@@ -98,14 +98,18 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
     }
 
     if (p === "stopped" || p === "idle") {
+      // Clear the previous result now that a new attempt is actually
+      // starting (it stayed on screen the whole time we sat at "stopped").
+      setDisplayMs(0);
+      // First press: start inspection (if enabled) and arm with the full
+      // hold delay — a deliberate anti-accidental-start safeguard for a
+      // key that wasn't already being interacted with.
       if (inspectionEnabled) {
         inspectionStartedAt.current = performance.now();
         setInspectionRemainingMs(INSPECTION_MS);
-        setPhaseBoth("inspecting");
         clearRaf();
         rafId.current = requestAnimationFrame(tickInspection);
       }
-      // Begin holding (armed) immediately either way.
       holdStartedAt.current = performance.now();
       setPhaseBoth(inspectionEnabled ? "inspecting" : "holding");
       clearHoldTimeout();
@@ -114,10 +118,21 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
           setPhaseBoth("ready");
         }
       }, holdToStartMs);
-      if (!inspectionEnabled) setPhaseBoth("holding");
       return;
     }
-    // Already inspecting/holding/ready: repeated keydown (auto-repeat) is a no-op.
+
+    if (p === "inspecting") {
+      // A *subsequent* press during inspection — the previous hold was
+      // released before it armed, but the solver already deliberately
+      // engaged once by starting inspection. Trust this tap and arm
+      // instantly instead of requiring another full hold, so a quick
+      // press/tap can interrupt inspection and jump straight to solving
+      // without waiting out the remaining 15s.
+      clearHoldTimeout();
+      setPhaseBoth("ready");
+      return;
+    }
+    // Already holding/ready: repeated keydown (auto-repeat) is a no-op.
   }, [inspectionEnabled, holdToStartMs, onComplete, tickInspection]);
 
   const release = useCallback(() => {
@@ -133,17 +148,16 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
       return;
     }
 
-    if (p === "holding" || p === "inspecting") {
-      // Released too early: not armed long enough. Fall back to inspecting
-      // (if enabled and time remains) or idle.
-      if (inspectionEnabled && inspectionRemainingMs > 0) {
-        setPhaseBoth("inspecting");
-      } else {
-        clearRaf();
-        setPhaseBoth("idle");
-      }
+    if (p === "holding") {
+      // No inspection in play, and released before it armed — back to idle.
+      clearRaf();
+      setPhaseBoth("idle");
+      return;
     }
-  }, [inspectionEnabled, inspectionRemainingMs, tickRunning]);
+
+    // p === "inspecting": released before it armed. Inspection keeps
+    // counting down; the next press (handled above) arms instantly.
+  }, [tickRunning]);
 
   const reset = useCallback(() => {
     clearRaf();

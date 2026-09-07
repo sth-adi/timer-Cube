@@ -62,7 +62,7 @@ export function TimerView() {
       // Delete/Backspace removes the most recent solve — but only when not
       // typing anywhere and the timer isn't live, so it can't eat a real
       // keystroke or nuke a solve mid-attempt.
-      if ((e.code === "Delete" || e.code === "Backspace") && !inField && phase === "idle") {
+      if ((e.code === "Delete" || e.code === "Backspace") && !inField && (phase === "idle" || phase === "stopped")) {
         const last = solves[solves.length - 1];
         if (last) {
           e.preventDefault();
@@ -83,12 +83,10 @@ export function TimerView() {
     };
   }, [press, release, reset, phase, solves, removeSolve]);
 
-  useEffect(() => {
-    if (phase === "stopped") {
-      const t = setTimeout(() => reset(), 50);
-      return () => clearTimeout(t);
-    }
-  }, [phase, reset]);
+  // Deliberately no auto-reset here: the just-finished time stays on screen
+  // (this is "stopped", not "idle") until the next attempt actually begins —
+  // pressing again from "stopped" starts a fresh inspection/hold cycle
+  // directly (see useTimer's press()), which is when the display clears.
 
   const showInspection = (phase === "inspecting" || phase === "holding" || phase === "ready") && inspectionEnabled;
 
@@ -121,6 +119,7 @@ export function TimerView() {
       {phase === "idle" && (
         <p className="text-muted-2 text-sm">hold space to start{inspectionEnabled ? " (inspection on)" : ""}</p>
       )}
+      {phase === "stopped" && <p className="text-muted-2 text-sm">space for next scramble</p>}
     </div>
   );
 }
