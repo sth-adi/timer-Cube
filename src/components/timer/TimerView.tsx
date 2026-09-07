@@ -7,6 +7,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import { playSolveChime } from "@/lib/utils/sound";
 
 const PHASE_COLOR: Record<string, string> = {
   idle: "text-foreground",
@@ -20,6 +21,7 @@ const PHASE_COLOR: Record<string, string> = {
 export function TimerView() {
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
   const holdToStartMs = useSettingsStore((s) => s.holdToStartMs);
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
@@ -27,9 +29,10 @@ export function TimerView() {
   const onComplete = useCallback(
     (timeMs: number) => {
       recordSolve(timeMs, scramble);
+      if (soundEnabled) playSolveChime();
       void nextScramble();
     },
-    [recordSolve, scramble, nextScramble],
+    [recordSolve, scramble, nextScramble, soundEnabled],
   );
 
   const { phase, displayMs, inspectionRemainingMs, press, release, reset } = useTimer({
@@ -38,13 +41,34 @@ export function TimerView() {
     onComplete,
   });
 
+  const removeSolve = useSessionStore((s) => s.removeSolve);
+  const solves = useSessionStore((s) => s.solves);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space" || e.repeat) return;
       const target = e.target as HTMLElement | null;
-      if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
-      e.preventDefault();
-      press();
+      const inField = !!target && ["INPUT", "TEXTAREA"].includes(target.tagName);
+
+      if (e.code === "Space" && !e.repeat && !inField) {
+        e.preventDefault();
+        press();
+        return;
+      }
+      if (e.code === "Escape" && !inField) {
+        e.preventDefault();
+        reset();
+        return;
+      }
+      // Delete/Backspace removes the most recent solve — but only when not
+      // typing anywhere and the timer isn't live, so it can't eat a real
+      // keystroke or nuke a solve mid-attempt.
+      if ((e.code === "Delete" || e.code === "Backspace") && !inField && phase === "idle") {
+        const last = solves[solves.length - 1];
+        if (last) {
+          e.preventDefault();
+          void removeSolve(last.id);
+        }
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
@@ -57,7 +81,7 @@ export function TimerView() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [press, release]);
+  }, [press, release, reset, phase, solves, removeSolve]);
 
   useEffect(() => {
     if (phase === "stopped") {

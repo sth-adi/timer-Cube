@@ -1,7 +1,9 @@
 "use client";
 
-import { X } from "lucide-react";
+import { useRef, useState } from "react";
+import { Download, Upload, X } from "lucide-react";
 import { useSettingsStore } from "@/lib/store/settingsStore";
+import { useSessionStore } from "@/lib/store/sessionStore";
 import { cn } from "@/lib/utils/cn";
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -34,15 +36,32 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setInspectionEnabled = useSettingsStore((s) => s.setInspectionEnabled);
   const hintSolverEnabled = useSettingsStore((s) => s.hintSolverEnabled);
   const setHintSolverEnabled = useSettingsStore((s) => s.setHintSolverEnabled);
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
+  const setSoundEnabled = useSettingsStore((s) => s.setSoundEnabled);
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const holdToStartMs = useSettingsStore((s) => s.holdToStartMs);
   const setHoldToStartMs = useSettingsStore((s) => s.setHoldToStartMs);
 
+  const exportActiveSession = useSessionStore((s) => s.exportActiveSession);
+  const importIntoActiveSession = useSessionStore((s) => s.importIntoActiveSession);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+
+  const onImportFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const count = await importIntoActiveSession(text);
+      setImportMsg(`Imported ${count} solve${count === 1 ? "" : "s"}.`);
+    } catch (err) {
+      setImportMsg(err instanceof Error ? err.message : "Import failed.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="glass-panel w-full max-w-sm rounded-2xl p-5 animate-fade-in-up"
+        className="glass-panel w-full max-w-sm rounded-2xl p-5 animate-fade-in-up max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -55,6 +74,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="divide-y divide-border">
           <Toggle checked={inspectionEnabled} onChange={setInspectionEnabled} label="WCA 15s inspection" />
           <Toggle checked={hintSolverEnabled} onChange={setHintSolverEnabled} label="Solve hints (cross / CFOP)" />
+          <Toggle checked={soundEnabled} onChange={setSoundEnabled} label="Sound on solve" />
           <Toggle checked={theme === "dark"} onChange={(v) => setTheme(v ? "dark" : "light")} label="Dark theme" />
         </div>
 
@@ -72,6 +92,53 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             onChange={(e) => setHoldToStartMs(Number(e.target.value))}
             className="w-full accent-[var(--accent)]"
           />
+        </div>
+
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Session data</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => exportActiveSession()}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
+            >
+              <Download size={13} /> Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
+            >
+              <Upload size={13} /> Import JSON
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void onImportFile(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
+          {importMsg && <p className="mt-1.5 text-xs text-muted-2">{importMsg}</p>}
+        </div>
+
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Keyboard shortcuts</p>
+          <ul className="space-y-1 text-xs text-muted">
+            <li>
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Space</kbd> hold to start, tap to stop
+            </li>
+            <li>
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Esc</kbd> cancel the current arm/hold
+            </li>
+            <li>
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Delete</kbd> remove the most recent solve
+            </li>
+          </ul>
         </div>
       </div>
     </div>

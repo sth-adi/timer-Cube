@@ -9,11 +9,13 @@ export interface SettingsState {
   holdToStartMs: number;
   theme: "dark" | "light";
   hintSolverEnabled: boolean;
+  soundEnabled: boolean;
   setInspectionEnabled: (v: boolean) => void;
   setInputMethod: (v: InputMethod) => void;
   setHoldToStartMs: (v: number) => void;
   setTheme: (v: "dark" | "light") => void;
   setHintSolverEnabled: (v: boolean) => void;
+  setSoundEnabled: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -24,11 +26,13 @@ export const useSettingsStore = create<SettingsState>()(
       holdToStartMs: 300,
       theme: "dark",
       hintSolverEnabled: true,
+      soundEnabled: false,
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
       setTheme: (v) => set({ theme: v }),
       setHintSolverEnabled: (v) => set({ hintSolverEnabled: v }),
+      setSoundEnabled: (v) => set({ soundEnabled: v }),
     }),
     { name: "cube-timer-settings" },
   ),

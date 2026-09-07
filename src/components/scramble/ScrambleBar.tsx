@@ -1,28 +1,54 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Boxes, RefreshCw } from "lucide-react";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { cn } from "@/lib/utils/cn";
+import { ScrambleNet } from "./ScrambleNet";
 
 export function ScrambleBar({ className }: { className?: string }) {
   const scramble = useScrambleStore((s) => s.scramble);
   const loading = useScrambleStore((s) => s.loadingScramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
+  const [netOpen, setNetOpen] = useState(false);
 
   return (
-    <div className={cn("flex items-start justify-center gap-3 px-4", className)}>
-      <p className="tabular-timer max-w-3xl text-center text-lg sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
-        {loading && !scramble ? "Generating scramble…" : scramble}
-      </p>
-      <button
-        type="button"
-        onClick={() => nextScramble()}
-        disabled={loading}
-        aria-label="New scramble"
-        className="mt-1 shrink-0 rounded-full p-2 text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-40"
-      >
-        <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-      </button>
+    <div className={cn("flex flex-col items-center gap-3 px-4", className)}>
+      <div className="flex items-start justify-center gap-3">
+        <p className="tabular-timer max-w-3xl text-center text-lg sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
+          {loading && !scramble ? "Generating scramble…" : scramble}
+        </p>
+        <div className="mt-1 flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setNetOpen((o) => !o)}
+            disabled={loading || !scramble}
+            aria-label="Show scramble diagram"
+            aria-pressed={netOpen}
+            className={cn(
+              "rounded-full p-2 transition-colors disabled:opacity-40",
+              netOpen ? "text-accent bg-accent-soft" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
+            )}
+          >
+            <Boxes size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => nextScramble()}
+            disabled={loading}
+            aria-label="New scramble"
+            className="rounded-full p-2 text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-40"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          </button>
+        </div>
+      </div>
+
+      {netOpen && scramble && (
+        <div className="glass-panel animate-fade-in-up w-full rounded-2xl p-4">
+          <ScrambleNet scramble={scramble} className="w-full" />
+        </div>
+      )}
     </div>
   );
 }

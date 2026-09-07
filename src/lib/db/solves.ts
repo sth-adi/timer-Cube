@@ -34,3 +34,21 @@ export async function getSessionSolves(sessionId: string): Promise<Solve[]> {
 export async function deleteAllSolvesForSession(sessionId: string): Promise<void> {
   await db.solves.where("sessionId").equals(sessionId).delete();
 }
+
+/** Bulk-imports solves into a session, assigning fresh ids so they never collide with existing rows. */
+export async function importSolves(
+  sessionId: string,
+  solves: Array<Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment">>,
+): Promise<number> {
+  const rows: Solve[] = solves.map((s) => ({
+    id: newId(),
+    sessionId,
+    timeMs: s.timeMs,
+    penalty: s.penalty,
+    scramble: s.scramble,
+    date: s.date,
+    comment: s.comment,
+  }));
+  await db.solves.bulkAdd(rows);
+  return rows.length;
+}

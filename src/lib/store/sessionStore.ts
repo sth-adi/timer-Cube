@@ -2,14 +2,24 @@ import { create } from "zustand";
 import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
-import { addSolve, deleteSolve, updateSolve, getSessionSolves } from "@/lib/db/solves";
+import { addSolve, deleteSolve, updateSolve, getSessionSolves, importSolves } from "@/lib/db/solves";
 import type { Penalty } from "@/types";
+import { computeSessionStats } from "@/lib/stats/stats";
+import { buildSessionExport, downloadJson, parseSessionExport } from "@/lib/utils/sessionExport";
+
+export type PBKind = "single" | "ao5" | "ao12";
+export interface PBEvent {
+  kind: PBKind;
+  ms: number;
+  id: number;
+}
 
 interface SessionState {
   sessions: Session[];
   activeSessionId: string | null;
   solves: Solve[];
   loaded: boolean;
+  lastPB: PBEvent | null;
   init: () => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   addSession: (name: string) => Promise<void>;
@@ -19,13 +29,19 @@ interface SessionState {
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
   removeSolve: (solveId: string) => Promise<void>;
+  clearPB: () => void;
+  exportActiveSession: () => void;
+  importIntoActiveSession: (json: string) => Promise<number>;
 }
+
+let pbEventId = 0;
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   sessions: [],
   activeSessionId: null,
   solves: [],
   loaded: false,
+  lastPB: null,
 
   init: async () => {
     const first = await ensureDefaultSession();
@@ -66,10 +82,28 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   recordSolve: async (timeMs, scramble) => {
-    const { activeSessionId } = get();
+    const { activeSessionId, solves: prevSolves } = get();
     if (!activeSessionId) return;
+    const prevStats = computeSessionStats(prevSolves);
+
     await addSolve({ sessionId: activeSessionId, timeMs, scramble });
-    set({ solves: await getSessionSolves(activeSessionId) });
+    const solves = await getSessionSolves(activeSessionId);
+    const newStats = computeSessionStats(solves);
+
+    let pb: PBEvent | null = null;
+    if (newStats.bestAo12 !== null && (prevStats.bestAo12 === null || newStats.bestAo12 < prevStats.bestAo12)) {
+      pb = { kind: "ao12", ms: newStats.bestAo12, id: ++pbEventId };
+    } else if (newStats.bestAo5 !== null && (prevStats.bestAo5 === null || newStats.bestAo5 < prevStats.bestAo5)) {
+      pb = { kind: "ao5", ms: newStats.bestAo5, id: ++pbEventId };
+    } else if (
+      prevStats.best !== null &&
+      newStats.best !== null &&
+      newStats.best < prevStats.best
+    ) {
+      pb = { kind: "single", ms: newStats.best, id: ++pbEventId };
+    }
+
+    set({ solves, lastPB: pb });
   },
 
   setPenalty: async (solveId, penalty) => {
@@ -88,5 +122,25 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     await deleteSolve(solveId);
     const { activeSessionId } = get();
     if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId) });
+  },
+
+  clearPB: () => set({ lastPB: null }),
+
+  exportActiveSession: () => {
+    const { activeSessionId, sessions, solves } = get();
+    const session = sessions.find((s) => s.id === activeSessionId);
+    if (!session) return;
+    const data = buildSessionExport(session.name, solves);
+    const datePart = new Date().toISOString().slice(0, 10);
+    downloadJson(`${session.name.replace(/[^a-z0-9]+/gi, "-")}-${datePart}.json`, data);
+  },
+
+  importIntoActiveSession: async (json) => {
+    const { activeSessionId } = get();
+    if (!activeSessionId) return 0;
+    const parsed = parseSessionExport(JSON.parse(json));
+    const count = await importSolves(activeSessionId, parsed);
+    set({ solves: await getSessionSolves(activeSessionId) });
+    return count;
   },
 }));
