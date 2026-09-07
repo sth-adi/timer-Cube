@@ -3,7 +3,7 @@ import { Cube } from "../cube-engine/engine";
 import { solveCrossOptimal } from "./cross";
 
 function crossSolved(cube: ReturnType<(typeof Cube)["prototype"]["clone"]>): boolean {
-  for (const slot of [4, 5, 6, 7]) {
+  for (const slot of [0, 1, 2, 3]) {
     if (cube.ep[slot] !== slot || cube.eo[slot] !== 0) return false;
   }
   return true;

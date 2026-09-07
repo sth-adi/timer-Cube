@@ -3,9 +3,9 @@ import { idaStarSolve } from "./idaStar";
 import { F2L_PAIRS, lastLayerHeuristic, pairHeuristic } from "./data/pieceTablesClient";
 import { crossHeuristic } from "./cross";
 
-const LAST_LAYER_FACES = [0, 1, 2, 4, 5] as const; // U, R, F, L, B — no D
+export const LAST_LAYER_FACES = [1, 2, 3, 4, 5] as const; // R, F, D, L, B — no U
 
-function pllHeuristic(cube: CubeJSInstance): number {
+export function pllHeuristic(cube: CubeJSInstance): number {
   let h = Math.max(lastLayerHeuristic(cube), crossHeuristic(cube));
   for (const pair of F2L_PAIRS) {
     const ph = pairHeuristic(cube, pair);

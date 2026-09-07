@@ -21,17 +21,17 @@ export interface PairId {
 }
 
 export const F2L_PAIRS: readonly PairId[] = [
-  { corner: 4, edge: 8 }, // FR
-  { corner: 5, edge: 9 }, // FL
-  { corner: 6, edge: 10 }, // BL
-  { corner: 7, edge: 11 }, // BR
+  { corner: 0, edge: 8 }, // FR (URF)
+  { corner: 1, edge: 9 }, // FL (UFL)
+  { corner: 2, edge: 10 }, // BL (ULB)
+  { corner: 3, edge: 11 }, // BR (UBR)
 ];
 
 const pairTableData: Record<number, { b64: string; size: number }> = {
-  4: { b64: F2lPairFR_B64, size: F2lPairFR_SIZE },
-  5: { b64: F2lPairFL_B64, size: F2lPairFL_SIZE },
-  6: { b64: F2lPairBL_B64, size: F2lPairBL_SIZE },
-  7: { b64: F2lPairBR_B64, size: F2lPairBR_SIZE },
+  0: { b64: F2lPairFR_B64, size: F2lPairFR_SIZE },
+  1: { b64: F2lPairFL_B64, size: F2lPairFL_SIZE },
+  2: { b64: F2lPairBL_B64, size: F2lPairBL_SIZE },
+  3: { b64: F2lPairBR_B64, size: F2lPairBR_SIZE },
 };
 
 const pairTableCache = new Map<number, Uint8Array>();
@@ -80,8 +80,8 @@ function getLastLayerEdgesTable(): Uint8Array {
   return lastLayerEdgesTable;
 }
 
-const LL_CORNERS = [0, 1, 2, 3];
-const LL_EDGES = [0, 1, 2, 3];
+const LL_CORNERS = [4, 5, 6, 7];
+const LL_EDGES = [4, 5, 6, 7];
 
 export function lastLayerHeuristic(cube: CubeJSInstance): number {
   const cornersTable = getLastLayerCornersTable();

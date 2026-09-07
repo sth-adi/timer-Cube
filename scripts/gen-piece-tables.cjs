@@ -12,10 +12,11 @@ const fs = require("fs");
 const path = require("path");
 const Cube = require("../src/lib/cube-engine/vendor/index.js");
 
-// U, R, F, L, B — D excluded, matching the actual F2L/OLL/PLL solvers (which
-// never turn D once the cross is solved). Building these heuristic tables
-// with the SAME move set the real search uses is what makes them tight.
-const FACES = [0, 1, 2, 4, 5];
+// R, F, D, L, B — U excluded, matching the actual F2L/OLL/PLL solvers (which
+// never turn U once the cross is solved — the cross lives on U/white, see
+// cube-engine/engine.ts). Building these heuristic tables with the SAME
+// move set the real search uses is what makes them tight.
+const FACES = [1, 2, 3, 4, 5];
 
 function buildTable({ name, kind, trackedIds, slotCount, oriCount }) {
   const size = Math.pow(slotCount, trackedIds.length) * Math.pow(oriCount, trackedIds.length);
@@ -70,40 +71,40 @@ const tables = [
   {
     name: "lastLayerCorners",
     kind: "corner",
-    trackedIds: [0, 1, 2, 3], // URF, UFL, ULB, UBR
+    trackedIds: [4, 5, 6, 7], // DFR, DLF, DBL, DRB
     slotCount: 8,
     oriCount: 3,
   },
   {
     name: "lastLayerEdges",
     kind: "edge",
-    trackedIds: [0, 1, 2, 3], // UR, UF, UL, UB
+    trackedIds: [4, 5, 6, 7], // DR, DF, DL, DB
     slotCount: 12,
     oriCount: 2,
   },
   {
     name: "f2lPairFR",
     kind: "pair",
-    corner: 4,
-    edge: 8,
+    corner: 0, // URF
+    edge: 8, // FR
   },
   {
     name: "f2lPairFL",
     kind: "pair",
-    corner: 5,
-    edge: 9,
+    corner: 1, // UFL
+    edge: 9, // FL
   },
   {
     name: "f2lPairBL",
     kind: "pair",
-    corner: 6,
-    edge: 10,
+    corner: 2, // ULB
+    edge: 10, // BL
   },
   {
     name: "f2lPairBR",
     kind: "pair",
-    corner: 7,
-    edge: 11,
+    corner: 3, // UBR
+    edge: 11, // BR
   },
 ];
 

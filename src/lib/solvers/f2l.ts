@@ -3,10 +3,11 @@ import { idaStarSolve } from "./idaStar";
 import { F2L_PAIRS, isPairSolved, pairHeuristic, type PairId } from "./data/pieceTablesClient";
 import { crossHeuristic } from "./cross";
 
-const CROSS_EDGES = [4, 5, 6, 7];
-// F,R,L,B in face-index terms (U=0,R=1,F=2,D=3,L=4,B=5) — D excluded, matching
-// real F2L technique (the bottom/cross layer is never turned again once solved).
-const F2L_FACES = [0, 1, 2, 4, 5] as const; // U, R, F, L, B
+const CROSS_EDGES = [0, 1, 2, 3];
+// R,F,D,L,B in face-index terms (U=0,R=1,F=2,D=3,L=4,B=5) — U excluded,
+// matching real F2L technique (the cross/white layer is never turned again
+// once solved — the cross lives on U, see cube-engine/engine.ts).
+const F2L_FACES = [1, 2, 3, 4, 5] as const; // R, F, D, L, B
 
 function crossSolved(cube: CubeJSInstance): boolean {
   for (const slot of CROSS_EDGES) {

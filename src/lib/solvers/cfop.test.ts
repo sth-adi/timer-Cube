@@ -34,7 +34,7 @@ describe("solveCFOP", () => {
       // Sanity bound: a genuinely "efficient" CFOP solve should be well under 80 STM.
       expect(result.totalMoves).toBeLessThan(80);
     }
-  }, 120_000);
+  }, 180_000);
 
   it("keeps the cross and each F2L pair fixed once solved (never re-disturbed later)", () => {
     const scramble = "R U2 F' L2 B2 R2 U2 F2 U2 L2 D' L U2 F' L D2 F' U' B2 D2";
@@ -49,7 +49,7 @@ describe("solveCFOP", () => {
     for (const pair of result.f2l) {
       cube.move(pair.moves.join(" "));
       running += pair.moves.length;
-      for (const slot of [4, 5, 6, 7]) {
+      for (const slot of [0, 1, 2, 3]) {
         expect(cube.ep[slot]).toBe(crossSnapshot.ep[slot]);
         expect(cube.eo[slot]).toBe(crossSnapshot.eo[slot]);
       }

@@ -39,19 +39,19 @@ export const EDGE = {
 } as const;
 
 /**
- * We follow standard competitive CFOP convention: the cross color lives on
- * D (bottom) for the whole solve, so the last layer (OLL/PLL) ends up on U
- * (top), matching how solvers actually hold the cube. "White cross" in the
- * UI simply means "the cross color", oriented to D during scrambling.
+ * The solver's cross lives on U — which is white in the fixed color scheme
+ * the 3D viewer (cubing.js) renders, and the face its default camera shows
+ * most prominently — so "white cross" in the UI actually shows a white
+ * cross on screen. The last layer (OLL/PLL) is consequently solved on D.
  */
-export const CROSS_EDGES = [EDGE.DR, EDGE.DF, EDGE.DL, EDGE.DB] as const;
+export const CROSS_EDGES = [EDGE.UR, EDGE.UF, EDGE.UL, EDGE.UB] as const;
 export const LAST_LAYER_CORNERS = [
-  CORNER.URF,
-  CORNER.UFL,
-  CORNER.ULB,
-  CORNER.UBR,
+  CORNER.DFR,
+  CORNER.DLF,
+  CORNER.DBL,
+  CORNER.DRB,
 ] as const;
-export const LAST_LAYER_EDGES = [EDGE.UR, EDGE.UF, EDGE.UL, EDGE.UB] as const;
+export const LAST_LAYER_EDGES = [EDGE.DR, EDGE.DF, EDGE.DL, EDGE.DB] as const;
 
 let solverReady = false;
 

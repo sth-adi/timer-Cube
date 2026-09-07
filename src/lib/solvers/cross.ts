@@ -3,7 +3,7 @@ import { CROSS_TABLE_B64, CROSS_TABLE_SIZE } from "./data/crossTable.generated";
 import { decodeBase64Table } from "./data/decodeTable";
 import { moveLabel } from "./moveNotation";
 
-const CROSS_EDGES = [4, 5, 6, 7]; // DR, DF, DL, DB — see cube-engine/engine.ts CROSS_EDGES
+const CROSS_EDGES = [0, 1, 2, 3]; // UR, UF, UL, UB — see cube-engine/engine.ts CROSS_EDGES
 
 let table: Uint8Array | null = null;
 function getTable(): Uint8Array {
@@ -27,9 +27,10 @@ export function crossHeuristic(cube: CubeJSInstance): number {
 }
 
 /**
- * Returns a guaranteed-optimal move sequence solving the cross (the 4 D-face
- * edges), starting from the given scramble applied to a solved cube. Every
- * other piece (corners, other edges) is left wherever the scramble put it.
+ * Returns a guaranteed-optimal move sequence solving the cross (the 4 U-face
+ * / white edges), starting from the given scramble applied to a solved
+ * cube. Every other piece (corners, other edges) is left wherever the
+ * scramble put it.
  */
 export function solveCrossOptimal(scramble: string): string[] {
   const dist = getTable();

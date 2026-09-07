@@ -3,13 +3,13 @@ import { idaStarSolve } from "./idaStar";
 import { crossHeuristic } from "./cross";
 import { F2L_PAIRS, pairHeuristic } from "./data/pieceTablesClient";
 
-const LAST_LAYER_FACES = [0, 1, 2, 4, 5] as const; // U, R, F, L, B — no D
+const LAST_LAYER_FACES = [1, 2, 3, 4, 5] as const; // R, F, D, L, B — no U
 
-const CROSS_EDGES = [4, 5, 6, 7];
-const F2L_CORNERS = [4, 5, 6, 7];
+const CROSS_EDGES = [0, 1, 2, 3];
+const F2L_CORNERS = [0, 1, 2, 3];
 const F2L_EDGES = [8, 9, 10, 11];
-const LL_CORNERS = [0, 1, 2, 3];
-const LL_EDGES = [0, 1, 2, 3];
+const LL_CORNERS = [4, 5, 6, 7];
+const LL_EDGES = [4, 5, 6, 7];
 
 function bottomLayerSolved(cube: CubeJSInstance): boolean {
   for (const s of CROSS_EDGES) if (cube.ep[s] !== s || cube.eo[s] !== 0) return false;
