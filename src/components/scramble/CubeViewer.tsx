@@ -3,7 +3,15 @@
 import { useEffect, useRef } from "react";
 
 interface CubeViewerProps {
+  /** The alg that actually plays/scrubs in the player's timeline. */
   alg: string;
+  /**
+   * Moves applied silently to establish the starting position before `alg`
+   * plays — e.g. the scramble, so the player opens already scrambled and
+   * only the solution itself animates, instead of animating the scramble
+   * first and the solution second.
+   */
+  setupAlg?: string;
   className?: string;
   controlPanel?: "none" | "bottom-row";
 }
@@ -13,7 +21,7 @@ interface CubeViewerProps {
  * real animated 3D cube. Client-only (WebGL + custom element), so this must
  * be dynamically imported with ssr:false wherever it's used.
  */
-export function CubeViewer({ alg, className, controlPanel = "none" }: CubeViewerProps) {
+export function CubeViewer({ alg, setupAlg, className, controlPanel = "none" }: CubeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
@@ -27,6 +35,7 @@ export function CubeViewer({ alg, className, controlPanel = "none" }: CubeViewer
       const player = new TwistyPlayer({
         puzzle: "3x3x3",
         alg,
+        experimentalSetupAlg: setupAlg,
         background: "none",
         controlPanel,
         hintFacelets: "none",
@@ -44,13 +53,17 @@ export function CubeViewer({ alg, className, controlPanel = "none" }: CubeViewer
       }
       playerRef.current = null;
     };
-    // Only (re)create the player on mount/unmount; alg updates are handled below.
+    // Only (re)create the player on mount/unmount; alg/setupAlg updates are handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (playerRef.current) playerRef.current.alg = alg;
-  }, [alg]);
+    // Set together (setup before alg) so there's never an intermediate
+    // frame where one updated but not the other.
+    if (!playerRef.current) return;
+    playerRef.current.experimentalSetupAlg = setupAlg ?? "";
+    playerRef.current.alg = alg;
+  }, [alg, setupAlg]);
 
   return <div ref={containerRef} className={className} />;
 }

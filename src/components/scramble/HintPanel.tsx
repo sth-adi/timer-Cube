@@ -14,6 +14,8 @@ function MoveList({ moves }: { moves: string[] }) {
   return <span className="tabular-timer">{moves.join(" ")}</span>;
 }
 
+type PreviewKind = "cross" | "cfop-cross" | "cfop-full" | null;
+
 export function HintPanel() {
   const hintSolverEnabled = useSettingsStore((s) => s.hintSolverEnabled);
   const hintVisible = useScrambleStore((s) => s.hintVisible);
@@ -27,7 +29,7 @@ export function HintPanel() {
   const scramble = useScrambleStore((s) => s.scramble);
 
   const [tab, setTab] = useState<"cross" | "cfop">("cross");
-  const [previewAlg, setPreviewAlg] = useState("");
+  const [previewKind, setPreviewKind] = useState<PreviewKind>(null);
 
   if (!hintSolverEnabled) return null;
 
@@ -44,6 +46,18 @@ export function HintPanel() {
     if (t === "cross") void loadCrossHint();
     else void loadCfopHint();
   };
+
+  // Derived, not stored: once the scramble moves on, crossHint/cfopHint are
+  // cleared by the store, so this naturally goes back to null — no need to
+  // separately track "is this preview stale" anywhere.
+  const previewMoves =
+    previewKind === "cross"
+      ? crossHint
+      : previewKind === "cfop-cross"
+        ? (cfopHint?.cross ?? null)
+        : previewKind === "cfop-full"
+          ? (cfopHint?.full ?? null)
+          : null;
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -96,7 +110,7 @@ export function HintPanel() {
               </p>
               <p
                 className="cursor-pointer hover:text-accent transition-colors"
-                onClick={() => setPreviewAlg(`${scramble} ${crossHint.join(" ")}`)}
+                onClick={() => setPreviewKind("cross")}
               >
                 <MoveList moves={crossHint} />
               </p>
@@ -110,7 +124,7 @@ export function HintPanel() {
                 <p className="text-accent text-xs font-semibold mb-1">CROSS ({cfopHint.cross.length})</p>
                 <p
                   className="cursor-pointer hover:text-accent transition-colors"
-                  onClick={() => setPreviewAlg(`${scramble} ${cfopHint.cross.join(" ")}`)}
+                  onClick={() => setPreviewKind("cfop-cross")}
                 >
                   <MoveList moves={cfopHint.cross} />
                 </p>
@@ -146,16 +160,21 @@ export function HintPanel() {
               <button
                 type="button"
                 className="text-xs text-muted hover:text-accent transition-colors"
-                onClick={() => setPreviewAlg(`${scramble} ${cfopHint.full.join(" ")}`)}
+                onClick={() => setPreviewKind("cfop-full")}
               >
                 Preview full solve →
               </button>
             </div>
           )}
 
-          {previewAlg && (
+          {previewMoves !== null && (
             <div className="mt-3 h-56 rounded-xl overflow-hidden border border-border">
-              <CubeViewer alg={previewAlg} controlPanel="bottom-row" className="h-full w-full" />
+              <CubeViewer
+                alg={previewMoves.join(" ")}
+                setupAlg={scramble}
+                controlPanel="bottom-row"
+                className="h-full w-full"
+              />
             </div>
           )}
         </div>

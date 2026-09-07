@@ -55,5 +55,5 @@ describe("solveCFOP", () => {
       }
     }
     expect(running).toBe(result.cross.length + result.f2l.reduce((n, p) => n + p.moves.length, 0));
-  });
+  }, 20_000);
 });

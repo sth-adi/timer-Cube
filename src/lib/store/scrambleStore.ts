@@ -19,6 +19,10 @@ interface ScrambleState {
   clearHints: () => void;
 }
 
+// Tracks the in-flight/completed first-scramble bootstrap, so hint loaders
+// can await it instead of racing it — see the comment on loadCrossHint.
+let initPromise: Promise<void> | null = null;
+
 export const useScrambleStore = create<ScrambleState>((set, get) => ({
   scramble: "",
   engineReady: false,
@@ -29,13 +33,18 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   hintError: null,
   hintVisible: false,
 
-  init: async () => {
-    const client = getCubeEngineClient();
-    set({ loadingScramble: true });
-    await client.ready();
-    set({ engineReady: true });
-    const scramble = await client.generateScramble();
-    set({ scramble, loadingScramble: false });
+  init: () => {
+    if (!initPromise) {
+      initPromise = (async () => {
+        const client = getCubeEngineClient();
+        set({ loadingScramble: true });
+        await client.ready();
+        set({ engineReady: true });
+        const scramble = await client.generateScramble();
+        set({ scramble, loadingScramble: false });
+      })();
+    }
+    return initPromise;
   },
 
   nextScramble: async () => {
@@ -48,6 +57,11 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   toggleHintVisible: () => set((s) => ({ hintVisible: !s.hintVisible })),
 
   loadCrossHint: async () => {
+    // The very first scramble is generated asynchronously by init() (the
+    // worker has to warm up the solver first, ~1-2s). If hints are revealed
+    // before that finishes, `scramble` is still "" — wait for it instead of
+    // silently no-op'ing forever with no error and no way to retry.
+    await get().init();
     const { scramble, crossHint } = get();
     if (crossHint || !scramble) return;
     set({ hintLoading: true, hintError: null });
@@ -60,6 +74,7 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   },
 
   loadCfopHint: async () => {
+    await get().init();
     const { scramble, cfopHint } = get();
     if (cfopHint || !scramble) return;
     set({ hintLoading: true, hintError: null });
