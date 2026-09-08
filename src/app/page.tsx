@@ -15,6 +15,7 @@ import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
 import { BottomNav, type TabId } from "@/components/nav/BottomNav";
+import { AuroraBackground } from "@/components/chrome/AuroraBackground";
 import { cn } from "@/lib/utils/cn";
 
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
   return (
     <>
       <AppBootstrap />
+      <AuroraBackground />
       <PBToast />
       <AchievementToast />
       <div className="flex h-dvh flex-col overflow-hidden">

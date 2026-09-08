@@ -1,34 +1,46 @@
 @import "tailwindcss";
 
+/* ===========================================================
+   Design tokens. Every visual value lives here as a custom
+   property, so a theme is just a block that rewrites a handful
+   of them — no component knows which theme is active.
+   =========================================================== */
+
 :root {
-  --background: #0a0b0e;
-  --bg-elevated: #131519;
-  --bg-panel: #16181d;
-  --bg-panel-2: #1d2026;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --foreground: #eef0f3;
-  --muted: #8b909d;
-  --muted-2: #5b606c;
+  /* palette — overwritten per theme below */
+  --background: #08080f;
+  --bg-elevated: #121220;
+  --bg-panel: #14141f;
+  --bg-panel-2: #1c1c2b;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --foreground: #ececf5;
+  --muted: #9a9ab4;
+  --muted-2: #5d5d78;
 
-  /* A single confident teal accent, used sparingly (active states, the
-     record-scratch of a PB) rather than as decorative gradient wash. */
-  --accent: #2dd4bf;
-  --accent-strong: #14b8a6;
-  --accent-soft: rgba(45, 212, 191, 0.14);
-  --cyan: #38bdf8;
+  --accent: #7c5cff;
+  --accent-strong: #6a48f5;
+  --accent-soft: rgba(124, 92, 255, 0.16);
+  --cyan: #35e6c5;
 
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
+  --success: #3ddc84;
+  --warning: #ffb020;
+  --danger: #ff4d6d;
 
   --timer-idle: var(--foreground);
   --timer-holding: var(--danger);
   --timer-ready: var(--success);
   --timer-running: var(--foreground);
+  /* Blur radius of the accent glow behind the timer digits. */
+  --timer-glow: 26px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  /* Aurora background layer — two drifting blobs tinted per theme. */
+  --aurora-1: rgba(124, 92, 255, 0.30);
+  --aurora-2: rgba(53, 230, 197, 0.20);
+  --aurora-opacity: 1;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
 
   --nav-height: 60px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -39,7 +51,127 @@
   color-scheme: dark;
 }
 
-:root[data-theme="light"] {
+/* --- Nebula: deep violet glass (default) --- */
+:root[data-theme="nebula"] {
+  color-scheme: dark;
+}
+
+/* --- Mint: cool teal on near-black --- */
+:root[data-theme="mint"] {
+  --background: #0a0b0e;
+  --bg-elevated: #131519;
+  --bg-panel: #16181d;
+  --bg-panel-2: #1d2026;
+  --foreground: #eef0f3;
+  --muted: #8b909d;
+  --muted-2: #5b606c;
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --accent-soft: rgba(45, 212, 191, 0.14);
+  --cyan: #38bdf8;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --aurora-1: rgba(45, 212, 191, 0.22);
+  --aurora-2: rgba(56, 189, 248, 0.16);
+  color-scheme: dark;
+}
+
+/* --- Carbon: minimal, high contrast, no colour cast --- */
+:root[data-theme="carbon"] {
+  --background: #050505;
+  --bg-elevated: #0f0f0f;
+  --bg-panel: #121212;
+  --bg-panel-2: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --foreground: #fafafa;
+  --muted: #a1a1a1;
+  --muted-2: #6b6b6b;
+  --accent: #fafafa;
+  --accent-strong: #d4d4d4;
+  --accent-soft: rgba(250, 250, 250, 0.12);
+  --cyan: #a1a1a1;
+  --success: #4ade80;
+  --warning: #facc15;
+  --danger: #f87171;
+  --timer-glow: 0px;
+  --aurora-opacity: 0;
+  color-scheme: dark;
+}
+
+/* --- Sunset: warm dusk --- */
+:root[data-theme="sunset"] {
+  --background: #120a10;
+  --bg-elevated: #1d1119;
+  --bg-panel: #21131c;
+  --bg-panel-2: #2c1a25;
+  --border: rgba(255, 220, 230, 0.09);
+  --border-strong: rgba(255, 220, 230, 0.18);
+  --foreground: #ffeef4;
+  --muted: #c39aad;
+  --muted-2: #8a6a7c;
+  --accent: #ff7a59;
+  --accent-strong: #f2603c;
+  --accent-soft: rgba(255, 122, 89, 0.16);
+  --cyan: #ffb37a;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #ff5470;
+  --aurora-1: rgba(255, 122, 89, 0.26);
+  --aurora-2: rgba(236, 72, 153, 0.20);
+  color-scheme: dark;
+}
+
+/* --- Terminal: phosphor green --- */
+:root[data-theme="terminal"] {
+  --background: #000000;
+  --bg-elevated: #060d06;
+  --bg-panel: #071007;
+  --bg-panel-2: #0c1a0c;
+  --border: rgba(61, 220, 132, 0.16);
+  --border-strong: rgba(61, 220, 132, 0.34);
+  --foreground: #b9ffcd;
+  --muted: #63b37c;
+  --muted-2: #3d7350;
+  --accent: #3ddc84;
+  --accent-strong: #2bb96b;
+  --accent-soft: rgba(61, 220, 132, 0.14);
+  --cyan: #7cf7b0;
+  --success: #3ddc84;
+  --warning: #d9f24f;
+  --danger: #ff6b6b;
+  --font-sans: var(--font-geist-mono);
+  --aurora-1: rgba(61, 220, 132, 0.16);
+  --aurora-2: rgba(61, 220, 132, 0.08);
+  color-scheme: dark;
+}
+
+/* --- Speedcube: WCA sticker colours --- */
+:root[data-theme="speedcube"] {
+  --background: #0b0d12;
+  --bg-elevated: #141821;
+  --bg-panel: #171c26;
+  --bg-panel-2: #1f2632;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --foreground: #f6f7fb;
+  --muted: #97a0b5;
+  --muted-2: #626b80;
+  --accent: #ffd500;
+  --accent-strong: #e6c000;
+  --accent-soft: rgba(255, 213, 0, 0.15);
+  --cyan: #0051ba;
+  --success: #009b48;
+  --warning: #ff5800;
+  --danger: #c41e3a;
+  --aurora-1: rgba(0, 81, 186, 0.28);
+  --aurora-2: rgba(255, 88, 0, 0.18);
+  color-scheme: dark;
+}
+
+/* --- Paper: light --- */
+:root[data-theme="paper"] {
   --background: #f4f5f8;
   --bg-elevated: #ffffff;
   --bg-panel: #ffffff;
@@ -49,19 +181,18 @@
   --foreground: #14151c;
   --muted: #656b80;
   --muted-2: #9498a8;
-
-  --accent: #0d9488;
-  --accent-strong: #0f766e;
-  --accent-soft: rgba(13, 148, 136, 0.1);
+  --accent: #5b3df5;
+  --accent-strong: #4a2fdb;
+  --accent-soft: rgba(91, 61, 245, 0.1);
   --cyan: #0284c7;
-
   --success: #059669;
   --warning: #b45309;
   --danger: #dc2626;
-
+  --timer-glow: 0px;
   --shadow-sm: 0 1px 2px rgba(15, 17, 25, 0.06);
   --shadow-md: 0 8px 24px rgba(15, 17, 25, 0.08);
-
+  --aurora-1: rgba(91, 61, 245, 0.13);
+  --aurora-2: rgba(2, 132, 199, 0.10);
   color-scheme: light;
 }
 
@@ -102,6 +233,7 @@ body {
   /* Prevent iOS's default pull-to-refresh / rubber-band scroll and the
      double-tap-to-zoom delay, which fights with the tap-to-arm timer. */
   overscroll-behavior-y: none;
+  touch-action: manipulation;
 }
 
 ::selection {
@@ -113,9 +245,10 @@ body {
    for things that actually float above other content (dropdowns, sheets,
    toasts), not every panel on the page. */
 .card {
-  background: var(--bg-panel);
+  background: color-mix(in srgb, var(--bg-panel) 82%, transparent);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(12px);
 }
 
 /* For genuinely floating overlays: menus, sheets, toasts. */
@@ -129,6 +262,14 @@ body {
 .tabular-timer {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+/* The timer digits, with an accent glow themes can dial to zero. */
+.timer-digits {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.045em;
+  text-shadow: 0 0 var(--timer-glow) color-mix(in srgb, currentColor 45%, transparent);
 }
 
 /* Minimum comfortable touch target per Apple/Material guidance, applied to
@@ -167,4 +308,78 @@ body {
 
 .animate-sheet-in {
   animation: sheet-in 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* --- Aurora background ---------------------------------------------------
+   Two large, slowly drifting radial blobs behind everything, tinted by the
+   active theme. Pure CSS (no canvas/WebGL) so it costs no JS frame time and
+   degrades to a flat background when the user prefers reduced motion. */
+@keyframes aurora-drift-a {
+  0%,
+  100% {
+    transform: translate3d(-12%, -8%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(8%, 6%, 0) scale(1.18);
+  }
+}
+
+@keyframes aurora-drift-b {
+  0%,
+  100% {
+    transform: translate3d(10%, 12%, 0) scale(1.1);
+  }
+  50% {
+    transform: translate3d(-8%, -6%, 0) scale(0.92);
+  }
+}
+
+.aurora-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: var(--aurora-opacity);
+}
+
+.aurora-blob {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  will-change: transform;
+}
+
+.aurora-blob-a {
+  top: -20vmax;
+  left: -10vmax;
+  background: radial-gradient(circle at center, var(--aurora-1), transparent 68%);
+  animation: aurora-drift-a 26s ease-in-out infinite;
+}
+
+.aurora-blob-b {
+  right: -18vmax;
+  bottom: -22vmax;
+  background: radial-gradient(circle at center, var(--aurora-2), transparent 68%);
+  animation: aurora-drift-b 32s ease-in-out infinite;
+}
+
+/* Darkens the edges so the aurora reads as depth rather than haze. */
+.aurora-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, var(--background) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob-a,
+  .aurora-blob-b {
+    animation: none;
+  }
+  .animate-fade-in-up,
+  .animate-sheet-in {
+    animation: none;
+  }
 }

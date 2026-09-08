@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
-import { useSettingsStore } from "@/lib/store/settingsStore";
+import { THEMES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { cn } from "@/lib/utils/cn";
 
@@ -44,6 +44,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setHoldToStartMs = useSettingsStore((s) => s.setHoldToStartMs);
   const dailyGoal = useSettingsStore((s) => s.dailyGoal);
   const setDailyGoal = useSettingsStore((s) => s.setDailyGoal);
+  const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
+  const setHideTimeWhileSolving = useSettingsStore((s) => s.setHideTimeWhileSolving);
 
   const exportActiveSession = useSessionStore((s) => s.exportActiveSession);
   const importIntoActiveSession = useSessionStore((s) => s.importIntoActiveSession);
@@ -82,11 +84,39 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="divide-y divide-border">
+        <div>
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Appearance</p>
+          <div className="grid grid-cols-4 gap-2">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTheme(t.id)}
+                aria-pressed={theme === t.id}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 transition-colors",
+                  theme === t.id ? "border-accent bg-accent-soft" : "border-border hover:bg-bg-panel-2",
+                )}
+              >
+                <span
+                  className="h-5 w-5 rounded-full border border-border-strong"
+                  style={{ background: t.swatch }}
+                />
+                <span className="text-[10px] leading-none text-muted">{t.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 divide-y divide-border border-t border-border pt-1">
           <Toggle checked={inspectionEnabled} onChange={setInspectionEnabled} label="WCA 15s inspection" />
           <Toggle checked={hintSolverEnabled} onChange={setHintSolverEnabled} label="Solve hints (cross / CFOP)" />
           <Toggle checked={soundEnabled} onChange={setSoundEnabled} label="Sound on solve" />
-          <Toggle checked={theme === "dark"} onChange={(v) => setTheme(v ? "dark" : "light")} label="Dark theme" />
+          <Toggle
+            checked={hideTimeWhileSolving}
+            onChange={setHideTimeWhileSolving}
+            label="Hide time while solving"
+          />
         </div>
 
         <div className="mt-3">

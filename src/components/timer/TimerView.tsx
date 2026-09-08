@@ -8,6 +8,7 @@ import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import { playSolveChime, playInspectionBeep } from "@/lib/utils/sound";
+import { InspectionRing } from "./InspectionRing";
 
 const PHASE_COLOR: Record<string, string> = {
   idle: "text-foreground",
@@ -22,6 +23,7 @@ export function TimerView() {
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
   const holdToStartMs = useSettingsStore((s) => s.holdToStartMs);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
+  const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
@@ -121,6 +123,8 @@ export function TimerView() {
         release();
       }}
     >
+      <InspectionRing remainingMs={inspectionRemainingMs} active={showInspection} />
+
       {showInspection && (
         <p className={cn("tabular-timer text-2xl font-medium", inspectionRemainingMs < 5000 ? "text-danger" : "text-muted")}>
           {Math.ceil(inspectionRemainingMs / 1000)}
@@ -128,12 +132,12 @@ export function TimerView() {
       )}
       <p
         className={cn(
-          "tabular-timer font-bold tracking-tight transition-colors duration-100",
-          "text-[18vw] leading-none sm:text-[9rem]",
+          "timer-digits font-bold transition-colors duration-100",
+          "text-[19vw] leading-none sm:text-[9.5rem]",
           PHASE_COLOR[phase],
         )}
       >
-        {formatTime(displayMs)}
+        {hideTimeWhileSolving && phase === "running" ? "solving" : formatTime(displayMs)}
       </p>
       {phase === "idle" && (
         <p className="text-muted-2 text-sm">hold space to start{inspectionEnabled ? " (inspection on)" : ""}</p>

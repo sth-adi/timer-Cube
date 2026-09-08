@@ -2,8 +2,14 @@ import { create } from "zustand";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import type { CFOPSolution } from "@/lib/solvers/cfop";
 
+/** How many past scrambles you can step back through. */
+const HISTORY_LIMIT = 50;
+
 interface ScrambleState {
   scramble: string;
+  /** Past scrambles, oldest first; `historyIndex` points at the current one. */
+  history: string[];
+  historyIndex: number;
   engineReady: boolean;
   loadingScramble: boolean;
   crossHint: string[] | null;
@@ -13,6 +19,8 @@ interface ScrambleState {
   hintVisible: boolean;
   init: () => Promise<void>;
   nextScramble: () => Promise<void>;
+  previousScramble: () => void;
+  canGoBack: () => boolean;
   toggleHintVisible: () => void;
   loadCrossHint: () => Promise<void>;
   loadCfopHint: () => Promise<void>;
@@ -25,6 +33,8 @@ let initPromise: Promise<void> | null = null;
 
 export const useScrambleStore = create<ScrambleState>((set, get) => ({
   scramble: "",
+  history: [],
+  historyIndex: -1,
   engineReady: false,
   loadingScramble: false,
   crossHint: null,
@@ -41,18 +51,59 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
         await client.ready();
         set({ engineReady: true });
         const scramble = await client.generateScramble();
-        set({ scramble, loadingScramble: false });
+        set({ scramble, history: [scramble], historyIndex: 0, loadingScramble: false });
       })();
     }
     return initPromise;
   },
 
   nextScramble: async () => {
+    const { history, historyIndex } = get();
+    // Stepping forward after going back replays the scramble already stored
+    // there rather than burning a fresh one, so back/forward is symmetric.
+    if (historyIndex >= 0 && historyIndex < history.length - 1) {
+      const scramble = history[historyIndex + 1];
+      set({
+        scramble,
+        historyIndex: historyIndex + 1,
+        crossHint: null,
+        cfopHint: null,
+        hintVisible: false,
+        hintError: null,
+      });
+      return;
+    }
+
     const client = getCubeEngineClient();
     set({ loadingScramble: true });
     const scramble = await client.generateScramble();
-    set({ scramble, loadingScramble: false, crossHint: null, cfopHint: null, hintVisible: false, hintError: null });
+    const trimmed = [...history, scramble].slice(-HISTORY_LIMIT);
+    set({
+      scramble,
+      history: trimmed,
+      historyIndex: trimmed.length - 1,
+      loadingScramble: false,
+      crossHint: null,
+      cfopHint: null,
+      hintVisible: false,
+      hintError: null,
+    });
   },
+
+  previousScramble: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex <= 0) return;
+    set({
+      scramble: history[historyIndex - 1],
+      historyIndex: historyIndex - 1,
+      crossHint: null,
+      cfopHint: null,
+      hintVisible: false,
+      hintError: null,
+    });
+  },
+
+  canGoBack: () => get().historyIndex > 0,
 
   toggleHintVisible: () => set((s) => ({ hintVisible: !s.hintVisible })),
 
