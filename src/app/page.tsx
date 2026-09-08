@@ -28,8 +28,8 @@ export default function Home() {
       <AppBootstrap />
       <PBToast />
       <AchievementToast />
-      <div className="flex min-h-svh flex-col">
-        <header className="flex items-center justify-between px-3 py-2">
+      <div className="flex h-dvh flex-col overflow-hidden">
+        <header className="flex shrink-0 items-center justify-between px-3 py-2">
           <SessionSwitcher />
 
           <div className="hidden items-center gap-1 rounded-full bg-bg-panel-2 p-1 lg:flex">
@@ -65,14 +65,14 @@ export default function Home() {
           </button>
         </header>
 
-        <div className={cn(tab === "timer" ? "block" : "hidden", "lg:block")}>
+        <div className={cn("shrink-0", tab === "timer" ? "block" : "hidden", "lg:block")}>
           <ScrambleBar className="mt-1" />
         </div>
 
-        <main className="grid flex-1 grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 px-4 pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-4">
+        <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 px-4 lg:pb-4">
           <div
             className={cn(
-              "flex-col items-center justify-center gap-4",
+              "min-h-0 flex-col items-center justify-center gap-4 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-0",
               mainPaneActive ? "flex" : "hidden",
               "lg:flex",
             )}
@@ -89,9 +89,9 @@ export default function Home() {
 
           <aside
             className={cn(
-              "flex-col gap-4 pb-2",
+              "min-h-0 flex-col gap-4 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-2",
               !mainPaneActive ? "flex" : "hidden",
-              "lg:flex lg:overflow-y-auto",
+              "lg:flex",
             )}
           >
             <div className={cn("flex-col gap-3", tab === "stats" ? "flex" : "hidden", "lg:flex")}>

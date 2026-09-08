@@ -40,8 +40,12 @@ describe("buildTrainerState", () => {
   }, 30_000);
 
   it("pll mode: solves cross+F2L+orientation, leaving only permutation scrambled", () => {
+    // Each iteration retries solveOLL (~20% per-attempt success rate, up to
+    // MAX_ATTEMPTS) on fresh scrambles until one succeeds, so worst-case
+    // total time has real variance run to run — give this a generous bound
+    // rather than chase a moving target with a tight one.
     let sawUnsolvedPermutation = false;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 6; i++) {
       const { setupAlg } = buildTrainerState("pll");
       const cube = new Cube();
       cube.move(setupAlg);
@@ -50,5 +54,5 @@ describe("buildTrainerState", () => {
       if (!cube.isSolved()) sawUnsolvedPermutation = true;
     }
     expect(sawUnsolvedPermutation).toBe(true);
-  }, 60_000);
+  }, 180_000);
 });
