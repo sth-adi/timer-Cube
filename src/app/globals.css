@@ -1,20 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0b0f;
-  --bg-elevated: #12141c;
-  --bg-panel: #15171f;
-  --bg-panel-2: #1b1e28;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --foreground: #edeef3;
-  --muted: #8a90a3;
-  --muted-2: #5c6175;
+  --background: #0a0b0e;
+  --bg-elevated: #131519;
+  --bg-panel: #16181d;
+  --bg-panel-2: #1d2026;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --foreground: #eef0f3;
+  --muted: #8b909d;
+  --muted-2: #5b606c;
 
-  --accent: #818cf8;
-  --accent-strong: #6366f1;
-  --accent-soft: rgba(129, 140, 248, 0.14);
-  --cyan: #22d3ee;
+  /* A single confident teal accent, used sparingly (active states, the
+     record-scratch of a PB) rather than as decorative gradient wash. */
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --accent-soft: rgba(45, 212, 191, 0.14);
+  --cyan: #38bdf8;
 
   --success: #34d399;
   --warning: #fbbf24;
@@ -25,6 +27,12 @@
   --timer-ready: var(--success);
   --timer-running: var(--foreground);
 
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+
+  --nav-height: 60px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
@@ -32,27 +40,27 @@
 }
 
 :root[data-theme="light"] {
-  --background: #f6f7fb;
+  --background: #f4f5f8;
   --bg-elevated: #ffffff;
   --bg-panel: #ffffff;
-  --bg-panel-2: #eef0f6;
-  --border: rgba(15, 17, 25, 0.08);
-  --border-strong: rgba(15, 17, 25, 0.16);
+  --bg-panel-2: #eceef3;
+  --border: rgba(15, 17, 25, 0.09);
+  --border-strong: rgba(15, 17, 25, 0.18);
   --foreground: #14151c;
   --muted: #656b80;
   --muted-2: #9498a8;
 
-  /* Deeper/more saturated than the dark-mode values (which are tuned to sit
-     on near-black) so they keep enough contrast to work as text, not just
-     fills, on a white surface. */
-  --accent: #4f46e5;
-  --accent-strong: #4338ca;
-  --accent-soft: rgba(79, 70, 229, 0.1);
-  --cyan: #0891b2;
+  --accent: #0d9488;
+  --accent-strong: #0f766e;
+  --accent-soft: rgba(13, 148, 136, 0.1);
+  --cyan: #0284c7;
 
   --success: #059669;
   --warning: #b45309;
   --danger: #dc2626;
+
+  --shadow-sm: 0 1px 2px rgba(15, 17, 25, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 17, 25, 0.08);
 
   color-scheme: light;
 }
@@ -82,10 +90,18 @@
   border-color: var(--border);
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  overflow-x: hidden;
+  /* Prevent iOS's default pull-to-refresh / rubber-band scroll and the
+     double-tap-to-zoom delay, which fights with the tap-to-arm timer. */
+  overscroll-behavior-y: none;
 }
 
 ::selection {
@@ -93,15 +109,36 @@ body {
   color: var(--foreground);
 }
 
-.glass-panel {
-  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+/* Flat, solid surface — the default card treatment. Blur/glass is reserved
+   for things that actually float above other content (dropdowns, sheets,
+   toasts), not every panel on the page. */
+.card {
+  background: var(--bg-panel);
   border: 1px solid var(--border);
-  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* For genuinely floating overlays: menus, sheets, toasts. */
+.glass-panel {
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  border: 1px solid var(--border-strong);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-md);
 }
 
 .tabular-timer {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+/* Minimum comfortable touch target per Apple/Material guidance, applied to
+   icon-only buttons that would otherwise be too small to reliably tap. */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes fade-in-up {
@@ -116,5 +153,18 @@ body {
 }
 
 .animate-fade-in-up {
-  animation: fade-in-up 0.25s ease-out;
+  animation: fade-in-up 0.2s ease-out;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-sheet-in {
+  animation: sheet-in 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }

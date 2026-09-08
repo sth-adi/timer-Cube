@@ -82,6 +82,153 @@ export interface SessionStats {
   stdDev: number | null;
 }
 
+export interface DayActivity {
+  /** YYYY-MM-DD in the viewer's local timezone. */
+  date: string;
+  count: number;
+}
+
+export interface ActivitySummary {
+  /** One entry per day with at least one solve, oldest first. */
+  days: DayActivity[];
+  /** Lookup from YYYY-MM-DD to solve count, for calendar rendering. */
+  byDate: Map<string, number>;
+  currentStreak: number;
+  longestStreak: number;
+}
+
+function dayKey(epochMs: number): string {
+  const d = new Date(epochMs);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Groups solves by local calendar day and derives streak info (consecutive
+ * days with at least one solve). "Current streak" counts backward from
+ * today or yesterday — a day missed further back doesn't retroactively
+ * break it, but a gap since yesterday does.
+ */
+export function computeActivity(solves: Solve[]): ActivitySummary {
+  const byDate = new Map<string, number>();
+  for (const solve of solves) {
+    const key = dayKey(solve.date);
+    byDate.set(key, (byDate.get(key) ?? 0) + 1);
+  }
+
+  const days = [...byDate.entries()]
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  let longestStreak = 0;
+  let running = 0;
+  let prevDayNum: number | null = null;
+  for (const { date } of days) {
+    const dayNum = Math.floor(new Date(`${date}T00:00:00`).getTime() / oneDayMs);
+    if (prevDayNum !== null && dayNum === prevDayNum + 1) {
+      running += 1;
+    } else {
+      running = 1;
+    }
+    longestStreak = Math.max(longestStreak, running);
+    prevDayNum = dayNum;
+  }
+
+  let currentStreak = 0;
+  if (days.length > 0) {
+    const todayNum = Math.floor(Date.now() / oneDayMs);
+    const lastDayNum = Math.floor(new Date(`${days[days.length - 1].date}T00:00:00`).getTime() / oneDayMs);
+    if (lastDayNum === todayNum || lastDayNum === todayNum - 1) {
+      currentStreak = 1;
+      for (let i = days.length - 1; i > 0; i--) {
+        const cur = Math.floor(new Date(`${days[i].date}T00:00:00`).getTime() / oneDayMs);
+        const prev = Math.floor(new Date(`${days[i - 1].date}T00:00:00`).getTime() / oneDayMs);
+        if (cur === prev + 1) currentStreak += 1;
+        else break;
+      }
+    }
+  }
+
+  return { days, byDate, currentStreak, longestStreak };
+}
+
+export interface HistogramBucket {
+  /** Bucket lower bound, ms. */
+  from: number;
+  /** Bucket upper bound (exclusive), ms. */
+  to: number;
+  count: number;
+}
+
+/** Buckets finite solve times into `bucketCount` equal-width bins for a distribution histogram. */
+export function computeHistogram(solves: Solve[], bucketCount = 12): HistogramBucket[] {
+  const times = solves.map(comparableTime).filter((t) => Number.isFinite(t));
+  if (times.length === 0) return [];
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  const span = max - min || 1;
+  const width = span / bucketCount;
+
+  const buckets: HistogramBucket[] = Array.from({ length: bucketCount }, (_, i) => ({
+    from: min + i * width,
+    to: min + (i + 1) * width,
+    count: 0,
+  }));
+  for (const t of times) {
+    const idx = Math.min(bucketCount - 1, Math.floor((t - min) / width));
+    buckets[idx].count += 1;
+  }
+  return buckets;
+}
+
+export interface HourBucket {
+  hour: number; // 0-23, local time
+  count: number;
+  mean: number | null;
+}
+
+/** Average solve time grouped by hour-of-day (local time), for a "when am I fastest" view. */
+export function computeHourOfDay(solves: Solve[]): HourBucket[] {
+  const sums = new Array<number>(24).fill(0);
+  const counts = new Array<number>(24).fill(0);
+  for (const solve of solves) {
+    const t = comparableTime(solve);
+    if (!Number.isFinite(t)) continue;
+    const hour = new Date(solve.date).getHours();
+    sums[hour] += t;
+    counts[hour] += 1;
+  }
+  return sums.map((sum, hour) => ({
+    hour,
+    count: counts[hour],
+    mean: counts[hour] > 0 ? sum / counts[hour] : null,
+  }));
+}
+
+export interface PBMoment {
+  solveId: string;
+  date: number;
+  ms: number;
+  solveIndex: number; // 1-based position in the session
+}
+
+/** Every solve that, at the time it was recorded, was a new session-best single. */
+export function computePBHistory(solves: Solve[]): PBMoment[] {
+  const history: PBMoment[] = [];
+  let best = Infinity;
+  solves.forEach((solve, i) => {
+    const t = comparableTime(solve);
+    if (t < best) {
+      best = t;
+      history.push({ solveId: solve.id, date: solve.date, ms: t, solveIndex: i + 1 });
+    }
+  });
+  return history;
+}
+
 export function computeSessionStats(solves: Solve[]): SessionStats {
   const times = solves.map(comparableTime);
   const finite = times.filter((t) => Number.isFinite(t));

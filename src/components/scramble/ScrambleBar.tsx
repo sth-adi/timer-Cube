@@ -18,7 +18,7 @@ export function ScrambleBar({ className }: { className?: string }) {
         <p className="tabular-timer max-w-3xl text-center text-lg sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
           {loading && !scramble ? "Generating scramble…" : scramble}
         </p>
-        <div className="mt-1 flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={() => setNetOpen((o) => !o)}
@@ -26,26 +26,26 @@ export function ScrambleBar({ className }: { className?: string }) {
             aria-label="Show scramble diagram"
             aria-pressed={netOpen}
             className={cn(
-              "rounded-full p-2 transition-colors disabled:opacity-40",
+              "tap-target rounded-full transition-colors disabled:opacity-40",
               netOpen ? "text-accent bg-accent-soft" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
             )}
           >
-            <Boxes size={16} />
+            <Boxes size={17} />
           </button>
           <button
             type="button"
             onClick={() => nextScramble()}
             disabled={loading}
             aria-label="New scramble"
-            className="rounded-full p-2 text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-40"
+            className="tap-target rounded-full text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-40"
           >
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
       </div>
 
       {netOpen && scramble && (
-        <div className="glass-panel animate-fade-in-up w-full rounded-2xl p-4">
+        <div className="card animate-fade-in-up w-full max-w-sm rounded-xl p-4">
           <ScrambleNet scramble={scramble} className="w-full" />
         </div>
       )}

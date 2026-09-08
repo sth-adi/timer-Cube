@@ -28,7 +28,7 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm hover:bg-bg-panel-2 transition-colors",
+          "w-full flex items-center justify-between rounded-lg px-2.5 py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
           isBest && "text-success",
           isWorst && "text-danger",
         )}
@@ -64,10 +64,10 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
             <button
               type="button"
               onClick={() => removeSolve(solve.id)}
-              className="ml-auto rounded px-2 py-1 text-xs text-muted hover:text-danger"
+              className="tap-target -mr-1.5 ml-auto rounded text-muted hover:text-danger"
               aria-label="Delete solve"
             >
-              <X size={13} />
+              <X size={14} />
             </button>
           </div>
           <input
@@ -152,11 +152,11 @@ export function SolveList() {
           onClick={() => setManualOpen((o) => !o)}
           aria-label="Add manual time"
           className={cn(
-            "rounded-full p-1 transition-colors",
+            "tap-target -mr-2 rounded-full transition-colors",
             manualOpen ? "text-accent" : "text-muted hover:text-foreground",
           )}
         >
-          <Plus size={14} />
+          <Plus size={16} />
         </button>
       </div>
 

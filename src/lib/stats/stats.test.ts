@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { averageOfN, computeSessionStats, rollingAverages } from "./stats";
+import {
+  averageOfN,
+  computeActivity,
+  computeHistogram,
+  computeHourOfDay,
+  computePBHistory,
+  computeSessionStats,
+  rollingAverages,
+} from "./stats";
 import type { Solve } from "@/types";
 
-function solve(timeMs: number, penalty: Solve["penalty"] = "none"): Solve {
-  return { id: Math.random().toString(), sessionId: "s", timeMs, penalty, scramble: "", date: Date.now() };
+function solve(timeMs: number, penalty: Solve["penalty"] = "none", date = Date.now()): Solve {
+  return { id: Math.random().toString(), sessionId: "s", timeMs, penalty, scramble: "", date };
 }
 
 describe("averageOfN", () => {
@@ -63,5 +71,65 @@ describe("computeSessionStats", () => {
     expect(rolling.slice(0, 4)).toEqual([null, null, null, null]);
     expect(rolling[4]).not.toBeNull();
     expect(rolling[5]).not.toBeNull();
+  });
+});
+
+describe("computeActivity", () => {
+  const day = 24 * 60 * 60 * 1000;
+
+  it("groups solves by local calendar day", () => {
+    const now = Date.now();
+    const solves = [solve(1000, "none", now), solve(2000, "none", now)];
+    const activity = computeActivity(solves);
+    expect(activity.days).toHaveLength(1);
+    expect(activity.days[0].count).toBe(2);
+  });
+
+  it("computes a current streak across consecutive days including today", () => {
+    const now = Date.now();
+    const solves = [solve(1000, "none", now - 2 * day), solve(1000, "none", now - day), solve(1000, "none", now)];
+    const activity = computeActivity(solves);
+    expect(activity.currentStreak).toBe(3);
+    expect(activity.longestStreak).toBe(3);
+  });
+
+  it("resets the current streak when yesterday was skipped", () => {
+    const now = Date.now();
+    const solves = [solve(1000, "none", now - 5 * day), solve(1000, "none", now - 4 * day)];
+    const activity = computeActivity(solves);
+    expect(activity.currentStreak).toBe(0);
+    expect(activity.longestStreak).toBe(2);
+  });
+});
+
+describe("computeHistogram", () => {
+  it("buckets finite times and excludes DNFs", () => {
+    const solves = [solve(1000), solve(2000), solve(3000), solve(1500, "dnf")];
+    const buckets = computeHistogram(solves, 3);
+    const total = buckets.reduce((sum, b) => sum + b.count, 0);
+    expect(total).toBe(3);
+  });
+
+  it("returns an empty array with no finite solves", () => {
+    expect(computeHistogram([solve(1000, "dnf")])).toEqual([]);
+  });
+});
+
+describe("computeHourOfDay", () => {
+  it("groups mean time by local hour", () => {
+    const d = new Date();
+    d.setHours(10, 0, 0, 0);
+    const solves = [solve(1000, "none", d.getTime()), solve(3000, "none", d.getTime())];
+    const buckets = computeHourOfDay(solves);
+    expect(buckets[10].count).toBe(2);
+    expect(buckets[10].mean).toBe(2000);
+  });
+});
+
+describe("computePBHistory", () => {
+  it("records only strictly improving singles, in order", () => {
+    const solves = [solve(5000), solve(4000), solve(6000), solve(3000)];
+    const history = computePBHistory(solves);
+    expect(history.map((h) => h.ms)).toEqual([5000, 4000, 3000]);
   });
 });

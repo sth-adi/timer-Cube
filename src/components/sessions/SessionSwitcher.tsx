@@ -19,7 +19,7 @@ export function SessionSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground/90 hover:bg-bg-panel-2 transition-colors"
+        className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/90 hover:bg-bg-panel-2 transition-colors"
       >
         {active?.name ?? "Session"}
         <ChevronDown size={14} className="text-muted-2" />

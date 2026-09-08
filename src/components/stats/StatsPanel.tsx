@@ -24,7 +24,7 @@ export function StatsPanel() {
   const stats = useMemo(() => computeSessionStats(solves), [solves]);
 
   return (
-    <div className="glass-panel rounded-2xl p-4">
+    <div className="card rounded-xl p-4">
       <div className="grid grid-cols-3 gap-4">
         <Stat label="ao5" value={fmt(stats.ao5)} />
         <Stat label="ao12" value={fmt(stats.ao12)} />

@@ -64,20 +64,20 @@ export function HintPanel() {
       <button
         type="button"
         onClick={onReveal}
-        className="flex items-center gap-1.5 text-xs text-muted-2 hover:text-muted transition-colors"
+        className="flex items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-2 hover:text-muted hover:bg-bg-panel-2 transition-colors"
       >
         {hintVisible ? <EyeOff size={13} /> : <Eye size={13} />}
         {hintVisible ? "hide solve hints" : "solve hints"}
       </button>
 
       {hintVisible && (
-        <div className="glass-panel animate-fade-in-up w-full max-w-xl rounded-2xl p-4 text-sm">
+        <div className="card animate-fade-in-up w-full max-w-xl rounded-xl p-4 text-sm">
           <div className="mb-3 flex gap-2">
             <button
               type="button"
               onClick={() => onTab("cross")}
               className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "rounded-full px-3 py-2 text-xs font-medium transition-colors",
                 tab === "cross" ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
               )}
             >
@@ -87,7 +87,7 @@ export function HintPanel() {
               type="button"
               onClick={() => onTab("cfop")}
               className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "rounded-full px-3 py-2 text-xs font-medium transition-colors",
                 tab === "cfop" ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
               )}
             >
