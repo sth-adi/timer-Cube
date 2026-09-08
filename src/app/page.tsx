@@ -12,6 +12,7 @@ import { HintPanel } from "@/components/scramble/HintPanel";
 import { TimerView } from "@/components/timer/TimerView";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { PBToast } from "@/components/timer/PBToast";
+import { AchievementToast } from "@/components/timer/AchievementToast";
 import { BottomNav, type TabId } from "@/components/nav/BottomNav";
 import { cn } from "@/lib/utils/cn";
 
@@ -23,6 +24,7 @@ export default function Home() {
     <>
       <AppBootstrap />
       <PBToast />
+      <AchievementToast />
       <div className="flex min-h-svh flex-col">
         <header className="flex items-center justify-between px-3 py-2">
           <SessionSwitcher />

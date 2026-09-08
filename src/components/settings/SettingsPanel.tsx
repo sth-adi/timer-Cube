@@ -42,6 +42,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const holdToStartMs = useSettingsStore((s) => s.holdToStartMs);
   const setHoldToStartMs = useSettingsStore((s) => s.setHoldToStartMs);
+  const dailyGoal = useSettingsStore((s) => s.dailyGoal);
+  const setDailyGoal = useSettingsStore((s) => s.setDailyGoal);
 
   const exportActiveSession = useSessionStore((s) => s.exportActiveSession);
   const importIntoActiveSession = useSessionStore((s) => s.importIntoActiveSession);
@@ -94,6 +96,22 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             step={50}
             value={holdToStartMs}
             onChange={(e) => setHoldToStartMs(Number(e.target.value))}
+            className="w-full accent-[var(--accent)]"
+          />
+        </div>
+
+        <div className="mt-3">
+          <label className="flex items-center justify-between py-2 text-sm text-foreground/90">
+            Daily practice goal
+            <span className="text-muted-2 tabular-timer">{dailyGoal} solves</span>
+          </label>
+          <input
+            type="range"
+            min={5}
+            max={100}
+            step={5}
+            value={dailyGoal}
+            onChange={(e) => setDailyGoal(Number(e.target.value))}
             className="w-full accent-[var(--accent)]"
           />
         </div>

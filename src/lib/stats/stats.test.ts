@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   averageOfN,
+  computeAchievements,
   computeActivity,
   computeHistogram,
   computeHourOfDay,
@@ -131,5 +132,47 @@ describe("computePBHistory", () => {
     const solves = [solve(5000), solve(4000), solve(6000), solve(3000)];
     const history = computePBHistory(solves);
     expect(history.map((h) => h.ms)).toEqual([5000, 4000, 3000]);
+  });
+});
+
+describe("computeAchievements", () => {
+  it("is entirely locked with no solves", () => {
+    const achievements = computeAchievements([]);
+    expect(achievements.every((a) => !a.unlocked)).toBe(true);
+  });
+
+  it("unlocks count-based achievements once the threshold is reached", () => {
+    const solves = Array.from({ length: 10 }, () => solve(20000));
+    const achievements = computeAchievements(solves);
+    const byId = Object.fromEntries(achievements.map((a) => [a.id, a]));
+    expect(byId["first-solve"].unlocked).toBe(true);
+    expect(byId["solves-10"].unlocked).toBe(true);
+    expect(byId["solves-100"].unlocked).toBe(false);
+  });
+
+  it("unlocks speed achievements once a fast-enough single is recorded", () => {
+    const solves = [solve(25000), solve(9500)];
+    const achievements = computeAchievements(solves);
+    const byId = Object.fromEntries(achievements.map((a) => [a.id, a]));
+    expect(byId["sub-30"].unlocked).toBe(true);
+    expect(byId["sub-10"].unlocked).toBe(true);
+    expect(byId["sub-15"].unlocked).toBe(true);
+  });
+
+  it("does not unlock speed achievements when every solve is DNF", () => {
+    const solves = [solve(1000, "dnf"), solve(2000, "dnf")];
+    const achievements = computeAchievements(solves);
+    const byId = Object.fromEntries(achievements.map((a) => [a.id, a]));
+    expect(byId["sub-30"].unlocked).toBe(false);
+  });
+
+  it("unlocks streak achievements based on the longest streak", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const solves = [solve(1000, "none", now - 2 * day), solve(1000, "none", now - day), solve(1000, "none", now)];
+    const achievements = computeAchievements(solves);
+    const byId = Object.fromEntries(achievements.map((a) => [a.id, a]));
+    expect(byId["streak-3"].unlocked).toBe(true);
+    expect(byId["streak-7"].unlocked).toBe(false);
   });
 });

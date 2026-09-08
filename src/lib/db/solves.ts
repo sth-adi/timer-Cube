@@ -31,6 +31,11 @@ export async function getSessionSolves(sessionId: string): Promise<Solve[]> {
   return db.solves.where("sessionId").equals(sessionId).sortBy("date");
 }
 
+/** Every solve across every session — the basis for lifetime achievements/streaks/goals. */
+export async function getAllSolves(): Promise<Solve[]> {
+  return db.solves.orderBy("date").toArray();
+}
+
 export async function deleteAllSolvesForSession(sessionId: string): Promise<void> {
   await db.solves.where("sessionId").equals(sessionId).delete();
 }

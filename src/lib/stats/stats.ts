@@ -229,6 +229,212 @@ export function computePBHistory(solves: Solve[]): PBMoment[] {
   return history;
 }
 
+export interface AchievementDef {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  /** "max": unlocked once current >= target (counts, streaks). "min": unlocked once current <= target (times — lower is better). */
+  direction: "max" | "min";
+  target: number;
+  current: (ctx: AchievementContext) => number;
+  /** Formats `current` for display in a progress readout, e.g. "42 / 100" or "12.3s". */
+  formatCurrent?: (current: number) => string;
+  formatTarget?: (target: number) => string;
+}
+
+export interface AchievementContext {
+  solves: Solve[];
+  finiteTimes: number[];
+  activity: ActivitySummary;
+}
+
+export interface AchievementState extends AchievementDef {
+  unlocked: boolean;
+  currentValue: number;
+}
+
+const countFmt = (n: number) => String(n);
+const secFmt = (ms: number) => (Number.isFinite(ms) ? `${(ms / 1000).toFixed(1)}s` : "—");
+const dayFmt = (n: number) => `${n}d`;
+
+function hourRangeSolved(solves: Solve[], startHour: number, endHour: number): boolean {
+  return solves.some((s) => {
+    const h = new Date(s.date).getHours();
+    return h >= startHour && h < endHour;
+  });
+}
+
+export const ACHIEVEMENTS: AchievementDef[] = [
+  {
+    id: "first-solve",
+    label: "First Steps",
+    description: "Complete your first solve",
+    icon: "🎬",
+    direction: "max",
+    target: 1,
+    current: (c) => c.solves.length,
+    formatCurrent: countFmt,
+    formatTarget: countFmt,
+  },
+  {
+    id: "solves-10",
+    label: "Getting Warmed Up",
+    description: "Complete 10 solves",
+    icon: "🔥",
+    direction: "max",
+    target: 10,
+    current: (c) => c.solves.length,
+    formatCurrent: countFmt,
+    formatTarget: countFmt,
+  },
+  {
+    id: "solves-100",
+    label: "Centurion",
+    description: "Complete 100 solves",
+    icon: "💯",
+    direction: "max",
+    target: 100,
+    current: (c) => c.solves.length,
+    formatCurrent: countFmt,
+    formatTarget: countFmt,
+  },
+  {
+    id: "solves-500",
+    label: "The Grind",
+    description: "Complete 500 solves",
+    icon: "⚙️",
+    direction: "max",
+    target: 500,
+    current: (c) => c.solves.length,
+    formatCurrent: countFmt,
+    formatTarget: countFmt,
+  },
+  {
+    id: "solves-1000",
+    label: "Solve Master",
+    description: "Complete 1,000 solves",
+    icon: "🏅",
+    direction: "max",
+    target: 1000,
+    current: (c) => c.solves.length,
+    formatCurrent: countFmt,
+    formatTarget: countFmt,
+  },
+  {
+    id: "sub-30",
+    label: "Sub-30",
+    description: "Get a single solve under 30 seconds",
+    icon: "🐢",
+    direction: "min",
+    target: 30000,
+    current: (c) => (c.finiteTimes.length ? Math.min(...c.finiteTimes) : Infinity),
+    formatCurrent: secFmt,
+    formatTarget: secFmt,
+  },
+  {
+    id: "sub-20",
+    label: "Sub-20",
+    description: "Get a single solve under 20 seconds",
+    icon: "🚗",
+    direction: "min",
+    target: 20000,
+    current: (c) => (c.finiteTimes.length ? Math.min(...c.finiteTimes) : Infinity),
+    formatCurrent: secFmt,
+    formatTarget: secFmt,
+  },
+  {
+    id: "sub-15",
+    label: "Sub-15",
+    description: "Get a single solve under 15 seconds",
+    icon: "🏍️",
+    direction: "min",
+    target: 15000,
+    current: (c) => (c.finiteTimes.length ? Math.min(...c.finiteTimes) : Infinity),
+    formatCurrent: secFmt,
+    formatTarget: secFmt,
+  },
+  {
+    id: "sub-10",
+    label: "Sub-10",
+    description: "Get a single solve under 10 seconds",
+    icon: "🚀",
+    direction: "min",
+    target: 10000,
+    current: (c) => (c.finiteTimes.length ? Math.min(...c.finiteTimes) : Infinity),
+    formatCurrent: secFmt,
+    formatTarget: secFmt,
+  },
+  {
+    id: "streak-3",
+    label: "On a Roll",
+    description: "Solve on 3 days in a row",
+    icon: "📆",
+    direction: "max",
+    target: 3,
+    current: (c) => c.activity.longestStreak,
+    formatCurrent: dayFmt,
+    formatTarget: dayFmt,
+  },
+  {
+    id: "streak-7",
+    label: "Committed",
+    description: "Solve on 7 days in a row",
+    icon: "🗓️",
+    direction: "max",
+    target: 7,
+    current: (c) => c.activity.longestStreak,
+    formatCurrent: dayFmt,
+    formatTarget: dayFmt,
+  },
+  {
+    id: "streak-30",
+    label: "Unstoppable",
+    description: "Solve on 30 days in a row",
+    icon: "🌟",
+    direction: "max",
+    target: 30,
+    current: (c) => c.activity.longestStreak,
+    formatCurrent: dayFmt,
+    formatTarget: dayFmt,
+  },
+  {
+    id: "night-owl",
+    label: "Night Owl",
+    description: "Solve between midnight and 4am",
+    icon: "🦉",
+    direction: "max",
+    target: 1,
+    current: (c) => (hourRangeSolved(c.solves, 0, 4) ? 1 : 0),
+    formatCurrent: () => "",
+    formatTarget: () => "",
+  },
+  {
+    id: "early-bird",
+    label: "Early Bird",
+    description: "Solve between 4am and 7am",
+    icon: "🐦",
+    direction: "max",
+    target: 1,
+    current: (c) => (hourRangeSolved(c.solves, 4, 7) ? 1 : 0),
+    formatCurrent: () => "",
+    formatTarget: () => "",
+  },
+];
+
+/** Evaluates every achievement definition against the given (typically lifetime, cross-session) solve history. */
+export function computeAchievements(solves: Solve[]): AchievementState[] {
+  const finiteTimes = solves.map(comparableTime).filter((t) => Number.isFinite(t));
+  const activity = computeActivity(solves);
+  const ctx: AchievementContext = { solves, finiteTimes, activity };
+
+  return ACHIEVEMENTS.map((def) => {
+    const currentValue = def.current(ctx);
+    const unlocked = def.direction === "max" ? currentValue >= def.target : currentValue <= def.target;
+    return { ...def, currentValue, unlocked };
+  });
+}
+
 export function computeSessionStats(solves: Solve[]): SessionStats {
   const times = solves.map(comparableTime);
   const finite = times.filter((t) => Number.isFinite(t));

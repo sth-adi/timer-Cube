@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { formatTime } from "@/lib/utils/time";
+import { vibrate } from "@/lib/utils/haptics";
 
 const LABEL: Record<string, string> = {
   single: "New personal best!",
@@ -18,12 +19,16 @@ export function PBToast() {
 
   useEffect(() => {
     if (!lastPB) return;
+    vibrate(lastPB.kind === "single" ? [40, 60, 80] : 50);
     const t = setTimeout(() => clearPB(), 2800);
     return () => clearTimeout(t);
   }, [lastPB, clearPB]);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center">
+    <div
+      className="pointer-events-none fixed inset-x-0 z-50 flex justify-center"
+      style={{ bottom: "calc(var(--nav-height) + var(--safe-bottom) + 16px)" }}
+    >
       <AnimatePresence>
         {lastPB && (
           <motion.div
