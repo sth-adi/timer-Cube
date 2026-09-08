@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
+import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { formatResult, parseTimeInput } from "@/lib/utils/time";
 import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { MessageSquare, Plus, X } from "lucide-react";
+import { MessageSquare, Plus, Wand2, X } from "lucide-react";
 
 function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: number; isBest: boolean; isWorst: boolean }) {
   const setPenalty = useSessionStore((s) => s.setPenalty);
   const setComment = useSessionStore((s) => s.setComment);
   const removeSolve = useSessionStore((s) => s.removeSolve);
+  const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const [open, setOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState(solve.comment ?? "");
 
@@ -63,8 +65,18 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
             </button>
             <button
               type="button"
+              onClick={() => {
+                requestAnalysis(solve.scramble, solveFinalMs(solve));
+                setOpen(false);
+              }}
+              className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"
+            >
+              <Wand2 size={12} /> Analyze
+            </button>
+            <button
+              type="button"
               onClick={() => removeSolve(solve.id)}
-              className="tap-target -mr-1.5 ml-auto rounded text-muted hover:text-danger"
+              className="tap-target -mr-1.5 rounded text-muted hover:text-danger"
               aria-label="Delete solve"
             >
               <X size={14} />

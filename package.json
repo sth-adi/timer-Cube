@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gen:cross-table": "node scripts/gen-cross-table.cjs",
-    "gen:piece-tables": "node scripts/gen-piece-tables.cjs"
+    "gen:piece-tables": "node scripts/gen-piece-tables.cjs",
+    "gen:ll-cases": "node scripts/gen-ll-cases.cjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

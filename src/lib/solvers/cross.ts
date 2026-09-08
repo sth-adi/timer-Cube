@@ -33,9 +33,20 @@ export function crossHeuristic(cube: CubeJSInstance): number {
  * scramble put it.
  */
 export function solveCrossOptimal(scramble: string): string[] {
-  const dist = getTable();
   const cube = new Cube();
   cube.move(scramble);
+  return solveCrossFromCube(cube);
+}
+
+/**
+ * Same guaranteed-optimal cross solution, but from a cube already in the
+ * position of interest rather than from a scramble string — which is what the
+ * solve analyzer needs, since it compares against the state the cuber was
+ * actually in rather than the start of the solve.
+ */
+export function solveCrossFromCube(start: CubeJSInstance): string[] {
+  const dist = getTable();
+  const cube = start.clone();
 
   let idx = crossIndex(cube);
   let remaining = dist[idx];

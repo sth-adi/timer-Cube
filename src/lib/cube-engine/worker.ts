@@ -3,13 +3,15 @@ import { ensureSolverReady, generateScramble333, normalizeAlg } from "./engine";
 import { solveCrossOptimal } from "../solvers/cross";
 import { solveCFOP } from "../solvers/cfop";
 import { buildTrainerState, type TrainerMode } from "../solvers/trainerState";
+import { analyzeSolve, type AnalyzeInput, type AnalyzeResult } from "../analysis/analyze";
 
 export type WorkerRequest =
   | { id: number; type: "init" }
   | { id: number; type: "scramble" }
   | { id: number; type: "solveCross"; scramble: string }
   | { id: number; type: "solveCFOP"; scramble: string }
-  | { id: number; type: "trainerState"; mode: TrainerMode };
+  | { id: number; type: "trainerState"; mode: TrainerMode }
+  | { id: number; type: "analyze"; input: AnalyzeInput };
 
 export type WorkerResponse =
   | { id: number; type: "ready" }
@@ -17,6 +19,7 @@ export type WorkerResponse =
   | { id: number; type: "solveCross"; moves: string[] }
   | { id: number; type: "solveCFOP"; solution: ReturnType<typeof solveCFOP> }
   | { id: number; type: "trainerState"; setupAlg: string }
+  | { id: number; type: "analyze"; result: AnalyzeResult }
   | { id: number; type: "error"; message: string };
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -59,6 +62,13 @@ ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       case "trainerState": {
         const { setupAlg } = buildTrainerState(msg.mode);
         ctx.postMessage({ id: msg.id, type: "trainerState", setupAlg } satisfies WorkerResponse);
+        break;
+      }
+      case "analyze": {
+        // Several IDA* searches per solve — easily a second or two, so it runs
+        // here rather than freezing the timer on the main thread.
+        const result = analyzeSolve(msg.input);
+        ctx.postMessage({ id: msg.id, type: "analyze", result } satisfies WorkerResponse);
         break;
       }
     }

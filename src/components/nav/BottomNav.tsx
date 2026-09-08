@@ -1,11 +1,12 @@
 "use client";
 
-import { Timer as TimerIcon, BarChart3, ListOrdered, Repeat } from "lucide-react";
+import { Timer as TimerIcon, BarChart3, ListOrdered, Repeat, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const TABS = [
   { id: "timer", label: "Timer", icon: TimerIcon },
   { id: "trainer", label: "Trainer", icon: Repeat },
+  { id: "analyze", label: "Analyze", icon: Wand2 },
   { id: "stats", label: "Stats", icon: BarChart3 },
   { id: "solves", label: "Solves", icon: ListOrdered },
 ] as const;
@@ -33,11 +34,11 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: T
             onClick={() => onChange(tab.id)}
             aria-current={isActive}
             className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
+              "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium transition-colors",
               isActive ? "text-accent" : "text-muted-2",
             )}
           >
-            <Icon size={21} strokeWidth={isActive ? 2.25 : 2} />
+            <Icon size={20} strokeWidth={isActive ? 2.25 : 2} />
             {tab.label}
           </button>
         );

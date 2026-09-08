@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Settings, Timer as TimerIcon, Repeat } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Settings, Timer as TimerIcon, Repeat, Wand2 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { SolveList } from "@/components/sessions/SolveList";
@@ -11,18 +11,32 @@ import { ScrambleBar } from "@/components/scramble/ScrambleBar";
 import { HintPanel } from "@/components/scramble/HintPanel";
 import { TimerView } from "@/components/timer/TimerView";
 import { TrainerHub } from "@/components/trainer/TrainerHub";
+import { AnalyzerView } from "@/components/analysis/AnalyzerView";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
 import { BottomNav, type TabId } from "@/components/nav/BottomNav";
 import { AuroraBackground } from "@/components/chrome/AuroraBackground";
+import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { cn } from "@/lib/utils/cn";
 
 export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("timer");
 
-  const mainPaneActive = tab === "timer" || tab === "trainer";
+  // "Analyze this solve" lives in the solve list, which has no way to change
+  // tabs; it bumps a counter in the store instead and the shell follows. This
+  // is a subscription to an external store rather than derived state, so it
+  // belongs in a listener, not in the render path.
+  useEffect(
+    () =>
+      useAnalysisStore.subscribe((state, prev) => {
+        if (state.requestSeq !== prev.requestSeq) setTab("analyze");
+      }),
+    [],
+  );
+
+  const mainPaneActive = tab === "timer" || tab === "trainer" || tab === "analyze";
 
   return (
     <>
@@ -40,7 +54,7 @@ export default function Home() {
               onClick={() => setTab("timer")}
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                tab !== "trainer" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
+                tab !== "trainer" && tab !== "analyze" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
               )}
             >
               <TimerIcon size={13} /> Timer
@@ -54,6 +68,16 @@ export default function Home() {
               )}
             >
               <Repeat size={13} /> Trainer
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("analyze")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                tab === "analyze" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
+              )}
+            >
+              <Wand2 size={13} /> Analyze
             </button>
           </div>
 
@@ -86,6 +110,8 @@ export default function Home() {
           >
             {tab === "trainer" ? (
               <TrainerHub />
+            ) : tab === "analyze" ? (
+              <AnalyzerView />
             ) : (
               <>
                 <TimerView />

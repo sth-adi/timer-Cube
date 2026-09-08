@@ -37,6 +37,38 @@ const SEARCH_TIERS = [
   { maxDepth: 13, maxNodes: 10_000_000 },
 ];
 
+/**
+ * Shortest way to finish one specific pair from the state the cube is in,
+ * without breaking the cross or any pair listed in `priorPairs`. This is the
+ * per-pair search `solveF2L` runs internally, exposed so the solve analyzer can
+ * ask "from exactly where you were, how short could this pair have been?" —
+ * which is a fairer comparison than diffing against a model solve that reached
+ * that slot from a different position. Returns null if no solution is found
+ * within the search budget.
+ */
+export function solvePairFromCube(
+  cube: CubeJSInstance,
+  pair: PairId,
+  priorPairs: readonly PairId[],
+): string[] | null {
+  const isGoal = (c: CubeJSInstance) =>
+    crossSolved(c) && priorPairs.every((p) => isPairSolved(c, p)) && isPairSolved(c, pair);
+  const heuristic = (c: CubeJSInstance) => {
+    let h = Math.max(pairHeuristic(c, pair), crossHeuristic(c));
+    for (const p of priorPairs) {
+      const ph = pairHeuristic(c, p);
+      if (ph > h) h = ph;
+    }
+    return h;
+  };
+
+  for (const tier of SEARCH_TIERS) {
+    const moves = idaStarSolve(cube, { heuristic, isGoal, faces: F2L_FACES, ...tier });
+    if (moves) return moves;
+  }
+  return null;
+}
+
 export function solveF2L(cube: CubeJSInstance): F2LPairSolution[] {
   const solved: PairId[] = [];
   const remaining = [...F2L_PAIRS];

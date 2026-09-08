@@ -64,6 +64,103 @@ function checkCaseIntegrity(c: AlgCase) {
   }
 }
 
+/**
+ * A last-layer case is defined by a cube state, so two entries are the same
+ * case whenever their states differ only by an AUF. Canonicalizing over those
+ * rotations is what turns "these algorithms all work" into "these algorithms
+ * cover every case exactly once" — the property a hand-written table can lose
+ * silently, and did: an earlier version of this file listed 57 OLL entries
+ * covering only 41 distinct cases.
+ */
+function rotateSlots(values: number[], n: number): number[] {
+  const out = [...values];
+  for (let k = 0; k < n; k++) out.unshift(out.pop()!);
+  return out;
+}
+
+function ollClassKey(cube: InstanceType<typeof Cube>): string {
+  const co = LL_CORNERS.map((s) => cube.co[s]);
+  const eo = LL_EDGES.map((s) => cube.eo[s]);
+  return [0, 1, 2, 3].map((n) => [...rotateSlots(co, n), ...rotateSlots(eo, n)].join(",")).sort()[0];
+}
+
+/** PLL is recognized modulo an AUF on both sides: one to line up, one to finish. */
+function pllClassKey(cube: InstanceType<typeof Cube>): string {
+  const cp = LL_CORNERS.map((s) => cube.cp[s]);
+  const ep = LL_EDGES.map((s) => cube.ep[s]);
+  const variants: string[] = [];
+  for (let a = 0; a < 4; a++) {
+    const relabel = rotateSlots([0, 1, 2, 3], a);
+    for (let b = 0; b < 4; b++) {
+      variants.push(
+        rotateSlots(cp.map((v) => relabel[v]), b).join("") +
+          "|" +
+          rotateSlots(ep.map((v) => relabel[v]), b).join(""),
+      );
+    }
+  }
+  return variants.sort()[0];
+}
+
+function caseStateFor(alg: string): InstanceType<typeof Cube> {
+  const cube = new Cube();
+  cube.move(invertAlg(alg));
+  return cube;
+}
+
+/** Every legal last-layer orientation: corner twists sum to 0 mod 3, flips are even. */
+function everyOrientationClass(): Set<string> {
+  const classes = new Set<string>();
+  for (let a = 0; a < 3; a++) {
+    for (let b = 0; b < 3; b++) {
+      for (let c = 0; c < 3; c++) {
+        const d = (3 - ((a + b + c) % 3)) % 3;
+        for (let p = 0; p < 2; p++) {
+          for (let q = 0; q < 2; q++) {
+            for (let r = 0; r < 2; r++) {
+              const cube = new Cube();
+              [a, b, c, d].forEach((v, i) => (cube.co[LL_CORNERS[i]] = v));
+              [p, q, r, (p + q + r) % 2].forEach((v, i) => (cube.eo[LL_EDGES[i]] = v));
+              classes.add(ollClassKey(cube));
+            }
+          }
+        }
+      }
+    }
+  }
+  return classes;
+}
+
+function permutationsOf(items: number[]): number[][] {
+  if (items.length <= 1) return [items];
+  const out: number[][] = [];
+  items.forEach((item, i) => {
+    for (const rest of permutationsOf(items.filter((_, j) => j !== i))) out.push([item, ...rest]);
+  });
+  return out;
+}
+
+/** Every legal last-layer permutation: corner and edge parity must agree. */
+function everyPermutationClass(): Set<string> {
+  const parity = (p: number[]) => {
+    let swaps = 0;
+    for (let i = 0; i < p.length; i++) for (let j = i + 1; j < p.length; j++) if (p[i] > p[j]) swaps++;
+    return swaps % 2;
+  };
+  const classes = new Set<string>();
+  const perms = permutationsOf([0, 1, 2, 3]);
+  for (const cp of perms) {
+    for (const ep of perms) {
+      if (parity(cp) !== parity(ep)) continue;
+      const cube = new Cube();
+      cp.forEach((v, i) => (cube.cp[LL_CORNERS[i]] = v));
+      ep.forEach((v, i) => (cube.ep[LL_EDGES[i]] = v));
+      classes.add(pllClassKey(cube));
+    }
+  }
+  return classes;
+}
+
 describe("PLL_CASES", () => {
   beforeAll(() => {
     Cube.initSolver();
@@ -80,6 +177,25 @@ describe("PLL_CASES", () => {
       checkCaseIntegrity(c);
     },
   );
+
+  it("covers all 21 permutation classes, one algorithm each", () => {
+    const all = everyPermutationClass();
+    const solvedKey = pllClassKey(new Cube());
+    expect(all.size).toBe(22); // the 21 cases plus an already-permuted layer
+
+    const covered = new Map<string, string[]>();
+    for (const c of PLL_CASES) {
+      const key = pllClassKey(caseStateFor(c.alg));
+      covered.set(key, [...(covered.get(key) ?? []), c.name]);
+    }
+
+    const duplicates = [...covered].filter(([, names]) => names.length > 1);
+    expect(duplicates, `cases sharing one permutation: ${JSON.stringify(duplicates)}`).toEqual([]);
+    expect(covered.has(solvedKey), "an entry that permutes nothing").toBe(false);
+
+    const missing = [...all].filter((k) => k !== solvedKey && !covered.has(k));
+    expect(missing, `permutation classes with no algorithm: ${missing.join(", ")}`).toEqual([]);
+  });
 });
 
 describe("OLL_CASES", () => {
@@ -98,4 +214,27 @@ describe("OLL_CASES", () => {
       checkCaseIntegrity(c);
     },
   );
+
+  it("covers all 57 orientation classes, one algorithm each", () => {
+    const all = everyOrientationClass();
+    const solvedKey = ollClassKey(new Cube());
+    expect(all.size).toBe(58); // the 57 cases plus an already-oriented layer
+
+    const covered = new Map<string, string[]>();
+    for (const c of OLL_CASES) {
+      const key = ollClassKey(caseStateFor(c.alg));
+      covered.set(key, [...(covered.get(key) ?? []), c.name]);
+    }
+
+    const duplicates = [...covered].filter(([, names]) => names.length > 1);
+    expect(duplicates, `cases sharing one orientation: ${JSON.stringify(duplicates)}`).toEqual([]);
+    expect(covered.has(solvedKey), "an entry that orients nothing").toBe(false);
+
+    const missing = [...all].filter((k) => k !== solvedKey && !covered.has(k));
+    expect(missing, `orientation classes with no algorithm: ${missing.join(", ")}`).toEqual([]);
+  });
+
+  it("names every case uniquely", () => {
+    expect(new Set(OLL_CASES.map((c) => c.name)).size).toBe(OLL_CASES.length);
+  });
 });

@@ -3,6 +3,7 @@
 import type { WorkerRequest, WorkerResponse } from "./worker";
 import type { CFOPSolution } from "../solvers/cfop";
 import type { TrainerMode } from "../solvers/trainerState";
+import type { AnalyzeInput, AnalyzeResult } from "../analysis/analyze";
 
 type Pending = {
   resolve: (value: WorkerResponse) => void;
@@ -17,8 +18,8 @@ class CubeEngineClient {
 
   private getWorker(): Worker {
     if (!this.worker) {
-      this.worker = new Worker(new URL("./worker.ts", import.meta.url));
-      this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+      const worker = new Worker(new URL("./worker.ts", import.meta.url));
+      worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
         const res = e.data;
         const p = this.pending.get(res.id);
         if (!p) return;
@@ -26,6 +27,23 @@ class CubeEngineClient {
         if (res.type === "error") p.reject(new Error(res.message));
         else p.resolve(res);
       };
+      // A worker that fails to load, or dies mid-task, never sends a reply —
+      // so without this every caller waits forever and the UI sits on a
+      // spinner with nothing to show and no way to retry. Fail the in-flight
+      // work loudly and drop the worker so the next call builds a fresh one.
+      const abort = (message: string) => {
+        for (const [, pending] of this.pending) pending.reject(new Error(message));
+        this.pending.clear();
+        this.worker = null;
+        this.readyPromise = null;
+      };
+      worker.onerror = (e: ErrorEvent) => {
+        abort(e.message || "The cube engine worker failed to start.");
+      };
+      worker.onmessageerror = () => {
+        abort("The cube engine worker sent a message that couldn't be read.");
+      };
+      this.worker = worker;
     }
     return this.worker;
   }
@@ -63,6 +81,12 @@ class CubeEngineClient {
     const res = await this.send({ type: "solveCFOP", scramble });
     if (res.type !== "solveCFOP") throw new Error("Unexpected worker response");
     return res.solution;
+  }
+
+  async analyzeSolve(input: AnalyzeInput): Promise<AnalyzeResult> {
+    const res = await this.send({ type: "analyze", input });
+    if (res.type !== "analyze") throw new Error("Unexpected worker response");
+    return res.result;
   }
 
   async generateTrainerState(mode: TrainerMode): Promise<string> {
