@@ -72,7 +72,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold">Settings</h2>
-          <button type="button" onClick={onClose} className="tap-target -mr-2 text-muted hover:text-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="tap-target -mr-2 text-muted hover:text-foreground"
+          >
             <X size={18} />
           </button>
         </div>

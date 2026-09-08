@@ -10,7 +10,7 @@ import { InsightsPanel } from "@/components/stats/InsightsPanel";
 import { ScrambleBar } from "@/components/scramble/ScrambleBar";
 import { HintPanel } from "@/components/scramble/HintPanel";
 import { TimerView } from "@/components/timer/TimerView";
-import { TrainerView } from "@/components/trainer/TrainerView";
+import { TrainerHub } from "@/components/trainer/TrainerHub";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
@@ -72,13 +72,18 @@ export default function Home() {
         <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 px-4 lg:pb-4">
           <div
             className={cn(
-              "min-h-0 flex-col items-center justify-center gap-4 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-0",
+              // No justify-center here: combined with overflow-y-auto, centering
+              // pushes overflow content into negative (unreachable) scroll space
+              // once it's taller than the viewport — see TrainerHub's Library
+              // sub-view. Components that want vertical centering while short
+              // (TimerView) already do it themselves via their own flex-1.
+              "min-h-0 flex-col items-center gap-4 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-0",
               mainPaneActive ? "flex" : "hidden",
               "lg:flex",
             )}
           >
             {tab === "trainer" ? (
-              <TrainerView />
+              <TrainerHub />
             ) : (
               <>
                 <TimerView />
