@@ -2,6 +2,7 @@
 
 import type { WorkerRequest, WorkerResponse } from "./worker";
 import type { CFOPSolution } from "../solvers/cfop";
+import type { TrainerMode } from "../solvers/trainerState";
 
 type Pending = {
   resolve: (value: WorkerResponse) => void;
@@ -62,6 +63,12 @@ class CubeEngineClient {
     const res = await this.send({ type: "solveCFOP", scramble });
     if (res.type !== "solveCFOP") throw new Error("Unexpected worker response");
     return res.solution;
+  }
+
+  async generateTrainerState(mode: TrainerMode): Promise<string> {
+    const res = await this.send({ type: "trainerState", mode });
+    if (res.type !== "trainerState") throw new Error("Unexpected worker response");
+    return res.setupAlg;
   }
 }
 

@@ -1,10 +1,11 @@
 "use client";
 
-import { Timer as TimerIcon, BarChart3, ListOrdered } from "lucide-react";
+import { Timer as TimerIcon, BarChart3, ListOrdered, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const TABS = [
   { id: "timer", label: "Timer", icon: TimerIcon },
+  { id: "trainer", label: "Trainer", icon: Repeat },
   { id: "stats", label: "Stats", icon: BarChart3 },
   { id: "solves", label: "Solves", icon: ListOrdered },
 ] as const;

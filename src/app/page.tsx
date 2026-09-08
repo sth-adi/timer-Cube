@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings } from "lucide-react";
+import { Settings, Timer as TimerIcon, Repeat } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { SolveList } from "@/components/sessions/SolveList";
@@ -10,6 +10,7 @@ import { InsightsPanel } from "@/components/stats/InsightsPanel";
 import { ScrambleBar } from "@/components/scramble/ScrambleBar";
 import { HintPanel } from "@/components/scramble/HintPanel";
 import { TimerView } from "@/components/timer/TimerView";
+import { TrainerView } from "@/components/trainer/TrainerView";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
@@ -20,6 +21,8 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("timer");
 
+  const mainPaneActive = tab === "timer" || tab === "trainer";
+
   return (
     <>
       <AppBootstrap />
@@ -28,6 +31,30 @@ export default function Home() {
       <div className="flex min-h-svh flex-col">
         <header className="flex items-center justify-between px-3 py-2">
           <SessionSwitcher />
+
+          <div className="hidden items-center gap-1 rounded-full bg-bg-panel-2 p-1 lg:flex">
+            <button
+              type="button"
+              onClick={() => setTab("timer")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                tab !== "trainer" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
+              )}
+            >
+              <TimerIcon size={13} /> Timer
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("trainer")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                tab === "trainer" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
+              )}
+            >
+              <Repeat size={13} /> Trainer
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -46,18 +73,24 @@ export default function Home() {
           <div
             className={cn(
               "flex-col items-center justify-center gap-4",
-              tab === "timer" ? "flex" : "hidden",
+              mainPaneActive ? "flex" : "hidden",
               "lg:flex",
             )}
           >
-            <TimerView />
-            <HintPanel />
+            {tab === "trainer" ? (
+              <TrainerView />
+            ) : (
+              <>
+                <TimerView />
+                <HintPanel />
+              </>
+            )}
           </div>
 
           <aside
             className={cn(
               "flex-col gap-4 pb-2",
-              tab !== "timer" ? "flex" : "hidden",
+              !mainPaneActive ? "flex" : "hidden",
               "lg:flex lg:overflow-y-auto",
             )}
           >

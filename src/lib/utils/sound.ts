@@ -38,3 +38,8 @@ export function playPBChime(): void {
   beep(880, 0, 90, 0.06);
   beep(1318.5, 0.09, 160, 0.07);
 }
+
+/** A short warning beep for the WCA 15s inspection countdown, matching the 8s/12s cues used at competitions. */
+export function playInspectionBeep(): void {
+  beep(660, 0, 70, 0.045);
+}

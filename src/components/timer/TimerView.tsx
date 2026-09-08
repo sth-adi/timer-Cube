@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
-import { playSolveChime } from "@/lib/utils/sound";
+import { playSolveChime, playInspectionBeep } from "@/lib/utils/sound";
 
 const PHASE_COLOR: Record<string, string> = {
   idle: "text-foreground",
@@ -89,6 +89,25 @@ export function TimerView() {
   // directly (see useTimer's press()), which is when the display clears.
 
   const showInspection = (phase === "inspecting" || phase === "holding" || phase === "ready") && inspectionEnabled;
+
+  // WCA-style 8s/12s audible inspection warnings. Tracked with a ref (not
+  // state) since these are one-shot side effects per inspection, not
+  // something that should trigger a re-render; reset once the cycle ends.
+  const beepedRef = useRef({ eight: false, twelve: false });
+  useEffect(() => {
+    if (!showInspection || !soundEnabled) return;
+    if (!beepedRef.current.eight && inspectionRemainingMs <= 7000) {
+      beepedRef.current.eight = true;
+      playInspectionBeep();
+    }
+    if (!beepedRef.current.twelve && inspectionRemainingMs <= 3000) {
+      beepedRef.current.twelve = true;
+      playInspectionBeep();
+    }
+  }, [showInspection, soundEnabled, inspectionRemainingMs]);
+  useEffect(() => {
+    if (phase === "idle") beepedRef.current = { eight: false, twelve: false };
+  }, [phase]);
 
   return (
     <div

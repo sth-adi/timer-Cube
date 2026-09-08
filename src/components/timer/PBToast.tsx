@@ -4,8 +4,11 @@ import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useSettingsStore } from "@/lib/store/settingsStore";
 import { formatTime } from "@/lib/utils/time";
 import { vibrate } from "@/lib/utils/haptics";
+import { playPBChime } from "@/lib/utils/sound";
+import { fireConfetti } from "@/lib/utils/confetti";
 
 const LABEL: Record<string, string> = {
   single: "New personal best!",
@@ -16,12 +19,16 @@ const LABEL: Record<string, string> = {
 export function PBToast() {
   const lastPB = useSessionStore((s) => s.lastPB);
   const clearPB = useSessionStore((s) => s.clearPB);
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
 
   useEffect(() => {
     if (!lastPB) return;
     vibrate(lastPB.kind === "single" ? [40, 60, 80] : 50);
+    if (soundEnabled) playPBChime();
+    if (lastPB.kind === "single") fireConfetti();
     const t = setTimeout(() => clearPB(), 2800);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastPB, clearPB]);
 
   return (

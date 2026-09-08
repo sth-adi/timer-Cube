@@ -2,18 +2,21 @@
 import { ensureSolverReady, generateScramble333, normalizeAlg } from "./engine";
 import { solveCrossOptimal } from "../solvers/cross";
 import { solveCFOP } from "../solvers/cfop";
+import { buildTrainerState, type TrainerMode } from "../solvers/trainerState";
 
 export type WorkerRequest =
   | { id: number; type: "init" }
   | { id: number; type: "scramble" }
   | { id: number; type: "solveCross"; scramble: string }
-  | { id: number; type: "solveCFOP"; scramble: string };
+  | { id: number; type: "solveCFOP"; scramble: string }
+  | { id: number; type: "trainerState"; mode: TrainerMode };
 
 export type WorkerResponse =
   | { id: number; type: "ready" }
   | { id: number; type: "scramble"; scramble: string }
   | { id: number; type: "solveCross"; moves: string[] }
   | { id: number; type: "solveCFOP"; solution: ReturnType<typeof solveCFOP> }
+  | { id: number; type: "trainerState"; setupAlg: string }
   | { id: number; type: "error"; message: string };
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -51,6 +54,11 @@ ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       case "solveCFOP": {
         const solution = solveCFOP(normalizeAlg(msg.scramble));
         ctx.postMessage({ id: msg.id, type: "solveCFOP", solution } satisfies WorkerResponse);
+        break;
+      }
+      case "trainerState": {
+        const { setupAlg } = buildTrainerState(msg.mode);
+        ctx.postMessage({ id: msg.id, type: "trainerState", setupAlg } satisfies WorkerResponse);
         break;
       }
     }
