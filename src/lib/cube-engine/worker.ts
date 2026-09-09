@@ -4,6 +4,7 @@ import { solveCrossOptimal } from "../solvers/cross";
 import { solveCFOP } from "../solvers/cfop";
 import { buildTrainerState, type TrainerMode } from "../solvers/trainerState";
 import { analyzeSolve, type AnalyzeInput, type AnalyzeResult } from "../analysis/analyze";
+import { gradeCrossAttempt, type CrossDrillInput, type CrossDrillOutcome } from "../analysis/crossDrill";
 
 export type WorkerRequest =
   | { id: number; type: "init" }
@@ -11,7 +12,8 @@ export type WorkerRequest =
   | { id: number; type: "solveCross"; scramble: string }
   | { id: number; type: "solveCFOP"; scramble: string }
   | { id: number; type: "trainerState"; mode: TrainerMode }
-  | { id: number; type: "analyze"; input: AnalyzeInput };
+  | { id: number; type: "analyze"; input: AnalyzeInput }
+  | { id: number; type: "gradeCross"; input: CrossDrillInput };
 
 export type WorkerResponse =
   | { id: number; type: "ready" }
@@ -20,6 +22,7 @@ export type WorkerResponse =
   | { id: number; type: "solveCFOP"; solution: ReturnType<typeof solveCFOP> }
   | { id: number; type: "trainerState"; setupAlg: string }
   | { id: number; type: "analyze"; result: AnalyzeResult }
+  | { id: number; type: "gradeCross"; result: CrossDrillOutcome }
   | { id: number; type: "error"; message: string };
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -62,6 +65,11 @@ ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       case "trainerState": {
         const { setupAlg } = buildTrainerState(msg.mode);
         ctx.postMessage({ id: msg.id, type: "trainerState", setupAlg } satisfies WorkerResponse);
+        break;
+      }
+      case "gradeCross": {
+        const result = gradeCrossAttempt(msg.input);
+        ctx.postMessage({ id: msg.id, type: "gradeCross", result } satisfies WorkerResponse);
         break;
       }
       case "analyze": {

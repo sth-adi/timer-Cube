@@ -9,6 +9,12 @@ export interface Solve {
   scramble: string;
   date: number; // epoch ms
   comment?: string;
+  /**
+   * Cumulative elapsed time at each phase boundary the cuber marked during the
+   * solve, in ms, excluding the final stop (which is `timeMs`). A 4-phase solve
+   * therefore has 3 entries. Absent on solves timed without phase splits on.
+   */
+  splits?: number[];
 }
 
 export interface Session {

@@ -6,6 +6,7 @@ export async function addSolve(input: {
   timeMs: number;
   scramble: string;
   penalty?: Penalty;
+  splits?: number[];
 }): Promise<Solve> {
   const solve: Solve = {
     id: newId(),
@@ -14,6 +15,9 @@ export async function addSolve(input: {
     penalty: input.penalty ?? "none",
     scramble: input.scramble,
     date: Date.now(),
+    // Omitted rather than stored empty, so "was this solve phase-timed?" is a
+    // simple presence check everywhere downstream.
+    ...(input.splits && input.splits.length > 0 ? { splits: input.splits } : {}),
   };
   await db.solves.add(solve);
   return solve;
@@ -43,7 +47,7 @@ export async function deleteAllSolvesForSession(sessionId: string): Promise<void
 /** Bulk-imports solves into a session, assigning fresh ids so they never collide with existing rows. */
 export async function importSolves(
   sessionId: string,
-  solves: Array<Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment">>,
+  solves: Array<Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits">>,
 ): Promise<number> {
   const rows: Solve[] = solves.map((s) => ({
     id: newId(),
@@ -53,6 +57,7 @@ export async function importSolves(
     scramble: s.scramble,
     date: s.date,
     comment: s.comment,
+    ...(s.splits && s.splits.length > 0 ? { splits: s.splits } : {}),
   }));
   await db.solves.bulkAdd(rows);
   return rows.length;

@@ -6,6 +6,7 @@ import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime, parseTimeInput } from "@/lib/utils/time";
 import type { PhaseAnalysis, Severity } from "@/lib/analysis/analyze";
+import { SolveReplay } from "./SolveReplay";
 import { cn } from "@/lib/utils/cn";
 
 const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string; label: string }> = {
@@ -228,6 +229,10 @@ export function AnalyzerView() {
               )}
             </div>
           </div>
+
+          {phases.length > 0 && (
+            <SolveReplay scramble={result.scramble} phases={phases} moves={result.moves} />
+          )}
 
           {phases.length > 0 && (
             <div className="card animate-fade-in-up rounded-xl p-3">

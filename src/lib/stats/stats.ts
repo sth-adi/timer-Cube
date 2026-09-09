@@ -468,3 +468,81 @@ export function computeSessionStats(solves: Solve[]): SessionStats {
     stdDev,
   };
 }
+
+export interface PhaseAverage {
+  label: string;
+  /** Mean duration of this phase, in ms. */
+  meanMs: number;
+  /** Best (fastest) recorded duration for this phase, in ms. */
+  bestMs: number;
+  /** Share of the average solve this phase accounts for, 0-1. */
+  share: number;
+}
+
+export interface PhaseSplitSummary {
+  /** Solves that carry usable splits — the sample these averages come from. */
+  sampleSize: number;
+  phases: PhaseAverage[];
+  /** Mean total time across the sampled solves, in ms. */
+  meanTotalMs: number;
+}
+
+/**
+ * Averages each phase across every solve timed with the same number of phases.
+ *
+ * Solves are grouped by phase count and the largest group wins, because mixing
+ * a 3-phase solve into 4-phase averages would silently compare "F2L" against
+ * "Cross" — a number that looks fine and means nothing. DNFs are excluded for
+ * the same reason they're excluded from averages: the phases after the mistake
+ * aren't a measurement of anything.
+ */
+export function computePhaseSplits(solves: Solve[], labelsFor: (count: number) => readonly string[]): PhaseSplitSummary | null {
+  const usable = solves.filter(
+    (s) => s.penalty !== "dnf" && s.splits && s.splits.length > 0 && s.splits.every((v, i, arr) => v >= 0 && (i === 0 || v >= arr[i - 1])),
+  );
+  if (usable.length === 0) return null;
+
+  const byCount = new Map<number, Solve[]>();
+  for (const solve of usable) {
+    const count = solve.splits!.length + 1;
+    byCount.set(count, [...(byCount.get(count) ?? []), solve]);
+  }
+
+  let group: Solve[] = [];
+  let phaseCount = 0;
+  for (const [count, rows] of byCount) {
+    if (rows.length > group.length) {
+      group = rows;
+      phaseCount = count;
+    }
+  }
+
+  const labels = labelsFor(phaseCount);
+  const durations: number[][] = Array.from({ length: phaseCount }, () => []);
+  let totalSum = 0;
+
+  for (const solve of group) {
+    const boundaries = [0, ...solve.splits!, solve.timeMs];
+    // A split recorded after the stop, or a total shorter than a split, means
+    // the marks were mistimed; that solve isn't evidence about anything.
+    if (boundaries.some((v, i) => i > 0 && v < boundaries[i - 1])) continue;
+    for (let i = 0; i < phaseCount; i++) durations[i].push(boundaries[i + 1] - boundaries[i]);
+    totalSum += solve.timeMs;
+  }
+
+  const sampleSize = durations[0]?.length ?? 0;
+  if (sampleSize === 0) return null;
+
+  const meanTotalMs = totalSum / sampleSize;
+  const phases = durations.map((values, i) => {
+    const meanMs = values.reduce((a, b) => a + b, 0) / values.length;
+    return {
+      label: labels[i] ?? `Phase ${i + 1}`,
+      meanMs,
+      bestMs: Math.min(...values),
+      share: meanTotalMs > 0 ? meanMs / meanTotalMs : 0,
+    };
+  });
+
+  return { sampleSize, phases, meanTotalMs };
+}

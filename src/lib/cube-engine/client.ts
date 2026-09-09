@@ -4,6 +4,7 @@ import type { WorkerRequest, WorkerResponse } from "./worker";
 import type { CFOPSolution } from "../solvers/cfop";
 import type { TrainerMode } from "../solvers/trainerState";
 import type { AnalyzeInput, AnalyzeResult } from "../analysis/analyze";
+import type { CrossDrillInput, CrossDrillOutcome } from "../analysis/crossDrill";
 
 type Pending = {
   resolve: (value: WorkerResponse) => void;
@@ -86,6 +87,12 @@ class CubeEngineClient {
   async analyzeSolve(input: AnalyzeInput): Promise<AnalyzeResult> {
     const res = await this.send({ type: "analyze", input });
     if (res.type !== "analyze") throw new Error("Unexpected worker response");
+    return res.result;
+  }
+
+  async gradeCross(input: CrossDrillInput): Promise<CrossDrillOutcome> {
+    const res = await this.send({ type: "gradeCross", input });
+    if (res.type !== "gradeCross") throw new Error("Unexpected worker response");
     return res.result;
   }
 

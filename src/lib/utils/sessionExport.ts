@@ -10,6 +10,7 @@ export interface SessionExport {
     scramble: string;
     date: number;
     comment?: string;
+    splits?: number[];
   }>;
 }
 
@@ -24,6 +25,7 @@ export function buildSessionExport(sessionName: string, solves: Solve[]): Sessio
       scramble: s.scramble,
       date: s.date,
       comment: s.comment,
+      splits: s.splits,
     })),
   };
 }
@@ -61,6 +63,12 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
       scramble: typeof s.scramble === "string" ? s.scramble : "",
       date: typeof s.date === "number" ? s.date : Date.now(),
       comment: typeof s.comment === "string" ? s.comment : undefined,
+      // Older exports predate phase splits, and a hand-edited file can carry
+      // anything, so only a clean array of finite numbers is taken.
+      splits:
+        Array.isArray(s.splits) && s.splits.every((v) => typeof v === "number" && Number.isFinite(v))
+          ? (s.splits as number[])
+          : undefined,
     };
   });
 }

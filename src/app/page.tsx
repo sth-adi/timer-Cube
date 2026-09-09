@@ -7,6 +7,7 @@ import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { SolveList } from "@/components/sessions/SolveList";
 import { StatsPanel } from "@/components/stats/StatsPanel";
 import { InsightsPanel } from "@/components/stats/InsightsPanel";
+import { PhaseSplitsCard } from "@/components/stats/PhaseSplitsCard";
 import { ScrambleBar } from "@/components/scramble/ScrambleBar";
 import { HintPanel } from "@/components/scramble/HintPanel";
 import { TimerView } from "@/components/timer/TimerView";
@@ -129,6 +130,7 @@ export default function Home() {
           >
             <div className={cn("flex-col gap-3", tab === "stats" ? "flex" : "hidden", "lg:flex")}>
               <StatsPanel />
+              <PhaseSplitsCard />
               <InsightsPanel />
             </div>
             <div className={cn("flex-col lg:flex-1", tab === "solves" ? "flex" : "hidden", "lg:flex")}>

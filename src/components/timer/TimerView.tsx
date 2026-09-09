@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useTimer } from "@/hooks/useTimer";
-import { useSettingsStore } from "@/lib/store/settingsStore";
+import { PHASE_LABELS, useSettingsStore } from "@/lib/store/settingsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime } from "@/lib/utils/time";
@@ -19,27 +19,83 @@ const PHASE_COLOR: Record<string, string> = {
   stopped: "text-foreground",
 };
 
+/**
+ * Live phase strip for a multiphase solve: each phase shows its own duration
+ * rather than the running total, since "how long was my PLL" is the question
+ * splits exist to answer. The phase in progress counts up.
+ */
+function PhaseTrack({
+  labels,
+  splits,
+  phaseIndex,
+  runningMs,
+  finished,
+  hideTimes,
+}: {
+  labels: readonly string[];
+  splits: number[];
+  phaseIndex: number;
+  runningMs: number;
+  finished: boolean;
+  /** Honours "hide time while solving": which phase you're on is fine to show, how long it took isn't. */
+  hideTimes: boolean;
+}) {
+  const boundaries = [0, ...splits];
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+      {labels.map((label, i) => {
+        const done = i < splits.length || (finished && i === splits.length);
+        const active = !finished && i === phaseIndex;
+        const end = i < splits.length ? splits[i] : runningMs;
+        const duration = end - (boundaries[i] ?? 0);
+        return (
+          <div key={label} className="flex flex-col items-center">
+            <span
+              className={cn(
+                "text-[10px] uppercase tracking-wide",
+                active ? "text-accent" : done ? "text-muted" : "text-muted-2",
+              )}
+            >
+              {label}
+            </span>
+            <span
+              className={cn(
+                "tabular-timer text-sm font-medium",
+                active ? "text-accent" : done ? "text-foreground" : "text-muted-2",
+              )}
+            >
+              {hideTimes ? "·" : done || active ? formatTime(duration) : "—"}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function TimerView() {
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
   const holdToStartMs = useSettingsStore((s) => s.holdToStartMs);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
+  const phaseCount = useSettingsStore((s) => s.phaseCount);
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
 
   const onComplete = useCallback(
-    (timeMs: number) => {
-      recordSolve(timeMs, scramble);
+    (timeMs: number, solveSplits: number[]) => {
+      recordSolve(timeMs, scramble, solveSplits);
       if (soundEnabled) playSolveChime();
       void nextScramble();
     },
     [recordSolve, scramble, nextScramble, soundEnabled],
   );
 
-  const { phase, displayMs, inspectionRemainingMs, press, release, reset } = useTimer({
+  const { phase, displayMs, inspectionRemainingMs, splits, phaseIndex, press, release, reset } = useTimer({
     inspectionEnabled,
     holdToStartMs,
+    phaseCount,
     onComplete,
   });
 
@@ -91,6 +147,8 @@ export function TimerView() {
   // directly (see useTimer's press()), which is when the display clears.
 
   const showInspection = (phase === "inspecting" || phase === "holding" || phase === "ready") && inspectionEnabled;
+  const labels = PHASE_LABELS[phaseCount];
+  const multiphase = phaseCount > 1;
 
   // WCA-style 8s/12s audible inspection warnings. Tracked with a ref (not
   // state) since these are one-shot side effects per inspection, not
@@ -139,8 +197,22 @@ export function TimerView() {
       >
         {hideTimeWhileSolving && phase === "running" ? "solving" : formatTime(displayMs)}
       </p>
+      {multiphase && (phase === "running" || phase === "stopped") && (
+        <PhaseTrack
+          labels={labels}
+          splits={splits}
+          phaseIndex={phaseIndex}
+          runningMs={displayMs}
+          finished={phase === "stopped"}
+          hideTimes={hideTimeWhileSolving && phase === "running"}
+        />
+      )}
+
       {phase === "idle" && (
-        <p className="text-muted-2 text-sm">hold space to start{inspectionEnabled ? " (inspection on)" : ""}</p>
+        <p className="text-muted-2 text-sm">
+          hold space to start{inspectionEnabled ? " (inspection on)" : ""}
+          {multiphase && ` · ${phaseCount} phases`}
+        </p>
       )}
       {phase === "stopped" && <p className="text-muted-2 text-sm">space for next scramble</p>}
     </div>

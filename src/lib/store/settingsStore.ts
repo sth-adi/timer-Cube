@@ -3,6 +3,22 @@ import { persist } from "zustand/middleware";
 
 export type InputMethod = "spacebar" | "tap";
 
+/**
+ * How many phases a solve is timed in. 1 is an ordinary single-stop timer;
+ * above that, each press marks the end of a phase and only the last one stops
+ * the clock — the same "multiphase" convention other timers use.
+ */
+export const PHASE_COUNTS = [1, 2, 3, 4] as const;
+export type PhaseCount = (typeof PHASE_COUNTS)[number];
+
+/** Names for each phase, by how many the solve is split into. */
+export const PHASE_LABELS: Record<PhaseCount, readonly string[]> = {
+  1: ["Solve"],
+  2: ["F2L", "Last layer"],
+  3: ["F2L", "OLL", "PLL"],
+  4: ["Cross", "F2L", "OLL", "PLL"],
+};
+
 export const THEMES = [
   { id: "nebula", name: "Nebula", swatch: "#7c5cff" },
   { id: "mint", name: "Mint", swatch: "#2dd4bf" },
@@ -26,6 +42,8 @@ export interface SettingsState {
   dailyGoal: number;
   /** Blanks the running digits so you can't pace yourself against them mid-solve. */
   hideTimeWhileSolving: boolean;
+  /** Number of phases each solve is timed in; 1 means a plain single-stop timer. */
+  phaseCount: PhaseCount;
   setInspectionEnabled: (v: boolean) => void;
   setInputMethod: (v: InputMethod) => void;
   setHoldToStartMs: (v: number) => void;
@@ -34,6 +52,7 @@ export interface SettingsState {
   setSoundEnabled: (v: boolean) => void;
   setDailyGoal: (v: number) => void;
   setHideTimeWhileSolving: (v: boolean) => void;
+  setPhaseCount: (v: PhaseCount) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -47,6 +66,7 @@ export const useSettingsStore = create<SettingsState>()(
       soundEnabled: false,
       dailyGoal: 20,
       hideTimeWhileSolving: false,
+      phaseCount: 1,
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
@@ -55,6 +75,7 @@ export const useSettingsStore = create<SettingsState>()(
       setSoundEnabled: (v) => set({ soundEnabled: v }),
       setDailyGoal: (v) => set({ dailyGoal: v }),
       setHideTimeWhileSolving: (v) => set({ hideTimeWhileSolving: v }),
+      setPhaseCount: (v) => set({ phaseCount: v }),
     }),
     {
       name: "cube-timer-settings",

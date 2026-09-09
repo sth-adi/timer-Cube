@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { TrainerView } from "./TrainerView";
 import { AlgorithmsView } from "@/components/algorithms/AlgorithmsView";
+import { CrossDrill } from "./CrossDrill";
 import { cn } from "@/lib/utils/cn";
 
 export function TrainerHub() {
-  const [mode, setMode] = useState<"drill" | "library">("drill");
+  const [mode, setMode] = useState<"drill" | "cross" | "library">("drill");
 
   return (
     <div className="flex w-full flex-1 flex-col items-center gap-3">
       <div className="flex gap-2">
-        {(["drill", "library"] as const).map((m) => (
+        {(["drill", "cross", "library"] as const).map((m) => (
           <button
             key={m}
             type="button"
@@ -26,7 +27,7 @@ export function TrainerHub() {
         ))}
       </div>
 
-      {mode === "drill" ? <TrainerView /> : <AlgorithmsView />}
+      {mode === "drill" ? <TrainerView /> : mode === "cross" ? <CrossDrill /> : <AlgorithmsView />}
     </div>
   );
 }

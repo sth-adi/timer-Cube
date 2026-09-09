@@ -10,6 +10,8 @@ A fast, aesthetic, local-first speedcubing timer for 3x3, built to be genuinely 
 - **Hidden solve hints** — a "solve hints" reveal (off by default, so it's never visible mid-solve) shows:
   - The **optimal cross** (guaranteed shortest, computed with a full exact pruning table).
   - A **full CFOP solution** — cross, then all 4 F2L pairs (cheapest-first, keeping earlier work intact), then OLL, then PLL — computed from scratch via IDA* search against the actual cube engine, not a canned algorithm list. Every solution is verified to actually solve the cube before it's shown.
+- **Phase splits** — time a solve in 2, 3 or 4 phases: each press marks a boundary and only the last one stops the clock, so Stats can show what your Cross/F2L/OLL/PLL actually cost, and how far your average sits from your own best for each.
+- **Cross trainer** — plan a cross during inspection, type it, and get graded against the provably shortest cross for that scramble (exact, from a complete lookup table). Works whether you hold the cross on the bottom or the top.
 - **Solve analyzer** — paste a reconstruction and get a phase-by-phase post-mortem: where the cross, each F2L slot, OLL and PLL began and ended, what each phase cost, and what it could have cost *from the position you were actually in*. See below.
 - A live 3D cube (via [cubing.js](https://github.com/cubing/cubing.js)'s `<twisty-player>`) can preview any hint.
 
@@ -41,6 +43,13 @@ you where the time went.
   only means something if the shorter route was available from where they stood.
   The cross reference is provably shortest (exact table); the rest are shortest
   within the search budget.
+- `crossDrill.ts` grades a planned cross the same way, and is what the cross
+  trainer runs on. Only the attempt is relabeled, not the scramble: the scramble
+  was applied in the standard orientation and it's the *grip* that's rotated.
+
+The result is replayable, not just readable — `SolveReplay` loads each phase
+into the 3D cube with everything before it applied silently as the setup, so the
+cube opens exactly as it looked when that phase began.
 
 ## Last-layer case data
 

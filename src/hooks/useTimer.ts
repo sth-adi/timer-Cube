@@ -9,13 +9,23 @@ const INSPECTION_MS = 15_000;
 export interface UseTimerOptions {
   inspectionEnabled: boolean;
   holdToStartMs: number;
-  onComplete: (timeMs: number) => void;
+  /**
+   * How many phases to time the solve in. 1 is an ordinary timer; above that,
+   * the first `phaseCount - 1` presses each mark a phase boundary and only the
+   * last one stops the clock.
+   */
+  phaseCount?: number;
+  onComplete: (timeMs: number, splits: number[]) => void;
 }
 
 export interface TimerEngine {
   phase: TimerPhase;
   displayMs: number;
   inspectionRemainingMs: number;
+  /** Cumulative times at each phase boundary marked so far, in ms. */
+  splits: number[];
+  /** Which phase is being timed right now, 0-based. */
+  phaseIndex: number;
   /** Call on keydown(space)/touchstart. */
   press: () => void;
   /** Call on keyup(space)/touchend. */
@@ -29,10 +39,20 @@ export interface TimerEngine {
  *  holdToStartMs turns "ready" (green) -> release -> running -> (press) ->
  *  stopped (records time).
  */
-export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTimerOptions): TimerEngine {
+export function useTimer({
+  inspectionEnabled,
+  holdToStartMs,
+  phaseCount = 1,
+  onComplete,
+}: UseTimerOptions): TimerEngine {
   const [phase, setPhase] = useState<TimerPhase>("idle");
   const [displayMs, setDisplayMs] = useState(0);
   const [inspectionRemainingMs, setInspectionRemainingMs] = useState(INSPECTION_MS);
+  const [splits, setSplits] = useState<number[]>([]);
+
+  // Read inside press(), which must see the marks recorded by earlier presses
+  // in the same solve without being re-created between them.
+  const splitsRef = useRef<number[]>([]);
 
   const phaseRef = useRef<TimerPhase>("idle");
   const holdStartedAt = useRef<number | null>(null);
@@ -88,12 +108,20 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
     const p = phaseRef.current;
 
     if (p === "running") {
-      // Stop the timer.
-      clearRaf();
       const elapsed = runStartedAt.current !== null ? performance.now() - runStartedAt.current : 0;
+
+      // Mid-solve press with phases left to mark: record the boundary and keep
+      // the clock running rather than stopping it.
+      if (splitsRef.current.length < phaseCount - 1) {
+        splitsRef.current = [...splitsRef.current, elapsed];
+        setSplits(splitsRef.current);
+        return;
+      }
+
+      clearRaf();
       setDisplayMs(elapsed);
       setPhaseBoth("stopped");
-      onComplete(elapsed);
+      onComplete(elapsed, splitsRef.current);
       return;
     }
 
@@ -101,6 +129,8 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
       // Clear the previous result now that a new attempt is actually
       // starting (it stayed on screen the whole time we sat at "stopped").
       setDisplayMs(0);
+      splitsRef.current = [];
+      setSplits([]);
       // First press: start inspection (if enabled) and arm with the full
       // hold delay — a deliberate anti-accidental-start safeguard for a
       // key that wasn't already being interacted with.
@@ -133,7 +163,7 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
       return;
     }
     // Already holding/ready: repeated keydown (auto-repeat) is a no-op.
-  }, [inspectionEnabled, holdToStartMs, onComplete, tickInspection]);
+  }, [inspectionEnabled, holdToStartMs, phaseCount, onComplete, tickInspection]);
 
   const release = useCallback(() => {
     const p = phaseRef.current;
@@ -167,6 +197,8 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
     inspectionStartedAt.current = null;
     setDisplayMs(0);
     setInspectionRemainingMs(INSPECTION_MS);
+    splitsRef.current = [];
+    setSplits([]);
     setPhaseBoth("idle");
   }, []);
 
@@ -175,5 +207,14 @@ export function useTimer({ inspectionEnabled, holdToStartMs, onComplete }: UseTi
     clearHoldTimeout();
   }, []);
 
-  return { phase, displayMs, inspectionRemainingMs, press, release, reset };
+  return {
+    phase,
+    displayMs,
+    inspectionRemainingMs,
+    splits,
+    phaseIndex: splits.length,
+    press,
+    release,
+    reset,
+  };
 }

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
-import { THEMES, useSettingsStore } from "@/lib/store/settingsStore";
+import { PHASE_COUNTS, PHASE_LABELS, THEMES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { cn } from "@/lib/utils/cn";
 
@@ -45,6 +45,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const dailyGoal = useSettingsStore((s) => s.dailyGoal);
   const setDailyGoal = useSettingsStore((s) => s.setDailyGoal);
   const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
+  const phaseCount = useSettingsStore((s) => s.phaseCount);
+  const setPhaseCount = useSettingsStore((s) => s.setPhaseCount);
   const setHideTimeWhileSolving = useSettingsStore((s) => s.setHideTimeWhileSolving);
 
   const exportActiveSession = useSessionStore((s) => s.exportActiveSession);
@@ -117,6 +119,33 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             onChange={setHideTimeWhileSolving}
             label="Hide time while solving"
           />
+        </div>
+
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Phase splits</p>
+          <div className="flex gap-1.5">
+            {PHASE_COUNTS.map((count) => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => setPhaseCount(count)}
+                aria-pressed={phaseCount === count}
+                className={cn(
+                  "flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors",
+                  phaseCount === count
+                    ? "bg-accent-soft text-accent"
+                    : "bg-bg-panel-2 text-muted hover:text-foreground",
+                )}
+              >
+                {count === 1 ? "Off" : `${count}`}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">
+            {phaseCount === 1
+              ? "One press stops the timer, as usual."
+              : `Press ${phaseCount} times: ${PHASE_LABELS[phaseCount].join(" → ")}. The last press stops the clock, and Stats shows where your time actually goes.`}
+          </p>
         </div>
 
         <div className="mt-3">

@@ -6,6 +6,7 @@ import {
   computeHistogram,
   computeHourOfDay,
   computePBHistory,
+  computePhaseSplits,
   computeSessionStats,
   rollingAverages,
 } from "./stats";
@@ -174,5 +175,75 @@ describe("computeAchievements", () => {
     const byId = Object.fromEntries(achievements.map((a) => [a.id, a]));
     expect(byId["streak-3"].unlocked).toBe(true);
     expect(byId["streak-7"].unlocked).toBe(false);
+  });
+});
+
+describe("computePhaseSplits", () => {
+  const labels = (count: number) =>
+    count === 4 ? ["Cross", "F2L", "OLL", "PLL"] : count === 3 ? ["F2L", "OLL", "PLL"] : ["Solve"];
+
+  const withSplits = (timeMs: number, splits: number[], extra: Partial<Solve> = {}): Solve => ({
+    id: Math.random().toString(36),
+    sessionId: "s",
+    timeMs,
+    penalty: "none",
+    scramble: "",
+    date: 0,
+    splits,
+    ...extra,
+  });
+
+  it("returns null when nothing was phase-timed", () => {
+    expect(computePhaseSplits([withSplits(10_000, [])], labels)).toBeNull();
+    expect(computePhaseSplits([], labels)).toBeNull();
+  });
+
+  it("averages each phase's own duration, not the running total", () => {
+    const summary = computePhaseSplits(
+      [withSplits(20_000, [2_000, 12_000, 16_000]), withSplits(24_000, [4_000, 14_000, 18_000])],
+      labels,
+    )!;
+    expect(summary.sampleSize).toBe(2);
+    expect(summary.phases.map((p) => p.label)).toEqual(["Cross", "F2L", "OLL", "PLL"]);
+    expect(summary.phases.map((p) => p.meanMs)).toEqual([3_000, 10_000, 4_000, 5_000]);
+    expect(summary.phases[0].bestMs).toBe(2_000);
+    // Shares are of the mean total, and account for the whole solve.
+    expect(summary.phases.reduce((n, p) => n + p.share, 0)).toBeCloseTo(1, 10);
+  });
+
+  it("ignores DNFs, whose later phases measure nothing", () => {
+    const summary = computePhaseSplits(
+      [
+        withSplits(20_000, [2_000, 12_000, 16_000]),
+        withSplits(60_000, [30_000, 40_000, 50_000], { penalty: "dnf" }),
+      ],
+      labels,
+    )!;
+    expect(summary.sampleSize).toBe(1);
+    expect(summary.phases[0].meanMs).toBe(2_000);
+  });
+
+  it("keeps phase counts apart rather than averaging across them", () => {
+    // Two 3-phase solves and one 4-phase: the larger group wins outright, so
+    // "F2L" is never averaged against "Cross".
+    const summary = computePhaseSplits(
+      [
+        withSplits(20_000, [10_000, 15_000]),
+        withSplits(24_000, [12_000, 18_000]),
+        withSplits(30_000, [3_000, 20_000, 25_000]),
+      ],
+      labels,
+    )!;
+    expect(summary.sampleSize).toBe(2);
+    expect(summary.phases).toHaveLength(3);
+    expect(summary.phases.map((p) => p.label)).toEqual(["F2L", "OLL", "PLL"]);
+  });
+
+  it("drops a solve whose marks run backwards", () => {
+    const summary = computePhaseSplits(
+      [withSplits(20_000, [2_000, 12_000, 16_000]), withSplits(10_000, [2_000, 4_000, 30_000])],
+      labels,
+    );
+    expect(summary!.sampleSize).toBe(1);
   });
 });

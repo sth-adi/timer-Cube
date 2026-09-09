@@ -42,7 +42,7 @@ interface SessionState {
   addSession: (name: string) => Promise<void>;
   renameActiveSession: (name: string) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
-  recordSolve: (timeMs: number, scramble: string) => Promise<void>;
+  recordSolve: (timeMs: number, scramble: string, splits?: number[]) => Promise<void>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
   removeSolve: (solveId: string) => Promise<void>;
@@ -103,13 +103,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble) => {
+  recordSolve: async (timeMs, scramble, splits) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return;
     const prevStats = computeSessionStats(prevSolves);
     const prevAchievements = computeAchievements(prevAllSolves);
 
-    await addSolve({ sessionId: activeSessionId, timeMs, scramble });
+    await addSolve({ sessionId: activeSessionId, timeMs, scramble, splits });
     const solves = await getSessionSolves(activeSessionId);
     const allSolves = await getAllSolves();
     const newStats = computeSessionStats(solves);
