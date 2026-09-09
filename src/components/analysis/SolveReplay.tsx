@@ -2,30 +2,52 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Play } from "lucide-react";
-import type { PhaseAnalysis } from "@/lib/analysis/analyze";
+import { AlertTriangle, CheckCircle2, Info, Lightbulb, Play } from "lucide-react";
+import { findingsForPhase, type Finding, type PhaseAnalysis, type Severity } from "@/lib/analysis/analyze";
 import { cn } from "@/lib/utils/cn";
 
 const CubeViewer = dynamic(() => import("@/components/scramble/CubeViewer").then((m) => m.CubeViewer), {
   ssr: false,
 });
 
+const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string }> = {
+  high: { icon: AlertTriangle, className: "text-danger" },
+  medium: { icon: Lightbulb, className: "text-warning" },
+  low: { icon: Info, className: "text-muted" },
+  good: { icon: CheckCircle2, className: "text-success" },
+};
+
 interface SolveReplayProps {
   scramble: string;
   phases: PhaseAnalysis[];
   /** Every move of the solve in order, so "whole solve" can play end to end. */
   moves: string[];
+  /** The solve's full findings list, so a phase's commentary can be pulled from it. */
+  findings: Finding[];
+  /** Best-effort one-line summary shown while "Whole solve" is selected. */
+  summary: string;
+}
+
+/** A neutral, non-alarming line for a phase that has no specific finding attached. */
+function fallbackCaption(phase: PhaseAnalysis): string {
+  if (phase.moves.length === 0) return `${phase.label} was skipped — free.`;
+  if (phase.model === null) return `${phase.label}: no shorter reference was found to compare against.`;
+  if ((phase.lost ?? 0) === 0) return `${phase.label} matched the shortest solution available — clean.`;
+  return `${phase.label} cost ${phase.lost} move${phase.lost === 1 ? "" : "s"} more than the shortest available.`;
 }
 
 /**
- * Plays the reconstruction back on the 3D cube, one phase at a time.
+ * Plays the reconstruction back on the 3D cube, one phase at a time, with the
+ * analysis for that phase captioned right next to it.
  *
  * Each phase is loaded as its own animation with everything before it applied
  * silently as the setup, so the cube opens exactly as it looked when that phase
  * began — which is the position the analysis is talking about. Watching the
- * expensive pair happen is worth more than reading that it cost four moves.
+ * expensive pair happen while reading *why* it was expensive is worth more
+ * than either the video or the text on its own, which is why they're fused
+ * into one panel instead of a replay you scroll past to find the comments.
  */
-export function SolveReplay({ scramble, phases, moves }: SolveReplayProps) {
+export function SolveReplay({ scramble, phases, moves, findings, summary }: SolveReplayProps) {
   const [selected, setSelected] = useState<number>(-1);
 
   // -1 is the whole solve; otherwise the index into `phases`.
@@ -38,6 +60,14 @@ export function SolveReplay({ scramble, phases, moves }: SolveReplayProps) {
 
   const setupAlg = [scramble, ...movesBefore].join(" ").trim();
   const alg = (phase ? phase.moves : moves).join(" ");
+
+  // Whole solve: lead with the top (already severity-sorted) findings that
+  // aren't about one specific phase, falling back to the summary sentence.
+  // One phase: whatever the analysis actually said about it, or a neutral
+  // line when nothing stood out — so the caption is never just blank.
+  const captions: Finding[] = phase
+    ? findingsForPhase(phase, findings)
+    : findings.filter((f) => !f.phase).slice(0, 2);
 
   return (
     <div className="card animate-fade-in-up rounded-xl p-3">
@@ -85,6 +115,30 @@ export function SolveReplay({ scramble, phases, moves }: SolveReplayProps) {
       <p className="mt-1.5 break-words text-center font-mono text-[11px] leading-relaxed text-muted">
         {alg || "nothing to play"}
       </p>
+
+      {/* The commentary — what this component exists for, not the video. */}
+      <div className="mt-3 space-y-2 border-t border-border pt-2.5">
+        {captions.length > 0 ? (
+          captions.map((f) => {
+            const style = SEVERITY_STYLE[f.severity];
+            const Icon = style.icon;
+            return (
+              <div key={f.id} className="flex gap-2">
+                <Icon size={13} className={cn("mt-0.5 shrink-0", style.className)} />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium leading-snug">{f.title}</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-muted">{f.detail}</p>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p className="flex gap-2 text-[11px] leading-relaxed text-muted">
+            <Info size={13} className="mt-0.5 shrink-0 text-muted-2" />
+            {phase ? fallbackCaption(phase) : summary}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

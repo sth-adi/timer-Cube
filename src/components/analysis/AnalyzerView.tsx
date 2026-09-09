@@ -230,28 +230,6 @@ export function AnalyzerView() {
             </div>
           </div>
 
-          {phases.length > 0 && (
-            <SolveReplay scramble={result.scramble} phases={phases} moves={result.moves} />
-          )}
-
-          {phases.length > 0 && (
-            <div className="card animate-fade-in-up rounded-xl p-3">
-              <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-2">
-                Where the moves went
-              </h3>
-              <div className="space-y-1.5">
-                {phases.map((p) => (
-                  <PhaseBar key={`${p.label}-${p.slot ?? ""}`} phase={p} max={maxStm} />
-                ))}
-              </div>
-              <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2">
-                Green is what the phase needed from the position you were in; amber is what it cost on top. A grey
-                bar means the search couldn&apos;t find a reference for that phase, so there&apos;s nothing to
-                compare against — not that it was efficient.
-              </p>
-            </div>
-          )}
-
           <div className="card animate-fade-in-up rounded-xl p-3">
             <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-2">What to work on</h3>
             <div className="space-y-2.5">
@@ -273,6 +251,34 @@ export function AnalyzerView() {
               )}
             </div>
           </div>
+
+          {phases.length > 0 && (
+            <SolveReplay
+              scramble={result.scramble}
+              phases={phases}
+              moves={result.moves}
+              findings={result.findings}
+              summary={result.summary}
+            />
+          )}
+
+          {phases.length > 0 && (
+            <div className="card animate-fade-in-up rounded-xl p-3">
+              <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-2">
+                Where the moves went
+              </h3>
+              <div className="space-y-1.5">
+                {phases.map((p) => (
+                  <PhaseBar key={`${p.label}-${p.slot ?? ""}`} phase={p} max={maxStm} />
+                ))}
+              </div>
+              <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2">
+                Green is what the phase needed from the position you were in; amber is what it cost on top. A grey
+                bar means the search couldn&apos;t find a reference for that phase, so there&apos;s nothing to
+                compare against — not that it was efficient.
+              </p>
+            </div>
+          )}
 
           {phases.length > 0 && (
             <div className="card animate-fade-in-up rounded-xl p-3">

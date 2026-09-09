@@ -82,6 +82,39 @@ export interface Finding {
   detail: string;
 }
 
+/**
+ * Findings whose id ties them to one specific phase segment, keyed by the
+ * suffix pattern that segment's `withLoss`/`buildFindings` code actually
+ * produces (see below) — kept in one place so the replay's commentary can
+ * never drift from what generates the ids.
+ */
+function findingIdsForSegment(phase: PhaseAnalysis): string[] {
+  switch (phase.phase) {
+    case "cross":
+      return ["cross-optimal", "cross-long"];
+    case "f2l":
+      // f2l-total is an aggregate across all four slots, not this one's alone
+      // — it belongs in the summary list, not attached to a single segment.
+      return [`f2l-worst-${phase.slot}`];
+    case "oll":
+    case "pll":
+      return [`${phase.phase}-skip`, `${phase.phase}-long`, `${phase.phase}-clean`];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Findings that talk about a specific phase segment rather than the solve as
+ * a whole — what the solve replay uses to caption whichever phase is on
+ * screen, so watching a phase and reading what's wrong with it happen in the
+ * same place instead of a disconnected list further down the page.
+ */
+export function findingsForPhase(phase: PhaseAnalysis, findings: readonly Finding[]): Finding[] {
+  const ids = new Set(findingIdsForSegment(phase));
+  return findings.filter((f) => ids.has(f.id));
+}
+
 export interface SolveAnalysis {
   ok: true;
   scramble: string;
