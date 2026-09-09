@@ -5,12 +5,18 @@ import { TrainerView } from "./TrainerView";
 import { AlgorithmsView } from "@/components/algorithms/AlgorithmsView";
 import { RecognitionTrainer } from "@/components/algorithms/RecognitionTrainer";
 import { CrossDrill } from "./CrossDrill";
+import { BldMemoTrainer } from "./BldMemoTrainer";
+import { RaceMode } from "./RaceMode";
+import { DualReplay } from "./DualReplay";
 import { cn } from "@/lib/utils/cn";
 
 const MODES = [
   { id: "drill", label: "Drill" },
   { id: "cross", label: "Cross" },
   { id: "recognize", label: "Recognize" },
+  { id: "bld", label: "BLD memo" },
+  { id: "race", label: "Race" },
+  { id: "replay", label: "Dual replay" },
   { id: "library", label: "Library" },
 ] as const;
 
@@ -43,6 +49,12 @@ export function TrainerHub() {
         <CrossDrill />
       ) : mode === "recognize" ? (
         <RecognitionTrainer />
+      ) : mode === "bld" ? (
+        <BldMemoTrainer />
+      ) : mode === "race" ? (
+        <RaceMode />
+      ) : mode === "replay" ? (
+        <DualReplay />
       ) : (
         <AlgorithmsView />
       )}

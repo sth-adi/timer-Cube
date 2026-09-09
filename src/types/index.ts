@@ -32,6 +32,8 @@ export interface Solve {
    * weakness report can look back across solved-and-analyzed history.
    */
   reconstruction?: string;
+  /** Average/max BPM during this solve, from a connected BLE heart-rate monitor. */
+  heartRate?: { avg: number; max: number };
 }
 
 export interface Session {

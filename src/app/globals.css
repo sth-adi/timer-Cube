@@ -356,22 +356,24 @@ body {
   width: 70vmax;
   height: 70vmax;
   border-radius: 50%;
-  filter: blur(80px);
-  will-change: transform;
+  /* hue/saturation nudged live by the performance aura bus while a solve is
+     running (see AuroraBackground.tsx) — 0deg/1 is a no-op the rest of the time. */
+  filter: blur(80px) hue-rotate(var(--aurora-pace-hue, 0deg)) saturate(var(--aurora-pace-sat, 1));
+  will-change: transform, filter;
 }
 
 .aurora-blob-a {
   top: -20vmax;
   left: -10vmax;
   background: radial-gradient(circle at center, var(--aurora-1), transparent 68%);
-  animation: aurora-drift-a 26s ease-in-out infinite;
+  animation: aurora-drift-a calc(26s / var(--aurora-pace-speed, 1)) ease-in-out infinite;
 }
 
 .aurora-blob-b {
   right: -18vmax;
   bottom: -22vmax;
   background: radial-gradient(circle at center, var(--aurora-2), transparent 68%);
-  animation: aurora-drift-b 32s ease-in-out infinite;
+  animation: aurora-drift-b calc(32s / var(--aurora-pace-speed, 1)) ease-in-out infinite;
 }
 
 /* Darkens the edges so the aurora reads as depth rather than haze. */

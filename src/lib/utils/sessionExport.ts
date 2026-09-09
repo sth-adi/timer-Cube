@@ -2,6 +2,15 @@ import type { EventTag, Penalty, Solve } from "@/types";
 
 const VALID_EVENT_TAGS: EventTag[] = ["oh", "feet", "bld"];
 
+function isHeartRate(v: unknown): v is { avg: number; max: number } {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    typeof (v as Record<string, unknown>).avg === "number" &&
+    typeof (v as Record<string, unknown>).max === "number"
+  );
+}
+
 export interface SessionExport {
   version: 1;
   exportedAt: number;
@@ -15,6 +24,7 @@ export interface SessionExport {
     splits?: number[];
     event?: EventTag;
     reconstruction?: string;
+    heartRate?: { avg: number; max: number };
   }>;
 }
 
@@ -32,6 +42,7 @@ export function buildSessionExport(sessionName: string, solves: Solve[]): Sessio
       splits: s.splits,
       event: s.event,
       reconstruction: s.reconstruction,
+      heartRate: s.heartRate,
     })),
   };
 }
@@ -77,6 +88,7 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
           : undefined,
       event: VALID_EVENT_TAGS.includes(s.event as EventTag) ? (s.event as EventTag) : undefined,
       reconstruction: typeof s.reconstruction === "string" ? s.reconstruction : undefined,
+      heartRate: isHeartRate(s.heartRate) ? s.heartRate : undefined,
     };
   });
 }

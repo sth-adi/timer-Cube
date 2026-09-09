@@ -12,6 +12,7 @@ import { ScrambleBar } from "@/components/scramble/ScrambleBar";
 import { EventTagSelector } from "@/components/timer/EventTagSelector";
 import { HintPanel } from "@/components/scramble/HintPanel";
 import { TimerView } from "@/components/timer/TimerView";
+import { SmartCubeTimer } from "@/components/timer/SmartCubeTimer";
 import { TrainerHub } from "@/components/trainer/TrainerHub";
 import { AnalyzerView } from "@/components/analysis/AnalyzerView";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils/cn";
 export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("timer");
+  const [timerMode, setTimerMode] = useState<"keyboard" | "smartcube">("keyboard");
 
   // "Analyze this solve" lives in the solve list, which has no way to change
   // tabs; it bumps a counter in the store instead and the shell follows. This
@@ -99,6 +101,22 @@ export default function Home() {
         <div className={cn("shrink-0", tab === "timer" ? "block" : "hidden", "lg:block")}>
           <ScrambleBar className="mt-1" />
           <EventTagSelector />
+          <div className="mt-1 flex justify-center gap-1">
+            {(["keyboard", "smartcube"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setTimerMode(m)}
+                aria-pressed={timerMode === m}
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  timerMode === m ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-muted",
+                )}
+              >
+                {m === "keyboard" ? "Keyboard" : "Smart cube"}
+              </button>
+            ))}
+          </div>
         </div>
 
         <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 px-4 lg:pb-4">
@@ -118,6 +136,8 @@ export default function Home() {
               <TrainerHub />
             ) : tab === "analyze" ? (
               <AnalyzerView />
+            ) : timerMode === "smartcube" ? (
+              <SmartCubeTimer />
             ) : (
               <>
                 <TimerView />

@@ -6,12 +6,17 @@ import { PHASE_LABELS, type PhaseCount, useSettingsStore } from "@/lib/store/set
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime } from "@/lib/utils/time";
-import { computePhaseSplits, normalSolves } from "@/lib/stats/stats";
+import { computePhaseSplits, computeSessionStats, normalSolves } from "@/lib/stats/stats";
 import type { PhaseAverage } from "@/lib/stats/stats";
 import { EVENT_TAGS } from "@/types";
+import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { cn } from "@/lib/utils/cn";
 import { playSolveChime, playInspectionBeep } from "@/lib/utils/sound";
 import { InspectionRing } from "./InspectionRing";
+import { PredictionBadge } from "./PredictionBadge";
+import { GhostPaceBar } from "./GhostPaceBar";
+import { predictSolveTime } from "@/lib/analysis/prediction";
+import { paceFromRatio, resetPerformanceAura, setPerformanceAura } from "@/lib/store/performanceAuraBus";
 
 const PHASE_COLOR: Record<string, string> = {
   idle: "text-foreground",
@@ -101,14 +106,21 @@ export function TimerView() {
   const nextScramble = useScrambleStore((s) => s.nextScramble);
 
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
+  const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
 
   const onComplete = useCallback(
     (timeMs: number, solveSplits: number[]) => {
-      recordSolve(timeMs, scramble, solveSplits, pendingEvent ?? undefined);
+      // The keyboard timer doesn't carry an absolute start timestamp — only
+      // an elapsed duration — so "now minus that duration" is the best
+      // available anchor for pulling in the heart-rate samples logged
+      // during this solve. A few milliseconds of render latency here is
+      // irrelevant next to a multi-second bpm sampling interval.
+      const heartRate = summarizeHeartRate(Date.now() - timeMs) ?? undefined;
+      recordSolve(timeMs, scramble, solveSplits, pendingEvent ?? undefined, undefined, heartRate);
       if (soundEnabled) playSolveChime();
       void nextScramble();
     },
-    [recordSolve, scramble, nextScramble, soundEnabled, pendingEvent],
+    [recordSolve, scramble, nextScramble, soundEnabled, pendingEvent, summarizeHeartRate],
   );
 
   const { phase, displayMs, inspectionRemainingMs, splits, phaseIndex, press, release, reset } = useTimer({
@@ -134,6 +146,40 @@ export function TimerView() {
     const matching = normalSolves(solves).filter((s) => (s.splits?.length ?? 0) + 1 === phaseCount);
     return computePhaseSplits(matching, (n) => PHASE_LABELS[n as PhaseCount] ?? []);
   }, [solves, phaseCount]);
+
+  // The ghost target for GhostPaceBar — only meaningful for ordinary
+  // 2-handed solves, same convention as PB detection itself, so racing an
+  // OH attempt against a 2-handed best doesn't happen.
+  const normalPbMs = useMemo(
+    () => (pendingEvent === null ? computeSessionStats(normalSolves(solves)).best : null),
+    [solves, pendingEvent],
+  );
+
+  // Feeds the ambient background's live pace cue (see AuroraBackground.tsx):
+  // prefer the predictive model's estimate for this exact scramble, falling
+  // back to the plain PB when there isn't enough history for a model yet.
+  // Frozen the moment a run starts, same reasoning as GhostPaceBar's target
+  // — a solve shouldn't have its own goalpost move mid-attempt.
+  const auraTargetRef = useRef<number | null>(null);
+  const prevPhaseForAuraRef = useRef(phase);
+  useEffect(() => {
+    if (phase === "running" && prevPhaseForAuraRef.current !== "running") {
+      const prediction = scramble ? predictSolveTime(normalSolves(solves), scramble) : null;
+      auraTargetRef.current = prediction?.predictedMs ?? normalPbMs ?? null;
+    }
+    if (phase !== "running") {
+      auraTargetRef.current = null;
+      resetPerformanceAura();
+    }
+    prevPhaseForAuraRef.current = phase;
+  }, [phase, scramble, solves, normalPbMs]);
+
+  useEffect(() => {
+    if (phase !== "running" || auraTargetRef.current === null) return;
+    setPerformanceAura(paceFromRatio(displayMs, auraTargetRef.current));
+  }, [displayMs, phase]);
+
+  useEffect(() => () => resetPerformanceAura(), []);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -235,6 +281,14 @@ export function TimerView() {
       >
         {hideTimeWhileSolving && phase === "running" ? "solving" : formatTime(displayMs)}
       </p>
+      {(phase === "running" || phase === "stopped") && (
+        <GhostPaceBar
+          phase={phase}
+          elapsedMs={displayMs}
+          pbMs={normalPbMs}
+          hideTimes={hideTimeWhileSolving && phase === "running"}
+        />
+      )}
       {multiphase && (phase === "running" || phase === "stopped") && (
         <PhaseTrack
           labels={labels}
@@ -248,10 +302,13 @@ export function TimerView() {
       )}
 
       {phase === "idle" && (
-        <p className="text-muted-2 text-sm">
-          hold space to start{inspectionEnabled ? " (inspection on)" : ""}
-          {multiphase && ` · ${phaseCount} phases`}
-        </p>
+        <>
+          <p className="text-muted-2 text-sm">
+            hold space to start{inspectionEnabled ? " (inspection on)" : ""}
+            {multiphase && ` · ${phaseCount} phases`}
+          </p>
+          <PredictionBadge />
+        </>
       )}
       {phase === "stopped" && <p className="text-muted-2 text-sm">space for next scramble</p>}
     </div>

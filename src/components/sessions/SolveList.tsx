@@ -9,7 +9,7 @@ import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { MessageSquare, Plus, Wand2, X } from "lucide-react";
+import { Heart, MessageSquare, Plus, Wand2, X } from "lucide-react";
 
 function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: number; isBest: boolean; isWorst: boolean }) {
   const setPenalty = useSessionStore((s) => s.setPenalty);
@@ -45,6 +45,12 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
       {open && (
         <div className="absolute right-0 top-full z-10 mt-1 w-64 rounded-lg glass-panel p-2.5 shadow-lg animate-fade-in-up">
           <p className="text-muted-2 text-[11px] font-mono leading-snug mb-2 break-words">{solve.scramble}</p>
+          {solve.heartRate && (
+            <p className="mb-2 flex items-center gap-1 text-[11px] text-danger">
+              <Heart size={11} fill="currentColor" />
+              {solve.heartRate.avg} avg · {solve.heartRate.max} max bpm
+            </p>
+          )}
           <div className="flex items-center gap-1 mb-2">
             <button
               type="button"

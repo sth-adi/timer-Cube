@@ -3,6 +3,7 @@
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { EVENT_TAGS } from "@/types";
 import { cn } from "@/lib/utils/cn";
+import { HeartRateWidget } from "./HeartRateWidget";
 
 /**
  * Which practice category the next solve counts as. Sticky rather than
@@ -16,7 +17,7 @@ export function EventTagSelector() {
   const setPendingEvent = useSessionStore((s) => s.setPendingEvent);
 
   return (
-    <div className="flex items-center justify-center gap-1 px-4">
+    <div className="flex flex-wrap items-center justify-center gap-1 px-4">
       <button
         type="button"
         onClick={() => setPendingEvent(null)}
@@ -42,6 +43,8 @@ export function EventTagSelector() {
           {tag.label}
         </button>
       ))}
+      <span className="mx-0.5 h-3 w-px bg-border" />
+      <HeartRateWidget />
     </div>
   );
 }
