@@ -1,5 +1,5 @@
 import { db, newId } from "./db";
-import type { Penalty, Solve } from "@/types";
+import type { EventTag, Penalty, Solve } from "@/types";
 
 export async function addSolve(input: {
   sessionId: string;
@@ -7,6 +7,7 @@ export async function addSolve(input: {
   scramble: string;
   penalty?: Penalty;
   splits?: number[];
+  event?: EventTag;
 }): Promise<Solve> {
   const solve: Solve = {
     id: newId(),
@@ -18,6 +19,7 @@ export async function addSolve(input: {
     // Omitted rather than stored empty, so "was this solve phase-timed?" is a
     // simple presence check everywhere downstream.
     ...(input.splits && input.splits.length > 0 ? { splits: input.splits } : {}),
+    ...(input.event ? { event: input.event } : {}),
   };
   await db.solves.add(solve);
   return solve;
@@ -47,7 +49,7 @@ export async function deleteAllSolvesForSession(sessionId: string): Promise<void
 /** Bulk-imports solves into a session, assigning fresh ids so they never collide with existing rows. */
 export async function importSolves(
   sessionId: string,
-  solves: Array<Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits">>,
+  solves: Array<Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits" | "event" | "reconstruction">>,
 ): Promise<number> {
   const rows: Solve[] = solves.map((s) => ({
     id: newId(),
@@ -58,6 +60,8 @@ export async function importSolves(
     date: s.date,
     comment: s.comment,
     ...(s.splits && s.splits.length > 0 ? { splits: s.splits } : {}),
+    ...(s.event ? { event: s.event } : {}),
+    ...(s.reconstruction ? { reconstruction: s.reconstruction } : {}),
   }));
   await db.solves.bulkAdd(rows);
   return rows.length;

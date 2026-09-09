@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, Plus } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { cn } from "@/lib/utils/cn";
+import { SessionCompareSheet } from "./SessionCompareSheet";
 
 export function SessionSwitcher() {
   const sessions = useSessionStore((s) => s.sessions);
@@ -11,6 +12,7 @@ export function SessionSwitcher() {
   const switchSession = useSessionStore((s) => s.switchSession);
   const addSession = useSessionStore((s) => s.addSession);
   const [open, setOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const active = sessions.find((s) => s.id === activeId);
 
@@ -54,8 +56,21 @@ export function SessionSwitcher() {
           >
             <Plus size={14} /> New session
           </button>
+          {sessions.length >= 2 && (
+            <button
+              type="button"
+              onClick={() => {
+                setCompareOpen(true);
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
+            >
+              <ArrowLeftRight size={14} /> Compare sessions
+            </button>
+          )}
         </div>
       )}
+      {compareOpen && <SessionCompareSheet onClose={() => setCompareOpen(false)} />}
     </div>
   );
 }

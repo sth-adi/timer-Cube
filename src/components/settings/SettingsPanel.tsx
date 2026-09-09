@@ -3,7 +3,10 @@
 import { useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
 import { PHASE_COUNTS, PHASE_LABELS, THEMES, useSettingsStore } from "@/lib/store/settingsStore";
+import { useScrambleStore } from "@/lib/store/scrambleStore";
+import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { looksLikeCsTimerExport, parseCsTimerExport, type CsTimerParsed } from "@/lib/utils/csTimerImport";
 import { cn } from "@/lib/utils/cn";
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -32,6 +35,10 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 }
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
+  const practiceMode = useScrambleStore((s) => s.practiceMode);
+  const setPracticeMode = useScrambleStore((s) => s.setPracticeMode);
+  const practiceLength = useScrambleStore((s) => s.practiceLength);
+  const setPracticeLength = useScrambleStore((s) => s.setPracticeLength);
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
   const setInspectionEnabled = useSettingsStore((s) => s.setInspectionEnabled);
   const hintSolverEnabled = useSettingsStore((s) => s.hintSolverEnabled);
@@ -51,17 +58,42 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   const exportActiveSession = useSessionStore((s) => s.exportActiveSession);
   const importIntoActiveSession = useSessionStore((s) => s.importIntoActiveSession);
+  const importRowsIntoActiveSession = useSessionStore((s) => s.importRowsIntoActiveSession);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  // Set only when the uploaded file is a csTimer export with more than one
+  // session — this app's own imports and single-session csTimer files never
+  // need a choice, so the picker only appears when one is actually needed.
+  const [csTimerPending, setCsTimerPending] = useState<CsTimerParsed | null>(null);
 
   const onImportFile = async (file: File) => {
+    setCsTimerPending(null);
     try {
       const text = await file.text();
+      const raw = JSON.parse(text);
+      if (looksLikeCsTimerExport(raw)) {
+        const parsed = parseCsTimerExport(raw);
+        if (parsed.sessions.length === 1) {
+          const count = await importRowsIntoActiveSession(parsed.solvesByKey[parsed.sessions[0].key]);
+          setImportMsg(`Imported ${count} solve${count === 1 ? "" : "s"} from csTimer.`);
+        } else {
+          setCsTimerPending(parsed);
+        }
+        return;
+      }
       const count = await importIntoActiveSession(text);
       setImportMsg(`Imported ${count} solve${count === 1 ? "" : "s"}.`);
     } catch (err) {
       setImportMsg(err instanceof Error ? err.message : "Import failed.");
     }
+  };
+
+  const onPickCsTimerSession = async (key: string) => {
+    if (!csTimerPending) return;
+    const rows = csTimerPending.solvesByKey[key];
+    const count = await importRowsIntoActiveSession(rows);
+    setImportMsg(`Imported ${count} solve${count === 1 ? "" : "s"} from csTimer.`);
+    setCsTimerPending(null);
   };
 
   return (
@@ -148,6 +180,35 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </p>
         </div>
 
+        <div className="mt-4 border-t border-border pt-3">
+          <Toggle checked={practiceMode} onChange={setPracticeMode} label="Practice scrambles (custom length)" />
+          {practiceMode && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {PRACTICE_SCRAMBLE_LENGTHS.map((len) => (
+                <button
+                  key={len}
+                  type="button"
+                  onClick={() => setPracticeLength(len)}
+                  aria-pressed={practiceLength === len}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    practiceLength === len
+                      ? "bg-accent-soft text-accent"
+                      : "bg-bg-panel-2 text-muted hover:text-foreground",
+                  )}
+                >
+                  {len}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">
+            {practiceMode
+              ? "Random-move scrambles at a fixed length you pick — not WCA-legal, and never scored against official stats. Good for drilling lookahead on long scrambles or isolating a stage on short ones."
+              : "Off uses real WCA-legal random-state scrambles, same as competition."}
+          </p>
+        </div>
+
         <div className="mt-3">
           <label className="flex items-center justify-between py-2 text-sm text-foreground/90">
             Hold-to-start
@@ -197,18 +258,41 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             >
               <Upload size={13} /> Import JSON
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void onImportFile(file);
-                e.target.value = "";
-              }}
-            />
           </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">
+            Accepts this app&apos;s own export, or a csTimer export — both go straight into the current session.
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void onImportFile(file);
+              e.target.value = "";
+            }}
+          />
+          {csTimerPending && (
+            <div className="mt-2 rounded-lg bg-bg-panel-2 p-2.5">
+              <p className="mb-1.5 text-[11px] text-muted-2">
+                This csTimer file has {csTimerPending.sessions.length} sessions — pick one to import into{" "}
+                <span className="text-foreground/80">the current session</span>:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {csTimerPending.sessions.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => void onPickCsTimerSession(s.key)}
+                    className="rounded-lg bg-bg-elevated px-2.5 py-1.5 text-xs font-medium text-foreground/90 hover:brightness-110"
+                  >
+                    {s.name} <span className="text-muted-2">({s.count})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {importMsg && <p className="mt-1.5 text-xs text-muted-2">{importMsg}</p>}
         </div>
 

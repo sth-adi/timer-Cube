@@ -7,6 +7,9 @@ import {
   computeHourOfDay,
   computePBHistory,
   computePhaseSplits,
+  normalSolves,
+  solvesForEvent,
+  eventTagsPresent,
   computeSessionStats,
   rollingAverages,
 } from "./stats";
@@ -245,5 +248,36 @@ describe("computePhaseSplits", () => {
       labels,
     );
     expect(summary!.sampleSize).toBe(1);
+  });
+});
+
+describe("event-tagged solve filtering", () => {
+  const base = (overrides: Partial<Solve>): Solve => ({
+    id: Math.random().toString(36),
+    sessionId: "s",
+    timeMs: 10_000,
+    penalty: "none",
+    scramble: "",
+    date: 0,
+    ...overrides,
+  });
+
+  it("excludes event-tagged solves from normalSolves", () => {
+    const solves = [base({}), base({ event: "oh" }), base({ event: "bld" })];
+    expect(normalSolves(solves)).toHaveLength(1);
+    expect(normalSolves(solves)[0].event).toBeUndefined();
+  });
+
+  it("solvesForEvent returns only that tag", () => {
+    const solves = [base({}), base({ event: "oh" }), base({ event: "oh" }), base({ event: "feet" })];
+    expect(solvesForEvent(solves, "oh")).toHaveLength(2);
+    expect(solvesForEvent(solves, "feet")).toHaveLength(1);
+    expect(solvesForEvent(solves, "bld")).toHaveLength(0);
+  });
+
+  it("eventTagsPresent lists only tags that actually occur, in stable order", () => {
+    const solves = [base({ event: "bld" }), base({ event: "oh" }), base({})];
+    expect(eventTagsPresent(solves)).toEqual(["oh", "bld"]);
+    expect(eventTagsPresent([base({})])).toEqual([]);
   });
 });

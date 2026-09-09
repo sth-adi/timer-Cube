@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Info, Lightbulb, Loader2, Wand2 } from "lucide-react";
+import { AlertTriangle, Bookmark, BookmarkCheck, CheckCircle2, Info, Lightbulb, Loader2, Wand2 } from "lucide-react";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
+import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime, parseTimeInput } from "@/lib/utils/time";
 import type { PhaseAnalysis, Severity } from "@/lib/analysis/analyze";
@@ -89,8 +90,12 @@ function PhaseDetail({ phase }: { phase: PhaseAnalysis }) {
 }
 
 export function AnalyzerView() {
-  const { scramble, reconstruction, result, errors, loading, setScramble, setReconstruction, setTimeMs, run } =
+  const { scramble, reconstruction, result, errors, loading, solveId, setScramble, setReconstruction, setTimeMs, run } =
     useAnalysisStore();
+  const saveReconstruction = useSessionStore((s) => s.saveReconstruction);
+  const solves = useSessionStore((s) => s.solves);
+  const savedOnSolve = solveId ? solves.find((s) => s.id === solveId)?.reconstruction : undefined;
+  const isSaved = solveId !== null && savedOnSolve === reconstruction && reconstruction.trim() !== "";
   const currentScramble = useScrambleStore((s) => s.scramble);
   const [timeText, setTimeText] = useState(() => {
     const ms = useAnalysisStore.getState().timeMs;
@@ -110,6 +115,11 @@ export function AnalyzerView() {
       }),
     [],
   );
+
+  const onSave = () => {
+    if (!solveId) return;
+    void saveReconstruction(solveId, reconstruction);
+  };
 
   const commitTime = (text: string) => {
     const parsed = text.trim() ? parseTimeInput(text) : null;
@@ -212,7 +222,23 @@ export function AnalyzerView() {
       {result && (
         <>
           <div className="card animate-fade-in-up rounded-xl p-3">
-            <p className="text-sm leading-relaxed">{result.summary}</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm leading-relaxed">{result.summary}</p>
+              {solveId && (
+                <button
+                  type="button"
+                  onClick={onSave}
+                  disabled={isSaved}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    isSaved ? "text-success" : "bg-bg-panel-2 text-muted hover:text-accent",
+                  )}
+                >
+                  {isSaved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
+                  {isSaved ? "Saved" : "Save to solve"}
+                </button>
+              )}
+            </div>
             <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
               <span>
                 Cross on <span className="text-foreground">{result.crossFace}</span>

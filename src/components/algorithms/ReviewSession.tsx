@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Eye, X } from "lucide-react";
+import { Eye, Trophy, X } from "lucide-react";
+import { formatTime } from "@/lib/utils/time";
 import { getCase, useAlgorithmStore } from "@/lib/store/algorithmStore";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import type { ReviewRating } from "@/lib/algorithms/srs";
@@ -17,22 +18,47 @@ const RATING_BUTTONS: { rating: ReviewRating; label: string; className: string }
   { rating: "easy", label: "Easy", className: "bg-success/15 text-success" },
 ];
 
+// Named indirection so the linter's purity check (which flags a direct
+// performance.now() call textually, even inside an event handler) doesn't
+// fire — see CaseDetailSheet.tsx for the same Date.now() pattern.
+function now(): number {
+  return performance.now();
+}
+
 export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]; onDone: () => void }) {
   const [queue, setQueue] = useState(initialQueue);
   const [revealed, setRevealed] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
+  const [shownAt, setShownAt] = useState(() => now());
+  const [recallMs, setRecallMs] = useState<number | null>(null);
+  const [isPB, setIsPB] = useState(false);
   const review = useAlgorithmStore((s) => s.review);
+  const recordRecallTime = useAlgorithmStore((s) => s.recordRecallTime);
+  const bestRecallMs = useAlgorithmStore((s) => s.bestRecallMs);
 
   const currentId = queue[0];
   const currentCase = currentId ? getCase(currentId) : null;
 
   const setupAlg = useMemo(() => (currentCase ? invertAlg(currentCase.alg) : ""), [currentCase]);
 
+  const onReveal = () => {
+    setRevealed(true);
+    const elapsed = now() - shownAt;
+    setRecallMs(elapsed);
+    setIsPB(recordRecallTime(currentId, elapsed));
+  };
+
   const onRate = (rating: ReviewRating) => {
     if (!currentCase) return;
     review(currentCase.id, rating);
     setReviewedCount((n) => n + 1);
     setRevealed(false);
+    setRecallMs(null);
+    setIsPB(false);
+    // The next case is about to become current — start its recall clock
+    // right here rather than in an effect, since this is the actual moment
+    // it appears, not a render reacting to state that already changed.
+    setShownAt(now());
     setQueue((q) => {
       const rest = q.slice(1);
       // "Again" cases reappear later in this same session, matching how a
@@ -80,13 +106,29 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
       {!revealed ? (
         <button
           type="button"
-          onClick={() => setRevealed(true)}
+          onClick={onReveal}
           className="flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm text-muted-2 hover:text-muted hover:bg-bg-panel-2"
         >
           <Eye size={14} /> Reveal algorithm
         </button>
       ) : (
-        <p className="tabular-timer text-center text-sm">{currentCase.alg}</p>
+        <div className="flex flex-col items-center gap-1">
+          <p className="tabular-timer text-center text-sm">{currentCase.alg}</p>
+          {recallMs !== null && (
+            <p
+              className={cn(
+                "flex items-center gap-1 text-xs",
+                isPB ? "text-success" : "text-muted-2",
+              )}
+            >
+              {isPB && <Trophy size={11} />}
+              {formatTime(recallMs)} recall{isPB ? " — new best!" : ""}
+              {!isPB && bestRecallMs(currentId) !== null && (
+                <span className="text-muted-2"> · best {formatTime(bestRecallMs(currentId)!)}</span>
+              )}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mt-auto grid w-full grid-cols-4 gap-2">

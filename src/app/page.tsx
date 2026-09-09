@@ -9,6 +9,7 @@ import { StatsPanel } from "@/components/stats/StatsPanel";
 import { InsightsPanel } from "@/components/stats/InsightsPanel";
 import { PhaseSplitsCard } from "@/components/stats/PhaseSplitsCard";
 import { ScrambleBar } from "@/components/scramble/ScrambleBar";
+import { EventTagSelector } from "@/components/timer/EventTagSelector";
 import { HintPanel } from "@/components/scramble/HintPanel";
 import { TimerView } from "@/components/timer/TimerView";
 import { TrainerHub } from "@/components/trainer/TrainerHub";
@@ -18,6 +19,7 @@ import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
 import { BottomNav, type TabId } from "@/components/nav/BottomNav";
 import { AuroraBackground } from "@/components/chrome/AuroraBackground";
+import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { cn } from "@/lib/utils/cn";
 
@@ -92,8 +94,11 @@ export default function Home() {
           </button>
         </header>
 
+        <ChallengeLinkBanner onRace={() => setTab("timer")} />
+
         <div className={cn("shrink-0", tab === "timer" ? "block" : "hidden", "lg:block")}>
           <ScrambleBar className="mt-1" />
+          <EventTagSelector />
         </div>
 
         <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 px-4 lg:pb-4">

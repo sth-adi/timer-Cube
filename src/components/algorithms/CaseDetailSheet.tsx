@@ -7,6 +7,7 @@ import type { AlgCase } from "@/lib/algorithms/types";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import { useAlgorithmStore } from "@/lib/store/algorithmStore";
 import { deriveStatus } from "@/lib/algorithms/srs";
+import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
 const CubeViewer = dynamic(() => import("@/components/scramble/CubeViewer").then((m) => m.CubeViewer), { ssr: false });
@@ -74,6 +75,12 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
             </span>
           )}
         </div>
+        {progress?.bestRecallMs !== undefined && (
+          <p className="mt-2 text-center text-[11px] text-muted-2">
+            Best recall: <span className="text-foreground/80">{formatTime(progress.bestRecallMs)}</span> — time to
+            reveal the algorithm in review, not physical turning speed
+          </p>
+        )}
       </div>
     </div>
   );

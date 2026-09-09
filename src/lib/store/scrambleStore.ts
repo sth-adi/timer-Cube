@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import type { CFOPSolution } from "@/lib/solvers/cfop";
+import {
+  DEFAULT_PRACTICE_LENGTH,
+  generatePracticeScramble,
+  type PracticeScrambleLength,
+} from "@/lib/cube-engine/practiceScramble";
 
 /** How many past scrambles you can step back through. */
 const HISTORY_LIMIT = 50;
@@ -12,6 +17,23 @@ interface ScrambleState {
   historyIndex: number;
   engineReady: boolean;
   loadingScramble: boolean;
+  /**
+   * When on, `nextScramble` generates a random-*move* practice scramble of
+   * `practiceLength` moves instead of the WCA-legal random-state one — see
+   * cube-engine/practiceScramble.ts for why those are a different thing.
+   * Off by default, and the very first scramble on app load is always the
+   * real WCA one regardless of this.
+   */
+  practiceMode: boolean;
+  practiceLength: number;
+  setPracticeMode: (v: boolean) => void;
+  setPracticeLength: (v: PracticeScrambleLength) => void;
+  /**
+   * Loads a scramble that came from outside the normal flow (a challenge
+   * link from someone else) as the current one, recorded into history like
+   * any other so it can still be stepped back to.
+   */
+  loadExternalScramble: (scramble: string) => void;
   crossHint: string[] | null;
   cfopHint: CFOPSolution | null;
   hintLoading: boolean;
@@ -42,6 +64,26 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   hintLoading: false,
   hintError: null,
   hintVisible: false,
+  practiceMode: false,
+  practiceLength: DEFAULT_PRACTICE_LENGTH,
+
+  setPracticeMode: (practiceMode) => set({ practiceMode }),
+  setPracticeLength: (practiceLength) => set({ practiceLength }),
+
+  loadExternalScramble: (scramble) => {
+    const { history } = get();
+    const trimmed = [...history, scramble].slice(-HISTORY_LIMIT);
+    set({
+      scramble,
+      history: trimmed,
+      historyIndex: trimmed.length - 1,
+      loadingScramble: false,
+      crossHint: null,
+      cfopHint: null,
+      hintVisible: false,
+      hintError: null,
+    });
+  },
 
   init: () => {
     if (!initPromise) {
@@ -74,9 +116,11 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
       return;
     }
 
-    const client = getCubeEngineClient();
+    const { practiceMode, practiceLength } = get();
     set({ loadingScramble: true });
-    const scramble = await client.generateScramble();
+    const scramble = practiceMode
+      ? generatePracticeScramble(practiceLength)
+      : await getCubeEngineClient().generateScramble();
     const trimmed = [...history, scramble].slice(-HISTORY_LIMIT);
     set({
       scramble,

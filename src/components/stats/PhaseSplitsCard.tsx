@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Split } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { PHASE_LABELS, type PhaseCount } from "@/lib/store/settingsStore";
-import { computePhaseSplits } from "@/lib/stats/stats";
+import { computePhaseSplits, normalSolves } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
 
 /** Distinct hues per phase, so the bar and the rows below read as one thing. */
@@ -14,7 +14,7 @@ const labelsFor = (count: number) => PHASE_LABELS[(count as PhaseCount)] ?? [];
 
 export function PhaseSplitsCard() {
   const solves = useSessionStore((s) => s.solves);
-  const summary = useMemo(() => computePhaseSplits(solves, labelsFor), [solves]);
+  const summary = useMemo(() => computePhaseSplits(normalSolves(solves), labelsFor), [solves]);
 
   if (!summary) return null;
 

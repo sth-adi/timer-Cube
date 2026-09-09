@@ -37,6 +37,9 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
       >
         <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
         <span className="tabular-timer flex-1 text-left ml-2">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
+        {solve.reconstruction && (
+          <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />
+        )}
         {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
       </button>
       {open && (
@@ -66,7 +69,7 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
             <button
               type="button"
               onClick={() => {
-                requestAnalysis(solve.scramble, solveFinalMs(solve));
+                requestAnalysis(solve.scramble, solveFinalMs(solve), solve.id, solve.reconstruction);
                 setOpen(false);
               }}
               className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"

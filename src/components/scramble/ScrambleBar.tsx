@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Boxes, Check, ChevronLeft, Copy, RefreshCw } from "lucide-react";
+import { Boxes, Check, ChevronLeft, Copy, RefreshCw, Swords } from "lucide-react";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { cn } from "@/lib/utils/cn";
 import { ScrambleNet } from "./ScrambleNet";
@@ -12,8 +12,10 @@ export function ScrambleBar({ className }: { className?: string }) {
   const nextScramble = useScrambleStore((s) => s.nextScramble);
   const previousScramble = useScrambleStore((s) => s.previousScramble);
   const historyIndex = useScrambleStore((s) => s.historyIndex);
+  const practiceMode = useScrambleStore((s) => s.practiceMode);
   const [netOpen, setNetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const onCopy = async () => {
     if (!scramble) return;
@@ -27,8 +29,25 @@ export function ScrambleBar({ className }: { className?: string }) {
     }
   };
 
+  const onCopyChallengeLink = async () => {
+    if (!scramble) return;
+    try {
+      const url = `${window.location.origin}${window.location.pathname}?scramble=${encodeURIComponent(scramble)}`;
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1600);
+    } catch {
+      // Same clipboard caveat as onCopy above.
+    }
+  };
+
   return (
     <div className={cn("flex flex-col items-center gap-3 px-4", className)}>
+      {practiceMode && (
+        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-warning">
+          Practice scramble — not WCA-legal
+        </span>
+      )}
       <div className="flex items-start justify-center gap-2">
         <p className="tabular-timer max-w-3xl text-center text-lg sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
           {loading && !scramble ? "Generating scramble…" : scramble}
@@ -67,6 +86,19 @@ export function ScrambleBar({ className }: { className?: string }) {
             )}
           >
             <Boxes size={17} />
+          </button>
+          <button
+            type="button"
+            onClick={onCopyChallengeLink}
+            disabled={!scramble}
+            aria-label="Copy a link a friend can use to race this exact scramble"
+            title="Copy challenge link"
+            className={cn(
+              "tap-target rounded-full transition-colors disabled:opacity-40",
+              linkCopied ? "text-success" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
+            )}
+          >
+            {linkCopied ? <Check size={17} /> : <Swords size={16} />}
           </button>
           <button
             type="button"

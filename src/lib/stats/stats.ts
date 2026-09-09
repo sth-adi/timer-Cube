@@ -1,4 +1,4 @@
-import type { Solve } from "@/types";
+import type { EventTag, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
 
 export interface AverageResult {
@@ -545,4 +545,27 @@ export function computePhaseSplits(solves: Solve[], labelsFor: (count: number) =
   });
 
   return { sampleSize, phases, meanTotalMs };
+}
+
+/**
+ * Solves timed under an event tag (one-handed, feet, blindfolded, ...) are
+ * excluded from every "normal" stat by default — ao5/ao12, PB detection,
+ * achievements, the heatmap, all of it — the same way mixing a handful of OH
+ * times into a 2-handed ao12 would corrupt it for a human. This is the single
+ * choke point every one of those call sites filters through, so a tagged
+ * solve can never silently skew a number it wasn't meant to be part of.
+ */
+export function normalSolves(solves: Solve[]): Solve[] {
+  return solves.filter((s) => !s.event);
+}
+
+/** The solves for one specific practice category, e.g. every one-handed solve. */
+export function solvesForEvent(solves: Solve[], event: EventTag): Solve[] {
+  return solves.filter((s) => s.event === event);
+}
+
+/** Which event tags actually have at least one solve in this list, in a stable display order. */
+export function eventTagsPresent(solves: Solve[]): EventTag[] {
+  const present = new Set(solves.map((s) => s.event).filter((e): e is EventTag => !!e));
+  return (["oh", "feet", "bld"] as const).filter((e) => present.has(e));
 }

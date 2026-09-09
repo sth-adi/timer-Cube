@@ -3,9 +3,9 @@ import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
 import { addSolve, deleteSolve, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
-import type { Penalty } from "@/types";
-import { computeAchievements, computeSessionStats, type AchievementState } from "@/lib/stats/stats";
-import { buildSessionExport, downloadJson, parseSessionExport } from "@/lib/utils/sessionExport";
+import type { EventTag, Penalty } from "@/types";
+import { computeAchievements, computeSessionStats, normalSolves, type AchievementState } from "@/lib/stats/stats";
+import { buildSessionExport, downloadJson, parseSessionExport, type SessionExport } from "@/lib/utils/sessionExport";
 
 export type PBKind = "single" | "ao5" | "ao12";
 export interface PBEvent {
@@ -42,14 +42,19 @@ interface SessionState {
   addSession: (name: string) => Promise<void>;
   renameActiveSession: (name: string) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
-  recordSolve: (timeMs: number, scramble: string, splits?: number[]) => Promise<void>;
+  recordSolve: (timeMs: number, scramble: string, splits?: number[], event?: EventTag) => Promise<void>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
+  saveReconstruction: (solveId: string, reconstruction: string) => Promise<void>;
+  /** Practice category the next timed solve will be tagged with; sticky until changed, not persisted. */
+  pendingEvent: EventTag | null;
+  setPendingEvent: (event: EventTag | null) => void;
   removeSolve: (solveId: string) => Promise<void>;
   clearPB: () => void;
   clearAchievementToast: () => void;
   exportActiveSession: () => void;
   importIntoActiveSession: (json: string) => Promise<number>;
+  importRowsIntoActiveSession: (rows: SessionExport["solves"]) => Promise<number>;
 }
 
 let pbEventId = 0;
@@ -62,6 +67,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   loaded: false,
   lastPB: null,
   achievementToast: null,
+  pendingEvent: null,
 
   init: async () => {
     const first = await ensureDefaultSession();
@@ -103,17 +109,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble, splits) => {
+  recordSolve: async (timeMs, scramble, splits, event) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return;
-    const prevStats = computeSessionStats(prevSolves);
-    const prevAchievements = computeAchievements(prevAllSolves);
+    // PB detection and achievements only ever look at ordinary 2-handed
+    // solves — see normalSolves() — so tagging a solve OH/feet/BLD never
+    // triggers a PB toast or unlocks a milestone that assumes normal timing,
+    // and never corrupts the running normal average either.
+    const prevStats = computeSessionStats(normalSolves(prevSolves));
+    const prevAchievements = computeAchievements(normalSolves(prevAllSolves));
 
-    await addSolve({ sessionId: activeSessionId, timeMs, scramble, splits });
+    await addSolve({ sessionId: activeSessionId, timeMs, scramble, splits, event: event ?? undefined });
     const solves = await getSessionSolves(activeSessionId);
     const allSolves = await getAllSolves();
-    const newStats = computeSessionStats(solves);
-    const newAchievements = computeAchievements(allSolves);
+    const newStats = computeSessionStats(normalSolves(solves));
+    const newAchievements = computeAchievements(normalSolves(allSolves));
 
     let pb: PBEvent | null = null;
     if (newStats.bestAo12 !== null && (prevStats.bestAo12 === null || newStats.bestAo12 < prevStats.bestAo12)) {
@@ -148,6 +158,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId) });
   },
 
+  saveReconstruction: async (solveId, reconstruction) => {
+    await updateSolve(solveId, { reconstruction });
+    const { activeSessionId } = get();
+    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId) });
+  },
+
+  setPendingEvent: (event) => set({ pendingEvent: event }),
+
   removeSolve: async (solveId) => {
     await deleteSolve(solveId);
     const { activeSessionId } = get();
@@ -167,10 +185,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   importIntoActiveSession: async (json) => {
+    const { activeSessionId, importRowsIntoActiveSession } = get();
+    if (!activeSessionId) return 0;
+    return importRowsIntoActiveSession(parseSessionExport(JSON.parse(json)));
+  },
+
+  importRowsIntoActiveSession: async (rows) => {
     const { activeSessionId } = get();
     if (!activeSessionId) return 0;
-    const parsed = parseSessionExport(JSON.parse(json));
-    const count = await importSolves(activeSessionId, parsed);
+    const count = await importSolves(activeSessionId, rows);
     set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
     return count;
   },

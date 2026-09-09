@@ -1,4 +1,6 @@
-import type { Penalty, Solve } from "@/types";
+import type { EventTag, Penalty, Solve } from "@/types";
+
+const VALID_EVENT_TAGS: EventTag[] = ["oh", "feet", "bld"];
 
 export interface SessionExport {
   version: 1;
@@ -11,6 +13,8 @@ export interface SessionExport {
     date: number;
     comment?: string;
     splits?: number[];
+    event?: EventTag;
+    reconstruction?: string;
   }>;
 }
 
@@ -26,6 +30,8 @@ export function buildSessionExport(sessionName: string, solves: Solve[]): Sessio
       date: s.date,
       comment: s.comment,
       splits: s.splits,
+      event: s.event,
+      reconstruction: s.reconstruction,
     })),
   };
 }
@@ -69,6 +75,8 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
         Array.isArray(s.splits) && s.splits.every((v) => typeof v === "number" && Number.isFinite(v))
           ? (s.splits as number[])
           : undefined,
+      event: VALID_EVENT_TAGS.includes(s.event as EventTag) ? (s.event as EventTag) : undefined,
+      reconstruction: typeof s.reconstruction === "string" ? s.reconstruction : undefined,
     };
   });
 }

@@ -13,6 +13,13 @@ export interface CaseProgress {
   dueAt: number;
   reps: number;
   lapses: number;
+  /**
+   * Fastest recall — from seeing the case to revealing the algorithm — ever
+   * recorded for it, in ms. This measures recognition + recall speed, not
+   * physical execution (we can't observe turns on a real cube), so it's
+   * deliberately named "recall" rather than "solve" throughout the UI.
+   */
+  bestRecallMs?: number;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -58,4 +65,14 @@ export function applyReview(progress: CaseProgress, rating: ReviewRating, now = 
   }
 
   return { ...progress, ease, intervalDays, reps, lapses, dueAt: now + intervalDays * DAY_MS };
+}
+
+/**
+ * Applies a recall-time sample to a case's progress, updating its best only
+ * when beaten. Pure so it's testable without the store, which is what
+ * `algorithmStore.recordRecallTime` actually calls.
+ */
+export function applyRecallTime(progress: CaseProgress, ms: number): { progress: CaseProgress; isPB: boolean } {
+  const isPB = progress.bestRecallMs === undefined || ms < progress.bestRecallMs;
+  return { progress: isPB ? { ...progress, bestRecallMs: ms } : progress, isPB };
 }

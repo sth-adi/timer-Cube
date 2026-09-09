@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTimer } from "@/hooks/useTimer";
-import { PHASE_LABELS, useSettingsStore } from "@/lib/store/settingsStore";
+import { PHASE_LABELS, type PhaseCount, useSettingsStore } from "@/lib/store/settingsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime } from "@/lib/utils/time";
+import { computePhaseSplits, normalSolves } from "@/lib/stats/stats";
+import type { PhaseAverage } from "@/lib/stats/stats";
+import { EVENT_TAGS } from "@/types";
 import { cn } from "@/lib/utils/cn";
 import { playSolveChime, playInspectionBeep } from "@/lib/utils/sound";
 import { InspectionRing } from "./InspectionRing";
@@ -31,6 +34,7 @@ function PhaseTrack({
   runningMs,
   finished,
   hideTimes,
+  historicalPhases,
 }: {
   labels: readonly string[];
   splits: number[];
@@ -39,6 +43,8 @@ function PhaseTrack({
   finished: boolean;
   /** Honours "hide time while solving": which phase you're on is fine to show, how long it took isn't. */
   hideTimes: boolean;
+  /** Your rolling average for each phase (by position), when enough matching history exists — drives the live pace dot. */
+  historicalPhases: readonly PhaseAverage[] | null;
 }) {
   const boundaries = [0, ...splits];
   return (
@@ -48,15 +54,26 @@ function PhaseTrack({
         const active = !finished && i === phaseIndex;
         const end = i < splits.length ? splits[i] : runningMs;
         const duration = end - (boundaries[i] ?? 0);
+        // Only a genuinely completed phase gets judged against history — the
+        // phase still running has no final duration to compare yet.
+        const isPastPhase = i < splits.length || (finished && i === splits.length);
+        const avgMs = historicalPhases?.[i]?.meanMs;
+        const pace = isPastPhase && avgMs !== undefined && !hideTimes ? (duration <= avgMs ? "ahead" : "behind") : null;
         return (
           <div key={label} className="flex flex-col items-center">
             <span
               className={cn(
-                "text-[10px] uppercase tracking-wide",
+                "flex items-center gap-1 text-[10px] uppercase tracking-wide",
                 active ? "text-accent" : done ? "text-muted" : "text-muted-2",
               )}
             >
               {label}
+              {pace && (
+                <span
+                  className={cn("h-1.5 w-1.5 rounded-full", pace === "ahead" ? "bg-success" : "bg-warning")}
+                  title={pace === "ahead" ? "Faster than your average for this phase" : "Slower than your average for this phase"}
+                />
+              )}
             </span>
             <span
               className={cn(
@@ -83,13 +100,15 @@ export function TimerView() {
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
 
+  const pendingEvent = useSessionStore((s) => s.pendingEvent);
+
   const onComplete = useCallback(
     (timeMs: number, solveSplits: number[]) => {
-      recordSolve(timeMs, scramble, solveSplits);
+      recordSolve(timeMs, scramble, solveSplits, pendingEvent ?? undefined);
       if (soundEnabled) playSolveChime();
       void nextScramble();
     },
-    [recordSolve, scramble, nextScramble, soundEnabled],
+    [recordSolve, scramble, nextScramble, soundEnabled, pendingEvent],
   );
 
   const { phase, displayMs, inspectionRemainingMs, splits, phaseIndex, press, release, reset } = useTimer({
@@ -101,6 +120,20 @@ export function TimerView() {
 
   const removeSolve = useSessionStore((s) => s.removeSolve);
   const solves = useSessionStore((s) => s.solves);
+
+  // Your rolling per-phase average, for the live pace dot — only meaningful
+  // once there's a matching-phase-count history to compare against, and
+  // recomputed as solves come in so it always reflects up-to-date form.
+  const paceSummary = useMemo(() => {
+    if (phaseCount <= 1) return null;
+    // Only solves phase-timed with the *current* phase count are comparable
+    // — history from before you switched, say, 3-phase to 4-phase splits
+    // would otherwise get silently treated as if it were the same phases,
+    // which computePhaseSplits' own "pick whichever count has the most
+    // solves" logic doesn't guarantee on its own.
+    const matching = normalSolves(solves).filter((s) => (s.splits?.length ?? 0) + 1 === phaseCount);
+    return computePhaseSplits(matching, (n) => PHASE_LABELS[n as PhaseCount] ?? []);
+  }, [solves, phaseCount]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -188,6 +221,11 @@ export function TimerView() {
           {Math.ceil(inspectionRemainingMs / 1000)}
         </p>
       )}
+      {pendingEvent && (
+        <p className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-medium text-accent">
+          {EVENT_TAGS.find((t) => t.id === pendingEvent)?.label}
+        </p>
+      )}
       <p
         className={cn(
           "timer-digits font-bold transition-colors duration-100",
@@ -205,6 +243,7 @@ export function TimerView() {
           runningMs={displayMs}
           finished={phase === "stopped"}
           hideTimes={hideTimeWhileSolving && phase === "running"}
+          historicalPhases={paceSummary?.phases ?? null}
         />
       )}
 

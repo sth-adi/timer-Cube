@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyReview, deriveStatus, initialProgress, isDue } from "./srs";
+import { applyRecallTime, applyReview, deriveStatus, initialProgress, isDue } from "./srs";
 
 describe("srs", () => {
   it("a new case has no progress and is always due", () => {
@@ -43,5 +43,34 @@ describe("srs", () => {
     const hard = applyReview(base, "hard", now);
     const good = applyReview(base, "good", now);
     expect(hard.intervalDays).toBeLessThan(good.intervalDays);
+  });
+});
+
+describe("applyRecallTime", () => {
+  it("records the first sample as the best", () => {
+    const p = initialProgress("x");
+    const { progress, isPB } = applyRecallTime(p, 2000);
+    expect(isPB).toBe(true);
+    expect(progress.bestRecallMs).toBe(2000);
+  });
+
+  it("updates the best only when actually beaten", () => {
+    const p = initialProgress("x");
+    const { progress: afterFirst } = applyRecallTime(p, 2000);
+
+    const slower = applyRecallTime(afterFirst, 3000);
+    expect(slower.isPB).toBe(false);
+    expect(slower.progress.bestRecallMs).toBe(2000);
+
+    const faster = applyRecallTime(afterFirst, 1200);
+    expect(faster.isPB).toBe(true);
+    expect(faster.progress.bestRecallMs).toBe(1200);
+  });
+
+  it("leaves the rest of the progress untouched", () => {
+    const p = { ...initialProgress("x"), reps: 4, ease: 2.7 };
+    const { progress } = applyRecallTime(p, 1500);
+    expect(progress.reps).toBe(4);
+    expect(progress.ease).toBe(2.7);
   });
 });

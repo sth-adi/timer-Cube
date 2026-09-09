@@ -3,6 +3,8 @@ import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import type { AnalyzeResult, SolveAnalysis } from "@/lib/analysis/analyze";
 
 interface AnalysisState {
+  /** The solve this analysis is tied to, if it was opened from the solve list — lets "Save to this solve" know what to save onto. */
+  solveId: string | null;
   scramble: string;
   reconstruction: string;
   /** Solve time in ms, or null when not supplied — it only unlocks turn-speed findings. */
@@ -19,12 +21,13 @@ interface AnalysisState {
   setScramble: (v: string) => void;
   setReconstruction: (v: string) => void;
   setTimeMs: (v: number | null) => void;
-  requestAnalysis: (scramble: string, timeMs: number | null) => void;
+  requestAnalysis: (scramble: string, timeMs: number | null, solveId?: string, savedReconstruction?: string) => void;
   run: () => Promise<void>;
   clear: () => void;
 }
 
 export const useAnalysisStore = create<AnalysisState>((set, get) => ({
+  solveId: null,
   scramble: "",
   reconstruction: "",
   timeMs: null,
@@ -37,11 +40,16 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   setReconstruction: (reconstruction) => set({ reconstruction }),
   setTimeMs: (timeMs) => set({ timeMs }),
 
-  requestAnalysis: (scramble, timeMs) =>
+  requestAnalysis: (scramble, timeMs, solveId, savedReconstruction) =>
     set((s) => ({
       scramble,
       timeMs,
-      reconstruction: "",
+      solveId: solveId ?? null,
+      // Prefills a reconstruction already saved on this solve, so reopening
+      // one you've analyzed before doesn't mean retyping it — but a fresh
+      // request always starts from a blank box, never a leftover from
+      // whichever solve was analyzed previously.
+      reconstruction: savedReconstruction ?? "",
       result: null,
       errors: [],
       requestSeq: s.requestSeq + 1,
@@ -65,5 +73,5 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }
   },
 
-  clear: () => set({ reconstruction: "", result: null, errors: [], timeMs: null }),
+  clear: () => set({ reconstruction: "", result: null, errors: [], timeMs: null, solveId: null }),
 }));
