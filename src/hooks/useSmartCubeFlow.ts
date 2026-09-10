@@ -41,6 +41,7 @@ export interface SmartCubeFlow {
 export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   const connected = useSmartCubeStore((s) => s.connected);
   const liveFacelets = useSmartCubeStore((s) => s.liveFacelets);
+  const recording = useSmartCubeStore((s) => s.recording);
   const arm = useSmartCubeStore((s) => s.arm);
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
 
@@ -69,19 +70,35 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
 
   const matched = phase === "scrambling" && connected && scramble !== "" && isScrambleComplete(liveFacelets, scramble);
 
-  // The instant the live state matches the scramble, hand off to inspection
-  // (or straight to arming, if inspection is off). Edge-triggered off a ref
-  // so this fires exactly once per match, not on every render where it holds.
+  // The instant the live state matches the scramble, arm the solve-detector
+  // right away — WCA rules let you start solving any time during (or
+  // skipping) inspection, so recording has to be live from this exact
+  // moment, not from whenever a visual countdown happens to finish. The
+  // countdown below is purely a display; it never gates when moves count.
+  // Edge-triggered off a ref so this fires exactly once per match.
   const prevMatchedRef = useRef(false);
   useEffect(() => {
     if (matched && !prevMatchedRef.current) {
       setCorrection(null);
       setCorrecting(false);
-      if (!inspectionEnabled) arm();
+      arm();
       setPhase(inspectionEnabled ? "inspecting" : "ready-to-solve");
     }
     prevMatchedRef.current = matched;
   }, [matched, inspectionEnabled, arm]);
+
+  // A move made mid-countdown (perfectly legal — inspection is a maximum,
+  // not a minimum) means the solve has already started recording; stop
+  // showing the countdown instead of leaving it stuck on screen. Ref-guarded
+  // so this only fires on the transition into "recording", not every render
+  // where it already holds.
+  const prevRecordingRef = useRef(false);
+  useEffect(() => {
+    if (phase === "inspecting" && recording && !prevRecordingRef.current) {
+      setPhase("ready-to-solve");
+    }
+    prevRecordingRef.current = recording;
+  }, [phase, recording]);
 
   // Still scrambling and not (yet) matched: clear any stale suggestion the
   // moment the state changes, then offer a fresh one after a genuine pause.
@@ -110,7 +127,8 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     return () => window.clearTimeout(timer);
   }, [liveFacelets, scramble, phase, matched]);
 
-  // WCA-style inspection countdown, auto-arming the solve once it runs out.
+  // WCA-style inspection countdown — display only, see above; the solve is
+  // already armed and recording moves regardless of what this shows.
   useEffect(() => {
     if (phase !== "inspecting") return undefined;
     let raf: number;
@@ -119,7 +137,6 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
       const remaining = Math.max(0, SMART_CUBE_INSPECTION_MS - (performance.now() - start));
       setInspectionRemainingMs(remaining);
       if (remaining <= 0) {
-        arm();
         setPhase("ready-to-solve");
         return;
       }
@@ -127,7 +144,7 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [phase, arm]);
+  }, [phase]);
 
   return { phase, correction, correcting, inspectionRemainingMs };
 }

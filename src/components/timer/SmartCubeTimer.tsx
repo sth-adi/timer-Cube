@@ -143,19 +143,23 @@ export function SmartCubeTimer() {
         </p>
       )}
 
-      {(armed || recording || finished) && (
-        <p className="tabular-timer text-center text-6xl font-bold">{formatTime(elapsedMs)}</p>
-      )}
-      {!armed && !recording && !finished && flow.phase === "inspecting" && (
+      {armed && !recording && flow.phase === "inspecting" ? (
         <p className="tabular-timer text-center text-6xl font-bold text-danger">
           {Math.ceil(flow.inspectionRemainingMs / 1000)}
         </p>
+      ) : (
+        (armed || recording || finished) && (
+          <p className="tabular-timer text-center text-6xl font-bold">{formatTime(elapsedMs)}</p>
+        )
       )}
 
-      {armed && !recording && (
+      {armed && !recording && flow.phase !== "inspecting" && (
         <p className="flex items-center gap-1.5 text-sm text-accent">
           <Radio size={14} className="animate-pulse" /> Waiting for your first move…
         </p>
+      )}
+      {armed && !recording && flow.phase === "inspecting" && (
+        <p className="text-xs text-muted-2">Scramble verified — start solving any time, inspection is just the max.</p>
       )}
       {recording && <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>}
 
@@ -183,10 +187,6 @@ export function SmartCubeTimer() {
           )}
         </div>
       )}
-      {!armed && !recording && !finished && flow.phase === "inspecting" && (
-        <p className="text-sm text-muted">Scramble verified — inspecting…</p>
-      )}
-
       {finished && (
         <>
           <div className="flex items-center gap-4 text-xs text-muted">
