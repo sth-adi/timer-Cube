@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Sparkles, Wand2, Zap } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -11,10 +11,84 @@ import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
-import { analyzeSmartCubeSolve, type SmartCubeAnalytics } from "@/lib/analysis/smartCubeAnalytics";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { cn } from "@/lib/utils/cn";
+
+const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
+
+/** Cumulative phase-boundary ms (from solve start), null for a phase not yet reached. */
+interface PhaseBoundaries {
+  cross: number | null;
+  f2l: number | null;
+  oll: number | null;
+  pll: number | null;
+}
+
+/** Each phase's own duration in ms, or null while it's not yet finished (or not yet started). */
+function phaseDurations(b: PhaseBoundaries): (number | null)[] {
+  const marks = [b.cross, b.f2l, b.oll, b.pll];
+  const out: (number | null)[] = [];
+  let prev = 0;
+  for (const mark of marks) {
+    if (mark === null) {
+      out.push(null);
+      continue;
+    }
+    out.push(mark - prev);
+    prev = mark;
+  }
+  return out;
+}
+
+/** Cubeast-style running phase breakdown: finished phases show their time, the current one counts up live. */
+function PhaseSplitsRow({
+  durations,
+  currentPhaseIndex,
+  liveCurrentMs,
+}: {
+  durations: (number | null)[];
+  currentPhaseIndex: number;
+  liveCurrentMs: number | null;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
+      {PHASE_LABELS_4.map((label, i) => {
+        const done = durations[i];
+        const isCurrent = i === currentPhaseIndex;
+        return (
+          <span
+            key={label}
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[11px] font-medium tabular-nums",
+              isCurrent ? "bg-accent-soft text-accent" : done !== null ? "bg-bg-panel-2 text-muted" : "bg-bg-panel-2 text-muted-2",
+            )}
+          >
+            {label} {done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; pllCaseName: string | null }) {
+  if (!ollCaseName && !pllCaseName) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
+      {ollCaseName && (
+        <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+          <Sparkles size={11} /> OLL: {ollCaseName}
+        </span>
+      )}
+      {pllCaseName && (
+        <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+          <Sparkles size={11} /> PLL: {pllCaseName}
+        </span>
+      )}
+    </div>
+  );
+}
 
 /**
  * Timing driven by a real Bluetooth smart cube instead of the keyboard:
@@ -43,6 +117,10 @@ export function SmartCubeTimer() {
     startedAtMs,
     solvedAtMs,
     crossAtMs,
+    f2lAtMs,
+    ollAtMs,
+    ollCaseName,
+    pllCaseName,
     moves,
     connect,
     disconnect,
@@ -55,8 +133,6 @@ export function SmartCubeTimer() {
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const [saved, setSaved] = useState(false);
-  const [analytics, setAnalytics] = useState<SmartCubeAnalytics | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
 
   // Auto-verifies the physical scramble against `scramble` and hands off to
   // inspection the instant it matches — see the hook for the full state
@@ -65,73 +141,57 @@ export function SmartCubeTimer() {
   const flow = useSmartCubeFlow(scramble);
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
-  const elapsedMs = recording
-    ? (moves[moves.length - 1]?.timeStampMs ?? startedAtMs ?? 0) - (startedAtMs ?? 0)
-    : finished
-      ? solvedAtMs! - startedAtMs!
-      : 0;
+  const lastMoveMs = moves[moves.length - 1]?.timeStampMs ?? startedAtMs ?? 0;
+  const elapsedMs = recording ? lastMoveMs - (startedAtMs ?? 0) : finished ? solvedAtMs! - startedAtMs! : 0;
 
   const timestamps = useMemo(() => moves.map((m) => m.timeStampMs), [moves]);
   const buckets = useMemo(() => computeTpsBuckets(timestamps), [timestamps]);
   const avgTps = useMemo(() => averageTps(timestamps), [timestamps]);
   const maxBucket = Math.max(1, peakTps(buckets));
 
+  // Cross/F2L/OLL/PLL boundaries, detected live off the cube's own state as
+  // it happens (see smartCubeStore) — always available the instant each
+  // phase completes, no post-solve analysis pass to wait on.
+  const boundaries: PhaseBoundaries | null =
+    startedAtMs !== null
+      ? {
+          cross: crossAtMs !== null ? crossAtMs - startedAtMs : null,
+          f2l: f2lAtMs !== null ? f2lAtMs - startedAtMs : null,
+          oll: ollAtMs !== null ? ollAtMs - startedAtMs : null,
+          pll: finished ? elapsedMs : null,
+        }
+      : null;
+  const durations = boundaries ? phaseDurations(boundaries) : [null, null, null, null];
+  const currentPhaseIndex = durations.findIndex((d) => d === null);
+  const priorBoundaryMs =
+    boundaries && currentPhaseIndex > 0 ? ([boundaries.cross, boundaries.f2l, boundaries.oll][currentPhaseIndex - 1] ?? 0) : 0;
+  const liveCurrentMs = recording && currentPhaseIndex >= 0 ? elapsedMs - priorBoundaryMs : null;
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
-
-  // The instant a solve finishes, run its captured reconstruction through
-  // the same analyzer pipeline the manual analyzer uses — cases ran into,
-  // real Cross/F2L/OLL/PLL splits, all of it, without asking the cuber to
-  // retype a single move. Edge-triggered off solvedAtMs so this fires once
-  // per solve, not on every render while "finished" holds.
-  const analyzedSolvedAtRef = useRef<number | null>(null);
-  const analysisRequestIdRef = useRef(0);
-  useEffect(() => {
-    if (!finished || analyzedSolvedAtRef.current === solvedAtMs) return;
-    analyzedSolvedAtRef.current = solvedAtMs;
-    const requestId = ++analysisRequestIdRef.current;
-    setAnalyzing(true);
-    const snapshotMoves = moves;
-    const snapshotScramble = scramble;
-    const snapshotStart = startedAtMs!;
-    void analyzeSmartCubeSolve(snapshotScramble, snapshotMoves, snapshotStart)
-      .then((result) => {
-        if (analysisRequestIdRef.current !== requestId) return; // superseded by a later solve
-        setAnalytics(result);
-      })
-      .catch(() => {
-        if (analysisRequestIdRef.current !== requestId) return;
-        setAnalytics(null);
-      })
-      .finally(() => {
-        if (analysisRequestIdRef.current !== requestId) return;
-        setAnalyzing(false);
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finished, solvedAtMs]);
 
   const onSave = () => {
     if (!finished) return;
     const reconstruction = moves.map((m) => m.token).join(" ");
+    const moveTimestamps = moves.map((m) => m.timeStampMs - startedAtMs!);
     // Unlike the keyboard timer, a smart-cube solve has a real absolute
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
     const heartRate = summarizeHeartRate(startedAtMs!) ?? undefined;
-    void recordSolve(elapsedMs, scramble, analytics?.splits, pendingEvent ?? undefined, reconstruction, heartRate, crossMs);
+    const splits = boundaries && boundaries.f2l !== null && boundaries.oll !== null
+      ? [boundaries.cross!, boundaries.f2l, boundaries.oll]
+      : undefined;
+    void recordSolve(elapsedMs, scramble, splits, pendingEvent ?? undefined, reconstruction, heartRate, crossMs, moveTimestamps);
     setSaved(true);
   };
 
   const onAnalyze = () => {
     const reconstruction = moves.map((m) => m.token).join(" ");
-    requestAnalysis(scramble, elapsedMs, undefined, reconstruction);
+    const moveTimestamps = moves.map((m) => m.timeStampMs - startedAtMs!);
+    requestAnalysis(scramble, elapsedMs, undefined, reconstruction, moveTimestamps);
   };
 
   const onNext = () => {
     cancel();
     setSaved(false);
-    setAnalytics(null);
-    setAnalyzing(false);
-    analyzedSolvedAtRef.current = null;
-    analysisRequestIdRef.current++;
     void nextScramble();
   };
 
@@ -213,7 +273,13 @@ export function SmartCubeTimer() {
       {armed && !recording && flow.phase === "inspecting" && (
         <p className="text-xs text-muted-2">Scramble verified — start solving any time, inspection is just the max.</p>
       )}
-      {recording && <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>}
+      {recording && (
+        <div className="flex flex-col items-center gap-1.5">
+          <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>
+          <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
+          <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
+        </div>
+      )}
 
       {!armed && !recording && !finished && flow.phase === "scrambling" && (
         <div className="flex w-full flex-col items-center gap-3">
@@ -244,35 +310,10 @@ export function SmartCubeTimer() {
           <div className="flex items-center gap-4 text-xs text-muted">
             <span>{moves.length} moves</span>
             {avgTps !== null && <span>{avgTps.toFixed(2)} avg TPS</span>}
-            {crossMs !== undefined && <span>cross {formatTime(crossMs)}</span>}
           </div>
 
-          {analyzing && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-2">
-              <Loader2 size={12} className="animate-spin" /> Reading your solution — cases, splits, the works…
-            </p>
-          )}
-
-          {analytics && (analytics.ollCaseName || analytics.pllCaseName || analytics.splits) && (
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {analytics.splits && (
-                <span className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted">
-                  Cross {formatTime(analytics.splits[0])} · F2L {formatTime(analytics.splits[1] - analytics.splits[0])} ·
-                  OLL {formatTime(analytics.splits[2] - analytics.splits[1])} · PLL {formatTime(elapsedMs - analytics.splits[2])}
-                </span>
-              )}
-              {analytics.ollCaseName && (
-                <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-                  <Sparkles size={11} /> OLL: {analytics.ollCaseName}
-                </span>
-              )}
-              {analytics.pllCaseName && (
-                <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-                  <Sparkles size={11} /> PLL: {analytics.pllCaseName}
-                </span>
-              )}
-            </div>
-          )}
+          <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
+          <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
 
           {buckets.length > 1 && (
             <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">

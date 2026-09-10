@@ -78,7 +78,7 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
             <button
               type="button"
               onClick={() => {
-                requestAnalysis(solve.scramble, solveFinalMs(solve), solve.id, solve.reconstruction);
+                requestAnalysis(solve.scramble, solveFinalMs(solve), solve.id, solve.reconstruction, solve.moveTimestamps);
                 setOpen(false);
               }}
               className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"

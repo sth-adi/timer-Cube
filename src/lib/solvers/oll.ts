@@ -11,14 +11,16 @@ const F2L_EDGES = [8, 9, 10, 11];
 const LL_CORNERS = [4, 5, 6, 7];
 const LL_EDGES = [4, 5, 6, 7];
 
-function bottomLayerSolved(cube: CubeJSInstance): boolean {
+/** True once the cross and all four F2L pairs are solved (last layer on D untouched). */
+export function bottomLayerSolved(cube: CubeJSInstance): boolean {
   for (const s of CROSS_EDGES) if (cube.ep[s] !== s || cube.eo[s] !== 0) return false;
   for (const s of F2L_CORNERS) if (cube.cp[s] !== s || cube.co[s] !== 0) return false;
   for (const s of F2L_EDGES) if (cube.ep[s] !== s || cube.eo[s] !== 0) return false;
   return true;
 }
 
-function orientationSolved(cube: CubeJSInstance): boolean {
+/** True once every last-layer piece faces up, regardless of permutation. */
+export function orientationSolved(cube: CubeJSInstance): boolean {
   for (const s of LL_CORNERS) if (cube.co[s] !== 0) return false;
   for (const s of LL_EDGES) if (cube.eo[s] !== 0) return false;
   return true;

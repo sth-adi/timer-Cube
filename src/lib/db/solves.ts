@@ -11,6 +11,7 @@ export async function addSolve(input: {
   reconstruction?: string;
   heartRate?: { avg: number; max: number };
   crossMs?: number;
+  moveTimestamps?: number[];
 }): Promise<Solve> {
   const solve: Solve = {
     id: newId(),
@@ -26,6 +27,7 @@ export async function addSolve(input: {
     ...(input.reconstruction ? { reconstruction: input.reconstruction } : {}),
     ...(input.heartRate ? { heartRate: input.heartRate } : {}),
     ...(input.crossMs !== undefined ? { crossMs: input.crossMs } : {}),
+    ...(input.moveTimestamps && input.moveTimestamps.length > 0 ? { moveTimestamps: input.moveTimestamps } : {}),
   };
   await db.solves.add(solve);
   return solve;
@@ -56,7 +58,10 @@ export async function deleteAllSolvesForSession(sessionId: string): Promise<void
 export async function importSolves(
   sessionId: string,
   solves: Array<
-    Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits" | "event" | "reconstruction" | "heartRate" | "crossMs">
+    Pick<
+      Solve,
+      "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits" | "event" | "reconstruction" | "heartRate" | "crossMs" | "moveTimestamps"
+    >
   >,
 ): Promise<number> {
   const rows: Solve[] = solves.map((s) => ({
@@ -72,6 +77,7 @@ export async function importSolves(
     ...(s.reconstruction ? { reconstruction: s.reconstruction } : {}),
     ...(s.heartRate ? { heartRate: s.heartRate } : {}),
     ...(s.crossMs !== undefined ? { crossMs: s.crossMs } : {}),
+    ...(s.moveTimestamps && s.moveTimestamps.length > 0 ? { moveTimestamps: s.moveTimestamps } : {}),
   }));
   await db.solves.bulkAdd(rows);
   return rows.length;

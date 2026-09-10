@@ -90,7 +90,7 @@ function PhaseDetail({ phase }: { phase: PhaseAnalysis }) {
 }
 
 export function AnalyzerView() {
-  const { scramble, reconstruction, result, errors, loading, solveId, setScramble, setReconstruction, setTimeMs, run } =
+  const { scramble, reconstruction, result, errors, loading, solveId, moveTimestamps, setScramble, setReconstruction, setTimeMs, run } =
     useAnalysisStore();
   const saveReconstruction = useSessionStore((s) => s.saveReconstruction);
   const solves = useSessionStore((s) => s.solves);
@@ -285,6 +285,7 @@ export function AnalyzerView() {
               moves={result.moves}
               findings={result.findings}
               summary={result.summary}
+              moveTimestamps={moveTimestamps ?? undefined}
             />
           )}
 

@@ -41,6 +41,14 @@ export interface Solve {
    * rather than reusing `splits`' phase-count-dependent labeling.
    */
   crossMs?: number;
+  /**
+   * Elapsed time (ms, from solve start) of each move in `reconstruction`,
+   * one entry per move — only present for a solve captured live off a smart
+   * cube's own move stream, where every move really did happen at that exact
+   * moment. Lets a replay play back at the cuber's actual pace (the pauses
+   * to look, the bursts to execute) instead of a uniform per-move tempo.
+   */
+  moveTimestamps?: number[];
 }
 
 export interface Session {

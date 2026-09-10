@@ -9,6 +9,13 @@ interface AnalysisState {
   reconstruction: string;
   /** Solve time in ms, or null when not supplied — it only unlocks turn-speed findings. */
   timeMs: number | null;
+  /**
+   * Per-move elapsed ms from solve start, parallel to `reconstruction`'s
+   * moves — only present for a solve captured live off a smart cube, where
+   * every move really happened at that exact moment. Lets the 3D replay play
+   * back at the cuber's actual pace instead of a uniform tempo.
+   */
+  moveTimestamps: number[] | null;
   result: SolveAnalysis | null;
   errors: string[];
   loading: boolean;
@@ -21,7 +28,13 @@ interface AnalysisState {
   setScramble: (v: string) => void;
   setReconstruction: (v: string) => void;
   setTimeMs: (v: number | null) => void;
-  requestAnalysis: (scramble: string, timeMs: number | null, solveId?: string, savedReconstruction?: string) => void;
+  requestAnalysis: (
+    scramble: string,
+    timeMs: number | null,
+    solveId?: string,
+    savedReconstruction?: string,
+    moveTimestamps?: number[],
+  ) => void;
   run: () => Promise<void>;
   clear: () => void;
 }
@@ -31,16 +44,19 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   scramble: "",
   reconstruction: "",
   timeMs: null,
+  moveTimestamps: null,
   result: null,
   errors: [],
   loading: false,
   requestSeq: 0,
 
   setScramble: (scramble) => set({ scramble }),
-  setReconstruction: (reconstruction) => set({ reconstruction }),
+  // Hand-editing the reconstruction invalidates any real per-move timing it
+  // came with — the timestamps would no longer line up with the new moves.
+  setReconstruction: (reconstruction) => set({ reconstruction, moveTimestamps: null }),
   setTimeMs: (timeMs) => set({ timeMs }),
 
-  requestAnalysis: (scramble, timeMs, solveId, savedReconstruction) =>
+  requestAnalysis: (scramble, timeMs, solveId, savedReconstruction, moveTimestamps) =>
     set((s) => ({
       scramble,
       timeMs,
@@ -50,6 +66,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       // request always starts from a blank box, never a leftover from
       // whichever solve was analyzed previously.
       reconstruction: savedReconstruction ?? "",
+      moveTimestamps: moveTimestamps ?? null,
       result: null,
       errors: [],
       requestSeq: s.requestSeq + 1,
@@ -73,5 +90,5 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }
   },
 
-  clear: () => set({ reconstruction: "", result: null, errors: [], timeMs: null, solveId: null }),
+  clear: () => set({ reconstruction: "", result: null, errors: [], timeMs: null, solveId: null, moveTimestamps: null }),
 }));

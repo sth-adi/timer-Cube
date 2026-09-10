@@ -26,6 +26,7 @@ export interface SessionExport {
     reconstruction?: string;
     heartRate?: { avg: number; max: number };
     crossMs?: number;
+    moveTimestamps?: number[];
   }>;
 }
 
@@ -45,6 +46,7 @@ export function buildSessionExport(sessionName: string, solves: Solve[]): Sessio
       reconstruction: s.reconstruction,
       heartRate: s.heartRate,
       crossMs: s.crossMs,
+      moveTimestamps: s.moveTimestamps,
     })),
   };
 }
@@ -92,6 +94,10 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
       reconstruction: typeof s.reconstruction === "string" ? s.reconstruction : undefined,
       heartRate: isHeartRate(s.heartRate) ? s.heartRate : undefined,
       crossMs: typeof s.crossMs === "number" && Number.isFinite(s.crossMs) ? s.crossMs : undefined,
+      moveTimestamps:
+        Array.isArray(s.moveTimestamps) && s.moveTimestamps.every((v) => typeof v === "number" && Number.isFinite(v))
+          ? (s.moveTimestamps as number[])
+          : undefined,
     };
   });
 }

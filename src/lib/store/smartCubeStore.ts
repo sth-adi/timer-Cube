@@ -5,6 +5,8 @@ import type { Subscription } from "rxjs";
 import type { SmartCubeConnection, SmartCubeEvent } from "smartcube-web-bluetooth";
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { crossHeuristic } from "@/lib/solvers/cross";
+import { bottomLayerSolved, orientationSolved } from "@/lib/solvers/oll";
+import { recognizeOll, recognizePll, isOllSkip, isPllSkip } from "@/lib/analysis/recognize";
 
 /**
  * Bridges a real Bluetooth smart cube into this app via
@@ -52,6 +54,19 @@ interface SmartCubeState {
    * needed — unlike the keyboard timer's manual multiphase splits.
    */
   crossAtMs: number | null;
+  /** When all four F2L pairs (cross + F2L corners/edges) first read solved, same live-detection as crossAtMs. */
+  f2lAtMs: number | null;
+  /** When the last layer first read fully oriented (F2L still intact), i.e. OLL complete. */
+  ollAtMs: number | null;
+  /**
+   * The OLL/PLL case actually faced, recognized the instant the cube reaches
+   * that state — no waiting on the full post-solve analyzer. Null while not
+   * yet known; "OLL skip"/"PLL skip" when that step was skipped outright;
+   * absent (stays null) if the state isn't in the library, e.g. a
+   * mis-detected cross.
+   */
+  ollCaseName: string | null;
+  pllCaseName: string | null;
   moves: SmartCubeMove[];
   /**
    * The cube's live state as a 54-char Kociemba facelet string, replayed
@@ -90,6 +105,10 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   startedAtMs: null,
   solvedAtMs: null,
   crossAtMs: null,
+  f2lAtMs: null,
+  ollAtMs: null,
+  ollCaseName: null,
+  pllCaseName: null,
   moves: [],
   liveFacelets: SOLVED_FACELETS,
 
@@ -128,16 +147,43 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         }
 
         const move: SmartCubeMove = { token: event.move, timeStampMs: event.timestamp };
-        // Cross-solved is checked directly off the live cube object (no
-        // need to re-parse facelets) — only while actually recording a
-        // solve, and only the first time, so a coincidentally cross-solved
-        // mid-scramble moment can never register, and re-scrambling the
-        // cross back apart mid-solve doesn't erase an already-earned split.
+        // Every milestone below is checked directly off the live cube object
+        // (no re-parsing facelets) and only the first time it's reached, so a
+        // coincidental alignment mid-scramble or mid-insertion can never
+        // register, and breaking it apart again later doesn't erase an
+        // already-earned split. This assumes the same cross-on-U convention
+        // the app's solver frame uses (see engine.ts) — the cuber's cross
+        // ends up on whichever face was "up" when the cube was connected.
         const crossJustSolved = state.crossAtMs === null && crossHeuristic(liveCube) === 0;
+        const f2lJustSolved = state.f2lAtMs === null && bottomLayerSolved(liveCube);
+        const ollJustSolved = state.ollAtMs === null && orientationSolved(liveCube) && bottomLayerSolved(liveCube);
+
+        // Case recognition wants the algorithm library's last-layer-on-U
+        // convention, the mirror of this store's cross-on-U cube — an x2
+        // whole-cube rotation swaps them (see frames.ts's mapToLibraryFrame,
+        // same rotation). Recognized right as each phase starts, on exactly
+        // the state the cuber was looking at when they read the case.
+        let ollCaseName = state.ollCaseName;
+        if (f2lJustSolved) {
+          const libraryFrame = liveCube.clone();
+          libraryFrame.move("x2");
+          ollCaseName = isOllSkip(libraryFrame) ? "OLL skip" : (recognizeOll(libraryFrame)?.case.name ?? null);
+        }
+        let pllCaseName = state.pllCaseName;
+        if (ollJustSolved) {
+          const libraryFrame = liveCube.clone();
+          libraryFrame.move("x2");
+          pllCaseName = isPllSkip(libraryFrame) ? "PLL skip" : (recognizePll(libraryFrame)?.case.name ?? null);
+        }
+
         set((s) => ({
           recording: true,
           startedAtMs: s.startedAtMs ?? event.timestamp,
           crossAtMs: crossJustSolved ? event.timestamp : s.crossAtMs,
+          f2lAtMs: f2lJustSolved ? event.timestamp : s.f2lAtMs,
+          ollAtMs: ollJustSolved ? event.timestamp : s.ollAtMs,
+          ollCaseName,
+          pllCaseName,
           moves: [...s.moves, move],
           liveFacelets: facelets,
         }));
@@ -179,10 +225,25 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       startedAtMs: null,
       solvedAtMs: null,
       crossAtMs: null,
+      f2lAtMs: null,
+      ollAtMs: null,
+      ollCaseName: null,
+      pllCaseName: null,
       moves: [],
       error: null,
     }),
 
   cancel: () =>
-    set({ armed: false, recording: false, startedAtMs: null, solvedAtMs: null, crossAtMs: null, moves: [] }),
+    set({
+      armed: false,
+      recording: false,
+      startedAtMs: null,
+      solvedAtMs: null,
+      crossAtMs: null,
+      f2lAtMs: null,
+      ollAtMs: null,
+      ollCaseName: null,
+      pllCaseName: null,
+      moves: [],
+    }),
 }));
