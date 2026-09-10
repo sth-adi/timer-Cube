@@ -101,6 +101,12 @@ class CubeEngineClient {
     if (res.type !== "trainerState") throw new Error("Unexpected worker response");
     return res.setupAlg;
   }
+
+  async computeCorrectiveMoves(scramble: string, actualFacelets: string): Promise<string[]> {
+    const res = await this.send({ type: "correctiveMoves", scramble, actualFacelets });
+    if (res.type !== "correctiveMoves") throw new Error("Unexpected worker response");
+    return res.moves;
+  }
 }
 
 let instance: CubeEngineClient | null = null;

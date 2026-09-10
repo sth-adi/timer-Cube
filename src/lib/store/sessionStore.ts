@@ -49,6 +49,7 @@ interface SessionState {
     event?: EventTag,
     reconstruction?: string,
     heartRate?: { avg: number; max: number },
+    crossMs?: number,
   ) => Promise<void>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
@@ -116,7 +117,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate) => {
+  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return;
     // PB detection and achievements only ever look at ordinary 2-handed
@@ -126,7 +127,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const prevStats = computeSessionStats(normalSolves(prevSolves));
     const prevAchievements = computeAchievements(normalSolves(prevAllSolves));
 
-    await addSolve({ sessionId: activeSessionId, timeMs, scramble, splits, event: event ?? undefined, reconstruction, heartRate });
+    await addSolve({ sessionId: activeSessionId, timeMs, scramble, splits, event: event ?? undefined, reconstruction, heartRate, crossMs });
     const solves = await getSessionSolves(activeSessionId);
     const allSolves = await getAllSolves();
     const newStats = computeSessionStats(normalSolves(solves));

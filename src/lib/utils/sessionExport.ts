@@ -25,6 +25,7 @@ export interface SessionExport {
     event?: EventTag;
     reconstruction?: string;
     heartRate?: { avg: number; max: number };
+    crossMs?: number;
   }>;
 }
 
@@ -43,6 +44,7 @@ export function buildSessionExport(sessionName: string, solves: Solve[]): Sessio
       event: s.event,
       reconstruction: s.reconstruction,
       heartRate: s.heartRate,
+      crossMs: s.crossMs,
     })),
   };
 }
@@ -89,6 +91,7 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
       event: VALID_EVENT_TAGS.includes(s.event as EventTag) ? (s.event as EventTag) : undefined,
       reconstruction: typeof s.reconstruction === "string" ? s.reconstruction : undefined,
       heartRate: isHeartRate(s.heartRate) ? s.heartRate : undefined,
+      crossMs: typeof s.crossMs === "number" && Number.isFinite(s.crossMs) ? s.crossMs : undefined,
     };
   });
 }

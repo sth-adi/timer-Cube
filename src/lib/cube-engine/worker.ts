@@ -5,6 +5,7 @@ import { solveCFOP } from "../solvers/cfop";
 import { buildTrainerState, type TrainerMode } from "../solvers/trainerState";
 import { analyzeSolve, type AnalyzeInput, type AnalyzeResult } from "../analysis/analyze";
 import { gradeCrossAttempt, type CrossDrillInput, type CrossDrillOutcome } from "../analysis/crossDrill";
+import { computeCorrectiveMoves } from "../analysis/scrambleVerify";
 
 export type WorkerRequest =
   | { id: number; type: "init" }
@@ -13,7 +14,8 @@ export type WorkerRequest =
   | { id: number; type: "solveCFOP"; scramble: string }
   | { id: number; type: "trainerState"; mode: TrainerMode }
   | { id: number; type: "analyze"; input: AnalyzeInput }
-  | { id: number; type: "gradeCross"; input: CrossDrillInput };
+  | { id: number; type: "gradeCross"; input: CrossDrillInput }
+  | { id: number; type: "correctiveMoves"; scramble: string; actualFacelets: string };
 
 export type WorkerResponse =
   | { id: number; type: "ready" }
@@ -23,6 +25,7 @@ export type WorkerResponse =
   | { id: number; type: "trainerState"; setupAlg: string }
   | { id: number; type: "analyze"; result: AnalyzeResult }
   | { id: number; type: "gradeCross"; result: CrossDrillOutcome }
+  | { id: number; type: "correctiveMoves"; moves: string[] }
   | { id: number; type: "error"; message: string };
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -77,6 +80,11 @@ ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         // here rather than freezing the timer on the main thread.
         const result = analyzeSolve(msg.input);
         ctx.postMessage({ id: msg.id, type: "analyze", result } satisfies WorkerResponse);
+        break;
+      }
+      case "correctiveMoves": {
+        const moves = computeCorrectiveMoves(msg.scramble, msg.actualFacelets);
+        ctx.postMessage({ id: msg.id, type: "correctiveMoves", moves } satisfies WorkerResponse);
         break;
       }
     }

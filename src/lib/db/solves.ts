@@ -10,6 +10,7 @@ export async function addSolve(input: {
   event?: EventTag;
   reconstruction?: string;
   heartRate?: { avg: number; max: number };
+  crossMs?: number;
 }): Promise<Solve> {
   const solve: Solve = {
     id: newId(),
@@ -24,6 +25,7 @@ export async function addSolve(input: {
     ...(input.event ? { event: input.event } : {}),
     ...(input.reconstruction ? { reconstruction: input.reconstruction } : {}),
     ...(input.heartRate ? { heartRate: input.heartRate } : {}),
+    ...(input.crossMs !== undefined ? { crossMs: input.crossMs } : {}),
   };
   await db.solves.add(solve);
   return solve;
@@ -53,7 +55,9 @@ export async function deleteAllSolvesForSession(sessionId: string): Promise<void
 /** Bulk-imports solves into a session, assigning fresh ids so they never collide with existing rows. */
 export async function importSolves(
   sessionId: string,
-  solves: Array<Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits" | "event" | "reconstruction" | "heartRate">>,
+  solves: Array<
+    Pick<Solve, "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits" | "event" | "reconstruction" | "heartRate" | "crossMs">
+  >,
 ): Promise<number> {
   const rows: Solve[] = solves.map((s) => ({
     id: newId(),
@@ -67,6 +71,7 @@ export async function importSolves(
     ...(s.event ? { event: s.event } : {}),
     ...(s.reconstruction ? { reconstruction: s.reconstruction } : {}),
     ...(s.heartRate ? { heartRate: s.heartRate } : {}),
+    ...(s.crossMs !== undefined ? { crossMs: s.crossMs } : {}),
   }));
   await db.solves.bulkAdd(rows);
   return rows.length;

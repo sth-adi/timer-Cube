@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Bluetooth, BluetoothConnected, Check, Loader2, Radio, Zap } from "lucide-react";
+import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Zap } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
+import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
 import { EVENT_TAGS } from "@/types";
@@ -12,15 +14,19 @@ import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Timing driven by a real Bluetooth smart cube instead of the keyboard: arm
- * it, make your first physical turn to start the clock, and the moment the
- * cube itself reports solved, the clock stops — no spacebar, and the exact
- * moves you made become a verified reconstruction automatically, ready for
- * the analyzer without retyping a single move.
+ * Timing driven by a real Bluetooth smart cube instead of the keyboard:
+ * scramble it, and this verifies the physical state against the target
+ * scramble live — matching it starts inspection automatically, and pausing
+ * mid-scramble with the wrong state offers the exact moves to fix it (see
+ * useSmartCubeFlow). Once inspection ends, your first physical turn starts
+ * the clock, and the moment the cube itself reports solved, the clock
+ * stops — no spacebar, and the exact moves you made become a verified
+ * reconstruction automatically, ready for the analyzer without retyping a
+ * single move.
  *
- * Needs a real smart cube (GAN / GiiKER / GoCube) and a browser with Web
- * Bluetooth (Chromium-based, HTTPS or localhost) — there's no software
- * fallback for the hardware half of this.
+ * Needs a real smart cube (GAN / GiiKER / GoCube / QiYi / MoYu) and a
+ * browser with Web Bluetooth (Chromium-based, HTTPS or localhost) — there's
+ * no software fallback for the hardware half of this.
  */
 export function SmartCubeTimer() {
   const {
@@ -33,10 +39,10 @@ export function SmartCubeTimer() {
     recording,
     startedAtMs,
     solvedAtMs,
+    crossAtMs,
     moves,
     connect,
     disconnect,
-    arm,
     cancel,
   } = useSmartCubeStore();
   const scramble = useScrambleStore((s) => s.scramble);
@@ -45,6 +51,12 @@ export function SmartCubeTimer() {
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
   const [saved, setSaved] = useState(false);
+
+  // Auto-verifies the physical scramble against `scramble` and hands off to
+  // inspection the instant it matches — see the hook for the full state
+  // machine. Only meaningful before `arm()` has been called; once armed,
+  // the existing recording/solved-detection below takes over.
+  const flow = useSmartCubeFlow(scramble);
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
   const elapsedMs = recording
@@ -58,6 +70,8 @@ export function SmartCubeTimer() {
   const avgTps = useMemo(() => averageTps(timestamps), [timestamps]);
   const maxBucket = Math.max(1, peakTps(buckets));
 
+  const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
+
   const onSave = () => {
     if (!finished) return;
     const reconstruction = moves.map((m) => m.token).join(" ");
@@ -65,7 +79,7 @@ export function SmartCubeTimer() {
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
     const heartRate = summarizeHeartRate(startedAtMs!) ?? undefined;
-    void recordSolve(elapsedMs, scramble, undefined, pendingEvent ?? undefined, reconstruction, heartRate);
+    void recordSolve(elapsedMs, scramble, undefined, pendingEvent ?? undefined, reconstruction, heartRate, crossMs);
     setSaved(true);
   };
 
@@ -91,8 +105,9 @@ export function SmartCubeTimer() {
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
         <Bluetooth size={28} className="text-accent" />
         <p className="max-w-xs text-sm text-muted">
-          Connect a GAN, GiiKER, or GoCube smart cube to time and record solves straight from your physical
-          turns — no spacebar, and the reconstruction is captured automatically.
+          Connect a GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) smart cube to
+          time and record solves straight from your physical turns — no spacebar, and the reconstruction is
+          captured automatically.
         </p>
         <button
           type="button"
@@ -105,7 +120,8 @@ export function SmartCubeTimer() {
         </button>
         {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
         <p className="max-w-xs text-[11px] text-muted-2">
-          Your cube should be solved before you connect — that&apos;s what the app calibrates orientation from.
+          Your cube should be solved before you connect — that&apos;s what the app calibrates orientation from. Once
+          connected, just scramble it: matching the target scramble starts inspection automatically.
         </p>
       </div>
     );
@@ -127,7 +143,14 @@ export function SmartCubeTimer() {
         </p>
       )}
 
-      <p className="tabular-timer text-center text-6xl font-bold">{formatTime(elapsedMs)}</p>
+      {(armed || recording || finished) && (
+        <p className="tabular-timer text-center text-6xl font-bold">{formatTime(elapsedMs)}</p>
+      )}
+      {!armed && !recording && !finished && flow.phase === "inspecting" && (
+        <p className="tabular-timer text-center text-6xl font-bold text-danger">
+          {Math.ceil(flow.inspectionRemainingMs / 1000)}
+        </p>
+      )}
 
       {armed && !recording && (
         <p className="flex items-center gap-1.5 text-sm text-accent">
@@ -136,11 +159,40 @@ export function SmartCubeTimer() {
       )}
       {recording && <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>}
 
+      {!armed && !recording && !finished && flow.phase === "scrambling" && (
+        <div className="flex w-full flex-col items-center gap-3">
+          {scramble && (
+            <div className="w-full max-w-[13rem]">
+              <ScrambleNet scramble={scramble} className="w-full" />
+            </div>
+          )}
+          <p className="tabular-timer break-words text-center text-xs leading-relaxed text-muted-2">{scramble}</p>
+          {flow.correction && flow.correction.length > 0 ? (
+            <div className="flex flex-col items-center gap-1 rounded-lg bg-warning/10 px-3 py-2 text-center">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
+                <AlertTriangle size={13} /> Off track — do this next
+              </p>
+              <p className="tabular-timer font-mono text-sm font-medium text-foreground">{flow.correction.join(" ")}</p>
+            </div>
+          ) : flow.correcting ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-2">
+              <Loader2 size={12} className="animate-spin" /> Checking your scramble…
+            </p>
+          ) : (
+            <p className="text-xs text-muted-2">Scramble your cube to this pattern — inspection starts automatically.</p>
+          )}
+        </div>
+      )}
+      {!armed && !recording && !finished && flow.phase === "inspecting" && (
+        <p className="text-sm text-muted">Scramble verified — inspecting…</p>
+      )}
+
       {finished && (
         <>
           <div className="flex items-center gap-4 text-xs text-muted">
             <span>{moves.length} moves</span>
             {avgTps !== null && <span>{avgTps.toFixed(2)} avg TPS</span>}
+            {crossMs !== undefined && <span>cross {formatTime(crossMs)}</span>}
           </div>
 
           {buckets.length > 1 && (
@@ -178,17 +230,6 @@ export function SmartCubeTimer() {
             </button>
           </div>
         </>
-      )}
-
-      {!armed && !recording && !finished && (
-        <button
-          type="button"
-          onClick={arm}
-          className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-fg"
-        >
-          <Radio size={14} />
-          Ready to solve
-        </button>
       )}
     </div>
   );

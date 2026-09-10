@@ -34,6 +34,13 @@ export interface Solve {
   reconstruction?: string;
   /** Average/max BPM during this solve, from a connected BLE heart-rate monitor. */
   heartRate?: { avg: number; max: number };
+  /**
+   * Elapsed time (ms) when the white cross (U-face cross) first read solved
+   * during this solve, detected live off a connected smart cube's own move
+   * stream — not a manually marked phase split, so it's its own field
+   * rather than reusing `splits`' phase-count-dependent labeling.
+   */
+  crossMs?: number;
 }
 
 export interface Session {

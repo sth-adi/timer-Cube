@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
-import { formatResult, parseTimeInput } from "@/lib/utils/time";
+import { formatResult, formatTime, parseTimeInput } from "@/lib/utils/time";
 import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
@@ -50,6 +50,9 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
               <Heart size={11} fill="currentColor" />
               {solve.heartRate.avg} avg · {solve.heartRate.max} max bpm
             </p>
+          )}
+          {solve.crossMs !== undefined && (
+            <p className="mb-2 text-[11px] text-muted">cross {formatTime(solve.crossMs)}</p>
           )}
           <div className="flex items-center gap-1 mb-2">
             <button

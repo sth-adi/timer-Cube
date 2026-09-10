@@ -7,8 +7,10 @@ import { OLL_CASES } from "@/lib/algorithms/ollData";
 import type { AlgCase } from "@/lib/algorithms/types";
 import { useAlgorithmStore } from "@/lib/store/algorithmStore";
 import { deriveStatus } from "@/lib/algorithms/srs";
+import { invertAlg } from "@/lib/algorithms/algUtils";
 import { cn } from "@/lib/utils/cn";
 import { CaseDetailSheet } from "./CaseDetailSheet";
+import { CaseIcon } from "./CaseIcon";
 
 const STATUS_DOT = { new: "bg-muted-2", learning: "bg-warning", known: "bg-success" } as const;
 
@@ -21,6 +23,7 @@ function CaseCard({ algCase, onOpen }: { algCase: AlgCase; onOpen: () => void })
       onClick={onOpen}
       className="card flex flex-col items-start gap-1.5 rounded-lg p-3 text-left transition-colors hover:bg-bg-panel-2"
     >
+      <CaseIcon setupAlg={invertAlg(algCase.alg)} className="w-full" />
       <div className="flex w-full items-center justify-between">
         <span className="text-sm font-medium">{algCase.name}</span>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[status])} />

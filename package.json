@@ -23,6 +23,7 @@
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "smartcube-web-bluetooth": "github:poliva/smartcube-web-bluetooth",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
