@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Sparkles, Wand2, Zap } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
+import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
+import { analyzeSmartCubeSolve, type SmartCubeAnalytics } from "@/lib/analysis/smartCubeAnalytics";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { cn } from "@/lib/utils/cn";
@@ -50,7 +53,10 @@ export function SmartCubeTimer() {
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
+  const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const [saved, setSaved] = useState(false);
+  const [analytics, setAnalytics] = useState<SmartCubeAnalytics | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   // Auto-verifies the physical scramble against `scramble` and hands off to
   // inspection the instant it matches — see the hook for the full state
@@ -72,6 +78,37 @@ export function SmartCubeTimer() {
 
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
+  // The instant a solve finishes, run its captured reconstruction through
+  // the same analyzer pipeline the manual analyzer uses — cases ran into,
+  // real Cross/F2L/OLL/PLL splits, all of it, without asking the cuber to
+  // retype a single move. Edge-triggered off solvedAtMs so this fires once
+  // per solve, not on every render while "finished" holds.
+  const analyzedSolvedAtRef = useRef<number | null>(null);
+  const analysisRequestIdRef = useRef(0);
+  useEffect(() => {
+    if (!finished || analyzedSolvedAtRef.current === solvedAtMs) return;
+    analyzedSolvedAtRef.current = solvedAtMs;
+    const requestId = ++analysisRequestIdRef.current;
+    setAnalyzing(true);
+    const snapshotMoves = moves;
+    const snapshotScramble = scramble;
+    const snapshotStart = startedAtMs!;
+    void analyzeSmartCubeSolve(snapshotScramble, snapshotMoves, snapshotStart)
+      .then((result) => {
+        if (analysisRequestIdRef.current !== requestId) return; // superseded by a later solve
+        setAnalytics(result);
+      })
+      .catch(() => {
+        if (analysisRequestIdRef.current !== requestId) return;
+        setAnalytics(null);
+      })
+      .finally(() => {
+        if (analysisRequestIdRef.current !== requestId) return;
+        setAnalyzing(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished, solvedAtMs]);
+
   const onSave = () => {
     if (!finished) return;
     const reconstruction = moves.map((m) => m.token).join(" ");
@@ -79,13 +116,22 @@ export function SmartCubeTimer() {
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
     const heartRate = summarizeHeartRate(startedAtMs!) ?? undefined;
-    void recordSolve(elapsedMs, scramble, undefined, pendingEvent ?? undefined, reconstruction, heartRate, crossMs);
+    void recordSolve(elapsedMs, scramble, analytics?.splits, pendingEvent ?? undefined, reconstruction, heartRate, crossMs);
     setSaved(true);
+  };
+
+  const onAnalyze = () => {
+    const reconstruction = moves.map((m) => m.token).join(" ");
+    requestAnalysis(scramble, elapsedMs, undefined, reconstruction);
   };
 
   const onNext = () => {
     cancel();
     setSaved(false);
+    setAnalytics(null);
+    setAnalyzing(false);
+    analyzedSolvedAtRef.current = null;
+    analysisRequestIdRef.current++;
     void nextScramble();
   };
 
@@ -153,6 +199,12 @@ export function SmartCubeTimer() {
         )
       )}
 
+      {(armed || recording || finished) && (
+        <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl">
+          <LiveCubeMimic scramble={scramble} moves={moves} className="h-full w-full" />
+        </div>
+      )}
+
       {armed && !recording && flow.phase !== "inspecting" && (
         <p className="flex items-center gap-1.5 text-sm text-accent">
           <Radio size={14} className="animate-pulse" /> Waiting for your first move…
@@ -195,6 +247,33 @@ export function SmartCubeTimer() {
             {crossMs !== undefined && <span>cross {formatTime(crossMs)}</span>}
           </div>
 
+          {analyzing && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-2">
+              <Loader2 size={12} className="animate-spin" /> Reading your solution — cases, splits, the works…
+            </p>
+          )}
+
+          {analytics && (analytics.ollCaseName || analytics.pllCaseName || analytics.splits) && (
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              {analytics.splits && (
+                <span className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted">
+                  Cross {formatTime(analytics.splits[0])} · F2L {formatTime(analytics.splits[1] - analytics.splits[0])} ·
+                  OLL {formatTime(analytics.splits[2] - analytics.splits[1])} · PLL {formatTime(elapsedMs - analytics.splits[2])}
+                </span>
+              )}
+              {analytics.ollCaseName && (
+                <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+                  <Sparkles size={11} /> OLL: {analytics.ollCaseName}
+                </span>
+              )}
+              {analytics.pllCaseName && (
+                <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+                  <Sparkles size={11} /> PLL: {analytics.pllCaseName}
+                </span>
+              )}
+            </div>
+          )}
+
           {buckets.length > 1 && (
             <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">
               {buckets.map((b, i) => (
@@ -208,7 +287,7 @@ export function SmartCubeTimer() {
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             <button
               type="button"
               onClick={onSave}
@@ -220,6 +299,13 @@ export function SmartCubeTimer() {
             >
               {saved ? <Check size={14} /> : <Zap size={14} />}
               {saved ? "Saved" : "Save solve"}
+            </button>
+            <button
+              type="button"
+              onClick={onAnalyze}
+              className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground"
+            >
+              <Wand2 size={14} /> Full 3D analysis
             </button>
             <button
               type="button"
