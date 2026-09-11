@@ -64,6 +64,8 @@ interface SessionState {
   exportActiveSession: () => void;
   importIntoActiveSession: (json: string) => Promise<number>;
   importRowsIntoActiveSession: (rows: SessionExport["solves"]) => Promise<number>;
+  /** Re-reads sessions/solves straight from Dexie without touching which session is active — for when something outside this store's own actions wrote to the db directly (device sync). */
+  refreshFromDb: () => Promise<void>;
 }
 
 let pbEventId = 0;
@@ -215,5 +217,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const count = await importSolves(activeSessionId, rows);
     set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
     return count;
+  },
+
+  refreshFromDb: async () => {
+    const { activeSessionId } = get();
+    const sessions = await listSessions();
+    const allSolves = await getAllSolves();
+    const solves = activeSessionId ? await getSessionSolves(activeSessionId) : [];
+    set({ sessions, solves, allSolves });
   },
 }));

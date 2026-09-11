@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Clock, Gauge, Pause, Play } from "lucide-react";
+import { Clock, Gauge, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface TimedCubePlayerProps {
@@ -46,6 +46,11 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   const [positionMs, setPositionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
+  const [soundOn, setSoundOn] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const audioCtxRef = useRef<any>(null);
+  const leafStartsRef = useRef<number[]>([]);
+  const lastPolledPosRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +88,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
           return { animLeaf: move, start, end };
         });
         duration = end;
+        leafStartsRef.current = leaves.map((l) => l.start);
         // `MillisecondTimestamp` is a branded number type cubing.js doesn't
         // export, so a plain number literal can't satisfy it structurally —
         // cast at this one boundary rather than fighting the brand.
@@ -111,6 +117,33 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     if (playerRef.current) playerRef.current.tempoScale = speed;
   }, [speed]);
 
+  useEffect(
+    () => () => {
+      void audioCtxRef.current?.close();
+      audioCtxRef.current = null;
+    },
+    [],
+  );
+
+  // A short percussive tick for one move — cheap synthesis (no audio file),
+  // fired from the poll loop below rather than scheduled in advance on the
+  // AudioContext's own clock, so it stays correct through pausing, seeking,
+  // and speed changes for free instead of needing to re-derive a schedule
+  // for each.
+  const playClick = () => {
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.value = 950;
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.035);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.035);
+  };
+
   // Polls the player's own timeline position while playing, so the scrubber
   // tracks native playback instead of a second clock of our own that could
   // drift from it. Self-rescheduling (like the rest of this codebase's
@@ -124,6 +157,13 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       const t: unknown = await playerRef.current?.experimentalGet.timestamp();
       if (cancelled) return;
       if (typeof t === "number") {
+        if (soundOn) {
+          const prev = lastPolledPosRef.current;
+          for (const start of leafStartsRef.current) {
+            if (start > prev && start <= t) playClick();
+          }
+        }
+        lastPolledPosRef.current = t;
         setPositionMs(t);
         if (durationMs > 0 && t >= durationMs - 1) {
           setPlaying(false);
@@ -137,7 +177,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [playing, durationMs]);
+  }, [playing, durationMs, soundOn]);
 
   const atEnd = durationMs > 0 && positionMs >= durationMs - 1;
 
@@ -152,6 +192,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     if (atEnd) {
       player.timestamp = 0;
       setPositionMs(0);
+      lastPolledPosRef.current = 0;
     }
     player.play();
     setPlaying(true);
@@ -164,6 +205,18 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     player.timestamp = value;
     setPlaying(false);
     setPositionMs(value);
+    lastPolledPosRef.current = value;
+  };
+
+  const onToggleSound = () => {
+    // Created inside this click handler (a real user gesture), not lazily
+    // from the poll loop, so browsers' autoplay policy doesn't suspend it.
+    if (!audioCtxRef.current) {
+      const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (Ctor) audioCtxRef.current = new Ctor();
+    }
+    void audioCtxRef.current?.resume?.();
+    setSoundOn((v) => !v);
   };
 
   return (
@@ -197,6 +250,18 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              onClick={onToggleSound}
+              aria-pressed={soundOn}
+              aria-label={soundOn ? "Mute move sounds" : "Play a click on every move"}
+              className={cn(
+                "flex items-center justify-center rounded-full p-1.5 transition-colors",
+                soundOn ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+              )}
+            >
+              {soundOn ? <Volume2 size={12} /> : <VolumeX size={12} />}
+            </button>
           </div>
           <input
             type="range"

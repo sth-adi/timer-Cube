@@ -7,6 +7,7 @@ import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
+import { useNowTick } from "@/hooks/useNowTick";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { formatTime } from "@/lib/utils/time";
@@ -142,7 +143,21 @@ export function SmartCubeTimer() {
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
   const lastMoveMs = moves[moves.length - 1]?.timeStampMs ?? startedAtMs ?? 0;
-  const elapsedMs = recording ? lastMoveMs - (startedAtMs ?? 0) : finished ? solvedAtMs! - startedAtMs! : 0;
+  // Ticks every frame while actually recording, same as the keyboard timer's
+  // own display — without this the clock only advances when a MOVE event
+  // arrives, i.e. it sits frozen during every pause between turns instead of
+  // running. `nowMs` and the smart cube's own event timestamps share the
+  // same performance.now() clock (see SmartCubeMove), so they're directly
+  // comparable; the max() guards a single frame where rAF fires just before
+  // this render sees a move that already landed a hair later.
+  const nowMs = useNowTick(recording);
+  const elapsedMs = recording
+    ? nowMs > 0
+      ? Math.max(nowMs - (startedAtMs ?? 0), lastMoveMs - (startedAtMs ?? 0))
+      : lastMoveMs - (startedAtMs ?? 0)
+    : finished
+      ? solvedAtMs! - startedAtMs!
+      : 0;
 
   const timestamps = useMemo(() => moves.map((m) => m.timeStampMs), [moves]);
   const buckets = useMemo(() => computeTpsBuckets(timestamps), [timestamps]);

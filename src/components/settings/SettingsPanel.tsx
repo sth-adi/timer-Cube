@@ -7,6 +7,7 @@ import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { looksLikeCsTimerExport, parseCsTimerExport, type CsTimerParsed } from "@/lib/utils/csTimerImport";
+import { DeviceSyncPanel } from "./DeviceSyncPanel";
 import { cn } from "@/lib/utils/cn";
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -295,6 +296,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           )}
           {importMsg && <p className="mt-1.5 text-xs text-muted-2">{importMsg}</p>}
         </div>
+
+        <DeviceSyncPanel />
 
         <div className="mt-4 border-t border-border pt-3">
           <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Keyboard shortcuts</p>

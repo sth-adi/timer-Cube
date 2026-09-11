@@ -11,6 +11,10 @@ import { DailyGoalRing } from "./DailyGoalRing";
 import { AchievementsPanel } from "./AchievementsPanel";
 import { ShareCardButton } from "./ShareCardButton";
 import { WeaknessReportCard } from "./WeaknessReportCard";
+import { CoachTipCard } from "./CoachTipCard";
+import { FaceSpeedFingerprintCard } from "./FaceSpeedFingerprintCard";
+import { LookaheadScoreCard } from "./LookaheadScoreCard";
+import { EfficiencyQuadrantCard } from "./EfficiencyQuadrantCard";
 
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -39,10 +43,14 @@ export function InsightsPanel() {
       <div className="card rounded-xl p-4">
         <AchievementsPanel />
       </div>
+      <CoachTipCard solves={solves} />
       <Section title="Consistency">
         <ConsistencyCard solves={solves} />
       </Section>
       <WeaknessReportCard />
+      <FaceSpeedFingerprintCard solves={solves} />
+      <LookaheadScoreCard solves={solves} />
+      <EfficiencyQuadrantCard solves={solves} />
       <Section title="Activity">
         <ActivityHeatmap solves={solves} />
       </Section>
