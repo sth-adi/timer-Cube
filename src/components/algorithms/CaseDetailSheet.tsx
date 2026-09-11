@@ -26,6 +26,7 @@ function now(): number {
 export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClose: () => void }) {
   const progress = useAlgorithmStore((s) => s.progress[algCase.id]);
   const status = deriveStatus(progress);
+  const setupAlg = useMemo(() => invertAlg(algCase.alg), [algCase]);
   // Captured once at open time — this is a rough "in about N days" readout,
   // not a live countdown, so it doesn't need to track the wall clock.
   const openedAt = useMemo(() => now(), []);
@@ -56,15 +57,13 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
         </div>
 
         <div className="card h-56 w-full overflow-hidden rounded-xl">
-          <CubeViewer
-            alg={algCase.alg}
-            setupAlg={invertAlg(algCase.alg)}
-            controlPanel="bottom-row"
-            className="h-full w-full"
-          />
+          <CubeViewer alg={algCase.alg} setupAlg={setupAlg} controlPanel="bottom-row" className="h-full w-full" />
         </div>
 
-        <p className="tabular-timer mt-3 text-sm leading-relaxed">{algCase.alg}</p>
+        <p className="tabular-timer mt-3 break-words text-center text-[11px] leading-relaxed text-muted-2">
+          Setup: {setupAlg}
+        </p>
+        <p className="tabular-timer mt-1 text-sm leading-relaxed">{algCase.alg}</p>
 
         <div className="mt-3 flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2 text-xs">
           <span className={STATUS_COLOR[status]}>{STATUS_LABEL[status]}</span>

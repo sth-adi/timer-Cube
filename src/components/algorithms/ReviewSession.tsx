@@ -101,6 +101,10 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
         <CubeViewer alg="" setupAlg={setupAlg} className="h-full w-full" />
       </div>
 
+      <p className="tabular-timer break-words text-center text-[11px] leading-relaxed text-muted-2">
+        Setup: {setupAlg}
+      </p>
+
       <p className="text-sm font-medium">{currentCase.name}</p>
 
       {!revealed ? (

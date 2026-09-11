@@ -6,6 +6,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { relativeTempoScales } from "@/lib/analysis/replayTempo";
 import { formatTime } from "@/lib/utils/time";
 import { solveFinalMs, type Solve } from "@/types";
+import { withViewRotation } from "@/components/scramble/CubeViewer";
 import { cn } from "@/lib/utils/cn";
 
 interface ReplayCubeHandle {
@@ -36,7 +37,7 @@ const ReplayCube = forwardRef<ReplayCubeHandle, { scramble: string; alg: string;
         const player = new TwistyPlayer({
           puzzle: "3x3x3",
           alg,
-          experimentalSetupAlg: scramble,
+          experimentalSetupAlg: withViewRotation(scramble),
           background: "none",
           controlPanel: "none",
           hintFacelets: "none",

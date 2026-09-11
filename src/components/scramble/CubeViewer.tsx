@@ -17,6 +17,19 @@ interface CubeViewerProps {
 }
 
 /**
+ * Every 3D view in the app reads yellow-on-top rather than cubing.js's
+ * default white-on-top — a whole-cube rotation baked silently into the
+ * setup (never animated) so it's applied before anything else plays.
+ * `x2` swaps U/D (white/yellow) and F/B, leaving R/L (and so the algorithm
+ * library's own red-right convention) untouched.
+ */
+export const VIEW_ROTATION = "x2";
+
+export function withViewRotation(setupAlg?: string): string {
+  return setupAlg ? `${VIEW_ROTATION} ${setupAlg}` : VIEW_ROTATION;
+}
+
+/**
  * Thin React wrapper around cubing.js's <twisty-player> web component for a
  * real animated 3D cube. Client-only (WebGL + custom element), so this must
  * be dynamically imported with ssr:false wherever it's used.
@@ -35,7 +48,7 @@ export function CubeViewer({ alg, setupAlg, className, controlPanel = "none" }: 
       const player = new TwistyPlayer({
         puzzle: "3x3x3",
         alg,
-        experimentalSetupAlg: setupAlg,
+        experimentalSetupAlg: withViewRotation(setupAlg),
         background: "none",
         controlPanel,
         hintFacelets: "none",
@@ -61,7 +74,7 @@ export function CubeViewer({ alg, setupAlg, className, controlPanel = "none" }: 
     // Set together (setup before alg) so there's never an intermediate
     // frame where one updated but not the other.
     if (!playerRef.current) return;
-    playerRef.current.experimentalSetupAlg = setupAlg ?? "";
+    playerRef.current.experimentalSetupAlg = withViewRotation(setupAlg);
     playerRef.current.alg = alg;
   }, [alg, setupAlg]);
 

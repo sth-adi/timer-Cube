@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Clock, Gauge, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { withViewRotation } from "@/components/scramble/CubeViewer";
 import { cn } from "@/lib/utils/cn";
 
 interface TimedCubePlayerProps {
@@ -61,7 +62,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
 
       const player = new TwistyPlayer({
         puzzle: "3x3x3",
-        experimentalSetupAlg: setupAlg,
+        experimentalSetupAlg: withViewRotation(setupAlg),
         background: "none",
         controlPanel: "none",
         hintFacelets: "none",
