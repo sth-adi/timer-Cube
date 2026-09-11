@@ -27,11 +27,13 @@ export function HintPanel() {
   const hintLoading = useScrambleStore((s) => s.hintLoading);
   const hintError = useScrambleStore((s) => s.hintError);
   const scramble = useScrambleStore((s) => s.scramble);
+  const event = useScrambleStore((s) => s.event);
 
   const [tab, setTab] = useState<"cross" | "cfop">("cross");
   const [previewKind, setPreviewKind] = useState<PreviewKind>(null);
 
-  if (!hintSolverEnabled) return null;
+  // Cross/CFOP solving only exists for 3x3 — no hints for other puzzle sizes.
+  if (!hintSolverEnabled || event !== "333") return null;
 
   const onReveal = () => {
     toggleHintVisible();

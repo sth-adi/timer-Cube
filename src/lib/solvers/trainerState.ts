@@ -2,8 +2,9 @@ import { Cube, generateScramble333 } from "../cube-engine/engine";
 import { solveCrossOptimal } from "./cross";
 import { solveF2L } from "./f2l";
 import { solveOLL } from "./oll";
+import { solveEdgeOrientation } from "./zbll";
 
-export type TrainerMode = "oll" | "pll";
+export type TrainerMode = "oll" | "pll" | "zbll";
 
 export interface TrainerState {
   /** Applied to a solved cube (as `experimentalSetupAlg`), this reproduces the practice state. */
@@ -26,7 +27,10 @@ const MAX_ATTEMPTS = 12;
  * construction. "oll" mode solves cross+F2L only (last layer's orientation
  * *and* permutation are left random, matching real OLL-recognition
  * practice). "pll" mode additionally orients the last layer, leaving only
- * its permutation to practice.
+ * its permutation to practice. "zbll" mode orients only the last layer's
+ * *edges* (corner orientation and the full permutation of both corners and
+ * edges are left as one combined case) — the precondition ZBLL algorithms
+ * solve in a single step, skipping the usual two-look OLL/PLL split.
  */
 export function buildTrainerState(mode: TrainerMode): TrainerState {
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -44,6 +48,21 @@ export function buildTrainerState(mode: TrainerMode): TrainerState {
       return { setupAlg: parts.filter(Boolean).join(" ") };
     }
 
+    if (mode === "zbll") {
+      try {
+        const eo = solveEdgeOrientation(cube);
+        // Vanishingly rare, but a fully-solved result (corners happened to
+        // already be oriented *and* permuted right too) is a no-op case —
+        // not useful to practice, so try again rather than show it.
+        if (cube.isSolved()) continue;
+        parts.push(eo.join(" "));
+        return { setupAlg: parts.filter(Boolean).join(" ") };
+      } catch {
+        // Rare from-scratch edge-orientation search failure — try a fresh scramble.
+      }
+      continue;
+    }
+
     try {
       const oll = solveOLL(cube);
       parts.push(oll.join(" "));
@@ -52,5 +71,5 @@ export function buildTrainerState(mode: TrainerMode): TrainerState {
       // Rare from-scratch OLL search failure — try a fresh scramble.
     }
   }
-  throw new Error("Could not generate a PLL practice state — please try again.");
+  throw new Error(`Could not generate a ${mode.toUpperCase()} practice state — please try again.`);
 }

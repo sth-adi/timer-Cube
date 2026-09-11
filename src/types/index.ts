@@ -1,5 +1,14 @@
 export type Penalty = "none" | "plus2" | "dnf";
 
+/** WCA puzzle event a session times. */
+export type WcaEvent = "222" | "333" | "444" | "555";
+export const WCA_EVENTS: { id: WcaEvent; label: string }[] = [
+  { id: "222", label: "2x2" },
+  { id: "333", label: "3x3" },
+  { id: "444", label: "4x4" },
+  { id: "555", label: "5x5" },
+];
+
 /** Practice category a solve was done under, for filtering stats separately from normal 2-handed solving. */
 export type EventTag = "oh" | "feet" | "bld";
 export const EVENT_TAGS: { id: EventTag; label: string }[] = [
@@ -54,7 +63,7 @@ export interface Solve {
 export interface Session {
   id: string;
   name: string;
-  event: "333"; // room to grow to other WCA events later
+  event: WcaEvent;
   createdAt: number;
   order: number;
 }

@@ -22,12 +22,14 @@ import { BottomNav, type TabId } from "@/components/nav/BottomNav";
 import { AuroraBackground } from "@/components/chrome/AuroraBackground";
 import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
+import { useNavigationStore, type PendingTrainerNav } from "@/lib/store/navigationStore";
 import { cn } from "@/lib/utils/cn";
 
 export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("timer");
   const [timerMode, setTimerMode] = useState<"keyboard" | "smartcube">("keyboard");
+  const [pendingTrainerNav, setPendingTrainerNav] = useState<PendingTrainerNav | null>(null);
 
   // "Analyze this solve" lives in the solve list, which has no way to change
   // tabs; it bumps a counter in the store instead and the shell follows. This
@@ -37,6 +39,29 @@ export default function Home() {
     () =>
       useAnalysisStore.subscribe((state, prev) => {
         if (state.requestSeq !== prev.requestSeq) setTab("analyze");
+      }),
+    [],
+  );
+
+  // The daily practice plan card lives in the stats aside and asks to jump
+  // to either the Trainer or Timer tab — see navigationStore for why this
+  // goes through a store rather than a prop, same reasoning as the analyzer
+  // subscription just above. A trainer-specific target also needs to reach
+  // TrainerHub, which only mounts once `tab` becomes "trainer" and so can't
+  // reliably catch the same store emission itself (it isn't mounted yet when
+  // it fires) — passed down as a resolved, one-shot prop instead, and
+  // TrainerHub tells us via onConsumedNav once it's acted on it so a later,
+  // unrelated remount doesn't replay a stale request.
+  useEffect(
+    () =>
+      useNavigationStore.subscribe((state, prev) => {
+        if (state.requestSeq === prev.requestSeq || !state.target) return;
+        if (state.target === "timer") {
+          setTab("timer");
+        } else {
+          setTab("trainer");
+          setPendingTrainerNav({ target: state.target, seq: state.requestSeq });
+        }
       }),
     [],
   );
@@ -133,7 +158,7 @@ export default function Home() {
             )}
           >
             {tab === "trainer" ? (
-              <TrainerHub />
+              <TrainerHub pendingNav={pendingTrainerNav} onConsumedNav={() => setPendingTrainerNav(null)} />
             ) : tab === "analyze" ? (
               <AnalyzerView />
             ) : timerMode === "smartcube" ? (

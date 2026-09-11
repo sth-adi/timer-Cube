@@ -1,11 +1,19 @@
 import { create } from "zustand";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
+import { generateScrambleForEvent } from "@/lib/cube-engine/multiScramble";
 import type { CFOPSolution } from "@/lib/solvers/cfop";
+import type { WcaEvent } from "@/types";
 import {
   DEFAULT_PRACTICE_LENGTH,
   generatePracticeScramble,
   type PracticeScrambleLength,
 } from "@/lib/cube-engine/practiceScramble";
+
+/** Generates a scramble for the given event — 3x3 is a genuine WCA-legal random-state scramble via this app's own worker (which also powers cross/CFOP hints); other sizes are random-move scrambles (see multiScramble.ts for why). */
+async function generateForEvent(event: WcaEvent): Promise<string> {
+  if (event === "333") return getCubeEngineClient().generateScramble();
+  return generateScrambleForEvent(event);
+}
 
 /** How many past scrambles you can step back through. */
 const HISTORY_LIMIT = 50;
@@ -17,6 +25,10 @@ interface ScrambleState {
   historyIndex: number;
   engineReady: boolean;
   loadingScramble: boolean;
+  /** Which puzzle the current scramble (and any future one from `nextScramble`) is for — follows the active session. */
+  event: WcaEvent;
+  /** Switches the puzzle being scrambled for, clearing history and loading a fresh scramble for it. A no-op if already on that event. */
+  setEvent: (event: WcaEvent) => Promise<void>;
   /**
    * When on, `nextScramble` generates a random-*move* practice scramble of
    * `practiceLength` moves instead of the WCA-legal random-state one — see
@@ -59,6 +71,7 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   historyIndex: -1,
   engineReady: false,
   loadingScramble: false,
+  event: "333",
   crossHint: null,
   cfopHint: null,
   hintLoading: false,
@@ -88,6 +101,11 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   init: () => {
     if (!initPromise) {
       initPromise = (async () => {
+        // Always warms the 3x3 engine and opens on a 3x3 scramble — the
+        // default session is always 3x3, and this is what loadCrossHint/
+        // loadCfopHint await for engine readiness. setEvent (called by
+        // sessionStore once the active session is known) takes it from here
+        // if that session turns out to be a different puzzle.
         const client = getCubeEngineClient();
         set({ loadingScramble: true });
         await client.ready();
@@ -97,6 +115,23 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
       })();
     }
     return initPromise;
+  },
+
+  setEvent: async (event) => {
+    if (get().event === event) return;
+    set({
+      event,
+      loadingScramble: true,
+      crossHint: null,
+      cfopHint: null,
+      hintVisible: false,
+      hintError: null,
+    });
+    const scramble = await generateForEvent(event);
+    // A rapid second switch may have landed while this was in flight —
+    // only apply this result if it's still the event actually selected.
+    if (get().event !== event) return;
+    set({ scramble, history: [scramble], historyIndex: 0, loadingScramble: false });
   },
 
   nextScramble: async () => {
@@ -116,11 +151,10 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
       return;
     }
 
-    const { practiceMode, practiceLength } = get();
+    const { practiceMode, practiceLength, event } = get();
     set({ loadingScramble: true });
-    const scramble = practiceMode
-      ? generatePracticeScramble(practiceLength)
-      : await getCubeEngineClient().generateScramble();
+    const scramble =
+      event === "333" && practiceMode ? generatePracticeScramble(practiceLength) : await generateForEvent(event);
     const trimmed = [...history, scramble].slice(-HISTORY_LIMIT);
     set({
       scramble,
@@ -152,6 +186,9 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   toggleHintVisible: () => set((s) => ({ hintVisible: !s.hintVisible })),
 
   loadCrossHint: async () => {
+    // Cross/CFOP solving only exists for 3x3 — HintPanel already hides
+    // itself for other events, this is just a defensive backstop.
+    if (get().event !== "333") return;
     // The very first scramble is generated asynchronously by init() (the
     // worker has to warm up the solver first, ~1-2s). If hints are revealed
     // before that finishes, `scramble` is still "" — wait for it instead of
@@ -169,6 +206,7 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   },
 
   loadCfopHint: async () => {
+    if (get().event !== "333") return;
     await get().init();
     const { scramble, cfopHint } = get();
     if (cfopHint || !scramble) return;

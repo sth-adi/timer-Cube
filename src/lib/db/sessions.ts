@@ -1,17 +1,17 @@
 import { db, newId } from "./db";
-import type { Session } from "@/types";
+import type { Session, WcaEvent } from "@/types";
 import { deleteAllSolvesForSession } from "./solves";
 
 export async function listSessions(): Promise<Session[]> {
   return db.sessions.orderBy("order").toArray();
 }
 
-export async function createSession(name: string): Promise<Session> {
+export async function createSession(name: string, event: WcaEvent = "333"): Promise<Session> {
   const count = await db.sessions.count();
   const session: Session = {
     id: newId(),
     name,
-    event: "333",
+    event,
     createdAt: Date.now(),
     order: count,
   };

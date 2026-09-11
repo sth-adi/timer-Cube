@@ -21,6 +21,11 @@ function lastLayerOriented(cube: InstanceType<typeof Cube>): boolean {
   return true;
 }
 
+function lastLayerEdgesOriented(cube: InstanceType<typeof Cube>): boolean {
+  for (const s of LL_EDGES) if (cube.eo[s] !== 0) return false;
+  return true;
+}
+
 describe("buildTrainerState", () => {
   beforeAll(() => {
     Cube.initSolver();
@@ -55,4 +60,22 @@ describe("buildTrainerState", () => {
     }
     expect(sawUnsolvedPermutation).toBe(true);
   }, 180_000);
+
+  it("zbll mode: solves cross+F2L+edge-orientation, leaving corner orientation and permutation scrambled", () => {
+    let sawUnorientedCorners = false;
+    let sawUnsolvedPermutation = false;
+    for (let i = 0; i < 15; i++) {
+      const { setupAlg } = buildTrainerState("zbll");
+      const cube = new Cube();
+      cube.move(setupAlg);
+      expect(firstTwoLayersSolved(cube)).toBe(true);
+      expect(lastLayerEdgesOriented(cube)).toBe(true);
+      if (!lastLayerOriented(cube)) sawUnorientedCorners = true;
+      if (!cube.isSolved()) sawUnsolvedPermutation = true;
+    }
+    // Astronomically unlikely for 15 random cases to all happen to have
+    // corners already oriented, or to all land fully solved.
+    expect(sawUnorientedCorners).toBe(true);
+    expect(sawUnsolvedPermutation).toBe(true);
+  }, 60_000);
 });

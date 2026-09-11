@@ -3,7 +3,8 @@ import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
 import { addSolve, deleteSolve, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
-import type { EventTag, Penalty } from "@/types";
+import type { EventTag, Penalty, WcaEvent } from "@/types";
+import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { computeAchievements, computeSessionStats, normalSolves, type AchievementState } from "@/lib/stats/stats";
 import { buildSessionExport, downloadJson, parseSessionExport, type SessionExport } from "@/lib/utils/sessionExport";
 
@@ -39,7 +40,7 @@ interface SessionState {
   achievementToast: AchievementToastEvent | null;
   init: () => Promise<void>;
   switchSession: (id: string) => Promise<void>;
-  addSession: (name: string) => Promise<void>;
+  addSession: (name: string, event?: WcaEvent) => Promise<void>;
   renameActiveSession: (name: string) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
   recordSolve: (
@@ -86,17 +87,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const solves = await getSessionSolves(first.id);
     const allSolves = await getAllSolves();
     set({ sessions, activeSessionId: first.id, solves, allSolves, loaded: true });
+    void useScrambleStore.getState().setEvent(first.event);
   },
 
   switchSession: async (id) => {
     const solves = await getSessionSolves(id);
     set({ activeSessionId: id, solves });
+    const session = get().sessions.find((s) => s.id === id);
+    if (session) void useScrambleStore.getState().setEvent(session.event);
   },
 
-  addSession: async (name) => {
-    const session = await createSession(name);
+  addSession: async (name, event) => {
+    const session = await createSession(name, event);
     const sessions = await listSessions();
     set({ sessions, activeSessionId: session.id, solves: [] });
+    void useScrambleStore.getState().setEvent(session.event);
   },
 
   renameActiveSession: async (name) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TrainerView } from "./TrainerView";
 import { AlgorithmsView } from "@/components/algorithms/AlgorithmsView";
 import { RecognitionTrainer } from "@/components/algorithms/RecognitionTrainer";
@@ -8,6 +8,8 @@ import { CrossDrill } from "./CrossDrill";
 import { BldMemoTrainer } from "./BldMemoTrainer";
 import { RaceMode } from "./RaceMode";
 import { DualReplay } from "./DualReplay";
+import type { PendingTrainerNav } from "@/lib/store/navigationStore";
+import { useTrainerStore } from "@/lib/store/trainerStore";
 import { cn } from "@/lib/utils/cn";
 
 const MODES = [
@@ -22,8 +24,47 @@ const MODES = [
 
 type Mode = (typeof MODES)[number]["id"];
 
-export function TrainerHub() {
+interface TrainerHubProps {
+  /** Set by page.tsx when the daily practice plan card asks to land on a specific drill sub-mode or the Library, rather than just the Trainer tab's default view. */
+  pendingNav?: PendingTrainerNav | null;
+  /** Tells page.tsx this request has been acted on, so a later unrelated remount of this component doesn't replay it. */
+  onConsumedNav?: () => void;
+}
+
+export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
   const [mode, setMode] = useState<Mode>("drill");
+  const [autoStartReview, setAutoStartReview] = useState<{ seq: number } | null>(null);
+  const setTrainerMode = useTrainerStore((s) => s.setMode);
+
+  // Edge-triggered off pendingNav.seq (a ref, not state) so a request is
+  // acted on exactly once per seq even if this effect re-runs for another
+  // reason — see page.tsx's subscription for why the request arrives as a
+  // resolved prop instead of this component reading navigationStore itself.
+  // The actual setState calls are deferred into a microtask: they include
+  // onConsumedNav, which updates page.tsx's state, and calling a different
+  // component's setter synchronously from within this effect body isn't
+  // safe — deferring it here is the documented escape hatch for that.
+  const consumedSeqRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!pendingNav || consumedSeqRef.current === pendingNav.seq) return;
+    consumedSeqRef.current = pendingNav.seq;
+    void Promise.resolve().then(() => {
+      if (pendingNav.target === "trainer-review") {
+        setMode("library");
+        setAutoStartReview({ seq: pendingNav.seq });
+      } else if (pendingNav.target === "trainer-oll") {
+        setMode("drill");
+        void setTrainerMode("oll");
+      } else if (pendingNav.target === "trainer-pll") {
+        setMode("drill");
+        void setTrainerMode("pll");
+      } else if (pendingNav.target === "trainer-zbll") {
+        setMode("drill");
+        void setTrainerMode("zbll");
+      }
+      onConsumedNav?.();
+    });
+  }, [pendingNav, setTrainerMode, onConsumedNav]);
 
   return (
     <div className="flex w-full flex-1 flex-col items-center gap-3">
@@ -56,7 +97,7 @@ export function TrainerHub() {
       ) : mode === "replay" ? (
         <DualReplay />
       ) : (
-        <AlgorithmsView />
+        <AlgorithmsView autoStartReview={autoStartReview} onAutoStartConsumed={() => setAutoStartReview(null)} />
       )}
     </div>
   );

@@ -95,7 +95,7 @@ export function TrainerView() {
   return (
     <div className="flex w-full max-w-md flex-1 flex-col items-center gap-3 py-2">
       <div className="flex gap-2">
-        {(["oll", "pll"] as const).map((m) => (
+        {(["oll", "pll", "zbll"] as const).map((m) => (
           <button
             key={m}
             type="button"

@@ -8,6 +8,7 @@ import { TimeOfDayChart } from "./TimeOfDayChart";
 import { PBHistory } from "./PBHistory";
 import { ConsistencyCard } from "./ConsistencyCard";
 import { DailyGoalRing } from "./DailyGoalRing";
+import { DailyPracticePlanCard } from "./DailyPracticePlanCard";
 import { AchievementsPanel } from "./AchievementsPanel";
 import { ShareCardButton } from "./ShareCardButton";
 import { WeaknessReportCard } from "./WeaknessReportCard";
@@ -38,6 +39,7 @@ export function InsightsPanel() {
 
   return (
     <div className="flex flex-col gap-3">
+      <DailyPracticePlanCard />
       <div className="card rounded-xl p-4">
         <DailyGoalRing />
       </div>
