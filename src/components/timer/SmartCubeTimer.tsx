@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Sparkles, Wand2, Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Sparkles, Wand2 } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useNowTick } from "@/hooks/useNowTick";
@@ -12,6 +13,7 @@ import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
+import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { cn } from "@/lib/utils/cn";
@@ -98,9 +100,10 @@ function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; 
  * mid-scramble with the wrong state offers the exact moves to fix it (see
  * useSmartCubeFlow). Once inspection ends, your first physical turn starts
  * the clock, and the moment the cube itself reports solved, the clock
- * stops — no spacebar, and the exact moves you made become a verified
- * reconstruction automatically, ready for the analyzer without retyping a
- * single move.
+ * stops and the solve saves itself — no spacebar, no save button, exactly
+ * like the keyboard timer's own onComplete — and the exact moves you made
+ * become a verified reconstruction automatically, ready for the analyzer
+ * without retyping a single move.
  *
  * Needs a real smart cube (GAN / GiiKER / GoCube / QiYi / MoYu) and a
  * browser with Web Bluetooth (Chromium-based, HTTPS or localhost) — there's
@@ -133,6 +136,7 @@ export function SmartCubeTimer() {
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const [saved, setSaved] = useState(false);
 
   // Auto-verifies the physical scramble against `scramble` and hands off to
@@ -167,15 +171,18 @@ export function SmartCubeTimer() {
   // Cross/F2L/OLL/PLL boundaries, detected live off the cube's own state as
   // it happens (see smartCubeStore) — always available the instant each
   // phase completes, no post-solve analysis pass to wait on.
-  const boundaries: PhaseBoundaries | null =
-    startedAtMs !== null
-      ? {
-          cross: crossAtMs !== null ? crossAtMs - startedAtMs : null,
-          f2l: f2lAtMs !== null ? f2lAtMs - startedAtMs : null,
-          oll: ollAtMs !== null ? ollAtMs - startedAtMs : null,
-          pll: finished ? elapsedMs : null,
-        }
-      : null;
+  const boundaries: PhaseBoundaries | null = useMemo(
+    () =>
+      startedAtMs !== null
+        ? {
+            cross: crossAtMs !== null ? crossAtMs - startedAtMs : null,
+            f2l: f2lAtMs !== null ? f2lAtMs - startedAtMs : null,
+            oll: ollAtMs !== null ? ollAtMs - startedAtMs : null,
+            pll: finished ? elapsedMs : null,
+          }
+        : null,
+    [startedAtMs, crossAtMs, f2lAtMs, ollAtMs, finished, elapsedMs],
+  );
   const durations = boundaries ? phaseDurations(boundaries) : [null, null, null, null];
   const currentPhaseIndex = durations.findIndex((d) => d === null);
   const priorBoundaryMs =
@@ -183,8 +190,14 @@ export function SmartCubeTimer() {
   const liveCurrentMs = recording && currentPhaseIndex >= 0 ? elapsedMs - priorBoundaryMs : null;
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
-  const onSave = () => {
-    if (!finished) return;
+  // Saves the instant a solve finishes — no button, exactly like the
+  // keyboard timer's own onComplete. Edge-triggered off solvedAtMs (a ref,
+  // not state) so this fires exactly once per solve even though `finished`
+  // keeps being true across re-renders until the next scramble is armed.
+  const autoSavedAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!finished || autoSavedAtRef.current === solvedAtMs) return;
+    autoSavedAtRef.current = solvedAtMs;
     const reconstruction = moves.map((m) => m.token).join(" ");
     const moveTimestamps = moves.map((m) => m.timeStampMs - startedAtMs!);
     // Unlike the keyboard timer, a smart-cube solve has a real absolute
@@ -195,8 +208,22 @@ export function SmartCubeTimer() {
       ? [boundaries.cross!, boundaries.f2l, boundaries.oll]
       : undefined;
     void recordSolve(elapsedMs, scramble, splits, pendingEvent ?? undefined, reconstruction, heartRate, crossMs, moveTimestamps);
+    if (soundEnabled) playSolveChime();
     setSaved(true);
-  };
+  }, [
+    finished,
+    solvedAtMs,
+    moves,
+    startedAtMs,
+    elapsedMs,
+    scramble,
+    boundaries,
+    crossMs,
+    pendingEvent,
+    recordSolve,
+    summarizeHeartRate,
+    soundEnabled,
+  ]);
 
   const onAnalyze = () => {
     const reconstruction = moves.map((m) => m.token).join(" ");
@@ -207,6 +234,7 @@ export function SmartCubeTimer() {
   const onNext = () => {
     cancel();
     setSaved(false);
+    autoSavedAtRef.current = null;
     void nextScramble();
   };
 
@@ -325,6 +353,11 @@ export function SmartCubeTimer() {
           <div className="flex items-center gap-4 text-xs text-muted">
             <span>{moves.length} moves</span>
             {avgTps !== null && <span>{avgTps.toFixed(2)} avg TPS</span>}
+            {saved && (
+              <span className="flex items-center gap-1 text-success">
+                <Check size={12} /> Saved
+              </span>
+            )}
           </div>
 
           <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
@@ -346,20 +379,8 @@ export function SmartCubeTimer() {
           <div className="flex flex-wrap justify-center gap-2">
             <button
               type="button"
-              onClick={onSave}
-              disabled={saved}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold",
-                saved ? "bg-success/15 text-success" : "bg-accent text-accent-fg",
-              )}
-            >
-              {saved ? <Check size={14} /> : <Zap size={14} />}
-              {saved ? "Saved" : "Save solve"}
-            </button>
-            <button
-              type="button"
               onClick={onAnalyze}
-              className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground"
+              className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg"
             >
               <Wand2 size={14} /> Full 3D analysis
             </button>
