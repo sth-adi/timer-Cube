@@ -11,7 +11,14 @@
 import { formatTime } from "@/lib/utils/time";
 import type { PhaseAverage } from "@/lib/stats/stats";
 
-export type PlanTarget = "trainer-review" | "trainer-oll" | "trainer-pll" | "trainer-zbll" | "timer";
+export type PlanTarget =
+  | "trainer-review"
+  | "trainer-f2l"
+  | "trainer-oll"
+  | "trainer-pll"
+  | "trainer-zbll"
+  | "trainer-daily"
+  | "timer";
 
 export interface PlanItem {
   id: string;
@@ -26,11 +33,13 @@ export interface DailyPlanInput {
   /** From computePhaseSplits — null when there isn't a same-phase-count sample yet. */
   phases: readonly PhaseAverage[] | null;
   phaseSampleSize: number;
-  trainerTimes: { oll: number[]; pll: number[]; zbll: number[] };
+  trainerTimes: { f2l: number[]; oll: number[]; pll: number[]; zbll: number[] };
   solvesToday: number;
   dailyGoal: number;
   /** Distinct WCA events with at least one session — used only for a low-priority "try something new" nudge. */
   eventsPracticed: readonly string[];
+  dailyChallengeStreak: number;
+  dailyChallengeDoneToday: boolean;
 }
 
 const MAX_ITEMS = 4;
@@ -51,7 +60,36 @@ function scored(items: (({ priority: number } & PlanItem) | null)[]): PlanItem[]
 }
 
 export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
-  const { dueAlgCount, phases, phaseSampleSize, trainerTimes, solvesToday, dailyGoal, eventsPracticed } = input;
+  const {
+    dueAlgCount,
+    phases,
+    phaseSampleSize,
+    trainerTimes,
+    solvesToday,
+    dailyGoal,
+    eventsPracticed,
+    dailyChallengeStreak,
+    dailyChallengeDoneToday,
+  } = input;
+
+  const dailyChallengeItem = !dailyChallengeDoneToday
+    ? {
+        id: "daily-challenge",
+        title:
+          dailyChallengeStreak > 0
+            ? `Keep your ${dailyChallengeStreak}-day streak alive`
+            : "Today's 5-scramble challenge is waiting",
+        detail:
+          dailyChallengeStreak > 0
+            ? "One attempt, five scrambles, an ao5 at the end — miss a day and the streak resets."
+            : "Same scrambles all day, one shot at an ao5 — come back tomorrow for a fresh set.",
+        target: "trainer-daily" as const,
+        targetLabel: "Take the challenge",
+        // A streak on the line outranks almost everything else — losing it
+        // is the one thing here that can't be made up later in the day.
+        priority: dailyChallengeStreak > 0 ? 25 : 6,
+      }
+    : null;
 
   const dueReview =
     dueAlgCount > 0
@@ -94,11 +132,24 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
 
   // Trainer-mode imbalance: only compares modes once each has enough reps
   // to have a real average, so a single lucky/unlucky case doesn't skew it.
+  const f2lN = trainerTimes.f2l.length;
   const ollN = trainerTimes.oll.length;
   const pllN = trainerTimes.pll.length;
   const zbllN = trainerTimes.zbll.length;
   let trainerBalance = null as ({ priority: number } & PlanItem) | null;
-  if (ollN >= MIN_TRAINER_REPS_FOR_BALANCE && pllN < ollN / 3) {
+  if ((ollN >= MIN_TRAINER_REPS_FOR_BALANCE || pllN >= MIN_TRAINER_REPS_FOR_BALANCE) && f2lN === 0) {
+    // F2L is usually the single biggest chunk of solve time — drilling
+    // last-layer recognition without ever drilling pair-tracking is a common
+    // imbalance, so this outranks the OLL/PLL balance checks below.
+    trainerBalance = {
+      id: "try-f2l",
+      title: "You've never drilled F2L",
+      detail: "F2L is usually the biggest single chunk of your solve time — worth at least as much dedicated practice as OLL/PLL.",
+      target: "trainer-f2l",
+      targetLabel: "Drill F2L",
+      priority: 14,
+    };
+  } else if (ollN >= MIN_TRAINER_REPS_FOR_BALANCE && pllN < ollN / 3) {
     trainerBalance = {
       id: "balance-pll",
       title: "PLL recognition is lagging behind OLL",
@@ -152,5 +203,5 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
         }
       : null;
 
-  return scored([dueReview, inconsistentPhase, trainerBalance, dailyGoalItem, varietyItem]);
+  return scored([dailyChallengeItem, dueReview, inconsistentPhase, trainerBalance, dailyGoalItem, varietyItem]);
 }

@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { ArrowRight, ListChecks } from "lucide-react";
 import { useAlgorithmStore } from "@/lib/store/algorithmStore";
 import { useTrainerStore } from "@/lib/store/trainerStore";
+import { useDailyChallengeStore, DAILY_CHALLENGE_LENGTH } from "@/lib/store/dailyChallengeStore";
+import { todayDateKey } from "@/lib/analysis/dailyChallenge";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore, PHASE_LABELS, type PhaseCount } from "@/lib/store/settingsStore";
 import { useNavigationStore } from "@/lib/store/navigationStore";
@@ -32,6 +34,17 @@ export function DailyPracticePlanCard() {
   const dueAlgCount = dueCaseIds().length;
 
   const trainerTimes = useTrainerStore((s) => s.times);
+
+  const dailyChallengeStreak = useDailyChallengeStore((s) => s.streak);
+  const dailyChallengeDateKey = useDailyChallengeStore((s) => s.dateKey);
+  const dailyChallengeTimes = useDailyChallengeStore((s) => s.times);
+  // dateKey only advances once DailyChallengeView (or anything else calling
+  // ensureToday) has actually run today — a stale prior day's fully-timed
+  // `times` array must not read as "done today" before that's happened.
+  const dailyChallengeDoneToday =
+    dailyChallengeDateKey === todayDateKey() &&
+    dailyChallengeTimes.length === DAILY_CHALLENGE_LENGTH &&
+    dailyChallengeTimes.every((t) => t !== null);
 
   const solves = useSessionStore((s) => s.solves);
   const allSolves = useSessionStore((s) => s.allSolves);
@@ -66,8 +79,19 @@ export function DailyPracticePlanCard() {
         solvesToday,
         dailyGoal,
         eventsPracticed,
+        dailyChallengeStreak,
+        dailyChallengeDoneToday,
       }),
-    [dueAlgCount, phaseSplit, trainerTimes, solvesToday, dailyGoal, eventsPracticed],
+    [
+      dueAlgCount,
+      phaseSplit,
+      trainerTimes,
+      solvesToday,
+      dailyGoal,
+      eventsPracticed,
+      dailyChallengeStreak,
+      dailyChallengeDoneToday,
+    ],
   );
 
   if (plan.length === 0) return null;

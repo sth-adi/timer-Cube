@@ -4,7 +4,7 @@ import { solveF2L } from "./f2l";
 import { solveOLL } from "./oll";
 import { solveEdgeOrientation } from "./zbll";
 
-export type TrainerMode = "oll" | "pll" | "zbll";
+export type TrainerMode = "f2l" | "oll" | "pll" | "zbll";
 
 export interface TrainerState {
   /** Applied to a solved cube (as `experimentalSetupAlg`), this reproduces the practice state. */
@@ -21,16 +21,19 @@ export interface TrainerState {
 const MAX_ATTEMPTS = 12;
 
 /**
- * Builds a last-layer practice state from a genuine random scramble, reusing
- * the app's own (already-verified) cross/F2L/OLL solvers rather than any
- * hand-typed algorithm data — so it's guaranteed reachable and correct by
- * construction. "oll" mode solves cross+F2L only (last layer's orientation
- * *and* permutation are left random, matching real OLL-recognition
- * practice). "pll" mode additionally orients the last layer, leaving only
- * its permutation to practice. "zbll" mode orients only the last layer's
- * *edges* (corner orientation and the full permutation of both corners and
- * edges are left as one combined case) — the precondition ZBLL algorithms
- * solve in a single step, skipping the usual two-look OLL/PLL split.
+ * Builds a practice state from a genuine random scramble, reusing the app's
+ * own (already-verified) cross/F2L/OLL solvers rather than any hand-typed
+ * algorithm data — so it's guaranteed reachable and correct by construction.
+ * "f2l" mode solves the cross only, leaving all four F2L pairs (and the last
+ * layer) scrambled — practicing the pair-tracking/lookahead that's the whole
+ * skill of F2L, as opposed to isolated algorithms. "oll" mode additionally
+ * solves F2L (last layer's orientation *and* permutation are left random,
+ * matching real OLL-recognition practice). "pll" mode additionally orients
+ * the last layer, leaving only its permutation to practice. "zbll" mode
+ * orients only the last layer's *edges* (corner orientation and the full
+ * permutation of both corners and edges are left as one combined case) —
+ * the precondition ZBLL algorithms solve in a single step, skipping the
+ * usual two-look OLL/PLL split.
  */
 export function buildTrainerState(mode: TrainerMode): TrainerState {
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -40,6 +43,10 @@ export function buildTrainerState(mode: TrainerMode): TrainerState {
 
     const cross = solveCrossOptimal(scramble);
     if (cross.length > 0) cube.move(cross.join(" "));
+
+    if (mode === "f2l") {
+      return { setupAlg: [scramble, cross.join(" ")].filter(Boolean).join(" ") };
+    }
 
     const f2l = solveF2L(cube);
     const parts = [scramble, cross.join(" "), f2l.flatMap((p) => p.moves).join(" ")];

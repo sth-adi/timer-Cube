@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PLL_CASES } from "./pllData";
 import { OLL_CASES } from "./ollData";
-import { buildRecognitionQuestion, pickRandomCase } from "./recognitionQuiz";
+import { buildRecognitionQuestion, pickRandomCase, pickWeightedCase, weakFocusWeight } from "./recognitionQuiz";
+import { initialProgress, applyReview } from "./srs";
 import type { AlgCase } from "./types";
 
 const ALL_CASES: AlgCase[] = [...PLL_CASES, ...OLL_CASES];
@@ -38,5 +39,37 @@ describe("recognitionQuiz", () => {
     const q = buildRecognitionQuestion(ALL_CASES, dot);
     const distractors = q.choices.filter((c) => c.id !== dot.id);
     expect(distractors.every((c) => c.shape === "Dot")).toBe(true);
+  });
+
+  describe("weakFocusWeight", () => {
+    it("weighs a never-seen case moderately", () => {
+      expect(weakFocusWeight(undefined)).toBe(3);
+    });
+
+    it("weighs a lapsed, low-ease case higher than a clean one", () => {
+      let struggled = initialProgress("x");
+      struggled = applyReview(struggled, "again");
+      struggled = applyReview(struggled, "again");
+      const clean = applyReview(initialProgress("y"), "easy");
+      expect(weakFocusWeight(struggled)).toBeGreaterThan(weakFocusWeight(clean));
+    });
+  });
+
+  describe("pickWeightedCase", () => {
+    it("overwhelmingly favors the one heavily-weighted case (weights are floored, not zeroed, so this is near-certain rather than guaranteed)", () => {
+      const target = ALL_CASES[3];
+      let hits = 0;
+      for (let i = 0; i < 50; i++) {
+        const picked = pickWeightedCase(ALL_CASES, (id) => (id === target.id ? 10_000 : 0));
+        if (picked.id === target.id) hits++;
+      }
+      expect(hits).toBeGreaterThan(45);
+    });
+
+    it("restricts to the requested group", () => {
+      for (let i = 0; i < 20; i++) {
+        expect(pickWeightedCase(ALL_CASES, () => 1, "PLL").group).toBe("PLL");
+      }
+    });
   });
 });

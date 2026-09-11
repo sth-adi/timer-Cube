@@ -8,8 +8,13 @@ const F2L_EDGES = [8, 9, 10, 11];
 const LL_CORNERS = [4, 5, 6, 7];
 const LL_EDGES = [4, 5, 6, 7];
 
-function firstTwoLayersSolved(cube: InstanceType<typeof Cube>): boolean {
+function crossSolved(cube: InstanceType<typeof Cube>): boolean {
   for (const s of CROSS_EDGES) if (cube.ep[s] !== s || cube.eo[s] !== 0) return false;
+  return true;
+}
+
+function firstTwoLayersSolved(cube: InstanceType<typeof Cube>): boolean {
+  if (!crossSolved(cube)) return false;
   for (const s of F2L_CORNERS) if (cube.cp[s] !== s || cube.co[s] !== 0) return false;
   for (const s of F2L_EDGES) if (cube.ep[s] !== s || cube.eo[s] !== 0) return false;
   return true;
@@ -30,6 +35,19 @@ describe("buildTrainerState", () => {
   beforeAll(() => {
     Cube.initSolver();
   });
+
+  it("f2l mode: solves the cross but leaves F2L (and the last layer) scrambled", () => {
+    let sawUnsolvedF2L = false;
+    for (let i = 0; i < 15; i++) {
+      const { setupAlg } = buildTrainerState("f2l");
+      const cube = new Cube();
+      cube.move(setupAlg);
+      expect(crossSolved(cube)).toBe(true);
+      if (!firstTwoLayersSolved(cube)) sawUnsolvedF2L = true;
+    }
+    // Astronomically unlikely for 15 random scrambles to all happen to finish with F2L already solved.
+    expect(sawUnsolvedF2L).toBe(true);
+  }, 30_000);
 
   it("oll mode: solves cross+F2L but leaves the last layer scrambled", () => {
     let sawUnsolvedLastLayer = false;

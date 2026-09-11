@@ -34,7 +34,7 @@ export const useTrainerStore = create<TrainerState>()(
       setupAlg: "",
       loading: false,
       error: null,
-      times: { oll: [], pll: [], zbll: [] },
+      times: { f2l: [], oll: [], pll: [], zbll: [] },
 
       setMode: async (mode) => {
         if (mode === get().mode && get().setupAlg) return;

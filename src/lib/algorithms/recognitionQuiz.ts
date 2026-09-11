@@ -8,6 +8,7 @@
  */
 
 import type { AlgCase, AlgGroup } from "./types";
+import type { CaseProgress } from "./srs";
 
 export interface RecognitionQuestion {
   case: AlgCase;
@@ -29,6 +30,39 @@ export function pickRandomCase(pool: readonly AlgCase[], group?: AlgGroup): AlgC
   const candidates = group ? pool.filter((c) => c.group === group) : pool;
   if (candidates.length === 0) throw new Error("No cases available to quiz on");
   return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+/**
+ * How much a case deserves to show up in a "focus weak cases" quiz, derived
+ * from its SRS history rather than tracked separately — a case you keep
+ * marking "again" (high lapses) or that's settled into a low ease is exactly
+ * the kind of case slower recognition is actually costing you time on. A
+ * never-seen case gets a modest flat weight (worth some practice, but a
+ * genuinely struggled-with case should still come up more often than a
+ * merely-new one).
+ */
+export function weakFocusWeight(progress: CaseProgress | undefined): number {
+  if (!progress || progress.reps === 0) return 3;
+  const easeWeakness = Math.max(0, 2.5 - progress.ease); // 0 (easy) up to ~1.2 (floor ease of 1.3)
+  return 1 + progress.lapses * 3 + easeWeakness * 4;
+}
+
+/** Weighted-random pick from the pool — see weakFocusWeight for how weights are derived. */
+export function pickWeightedCase(
+  pool: readonly AlgCase[],
+  weightOf: (caseId: string) => number,
+  group?: AlgGroup,
+): AlgCase {
+  const candidates = group ? pool.filter((c) => c.group === group) : pool;
+  if (candidates.length === 0) throw new Error("No cases available to quiz on");
+  const weights = candidates.map((c) => Math.max(0.01, weightOf(c.id)));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < candidates.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];
 }
 
 const DISTRACTOR_COUNT = 3;

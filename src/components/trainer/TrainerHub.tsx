@@ -8,6 +8,7 @@ import { CrossDrill } from "./CrossDrill";
 import { BldMemoTrainer } from "./BldMemoTrainer";
 import { RaceMode } from "./RaceMode";
 import { DualReplay } from "./DualReplay";
+import { DailyChallengeView } from "./DailyChallengeView";
 import type { PendingTrainerNav } from "@/lib/store/navigationStore";
 import { useTrainerStore } from "@/lib/store/trainerStore";
 import { cn } from "@/lib/utils/cn";
@@ -16,6 +17,7 @@ const MODES = [
   { id: "drill", label: "Drill" },
   { id: "cross", label: "Cross" },
   { id: "recognize", label: "Recognize" },
+  { id: "daily", label: "Daily" },
   { id: "bld", label: "BLD memo" },
   { id: "race", label: "Race" },
   { id: "replay", label: "Dual replay" },
@@ -52,6 +54,9 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
       if (pendingNav.target === "trainer-review") {
         setMode("library");
         setAutoStartReview({ seq: pendingNav.seq });
+      } else if (pendingNav.target === "trainer-f2l") {
+        setMode("drill");
+        void setTrainerMode("f2l");
       } else if (pendingNav.target === "trainer-oll") {
         setMode("drill");
         void setTrainerMode("oll");
@@ -61,6 +66,8 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
       } else if (pendingNav.target === "trainer-zbll") {
         setMode("drill");
         void setTrainerMode("zbll");
+      } else if (pendingNav.target === "trainer-daily") {
+        setMode("daily");
       }
       onConsumedNav?.();
     });
@@ -90,6 +97,8 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
         <CrossDrill />
       ) : mode === "recognize" ? (
         <RecognitionTrainer />
+      ) : mode === "daily" ? (
+        <DailyChallengeView />
       ) : mode === "bld" ? (
         <BldMemoTrainer />
       ) : mode === "race" ? (
