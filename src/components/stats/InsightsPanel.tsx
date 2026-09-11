@@ -15,6 +15,7 @@ import { CoachTipCard } from "./CoachTipCard";
 import { FaceSpeedFingerprintCard } from "./FaceSpeedFingerprintCard";
 import { LookaheadScoreCard } from "./LookaheadScoreCard";
 import { EfficiencyQuadrantCard } from "./EfficiencyQuadrantCard";
+import { StatTilesGrid } from "./StatTilesGrid";
 
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -63,6 +64,7 @@ export function InsightsPanel() {
       <Section title="Personal bests" action={<ShareCardButton />}>
         <PBHistory solves={solves} />
       </Section>
+      <StatTilesGrid solves={solves} rawSolves={rawSolves} />
     </div>
   );
 }
