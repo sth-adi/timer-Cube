@@ -32,12 +32,7 @@ const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
 let readyPromise: Promise<void> | null = null;
 function init(): Promise<void> {
-  if (!readyPromise) {
-    readyPromise = new Promise((resolve) => {
-      ensureSolverReady();
-      resolve();
-    });
-  }
+  if (!readyPromise) readyPromise = ensureSolverReady();
   return readyPromise;
 }
 

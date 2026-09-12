@@ -1,19 +1,6 @@
 import Cube from "./vendor/index.js";
-import { decodeInt16Table, decodeUint32Table } from "./data/decodeSolverTable";
-import {
-  MOVE_twist_ROWS, MOVE_twist_COLS, MOVE_twist_B64,
-  MOVE_flip_ROWS, MOVE_flip_COLS, MOVE_flip_B64,
-  MOVE_FRtoBR_ROWS, MOVE_FRtoBR_COLS, MOVE_FRtoBR_B64,
-  MOVE_URFtoDLF_ROWS, MOVE_URFtoDLF_COLS, MOVE_URFtoDLF_B64,
-  MOVE_URtoDF_ROWS, MOVE_URtoDF_COLS, MOVE_URtoDF_B64,
-  MOVE_URtoUL_ROWS, MOVE_URtoUL_COLS, MOVE_URtoUL_B64,
-  MOVE_UBtoDF_ROWS, MOVE_UBtoDF_COLS, MOVE_UBtoDF_B64,
-  MOVE_mergeURtoDF_ROWS, MOVE_mergeURtoDF_COLS, MOVE_mergeURtoDF_B64,
-  PRUNING_sliceTwist_LENGTH, PRUNING_sliceTwist_B64,
-  PRUNING_sliceFlip_LENGTH, PRUNING_sliceFlip_B64,
-  PRUNING_sliceURFtoDLFParity_LENGTH, PRUNING_sliceURFtoDLFParity_B64,
-  PRUNING_sliceURtoDFParity_LENGTH, PRUNING_sliceURtoDFParity_B64,
-} from "./data/solverTables.generated";
+import { fetchSolverTablesBuffer, sliceInt16, sliceUint32 } from "./data/decodeSolverTable";
+import { SOLVER_TABLES_URL, MOVE_TABLE_MANIFEST, PRUNING_TABLE_MANIFEST } from "./data/solverTablesManifest.generated";
 
 /**
  * Splits a flat, row-major Int16Array into `rows` zero-copy subarray views,
@@ -37,32 +24,41 @@ let loaded = false;
  * `Cube.initSolver()` compute them via BFS/DFS — measured at ~2.5s and
  * ~35MB of heap on a fast desktop CPU, so worse on typical mobile hardware,
  * and run unconditionally on every page load (the worker needs it just to
- * produce the very first scramble). `computeMoveTables`/`computePruningTables`
- * (vendor/solve.js) both skip any table that's already non-null, so once
- * this runs, `Cube.initSolver()` finds everything already populated and
- * returns immediately — nothing about the solver's own algorithm changes,
- * and a table missing or failing to decode here just falls back to that
- * table being computed normally, as if this function were never called.
+ * produce the very first scramble).
+ *
+ * The data is a plain static asset (public/solver-tables.*.bin), fetched
+ * once here — deliberately NOT embedded as a string constant in this
+ * module. An earlier version of this fix did exactly that, and it bloated
+ * the cube-engine worker's own script to 7MB+, which is itself a plausible
+ * failure mode on constrained mobile connections/devices: a Worker can't
+ * respond to anything until its whole script downloads, parses, and
+ * compiles, so a script that size — on top of everything else already in
+ * that bundle — could easily be *worse* for exactly the devices this is
+ * meant to help. A fetched asset is a normal, independently cacheable HTTP
+ * resource instead, decoded straight from raw bytes with no base64 overhead.
+ *
+ * `computeMoveTables`/`computePruningTables` (vendor/solve.js) both skip any
+ * table that's already non-null, so once this runs, `Cube.initSolver()`
+ * finds everything already populated and returns immediately — nothing
+ * about the solver's own algorithm changes, and any table that fails to
+ * load (network error, corrupt/mismatched asset) just falls back to being
+ * computed normally, as if this function had never run for that table.
  */
-export function loadPrecomputedSolverTables(): void {
+export async function loadPrecomputedSolverTables(): Promise<void> {
   if (loaded) return;
   loaded = true;
   try {
-    Cube.moveTables.twist = toRowViews(decodeInt16Table(MOVE_twist_B64, MOVE_twist_ROWS * MOVE_twist_COLS), MOVE_twist_ROWS, MOVE_twist_COLS);
-    Cube.moveTables.flip = toRowViews(decodeInt16Table(MOVE_flip_B64, MOVE_flip_ROWS * MOVE_flip_COLS), MOVE_flip_ROWS, MOVE_flip_COLS);
-    Cube.moveTables.FRtoBR = toRowViews(decodeInt16Table(MOVE_FRtoBR_B64, MOVE_FRtoBR_ROWS * MOVE_FRtoBR_COLS), MOVE_FRtoBR_ROWS, MOVE_FRtoBR_COLS);
-    Cube.moveTables.URFtoDLF = toRowViews(decodeInt16Table(MOVE_URFtoDLF_B64, MOVE_URFtoDLF_ROWS * MOVE_URFtoDLF_COLS), MOVE_URFtoDLF_ROWS, MOVE_URFtoDLF_COLS);
-    Cube.moveTables.URtoDF = toRowViews(decodeInt16Table(MOVE_URtoDF_B64, MOVE_URtoDF_ROWS * MOVE_URtoDF_COLS), MOVE_URtoDF_ROWS, MOVE_URtoDF_COLS);
-    Cube.moveTables.URtoUL = toRowViews(decodeInt16Table(MOVE_URtoUL_B64, MOVE_URtoUL_ROWS * MOVE_URtoUL_COLS), MOVE_URtoUL_ROWS, MOVE_URtoUL_COLS);
-    Cube.moveTables.UBtoDF = toRowViews(decodeInt16Table(MOVE_UBtoDF_B64, MOVE_UBtoDF_ROWS * MOVE_UBtoDF_COLS), MOVE_UBtoDF_ROWS, MOVE_UBtoDF_COLS);
-    Cube.moveTables.mergeURtoDF = toRowViews(decodeInt16Table(MOVE_mergeURtoDF_B64, MOVE_mergeURtoDF_ROWS * MOVE_mergeURtoDF_COLS), MOVE_mergeURtoDF_ROWS, MOVE_mergeURtoDF_COLS);
-
-    Cube.pruningTables.sliceTwist = decodeUint32Table(PRUNING_sliceTwist_B64, PRUNING_sliceTwist_LENGTH);
-    Cube.pruningTables.sliceFlip = decodeUint32Table(PRUNING_sliceFlip_B64, PRUNING_sliceFlip_LENGTH);
-    Cube.pruningTables.sliceURFtoDLFParity = decodeUint32Table(PRUNING_sliceURFtoDLFParity_B64, PRUNING_sliceURFtoDLFParity_LENGTH);
-    Cube.pruningTables.sliceURtoDFParity = decodeUint32Table(PRUNING_sliceURtoDFParity_B64, PRUNING_sliceURtoDFParity_LENGTH);
+    const buffer = await fetchSolverTablesBuffer(SOLVER_TABLES_URL);
+    for (const entry of MOVE_TABLE_MANIFEST) {
+      const flat = sliceInt16(buffer, entry.byteOffset, entry.byteLength);
+      Cube.moveTables[entry.name] = toRowViews(flat, entry.rows, entry.cols);
+    }
+    for (const entry of PRUNING_TABLE_MANIFEST) {
+      Cube.pruningTables[entry.name] = sliceUint32(buffer, entry.byteOffset, entry.byteLength);
+    }
   } catch {
-    // A corrupt or mismatched blob should never break scrambling/solving —
-    // just fall back to Cube.initSolver() computing whatever didn't load.
+    // A network failure, or a corrupt/mismatched asset, should never break
+    // scrambling/solving — just fall back to Cube.initSolver() computing
+    // whatever didn't load.
   }
 }

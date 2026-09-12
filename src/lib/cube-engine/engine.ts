@@ -58,14 +58,15 @@ let solverReady = false;
 
 /**
  * Builds the two-phase solver's move + pruning tables — ~2.5s and ~35MB of
- * heap from scratch (measured), so loadPrecomputedSolverTables() populates
- * everything it can from build-time-precomputed data first; initSolver()
- * then only computes whatever, if anything, didn't load. Call once, off the
- * main thread (this runs inside cube-engine/worker.ts).
+ * heap from scratch (measured), so loadPrecomputedSolverTables() fetches a
+ * precomputed static asset and populates everything it can from that first
+ * (hence this being async); initSolver() then only computes whatever, if
+ * anything, didn't load. Call once, off the main thread (this runs inside
+ * cube-engine/worker.ts).
  */
-export function ensureSolverReady(): void {
+export async function ensureSolverReady(): Promise<void> {
   if (solverReady) return;
-  loadPrecomputedSolverTables();
+  await loadPrecomputedSolverTables();
   Cube.initSolver();
   solverReady = true;
 }

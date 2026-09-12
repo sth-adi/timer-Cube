@@ -1,29 +1,22 @@
-function decodeBase64Bytes(b64: string): Uint8Array {
-  if (typeof atob === "function") {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return bytes;
-  }
-  return new Uint8Array(Buffer.from(b64, "base64"));
+/**
+ * Fetches public/solver-tables.<version>.bin (see scripts/gen-solver-tables.cjs
+ * and solverTablesManifest.generated.ts) and returns it as one ArrayBuffer,
+ * ready to slice into per-table typed-array views. Works from a Worker
+ * context (this only ever runs inside cube-engine/worker.ts) — `fetch` is
+ * available in both.
+ */
+export async function fetchSolverTablesBuffer(url: string): Promise<ArrayBuffer> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+  return res.arrayBuffer();
 }
 
-/** Decodes a base64 blob of packed Int16 values (little-endian), in both browser and Node. */
-export function decodeInt16Table(b64: string, expectedLength: number): Int16Array {
-  const bytes = decodeBase64Bytes(b64);
-  const table = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
-  if (table.length !== expectedLength) {
-    throw new Error(`Decoded Int16 table length ${table.length} !== expected ${expectedLength}`);
-  }
-  return table;
+/** A zero-copy Int16 view into `buffer` at the given byte range. */
+export function sliceInt16(buffer: ArrayBuffer, byteOffset: number, byteLength: number): Int16Array {
+  return new Int16Array(buffer, byteOffset, byteLength / 2);
 }
 
-/** Decodes a base64 blob of packed Uint32 values (little-endian), in both browser and Node. */
-export function decodeUint32Table(b64: string, expectedLength: number): Uint32Array {
-  const bytes = decodeBase64Bytes(b64);
-  const table = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-  if (table.length !== expectedLength) {
-    throw new Error(`Decoded Uint32 table length ${table.length} !== expected ${expectedLength}`);
-  }
-  return table;
+/** A zero-copy Uint32 view into `buffer` at the given byte range. */
+export function sliceUint32(buffer: ArrayBuffer, byteOffset: number, byteLength: number): Uint32Array {
+  return new Uint32Array(buffer, byteOffset, byteLength / 4);
 }
