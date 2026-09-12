@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Clock, Gauge, Pause, Play, Volume2, VolumeX } from "lucide-react";
-import { withViewRotation } from "@/components/scramble/CubeViewer";
+import { CAMERA_LATITUDE, CAMERA_LONGITUDE } from "@/components/scramble/CubeViewer";
 import { cn } from "@/lib/utils/cn";
 
 interface TimedCubePlayerProps {
@@ -62,14 +62,21 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
 
       const player = new TwistyPlayer({
         puzzle: "3x3x3",
-        experimentalSetupAlg: withViewRotation(setupAlg),
+        experimentalSetupAlg: setupAlg,
         background: "none",
         controlPanel: "none",
         hintFacelets: "none",
         experimentalDragInput: "auto",
+        cameraLatitude: CAMERA_LATITUDE,
+        cameraLongitude: CAMERA_LONGITUDE,
       });
       player.style.width = "100%";
       player.style.height = "100%";
+      // See CubeViewer.tsx's CAMERA_LATITUDE doc comment: this camera+flip
+      // pair is what puts yellow (D) on top instead of cubing.js's default
+      // white (U), and has to be a real 180° rotation (not a mirror) to
+      // keep the cube's turns looking correctly handed.
+      player.style.transform = "rotate(180deg)";
       container.appendChild(player);
       playerRef.current = player;
 

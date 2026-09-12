@@ -12,6 +12,7 @@ import {
   type RecognitionQuestion,
 } from "@/lib/algorithms/recognitionQuiz";
 import { invertAlg } from "@/lib/algorithms/algUtils";
+import { mapToLibraryFrame, relabelAlg } from "@/lib/analysis/frames";
 import type { AlgGroup } from "@/lib/algorithms/types";
 import { cn } from "@/lib/utils/cn";
 
@@ -62,7 +63,11 @@ export function RecognitionTrainer() {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0, totalMs: 0 });
 
-  const setupAlg = useMemo(() => invertAlg(question.case.alg), [question]);
+  // Published algs are last-layer-on-U; this app's 3D views put the
+  // practice layer on D (yellow) instead — see CubeViewer's CAMERA_LATITUDE
+  // doc comment — so the setup needs the same whole-cube relabeling
+  // CaseDetailSheet applies before it'll show correctly oriented.
+  const setupAlg = useMemo(() => invertAlg(relabelAlg(question.case.alg, mapToLibraryFrame())), [question]);
 
   const startGroup = useCallback(
     (g: AlgGroup | "all") => {

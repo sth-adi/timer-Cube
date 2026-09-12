@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { X } from "lucide-react";
+import { Pause, Play, RotateCcw, X } from "lucide-react";
 import type { AlgCase } from "@/lib/algorithms/types";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import { useAlgorithmStore } from "@/lib/store/algorithmStore";
 import { deriveStatus } from "@/lib/algorithms/srs";
+import { mapToLibraryFrame, relabelAlg } from "@/lib/analysis/frames";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import type { CubeViewerHandle } from "@/components/scramble/CubeViewer";
 
 const CubeViewer = dynamic(() => import("@/components/scramble/CubeViewer").then((m) => m.CubeViewer), { ssr: false });
 
@@ -26,10 +28,33 @@ function now(): number {
 export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClose: () => void }) {
   const progress = useAlgorithmStore((s) => s.progress[algCase.id]);
   const status = deriveStatus(progress);
-  const setupAlg = useMemo(() => invertAlg(algCase.alg), [algCase]);
+  // Published OLL/PLL algs are written last-layer-on-U ("library frame"),
+  // but this app's cube views put the practice layer on D (yellow) instead
+  // — see CubeViewer's CAMERA_LATITUDE doc comment. mapToLibraryFrame() is a
+  // whole-cube-rotation relabeling (self-inverse), so applying it again here
+  // carries the alg from library frame back into the D-practice frame every
+  // other view already uses, purely by renaming face letters — no risk of
+  // the sequential-interpretation corruption a real rotation move would add.
+  const relabeledAlg = useMemo(() => relabelAlg(algCase.alg, mapToLibraryFrame()), [algCase]);
+  const setupAlg = useMemo(() => invertAlg(relabeledAlg), [relabeledAlg]);
+  // Shown to the user in the alg's own (published, last-layer-on-U) notation
+  // — not the D-practice relabeling above, which only exists to feed the 3D
+  // viewer and would look like a different, unrecognizable algorithm here.
+  const displaySetupAlg = useMemo(() => invertAlg(algCase.alg), [algCase]);
   // Captured once at open time — this is a rough "in about N days" readout,
   // not a live countdown, so it doesn't need to track the wall clock.
   const openedAt = useMemo(() => now(), []);
+
+  const handleRef = useRef<CubeViewerHandle | null>(null);
+  const [playing, setPlaying] = useState(false);
+
+  const onReady = useCallback((handle: CubeViewerHandle) => {
+    handleRef.current = handle;
+    handle.onPlayingChange(setPlaying);
+  }, []);
+
+  const onRestart = () => handleRef.current?.jumpToStart();
+  const onPlayPause = () => handleRef.current?.togglePlay();
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
@@ -57,11 +82,30 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
         </div>
 
         <div className="card h-56 w-full overflow-hidden rounded-xl">
-          <CubeViewer alg={algCase.alg} setupAlg={setupAlg} controlPanel="bottom-row" className="h-full w-full" />
+          <CubeViewer alg={relabeledAlg} setupAlg={setupAlg} onReady={onReady} className="h-full w-full" />
+        </div>
+
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={onRestart}
+            aria-label="Restart"
+            className="tap-target flex items-center justify-center rounded-full bg-bg-panel-2 p-2 text-muted hover:text-foreground"
+          >
+            <RotateCcw size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={onPlayPause}
+            className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+          >
+            {playing ? <Pause size={12} /> : <Play size={12} />}
+            {playing ? "Pause" : "Play"}
+          </button>
         </div>
 
         <p className="tabular-timer mt-3 break-words text-center text-[11px] leading-relaxed text-muted-2">
-          Setup: {setupAlg}
+          Setup: {displaySetupAlg}
         </p>
         <p className="tabular-timer mt-1 text-sm leading-relaxed">{algCase.alg}</p>
 

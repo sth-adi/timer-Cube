@@ -6,6 +6,7 @@ import { Eye, Trophy, X } from "lucide-react";
 import { formatTime } from "@/lib/utils/time";
 import { getCase, useAlgorithmStore } from "@/lib/store/algorithmStore";
 import { invertAlg } from "@/lib/algorithms/algUtils";
+import { mapToLibraryFrame, relabelAlg } from "@/lib/analysis/frames";
 import type { ReviewRating } from "@/lib/algorithms/srs";
 import { cn } from "@/lib/utils/cn";
 
@@ -39,7 +40,14 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
   const currentId = queue[0];
   const currentCase = currentId ? getCase(currentId) : null;
 
-  const setupAlg = useMemo(() => (currentCase ? invertAlg(currentCase.alg) : ""), [currentCase]);
+  // Published algs are last-layer-on-U; this app's 3D views put the
+  // practice layer on D (yellow) instead — see CubeViewer's CAMERA_LATITUDE
+  // doc comment — so the setup needs the same whole-cube relabeling
+  // CaseDetailSheet applies before it'll show correctly oriented.
+  const setupAlg = useMemo(
+    () => (currentCase ? invertAlg(relabelAlg(currentCase.alg, mapToLibraryFrame())) : ""),
+    [currentCase],
+  );
 
   const onReveal = () => {
     setRevealed(true);

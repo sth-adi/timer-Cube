@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Pause, Play, RotateCcw } from "lucide-react";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { cn } from "@/lib/utils/cn";
+import type { CubeViewerHandle } from "./CubeViewer";
 
 const CubeViewer = dynamic(() => import("./CubeViewer").then((m) => m.CubeViewer), { ssr: false });
 
@@ -31,6 +32,12 @@ export function HintPanel() {
 
   const [tab, setTab] = useState<"cross" | "cfop">("cross");
   const [previewKind, setPreviewKind] = useState<PreviewKind>(null);
+  const previewHandleRef = useRef<CubeViewerHandle | null>(null);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const onPreviewReady = useCallback((handle: CubeViewerHandle) => {
+    previewHandleRef.current = handle;
+    handle.onPlayingChange(setPreviewPlaying);
+  }, []);
 
   // Cross/CFOP solving only exists for 3x3 — no hints for other puzzle sizes.
   if (!hintSolverEnabled || event !== "333") return null;
@@ -170,13 +177,33 @@ export function HintPanel() {
           )}
 
           {previewMoves !== null && (
-            <div className="mt-3 h-56 rounded-xl overflow-hidden border border-border">
-              <CubeViewer
-                alg={previewMoves.join(" ")}
-                setupAlg={scramble}
-                controlPanel="bottom-row"
-                className="h-full w-full"
-              />
+            <div className="mt-3">
+              <div className="h-56 rounded-xl overflow-hidden border border-border">
+                <CubeViewer
+                  alg={previewMoves.join(" ")}
+                  setupAlg={scramble}
+                  onReady={onPreviewReady}
+                  className="h-full w-full"
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => previewHandleRef.current?.jumpToStart()}
+                  aria-label="Restart"
+                  className="tap-target flex items-center justify-center rounded-full bg-bg-panel-2 p-2 text-muted hover:text-foreground"
+                >
+                  <RotateCcw size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => previewHandleRef.current?.togglePlay()}
+                  className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+                >
+                  {previewPlaying ? <Pause size={12} /> : <Play size={12} />}
+                  {previewPlaying ? "Pause" : "Play"}
+                </button>
+              </div>
             </div>
           )}
         </div>

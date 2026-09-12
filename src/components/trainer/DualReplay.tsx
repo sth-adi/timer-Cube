@@ -6,7 +6,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { relativeTempoScales } from "@/lib/analysis/replayTempo";
 import { formatTime } from "@/lib/utils/time";
 import { solveFinalMs, type Solve } from "@/types";
-import { withViewRotation } from "@/components/scramble/CubeViewer";
+import { CAMERA_LATITUDE, CAMERA_LONGITUDE } from "@/components/scramble/CubeViewer";
 import { cn } from "@/lib/utils/cn";
 
 interface ReplayCubeHandle {
@@ -37,15 +37,22 @@ const ReplayCube = forwardRef<ReplayCubeHandle, { scramble: string; alg: string;
         const player = new TwistyPlayer({
           puzzle: "3x3x3",
           alg,
-          experimentalSetupAlg: withViewRotation(scramble),
+          experimentalSetupAlg: scramble,
           background: "none",
           controlPanel: "none",
           hintFacelets: "none",
           experimentalDragInput: "none",
           tempoScale,
+          cameraLatitude: CAMERA_LATITUDE,
+          cameraLongitude: CAMERA_LONGITUDE,
         });
         player.style.width = "100%";
         player.style.height = "100%";
+        // See CubeViewer.tsx's CAMERA_LATITUDE doc comment: this camera+flip
+        // pair is what puts yellow (D) on top instead of cubing.js's default
+        // white (U), and has to be a real 180° rotation (not a mirror) to
+        // keep the cube's turns looking correctly handed.
+        player.style.transform = "rotate(180deg)";
         container.appendChild(player);
         playerRef.current = player;
       })();
