@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Compass } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 
 export interface CubeViewerHandle {
   play(): void;
@@ -66,6 +68,35 @@ interface CubeViewerProps {
 export const CAMERA_LATITUDE = -35;
 export const CAMERA_LONGITUDE = 30;
 
+/** How far one arrow-key press or one degree of phone tilt rotates the view. */
+const ORBIT_STEP_DEG = 12;
+/** Keeps the camera shy of the poles, where cubing.js's own view becomes a flat, disorienting silhouette. */
+const LATITUDE_LIMIT_DEG = 85;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type OrbitModel = any;
+
+function clampLatitude(lat: number): number {
+  return Math.max(-LATITUDE_LIMIT_DEG, Math.min(LATITUDE_LIMIT_DEG, lat));
+}
+
+/**
+ * Nudges the player's camera by a relative amount, read-modify-write against
+ * cubing.js's own live orbit state (`experimentalModel.twistySceneModel`) so
+ * this always composes correctly with whatever the user's last drag, arrow
+ * press, or tilt already did — there's no other way to read the current
+ * camera back out, since the public `cameraLatitude`/`cameraLongitude`
+ * setters are write-only.
+ */
+async function nudgeOrbit(model: OrbitModel, deltaLatitude: number, deltaLongitude: number): Promise<void> {
+  const current = await model.orbitCoordinates.get();
+  model.orbitCoordinatesRequest.set({
+    latitude: clampLatitude(current.latitude + deltaLatitude),
+    longitude: current.longitude + deltaLongitude,
+    distance: current.distance,
+  });
+}
+
 /**
  * Thin React wrapper around cubing.js's <twisty-player> web component for a
  * real animated 3D cube. Client-only (WebGL + custom element), so this must
@@ -75,6 +106,10 @@ export function CubeViewer({ alg, setupAlg, className, onReady }: CubeViewerProp
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
+  const [playerReady, setPlayerReady] = useState(false);
+  const [gyroOn, setGyroOn] = useState(false);
+  const [gyroDenied, setGyroDenied] = useState(false);
+  const gyroBaselineRef = useRef<{ beta: number; gamma: number; latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +133,7 @@ export function CubeViewer({ alg, setupAlg, className, onReady }: CubeViewerProp
       player.style.transform = "rotate(180deg)";
       container.appendChild(player);
       playerRef.current = player;
+      setPlayerReady(true);
       onReady?.({
         play: () => playerRef.current?.play(),
         togglePlay: () => playerRef.current?.togglePlay(),
@@ -117,6 +153,7 @@ export function CubeViewer({ alg, setupAlg, className, onReady }: CubeViewerProp
         container.removeChild(playerRef.current);
       }
       playerRef.current = null;
+      setPlayerReady(false);
     };
     // Only (re)create the player on mount/unmount; alg/setupAlg updates are handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,5 +167,124 @@ export function CubeViewer({ alg, setupAlg, className, onReady }: CubeViewerProp
     playerRef.current.alg = alg;
   }, [alg, setupAlg]);
 
-  return <div ref={containerRef} className={className} style={{ overflow: "hidden" }} />;
+  // Tilt-to-rotate: while enabled, the view tracks the phone's tilt relative
+  // to however it was held the moment gyro was turned on (not absolute
+  // compass/tilt angles, which would make the starting view depend on
+  // however you happened to be holding the phone) — so tilting right/left
+  // and toward/away from you orbits the camera the same way a drag would.
+  useEffect(() => {
+    if (!gyroOn) return;
+    const model = playerRef.current?.experimentalModel?.twistySceneModel;
+    if (!model) return;
+    gyroBaselineRef.current = null;
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      if (e.beta === null || e.gamma === null) return;
+      const beta = e.beta;
+      const gamma = e.gamma;
+      void (async () => {
+        if (!gyroBaselineRef.current) {
+          const current = await model.orbitCoordinates.get();
+          gyroBaselineRef.current = { beta, gamma, latitude: current.latitude, longitude: current.longitude };
+          return;
+        }
+        const base = gyroBaselineRef.current;
+        const current = await model.orbitCoordinates.get();
+        model.orbitCoordinatesRequest.set({
+          latitude: clampLatitude(base.latitude + (beta - base.beta)),
+          longitude: base.longitude - (gamma - base.gamma),
+          distance: current.distance,
+        });
+      })();
+    };
+    window.addEventListener("deviceorientation", onOrientation);
+    return () => {
+      window.removeEventListener("deviceorientation", onOrientation);
+      gyroBaselineRef.current = null;
+    };
+  }, [gyroOn]);
+
+  const onToggleGyro = async () => {
+    if (gyroOn) {
+      setGyroOn(false);
+      return;
+    }
+    setGyroDenied(false);
+    const ctor = typeof DeviceOrientationEvent !== "undefined" ? DeviceOrientationEvent : null;
+    const requestPermission = (ctor as unknown as { requestPermission?: () => Promise<"granted" | "denied"> } | null)
+      ?.requestPermission;
+    if (typeof requestPermission === "function") {
+      try {
+        // Must be called synchronously-ish from a user gesture (this click
+        // handler) — iOS Safari refuses it otherwise. Only iOS exposes this
+        // gate at all; everywhere else the browser just starts firing events.
+        const result = await requestPermission();
+        if (result !== "granted") {
+          setGyroDenied(true);
+          return;
+        }
+      } catch {
+        setGyroDenied(true);
+        return;
+      }
+    }
+    setGyroOn(true);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const model = playerRef.current?.experimentalModel?.twistySceneModel;
+    if (!model) return;
+    // Mirrors drag's own sign convention (see TwistyOrbitControls.onMovement
+    // in cubing/twisty) so an arrow key rotates the view the same way
+    // dragging in that direction would, rather than introducing a second,
+    // inconsistent convention.
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        void nudgeOrbit(model, -ORBIT_STEP_DEG, 0);
+        return;
+      case "ArrowDown":
+        e.preventDefault();
+        void nudgeOrbit(model, ORBIT_STEP_DEG, 0);
+        return;
+      case "ArrowLeft":
+        e.preventDefault();
+        void nudgeOrbit(model, 0, ORBIT_STEP_DEG);
+        return;
+      case "ArrowRight":
+        e.preventDefault();
+        void nudgeOrbit(model, 0, -ORBIT_STEP_DEG);
+        return;
+    }
+  };
+
+  const gyroSupported = typeof window !== "undefined" && "DeviceOrientationEvent" in window;
+
+  return (
+    <div className="relative h-full w-full">
+      <div
+        ref={containerRef}
+        className={cn(className, "outline-none focus-visible:ring-2 focus-visible:ring-accent")}
+        style={{ overflow: "hidden" }}
+        tabIndex={0}
+        role="group"
+        aria-label="3D cube view — use arrow keys to rotate"
+        onKeyDown={onKeyDown}
+      />
+      {playerReady && gyroSupported && (
+        <button
+          type="button"
+          onClick={() => void onToggleGyro()}
+          aria-pressed={gyroOn}
+          aria-label={gyroOn ? "Turn off tilt-to-rotate" : "Turn on tilt-to-rotate"}
+          title={gyroDenied ? "Motion access denied — check your browser's site permissions" : "Tilt phone to rotate"}
+          className={cn(
+            "absolute bottom-1.5 right-1.5 flex items-center justify-center rounded-full p-1.5 transition-colors",
+            gyroOn ? "bg-accent text-accent-fg" : "bg-bg-panel-2/80 text-muted hover:text-foreground",
+          )}
+        >
+          <Compass size={13} />
+        </button>
+      )}
+    </div>
+  );
 }

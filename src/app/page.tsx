@@ -68,6 +68,40 @@ export default function Home() {
 
   const mainPaneActive = tab === "timer" || tab === "trainer" || tab === "analyze";
 
+  // Global nav shortcuts: 1-5 jump straight to a tab, "?" toggles the
+  // shortcuts reference in Settings — on top of the timer's own Space/Esc/
+  // Delete handling (TimerView) and the 3D cube viewer's own arrow-key
+  // rotation (CubeViewer), neither of which these keys touch.
+  useEffect(() => {
+    const TAB_BY_DIGIT: Partial<Record<string, TabId>> = {
+      "1": "timer",
+      "2": "trainer",
+      "3": "analyze",
+      "4": "stats",
+      "5": "solves",
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const inField = !!target && (["INPUT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable);
+      if (inField) return;
+
+      if (e.key === "?") {
+        e.preventDefault();
+        setSettingsOpen((v) => !v);
+        return;
+      }
+      if (settingsOpen) return;
+      const nextTab = TAB_BY_DIGIT[e.key];
+      if (nextTab) {
+        e.preventDefault();
+        setTab(nextTab);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [settingsOpen]);
+
   return (
     <>
       <AppBootstrap />

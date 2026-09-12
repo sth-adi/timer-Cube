@@ -311,6 +311,18 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <li>
               <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Delete</kbd> remove the most recent solve
             </li>
+            <li>
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">1</kbd>–
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">5</kbd> jump to Timer / Trainer / Analyze /
+              Stats / Solves
+            </li>
+            <li>
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">?</kbd> toggle this panel
+            </li>
+            <li>
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">↑↓←→</kbd> rotate a focused 3D cube view
+              (or tap its <span className="text-foreground/80">⌖</span> icon to steer it by tilting your phone)
+            </li>
           </ul>
         </div>
       </div>
