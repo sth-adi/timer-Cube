@@ -280,6 +280,27 @@ body {
   text-shadow: 0 0 var(--timer-glow) color-mix(in srgb, currentColor 45%, transparent);
 }
 
+/* Timer digit style variants (independent of theme/background — see
+   settingsStore.ts's TIMER_STYLES doc comment). Each overrides just enough
+   of .timer-digits to read as a genuinely different treatment. */
+.timer-digits--flat {
+  text-shadow: none;
+}
+
+.timer-digits--gradient {
+  text-shadow: none;
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.timer-digits--outline {
+  text-shadow: none;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 2px currentColor;
+}
+
 /* Minimum comfortable touch target per Apple/Material guidance, applied to
    icon-only buttons that would otherwise be too small to reliably tap. */
 .tap-target {
@@ -383,9 +404,107 @@ body {
   background: radial-gradient(ellipse at center, transparent 40%, var(--background) 100%);
 }
 
+/* --- Alternative background styles (settingsStore.ts's BACKGROUND_STYLES) ---
+   Each is a sibling to the aurora layer above: fixed, z-index -1, no pointer
+   events, pure CSS (no canvas/WebGL, no per-frame JS) — see AppBackground.tsx
+   and AuroraBackground.tsx's own doc comment for why that matters on mobile. */
+
+.grid-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+.particles-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle-dot {
+  position: absolute;
+  top: var(--py, 50%);
+  left: var(--px, 50%);
+  width: var(--size, 6px);
+  height: var(--size, 6px);
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.18;
+  animation: particle-drift var(--duration, 18s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform, opacity;
+}
+
+@keyframes particle-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate3d(var(--dx, 20px), var(--dy, -30px), 0);
+    opacity: 0.45;
+  }
+}
+
+.waves-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wave {
+  position: absolute;
+  left: -25%;
+  width: 150%;
+  height: 60vh;
+  border-radius: 45%;
+  opacity: 0.16;
+  animation: wave-sway 24s ease-in-out infinite;
+}
+
+.wave-a {
+  background: var(--accent);
+  bottom: -32vh;
+}
+
+.wave-b {
+  background: var(--cyan);
+  bottom: -40vh;
+  opacity: 0.12;
+  animation-duration: 30s;
+  animation-delay: -8s;
+}
+
+@keyframes wave-sway {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  50% {
+    transform: translateX(4%) rotate(2deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora-blob-a,
   .aurora-blob-b {
+    animation: none;
+  }
+  .particle-dot,
+  .wave {
     animation: none;
   }
   .animate-fade-in-up,

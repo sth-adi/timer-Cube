@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
-import { PHASE_COUNTS, PHASE_LABELS, THEMES, useSettingsStore } from "@/lib/store/settingsStore";
+import { BACKGROUND_STYLES, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -48,6 +48,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setSoundEnabled = useSettingsStore((s) => s.setSoundEnabled);
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
+  const backgroundStyle = useSettingsStore((s) => s.backgroundStyle);
+  const setBackgroundStyle = useSettingsStore((s) => s.setBackgroundStyle);
+  const timerStyle = useSettingsStore((s) => s.timerStyle);
+  const setTimerStyle = useSettingsStore((s) => s.setTimerStyle);
   const holdToStartMs = useSettingsStore((s) => s.holdToStartMs);
   const setHoldToStartMs = useSettingsStore((s) => s.setHoldToStartMs);
   const dailyGoal = useSettingsStore((s) => s.dailyGoal);
@@ -138,6 +142,46 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   style={{ background: t.swatch }}
                 />
                 <span className="text-[10px] leading-none text-muted">{t.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Background</p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {BACKGROUND_STYLES.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => setBackgroundStyle(b.id)}
+                aria-pressed={backgroundStyle === b.id}
+                className={cn(
+                  "rounded-lg border px-1 py-2 text-center text-[10px] font-medium leading-none transition-colors",
+                  backgroundStyle === b.id ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:bg-bg-panel-2",
+                )}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Timer style</p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {TIMER_STYLES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTimerStyle(t.id)}
+                aria-pressed={timerStyle === t.id}
+                className={cn(
+                  "rounded-lg border px-1 py-2 text-center text-[10px] font-medium leading-none transition-colors",
+                  timerStyle === t.id ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:bg-bg-panel-2",
+                )}
+              >
+                {t.name}
               </button>
             ))}
           </div>

@@ -101,6 +101,7 @@ export function TimerView() {
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
   const phaseCount = useSettingsStore((s) => s.phaseCount);
+  const timerStyle = useSettingsStore((s) => s.timerStyle);
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
@@ -276,6 +277,7 @@ export function TimerView() {
         className={cn(
           "timer-digits font-bold transition-colors duration-100",
           "text-[19vw] leading-none sm:text-[9.5rem]",
+          timerStyle !== "glow" && `timer-digits--${timerStyle}`,
           PHASE_COLOR[phase],
         )}
       >

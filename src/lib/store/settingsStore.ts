@@ -31,11 +31,38 @@ export const THEMES = [
 
 export type ThemeId = (typeof THEMES)[number]["id"];
 
+/**
+ * Background and timer-digit styling are independent of `theme` (which only
+ * sets the color palette) and of each other, so the 7 themes × 5 backgrounds
+ * × 4 timer styles combine into 140 distinct looks — a big, genuinely varied
+ * set built from three small, independently reviewable pieces rather than
+ * 100+ bespoke one-off designs, the same principle behind statTiles.ts's
+ * "big registry, not bespoke" stat tiles.
+ */
+export const BACKGROUND_STYLES = [
+  { id: "aurora", name: "Aurora" },
+  { id: "grid", name: "Grid" },
+  { id: "particles", name: "Particles" },
+  { id: "waves", name: "Waves" },
+  { id: "minimal", name: "Minimal" },
+] as const;
+export type BackgroundStyleId = (typeof BACKGROUND_STYLES)[number]["id"];
+
+export const TIMER_STYLES = [
+  { id: "glow", name: "Glow" },
+  { id: "flat", name: "Flat" },
+  { id: "gradient", name: "Gradient" },
+  { id: "outline", name: "Outline" },
+] as const;
+export type TimerStyleId = (typeof TIMER_STYLES)[number]["id"];
+
 export interface SettingsState {
   inspectionEnabled: boolean;
   inputMethod: InputMethod;
   holdToStartMs: number;
   theme: ThemeId;
+  backgroundStyle: BackgroundStyleId;
+  timerStyle: TimerStyleId;
   hintSolverEnabled: boolean;
   soundEnabled: boolean;
   /** Target solve count per day, for the practice-goal ring. */
@@ -48,6 +75,8 @@ export interface SettingsState {
   setInputMethod: (v: InputMethod) => void;
   setHoldToStartMs: (v: number) => void;
   setTheme: (v: ThemeId) => void;
+  setBackgroundStyle: (v: BackgroundStyleId) => void;
+  setTimerStyle: (v: TimerStyleId) => void;
   setHintSolverEnabled: (v: boolean) => void;
   setSoundEnabled: (v: boolean) => void;
   setDailyGoal: (v: number) => void;
@@ -62,6 +91,8 @@ export const useSettingsStore = create<SettingsState>()(
       inputMethod: "spacebar",
       holdToStartMs: 300,
       theme: "nebula",
+      backgroundStyle: "aurora",
+      timerStyle: "glow",
       hintSolverEnabled: true,
       soundEnabled: false,
       dailyGoal: 20,
@@ -71,6 +102,8 @@ export const useSettingsStore = create<SettingsState>()(
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
       setTheme: (v) => set({ theme: v }),
+      setBackgroundStyle: (v) => set({ backgroundStyle: v }),
+      setTimerStyle: (v) => set({ timerStyle: v }),
       setHintSolverEnabled: (v) => set({ hintSolverEnabled: v }),
       setSoundEnabled: (v) => set({ soundEnabled: v }),
       setDailyGoal: (v) => set({ dailyGoal: v }),
