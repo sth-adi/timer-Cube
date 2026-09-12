@@ -6,7 +6,12 @@
 // connection IS available) — the cache exists purely so the timer keeps
 // working with no network at all, which matters at practice spots/venues
 // with unreliable wifi.
-const CACHE_NAME = "cube-timer-cache-v1";
+// Bump this whenever a deploy should flush every previously cached asset —
+// each deploy renames hashed JS chunk filenames, so a cache left over from
+// an old deploy is holding chunk names the server no longer serves. This
+// version bump forces activate() (below) to drop that stale bucket instead
+// of it lingering (and potentially getting served) indefinitely.
+const CACHE_NAME = "cube-timer-cache-v2";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
