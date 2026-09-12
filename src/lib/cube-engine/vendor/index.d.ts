@@ -36,6 +36,23 @@ export interface CubeJSStatic {
   /** WCA-legal random-*state* scramble (random valid state, solved & inverted). */
   scramble(): string;
   inverse(arg: string): string;
+  /**
+   * Two-phase solver move tables, keyed by coordinate name (see
+   * vendor/solve.js). `initSolver()` computes any entry still `null`; a
+   * value of `number[][]` is what it computes, `Int16Array[]` is what
+   * loadPrecomputedSolverTables.ts substitutes instead (row-major views into
+   * one precomputed buffer — see that file for why).
+   */
+  moveTables: Record<string, number[][] | Int16Array[] | null>;
+  /**
+   * Two-phase solver pruning tables (4-bit distances packed 8-per-32-bit
+   * word — see vendor/solve.js's `pruning()` helper), keyed by name.
+   * `number[]` is what `initSolver()` computes; `Uint32Array` is what
+   * loadPrecomputedSolverTables.ts substitutes instead — bitwise ops on it
+   * behave identically, so nothing that reads/writes these tables needs to
+   * change based on which one is present.
+   */
+  pruningTables: Record<string, number[] | Uint32Array | null>;
 }
 
 declare const Cube: CubeJSStatic;

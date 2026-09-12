@@ -1,4 +1,5 @@
 import Cube, { type CubeJSInstance } from "./vendor/index.js";
+import { loadPrecomputedSolverTables } from "./loadPrecomputedSolverTables";
 
 /** Face indices, Kociemba convention. */
 export const FACE = {
@@ -55,9 +56,16 @@ export const LAST_LAYER_EDGES = [EDGE.DR, EDGE.DF, EDGE.DL, EDGE.DB] as const;
 
 let solverReady = false;
 
-/** Builds the two-phase solver's pruning tables. Expensive (~1-2s); call once, off the main thread. */
+/**
+ * Builds the two-phase solver's move + pruning tables — ~2.5s and ~35MB of
+ * heap from scratch (measured), so loadPrecomputedSolverTables() populates
+ * everything it can from build-time-precomputed data first; initSolver()
+ * then only computes whatever, if anything, didn't load. Call once, off the
+ * main thread (this runs inside cube-engine/worker.ts).
+ */
 export function ensureSolverReady(): void {
   if (solverReady) return;
+  loadPrecomputedSolverTables();
   Cube.initSolver();
   solverReady = true;
 }
