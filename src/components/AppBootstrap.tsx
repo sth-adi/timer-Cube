@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
+import { initCloudSync } from "@/lib/store/cloudSyncStore";
 
 export function AppBootstrap() {
   const initSessions = useSessionStore((s) => s.init);
@@ -13,6 +14,7 @@ export function AppBootstrap() {
   useEffect(() => {
     void initSessions();
     void initScramble();
+    initCloudSync();
   }, [initSessions, initScramble]);
 
   useEffect(() => {
