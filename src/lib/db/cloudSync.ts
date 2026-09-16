@@ -145,6 +145,40 @@ export async function pushPublicStats(userId: string, username: string): Promise
 }
 
 /**
+ * Deletes propagate to the cloud copy the moment they happen locally —
+ * fire-and-forget from the caller (removeSolve/removeSession in
+ * sessionStore.ts), not awaited, so deleting feels instant regardless of
+ * network. Without this, a deleted solve looked gone until the next sync's
+ * pullAll() fetched the whole remote table again and additively merged the
+ * still-there remote row right back in — sync bringing a "deleted" solve
+ * back from the dead. RLS (auth.uid() = user_id) means this is safe to call
+ * even signed out or against an id that isn't this account's: it just
+ * deletes zero rows.
+ *
+ * This is a best-effort, one-device-at-a-time fix, not a full tombstone
+ * system: if a second device deletes nothing locally and syncs later, its
+ * own pushAll() will upsert the solve straight back into the cloud table
+ * (and from there back to every other device on their next pull) — the
+ * same fundamental limitation the device-to-device WebRTC sync already has
+ * (see lib/db/sync.ts's own doc comment). Deleting on every device you've
+ * synced to is still the only fully reliable way to make a solve gone
+ * everywhere.
+ */
+export async function deleteRemoteSolve(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  await withTimeout(supabase.from("solves").delete().eq("id", id)).catch(() => {});
+}
+
+/** Mirrors deleteSession's local cascade (lib/db/sessions.ts): its solves first, then the session row itself. */
+export async function deleteRemoteSession(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  await withTimeout(supabase.from("solves").delete().eq("session_id", id)).catch(() => {});
+  await withTimeout(supabase.from("sessions").delete().eq("id", id)).catch(() => {});
+}
+
+/**
  * Pulls everything this account has in the cloud and merges it into local
  * storage — additive only, same semantics as the existing device-to-device
  * WebRTC sync (lib/db/sync.ts): a row that already exists locally is left

@@ -3,6 +3,7 @@ import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
 import { addSolve, deleteSolve, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
+import { deleteRemoteSolve, deleteRemoteSession } from "@/lib/db/cloudSync";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { computeAchievements, computeSessionStats, normalSolves, type AchievementState } from "@/lib/stats/stats";
@@ -124,6 +125,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   removeSession: async (id) => {
     await deleteSession(id);
+    void deleteRemoteSession(id);
     const sessions = await listSessions();
     const active = get().activeSessionId;
     const allSolves = await getAllSolves();
@@ -205,6 +207,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   removeSolve: async (solveId) => {
     await deleteSolve(solveId);
+    void deleteRemoteSolve(solveId);
     const { activeSessionId } = get();
     if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
   },
