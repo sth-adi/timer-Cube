@@ -1,43 +1,12 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { withTimeout, SupabaseTimeoutError } from "@/lib/supabase/withTimeout";
 import { db } from "./db";
 import { mergeSyncPayload, type SyncPayload } from "./sync";
+import { computeSessionStats } from "@/lib/stats/stats";
 import type { Session, Solve } from "@/types";
 
-const SYNC_TIMEOUT_MS = 15_000;
-
-export class SyncTimeoutError extends Error {
-  constructor() {
-    super("Timed out reaching the server.");
-    this.name = "SyncTimeoutError";
-  }
-}
-
-/**
- * A request that hangs on a bad connection (packet loss, a dying proxy, a
- * dead Wi-Fi handoff) would otherwise leave callers `await`ing forever —
- * observed directly while testing this: a stuck sessions/solves fetch left
- * the sync status frozen on "Syncing…" indefinitely, with no error and no
- * way to recover short of a page reload. Every Supabase call here is bounded
- * so a stuck request always settles, one way or another, within
- * SYNC_TIMEOUT_MS. The real fetch may still be running in the background
- * when this rejects — harmless for a periodic background sync, not worth
- * threading an AbortController through for.
- */
-function withTimeout<T>(promise: PromiseLike<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new SyncTimeoutError()), SYNC_TIMEOUT_MS);
-    Promise.resolve(promise).then(
-      (v) => {
-        clearTimeout(timer);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(timer);
-        reject(e);
-      },
-    );
-  });
-}
+// Kept as a re-export so existing imports of SyncTimeoutError from here (cloudSyncStore.ts) don't need to change.
+export { SupabaseTimeoutError as SyncTimeoutError };
 
 /**
  * Row shapes as stored in Supabase (snake_case, one extra `user_id` column
@@ -132,6 +101,33 @@ export async function pushAll(userId: string): Promise<void> {
     const { error } = await withTimeout(supabase.from("solves").upsert(solves.map((s) => solveToRow(s, userId))));
     if (error) throw error;
   }
+}
+
+/**
+ * Publishes a lightweight, non-identifying summary (best single/ao5/ao12,
+ * total solve count — never scrambles, comments, or reconstructions) to a
+ * separate publicly-readable table, keyed by username rather than raw solve
+ * history. This is what powers rival lookups (lib/social/rival.ts) — an RLS
+ * policy that opened up the real `solves`/`sessions` tables for cross-user
+ * reads would leak everything, whereas this one row per user is the only
+ * thing anyone else's client can ever see.
+ */
+export async function pushPublicStats(userId: string, username: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const solves = await db.solves.toArray();
+  const stats = computeSessionStats(solves);
+  const { error } = await withTimeout(
+    supabase.from("public_stats").upsert({
+      user_id: userId,
+      username,
+      best_single_ms: stats.best,
+      best_ao5_ms: stats.bestAo5,
+      best_ao12_ms: stats.bestAo12,
+      total_solves: stats.solveCount,
+    }),
+  );
+  if (error) throw error;
 }
 
 /**

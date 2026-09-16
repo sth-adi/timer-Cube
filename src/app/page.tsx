@@ -20,6 +20,7 @@ import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
 import { BottomNav, type TabId } from "@/components/nav/BottomNav";
 import { AppBackground } from "@/components/chrome/AppBackground";
+import { OnlinePresenceBadge } from "@/components/chrome/OnlinePresenceBadge";
 import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useNavigationStore, type PendingTrainerNav } from "@/lib/store/navigationStore";
@@ -145,14 +146,17 @@ export default function Home() {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Settings"
-            className="tap-target rounded-lg text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
-          >
-            <Settings size={19} />
-          </button>
+          <div className="flex items-center gap-2">
+            <OnlinePresenceBadge />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              className="tap-target rounded-lg text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
+            >
+              <Settings size={19} />
+            </button>
+          </div>
         </header>
 
         <ChallengeLinkBanner onRace={() => setTab("timer")} />

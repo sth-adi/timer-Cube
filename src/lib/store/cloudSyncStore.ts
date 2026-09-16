@@ -3,7 +3,8 @@
 import { create } from "zustand";
 import { useAuthStore } from "./authStore";
 import { useSessionStore } from "./sessionStore";
-import { pullAll, pushAll, SyncTimeoutError } from "@/lib/db/cloudSync";
+import { pullAll, pushAll, pushPublicStats, SyncTimeoutError } from "@/lib/db/cloudSync";
+import { displayUsername } from "@/lib/auth/username";
 
 export type CloudSyncStatus = "idle" | "syncing" | "synced" | "error";
 
@@ -69,6 +70,11 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
         await useSessionStore.getState().refreshFromDb();
         await useSessionStore.getState().adoptSyncedSessionIfLocalEmpty();
       }
+      // Best-effort: rival lookups and the daily leaderboard read this, but
+      // neither of those exists for a signed-out user, so a failure here
+      // shouldn't flip the whole sync to "error" the way a failed
+      // push/pull of your own solve history should.
+      await pushPublicStats(user.id, displayUsername(user)).catch(() => {});
       clearScheduledRetry();
       set({ status: "synced", lastSyncedAt: Date.now() });
     } catch (err) {

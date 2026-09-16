@@ -5,7 +5,8 @@ import { CheckCircle2, Cloud, Loader2, LogOut } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
-import { isValidUsername } from "@/lib/auth/username";
+import { displayUsername, isValidUsername } from "@/lib/auth/username";
+import { RivalCompare } from "./RivalCompare";
 
 type Mode = "signin" | "signup";
 
@@ -124,9 +125,7 @@ export function AccountPanel() {
         </>
       ) : (
         <div className="flex flex-col gap-2">
-          <p className="min-w-0 truncate text-xs text-foreground/90">
-            {typeof user.user_metadata?.username === "string" ? user.user_metadata.username : user.email}
-          </p>
+          <p className="min-w-0 truncate text-xs text-foreground/90">{displayUsername(user)}</p>
 
           <div className="flex items-center justify-between gap-2">
             <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-2">
@@ -159,6 +158,8 @@ export function AccountPanel() {
           >
             <LogOut size={12} /> Sign out
           </button>
+
+          <RivalCompare />
         </div>
       )}
     </div>

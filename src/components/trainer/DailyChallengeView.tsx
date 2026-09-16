@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { Flame } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Flame, Trophy } from "lucide-react";
 import { useTimer } from "@/hooks/useTimer";
 import { useSettingsStore } from "@/lib/store/settingsStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { displayUsername } from "@/lib/auth/username";
 import { DAILY_CHALLENGE_LENGTH, useDailyChallengeStore } from "@/lib/store/dailyChallengeStore";
+import { todayDateKey } from "@/lib/analysis/dailyChallenge";
+import { fetchDailyLeaderboard, submitDailyChallengeResult, type DailyLeaderboard } from "@/lib/social/leaderboard";
 import { averageOfN } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
@@ -65,6 +69,24 @@ export function DailyChallengeView() {
     return averageOfN(times as number[]).value;
   }, [times]);
 
+  // Once today's ao5 is in, submit it to the shared leaderboard (signed-in
+  // only) and pull back the current standings — a ref instead of state for
+  // "have we submitted" since it's write-once-per-day bookkeeping that
+  // should never itself trigger a re-render.
+  const user = useAuthStore((s) => s.user);
+  const submittedRef = useRef<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<DailyLeaderboard | null>(null);
+  useEffect(() => {
+    if (ao5 === null || !user) return;
+    const today = todayDateKey();
+    if (submittedRef.current === today) return;
+    submittedRef.current = today;
+    void (async () => {
+      await submitDailyChallengeResult(user.id, displayUsername(user), today, ao5);
+      setLeaderboard(await fetchDailyLeaderboard(today, user.id));
+    })();
+  }, [ao5, user]);
+
   if (loading || scrambles.length < DAILY_CHALLENGE_LENGTH) {
     return (
       <div className="flex w-full max-w-md flex-1 items-center justify-center py-8">
@@ -91,6 +113,41 @@ export function DailyChallengeView() {
           ))}
         </div>
         <p className="mt-2 text-xs text-muted-2">Come back tomorrow for a fresh set — and to keep the streak alive.</p>
+
+        {leaderboard && leaderboard.top.length > 0 && (
+          <div className="mt-3 w-full max-w-xs rounded-xl bg-bg-panel-2 p-3 text-left">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-xs font-semibold">
+                <Trophy size={13} className="text-warning" /> Today&apos;s leaderboard
+              </p>
+              {leaderboard.yourRank && (
+                <span className="text-[11px] text-muted-2">
+                  You: #{leaderboard.yourRank} of {leaderboard.total}
+                </span>
+              )}
+            </div>
+            <ol className="flex flex-col gap-1">
+              {leaderboard.top.map((entry, i) => (
+                <li
+                  key={entry.username}
+                  className={cn(
+                    "flex items-center justify-between rounded-lg px-2 py-1 text-xs",
+                    entry.isYou ? "bg-accent-soft text-accent" : "text-foreground/90",
+                  )}
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="w-4 shrink-0 text-muted-2">{i + 1}</span>
+                    <span className="truncate">{entry.username}</span>
+                  </span>
+                  <span className="tabular-timer shrink-0">{formatTime(entry.ao5Ms)}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+        {!user && (
+          <p className="mt-2 text-[11px] text-muted-2">Sign in (Settings → Account) to join today&apos;s leaderboard.</p>
+        )}
       </div>
     );
   }
