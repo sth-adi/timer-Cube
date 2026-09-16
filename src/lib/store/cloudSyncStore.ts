@@ -15,9 +15,25 @@ interface CloudSyncState {
   syncNow: () => Promise<void>;
 }
 
+/**
+ * `instanceof Error` is not reliable across engines for every thrown value
+ * this can see — notably Safari/WebKit's DOMException (what a blocked or
+ * failing IndexedDB access throws, e.g. from db.sessions.toArray() inside
+ * pushAll) does not satisfy `instanceof Error` there, even though it has a
+ * perfectly good `.message`. Duck-typing on `.message` instead of checking
+ * the prototype chain means a real underlying reason always surfaces
+ * instead of silently collapsing to a bare "Sync failed."
+ */
+function errorMessage(err: unknown): string {
+  if (err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string") {
+    return (err as { message: string }).message;
+  }
+  return "Sync failed.";
+}
+
 function friendlyErrorMessage(err: unknown): string {
   if (err instanceof SyncTimeoutError) return "Couldn't reach the server — retrying automatically…";
-  const raw = err instanceof Error ? err.message : "Sync failed.";
+  const raw = errorMessage(err);
   // "Failed to fetch" (and its Safari/Firefox equivalents) is the raw
   // TypeError a browser throws for any network-level failure — dropped
   // connection, DNS hiccup, offline — not something a user can act on as
