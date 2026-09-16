@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bluetooth, Loader2, Radio, Swords, Trophy, Wifi, WifiOff } from "lucide-react";
 import { useRaceStore, type RaceCubeMove } from "@/lib/store/raceStore";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
@@ -11,6 +12,7 @@ import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
 const webrtcSupported = typeof window !== "undefined" && "RTCPeerConnection" in window;
+const quickConnectAvailable = isSupabaseConfigured();
 
 function CodeBox({ label, value, hint }: { label: string; value: string; hint: string }) {
   const [copied, setCopied] = useState(false);
@@ -162,6 +164,7 @@ export function RaceMode() {
     busy,
     error,
     localCode,
+    roomCode,
     connected,
     scramble,
     myReady,
@@ -173,10 +176,11 @@ export function RaceMode() {
     myHasSmartCube,
     opponentHasSmartCube,
     opponentMoves,
-    startHosting,
     startJoining,
     submitOfferCode,
     submitAnswerCode,
+    hostQuick,
+    joinQuick,
     setReady,
     finish,
     rematch,
@@ -187,12 +191,22 @@ export function RaceMode() {
   } = useRaceStore();
 
   const [pasteValue, setPasteValue] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [manualJoin, setManualJoin] = useState(false);
   const [countdownLabel, setCountdownLabel] = useState("");
   // `mode` is set once (hosting/joining) and never flips mid-session, so it
   // doubles as "am I the host" for the whole connected lifetime too.
   const isHost = mode === "hosting";
 
   useEffect(() => () => reset(), [reset]);
+
+  // Local-only UI state has no home in the store (it's never sent anywhere) — clear it whenever the racer backs out to start fresh.
+  const handleDisconnect = () => {
+    disconnect();
+    setPasteValue("");
+    setJoinCodeInput("");
+    setManualJoin(false);
+  };
 
   useEffect(() => {
     if (raceState !== "countdown" || startAtMs === null) return;
@@ -277,14 +291,13 @@ export function RaceMode() {
         {mode === "idle" && (
           <>
             <p className="mb-3 text-xs leading-relaxed text-muted">
-              Race someone directly, browser to browser — no account, nothing running on our end. One of you hosts
-              and shares a connection code, the other pastes it back; then you&apos;re on the same scramble racing
-              live.
+              Race someone directly, browser to browser — no account. Host a race to get a short code, share it
+              however&apos;s easiest, and you&apos;re both on the same scramble racing live.
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => void startHosting()}
+                onClick={() => void hostQuick()}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-fg"
               >
                 <Radio size={13} /> Host a race
@@ -302,12 +315,21 @@ export function RaceMode() {
 
         {mode === "hosting" && !connected && (
           <div className="flex flex-col gap-3">
-            {busy && !localCode && (
+            {busy && !roomCode && !localCode && (
               <p className="flex items-center gap-1.5 text-xs text-muted">
-                <Loader2 size={13} className="animate-spin" /> Setting up your connection…
+                <Loader2 size={13} className="animate-spin" /> Setting up your race…
               </p>
             )}
-            {localCode && (
+            {roomCode && (
+              <div className="flex flex-col items-center gap-2 py-2">
+                <p className="text-[11px] font-medium text-muted">Give them this code</p>
+                <p className="text-4xl font-bold tracking-[0.3em] text-accent">{roomCode}</p>
+                <p className="flex items-center gap-1.5 text-xs text-muted-2">
+                  <Loader2 size={13} className="animate-spin" /> Waiting for them to join…
+                </p>
+              </div>
+            )}
+            {!roomCode && localCode && (
               <>
                 <CodeBox label="1. Send this code to your opponent" value={localCode} hint="They'll paste it into their own 'Join a race'." />
                 <div className="flex flex-col gap-1">
@@ -333,7 +355,35 @@ export function RaceMode() {
           </div>
         )}
 
-        {mode === "joining" && !connected && (
+        {mode === "joining" && !connected && quickConnectAvailable && !manualJoin && (
+          <div className="flex flex-col gap-2">
+            <p className="text-[11px] font-medium text-muted">Enter their room code</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="text"
+                autoCapitalize="characters"
+                value={joinCodeInput}
+                onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5))}
+                placeholder="ABCDE"
+                className="flex-1 rounded-lg bg-bg-panel-2 px-3 py-2 text-center font-mono text-lg font-bold tracking-[0.3em] text-foreground outline-none focus:ring-1 focus:ring-accent"
+              />
+              <button
+                type="button"
+                onClick={() => void joinQuick(joinCodeInput)}
+                disabled={joinCodeInput.length < 5 || busy}
+                className="flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-fg disabled:opacity-40"
+              >
+                {busy ? <Loader2 size={13} className="animate-spin" /> : "Join"}
+              </button>
+            </div>
+            <button type="button" onClick={() => setManualJoin(true)} className="self-start text-[11px] text-muted-2 underline">
+              Have a code to paste instead?
+            </button>
+          </div>
+        )}
+
+        {mode === "joining" && !connected && (!quickConnectAvailable || manualJoin) && (
           <div className="flex flex-col gap-3">
             {!localCode ? (
               <>
@@ -474,7 +524,7 @@ export function RaceMode() {
         )}
 
         {mode !== "idle" && (
-          <button type="button" onClick={disconnect} className="mt-3 text-[11px] text-muted-2 hover:text-danger">
+          <button type="button" onClick={handleDisconnect} className="mt-3 text-[11px] text-muted-2 hover:text-danger">
             Disconnect
           </button>
         )}

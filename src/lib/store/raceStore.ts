@@ -2,17 +2,27 @@
 
 import { create } from "zustand";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
+import { createRaceRoom, deleteRaceRoom, fetchRaceRoomOffer, submitRaceRoomAnswer, waitForRaceRoomAnswer } from "@/lib/social/raceSignaling";
 
 /**
- * Live head-to-head racing over a direct WebRTC data channel — no signaling
- * server, no account system, nothing running on our end at all. The two
- * browsers exchange a single connection "code" each (their WebRTC offer/
- * answer, base64-encoded) through whatever channel the racers already have
- * open — text, Discord, reading it aloud — then talk directly to each other
- * over the internet from then on. A public STUN server (Google's, the same
- * one nearly every WebRTC demo and library defaults to) is used only so
- * each side can discover its own public address; no cube data, times, or
- * anything else passes through it.
+ * Live head-to-head racing over a direct WebRTC data channel. The race
+ * itself — scramble, ready-up, times, moves — always goes straight between
+ * the two browsers over that data channel, never through anything we run.
+ *
+ * The one piece two browsers can never do unassisted is finding each other
+ * in the first place (WebRTC needs *some* side channel to swap a
+ * connection "offer" and "answer"). The quick-connect path (hostQuick/
+ * joinQuick) uses this app's Supabase project as a short-lived mailbox for
+ * exactly that handshake — a 5-character room code instead of a giant
+ * blob to copy/paste — see lib/social/raceSignaling.ts; the room is
+ * deleted the moment the host completes the connection. If Supabase isn't
+ * configured, startHosting/submitOfferCode/submitAnswerCode are the manual
+ * fallback: the same handshake with the offer/answer copy-pasted by hand
+ * through whatever channel the racers already have open.
+ *
+ * Either way, a public STUN server (Google's, the same one nearly every
+ * WebRTC demo and library defaults to) is used only so each side can
+ * discover its own public address for the eventual direct connection.
  *
  * If a side has a smart cube connected, its moves stream over the same data
  * channel (see the "move" WireMessage) so the other side can render a live
@@ -46,8 +56,10 @@ interface RaceStoreState {
   mode: RaceMode;
   busy: boolean;
   error: string | null;
-  /** The blob you share with your opponent — your offer (host) or your answer (joiner). */
+  /** The blob you share with your opponent — your offer (host) or your answer (joiner). Manual-flow fallback only; the quick-connect path never shows this unless it fails. */
   localCode: string | null;
+  /** The short code shown to the host once a quick-connect room is up, or typed in by the joiner. Null while using the manual fallback. */
+  roomCode: string | null;
   connected: boolean;
   scramble: string | null;
   myReady: boolean;
@@ -66,6 +78,10 @@ interface RaceStoreState {
   startJoining: () => void;
   submitOfferCode: (code: string) => Promise<void>;
   submitAnswerCode: (code: string) => Promise<void>;
+  /** Quick-connect: generates the offer, publishes it under a fresh room code, and waits for a joiner's answer to arrive — no manual code exchange at all. Falls back to leaving `error` set (the manual flow underneath is unaffected) if Supabase isn't reachable. */
+  hostQuick: () => Promise<void>;
+  /** Quick-connect: looks up the room by code, answers it, and hands the answer back through the same room. */
+  joinQuick: (code: string) => Promise<void>;
   setReady: (ready: boolean) => void;
   finish: (timeMs: number) => void;
   rematch: () => Promise<void>;
@@ -78,6 +94,7 @@ interface RaceStoreState {
 let pc: RTCPeerConnection | null = null;
 let dc: RTCDataChannel | null = null;
 let isHost = false;
+let roomAbort: AbortController | null = null;
 
 function encode(desc: RTCSessionDescriptionInit): string {
   return btoa(unescape(encodeURIComponent(JSON.stringify(desc))));
@@ -110,7 +127,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
   function wireDataChannel(channel: RTCDataChannel) {
     dc = channel;
     channel.onopen = () => {
-      set({ connected: true, busy: false, error: null });
+      set({ connected: true, busy: false, error: null, roomCode: null });
       // The host is the one who picked the scramble (during startHosting,
       // before the joiner even existed) — hand it over now that there's
       // finally a channel to send it on.
@@ -179,6 +196,8 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
     dc = null;
     pc = null;
     isHost = false;
+    roomAbort?.abort();
+    roomAbort = null;
   }
 
   return {
@@ -186,6 +205,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
     busy: false,
     error: null,
     localCode: null,
+    roomCode: null,
     connected: false,
     scramble: null,
     myReady: false,
@@ -249,6 +269,70 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
       }
     },
 
+    hostQuick: async () => {
+      teardown();
+      isHost = true;
+      const abort = new AbortController();
+      roomAbort = abort;
+      set({ mode: "hosting", busy: true, error: null, localCode: null, roomCode: null });
+      try {
+        const conn = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        pc = conn;
+        wireDataChannel(conn.createDataChannel("race"));
+        const offer = await conn.createOffer();
+        await conn.setLocalDescription(offer);
+        await waitForIceGatheringComplete(conn);
+        const scramble = await getCubeEngineClient().generateScramble();
+        const offerCode = encode(conn.localDescription!);
+        const code = await createRaceRoom(offerCode);
+        if (!code) {
+          // No Supabase (or it's unreachable) — fall back to the manual code, same as startHosting.
+          set({ localCode: offerCode, scramble, busy: false, error: "Couldn't create a quick room — use the code below instead." });
+          return;
+        }
+        // Keep the manual offer code around too (unused unless the quick-connect wait fails or the racer opts into the fallback UI).
+        set({ roomCode: code, localCode: offerCode, scramble, busy: false });
+        const answer = await waitForRaceRoomAnswer(code, abort.signal);
+        if (abort.signal.aborted || !pc) return;
+        if (!answer) {
+          set({ error: "Nobody joined in time — try hosting again.", roomCode: null });
+          return;
+        }
+        await pc.setRemoteDescription(decode(answer));
+        void deleteRaceRoom(code);
+      } catch (err) {
+        set({ busy: false, error: err instanceof Error ? err.message : String(err) });
+      }
+    },
+
+    joinQuick: async (code) => {
+      teardown();
+      isHost = false;
+      const abort = new AbortController();
+      roomAbort = abort;
+      const normalized = code.trim().toUpperCase();
+      set({ mode: "joining", busy: true, error: null, localCode: null, roomCode: normalized });
+      try {
+        const offer = await fetchRaceRoomOffer(normalized);
+        if (abort.signal.aborted) return;
+        if (!offer) {
+          set({ busy: false, roomCode: null, error: "That room code wasn't found — check it and try again." });
+          return;
+        }
+        const conn = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        pc = conn;
+        conn.ondatachannel = (event) => wireDataChannel(event.channel);
+        await conn.setRemoteDescription(decode(offer));
+        const answer = await conn.createAnswer();
+        await conn.setLocalDescription(answer);
+        await waitForIceGatheringComplete(conn);
+        await submitRaceRoomAnswer(normalized, encode(conn.localDescription!));
+        set({ busy: false });
+      } catch (err) {
+        set({ busy: false, roomCode: null, error: err instanceof Error ? err.message : "Couldn't join that room." });
+      }
+    },
+
     setReady: (ready) => {
       set({ myReady: ready });
       send({ t: "ready", ready });
@@ -284,6 +368,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         mode: "idle",
         busy: false,
         localCode: null,
+        roomCode: null,
         connected: false,
         scramble: null,
         myReady: false,
@@ -305,6 +390,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         busy: false,
         error: null,
         localCode: null,
+        roomCode: null,
         connected: false,
         scramble: null,
         myReady: false,
