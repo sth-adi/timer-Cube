@@ -67,6 +67,7 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
       const result = await pullAll(user.id);
       if (result.addedSessions > 0 || result.addedSolves > 0) {
         await useSessionStore.getState().refreshFromDb();
+        await useSessionStore.getState().adoptSyncedSessionIfLocalEmpty();
       }
       clearScheduledRetry();
       set({ status: "synced", lastSyncedAt: Date.now() });

@@ -67,6 +67,17 @@ interface SessionState {
   importRowsIntoActiveSession: (rows: SessionExport["solves"]) => Promise<number>;
   /** Re-reads sessions/solves straight from Dexie without touching which session is active — for when something outside this store's own actions wrote to the db directly (device sync). */
   refreshFromDb: () => Promise<void>;
+  /**
+   * A device-to-device or cloud sync merges in whatever sessions/solves the
+   * other side has under *their own* ids — never the id of this device's own
+   * auto-created default session (see ensureDefaultSession in db.ts) — so a
+   * first sync leaves this device looking at its own still-empty "Session 1"
+   * while the solves that just arrived sit under a same-named session it
+   * isn't viewing. Only fires when the active session has nothing in it yet,
+   * so it can never yank a session out from under solves someone's already
+   * recorded here; picks whichever other session now has the most solves.
+   */
+  adoptSyncedSessionIfLocalEmpty: () => Promise<void>;
 }
 
 let pbEventId = 0;
@@ -230,5 +241,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const allSolves = await getAllSolves();
     const solves = activeSessionId ? await getSessionSolves(activeSessionId) : [];
     set({ sessions, solves, allSolves });
+  },
+
+  adoptSyncedSessionIfLocalEmpty: async () => {
+    const { activeSessionId, solves, sessions, allSolves } = get();
+    if (!activeSessionId || solves.length > 0) return;
+    const counts = new Map<string, number>();
+    for (const s of allSolves) counts.set(s.sessionId, (counts.get(s.sessionId) ?? 0) + 1);
+    const candidate = sessions
+      .filter((s) => s.id !== activeSessionId && (counts.get(s.id) ?? 0) > 0)
+      .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0))[0];
+    if (candidate) await get().switchSession(candidate.id);
   },
 }));
