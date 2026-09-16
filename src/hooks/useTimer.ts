@@ -108,7 +108,12 @@ export function useTimer({
     const p = phaseRef.current;
 
     if (p === "running") {
-      const elapsed = runStartedAt.current !== null ? performance.now() - runStartedAt.current : 0;
+      // performance.now() is sub-millisecond-precision (a float); solve
+      // times are stored and compared as whole milliseconds everywhere
+      // downstream (Postgres columns included, once synced), so this is
+      // the one place that ever needs to round it.
+      const elapsed =
+        runStartedAt.current !== null ? Math.round(performance.now() - runStartedAt.current) : 0;
 
       // Mid-solve press with phases left to mark: record the boundary and keep
       // the clock running rather than stopping it.

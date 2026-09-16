@@ -51,7 +51,15 @@ function solveToRow(s: Solve, userId: string): SolveRow {
     id: s.id,
     user_id: userId,
     session_id: s.sessionId,
-    time_ms: s.timeMs,
+    // `time_ms`/`cross_ms` are Postgres `integer` columns. Solve timing is
+    // ultimately derived from performance.now() (sub-millisecond-precision,
+    // a float) — useTimer.ts rounds at capture time, but this is a second,
+    // defensive line for whatever's already sitting in a device's local
+    // Dexie store from before that fix, or from a path that doesn't (smart
+    // cube live capture). An unrounded value here fails the upsert outright
+    // with "invalid input syntax for type integer" — this is exactly the
+    // bug a user hit syncing from a device with an old fractional solve.
+    time_ms: Math.round(s.timeMs),
     penalty: s.penalty,
     scramble: s.scramble,
     date: s.date,
@@ -60,7 +68,7 @@ function solveToRow(s: Solve, userId: string): SolveRow {
     event: s.event ?? null,
     reconstruction: s.reconstruction ?? null,
     heart_rate: s.heartRate ?? null,
-    cross_ms: s.crossMs ?? null,
+    cross_ms: s.crossMs !== undefined ? Math.round(s.crossMs) : null,
     move_timestamps: s.moveTimestamps ?? null,
   };
 }
@@ -117,13 +125,19 @@ export async function pushPublicStats(userId: string, username: string): Promise
   if (!supabase) return;
   const solves = await db.solves.toArray();
   const stats = computeSessionStats(solves);
+  // best_ao5_ms/best_ao12_ms are averages — genuinely fractional by
+  // construction even when every underlying solve is a clean integer
+  // (e.g. an odd sum divided by 3) — and best_single_ms inherits whatever
+  // Math.min() found among possibly-unrounded historical solves. All three
+  // are Postgres `integer` columns; round or this upsert fails outright.
+  const roundOrNull = (ms: number | null) => (ms === null ? null : Math.round(ms));
   const { error } = await withTimeout(
     supabase.from("public_stats").upsert({
       user_id: userId,
       username,
-      best_single_ms: stats.best,
-      best_ao5_ms: stats.bestAo5,
-      best_ao12_ms: stats.bestAo12,
+      best_single_ms: roundOrNull(stats.best),
+      best_ao5_ms: roundOrNull(stats.bestAo5),
+      best_ao12_ms: roundOrNull(stats.bestAo12),
       total_solves: stats.solveCount,
     }),
   );
