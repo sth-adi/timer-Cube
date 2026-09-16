@@ -3,6 +3,42 @@ import { db } from "./db";
 import { mergeSyncPayload, type SyncPayload } from "./sync";
 import type { Session, Solve } from "@/types";
 
+const SYNC_TIMEOUT_MS = 15_000;
+
+export class SyncTimeoutError extends Error {
+  constructor() {
+    super("Timed out reaching the server.");
+    this.name = "SyncTimeoutError";
+  }
+}
+
+/**
+ * A request that hangs on a bad connection (packet loss, a dying proxy, a
+ * dead Wi-Fi handoff) would otherwise leave callers `await`ing forever —
+ * observed directly while testing this: a stuck sessions/solves fetch left
+ * the sync status frozen on "Syncing…" indefinitely, with no error and no
+ * way to recover short of a page reload. Every Supabase call here is bounded
+ * so a stuck request always settles, one way or another, within
+ * SYNC_TIMEOUT_MS. The real fetch may still be running in the background
+ * when this rejects — harmless for a periodic background sync, not worth
+ * threading an AbortController through for.
+ */
+function withTimeout<T>(promise: PromiseLike<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new SyncTimeoutError()), SYNC_TIMEOUT_MS);
+    Promise.resolve(promise).then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 /**
  * Row shapes as stored in Supabase (snake_case, one extra `user_id` column
  * for RLS) vs. this app's own camelCase local types.
@@ -89,11 +125,11 @@ export async function pushAll(userId: string): Promise<void> {
   if (!supabase) return;
   const [sessions, solves] = await Promise.all([db.sessions.toArray(), db.solves.toArray()]);
   if (sessions.length > 0) {
-    const { error } = await supabase.from("sessions").upsert(sessions.map((s) => sessionToRow(s, userId)));
+    const { error } = await withTimeout(supabase.from("sessions").upsert(sessions.map((s) => sessionToRow(s, userId))));
     if (error) throw error;
   }
   if (solves.length > 0) {
-    const { error } = await supabase.from("solves").upsert(solves.map((s) => solveToRow(s, userId)));
+    const { error } = await withTimeout(supabase.from("solves").upsert(solves.map((s) => solveToRow(s, userId))));
     if (error) throw error;
   }
 }
@@ -110,8 +146,8 @@ export async function pullAll(userId: string): Promise<{ addedSessions: number; 
   const supabase = getSupabaseClient();
   if (!supabase) return { addedSessions: 0, addedSolves: 0 };
   const [{ data: sessionRows, error: sessionErr }, { data: solveRows, error: solveErr }] = await Promise.all([
-    supabase.from("sessions").select("*").eq("user_id", userId),
-    supabase.from("solves").select("*").eq("user_id", userId),
+    withTimeout(supabase.from("sessions").select("*").eq("user_id", userId)),
+    withTimeout(supabase.from("solves").select("*").eq("user_id", userId)),
   ]);
   if (sessionErr) throw sessionErr;
   if (solveErr) throw solveErr;
