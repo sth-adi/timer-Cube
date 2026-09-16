@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Radio, Swords, Trophy, Wifi, WifiOff } from "lucide-react";
-import { useRaceStore } from "@/lib/store/raceStore";
+import { Bluetooth, Loader2, Radio, Swords, Trophy, Wifi, WifiOff } from "lucide-react";
+import { useRaceStore, type RaceCubeMove } from "@/lib/store/raceStore";
+import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
+import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
+import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
@@ -78,10 +81,72 @@ function RaceClock({ startAtMs, onStop }: { startAtMs: number; onStop: (timeMs: 
     <button
       type="button"
       onClick={stop}
-      className="tabular-timer w-full rounded-xl bg-bg-panel-2 py-8 text-center text-5xl font-bold text-foreground active:opacity-80"
+      className="tabular-timer w-full rounded-xl bg-bg-panel-2 py-6 text-center text-3xl font-bold text-foreground active:opacity-80 sm:text-4xl"
     >
       {formatTime(displayMs)}
     </button>
+  );
+}
+
+/** Opponent's live-ticking number — read-only, derived purely from the shared start epoch both sides already agreed on (see raceStore's "start" message), so it needs no per-tick network traffic at all: just Date.now() minus that epoch, same math RaceClock does for your own. */
+function OpponentClock({ startAtMs }: { startAtMs: number }) {
+  const [displayMs, setDisplayMs] = useState(0);
+
+  useEffect(() => {
+    let raf: number;
+    const tick = () => {
+      setDisplayMs(Math.max(0, Date.now() - startAtMs));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [startAtMs]);
+
+  return (
+    <p className="tabular-timer w-full rounded-xl bg-bg-panel-2 py-6 text-center text-3xl font-bold text-muted sm:text-4xl">
+      {formatTime(displayMs)}
+    </p>
+  );
+}
+
+/**
+ * The opponent's side of the race, live: their finished time once they have
+ * one, otherwise a cube mimic (if they're on a smart cube — driven by moves
+ * relayed over the data channel, same LiveCubeMimic the solo timer uses
+ * locally) or just their ticking clock. Shared between the "still solving"
+ * and "waiting for them" states below rather than duplicated.
+ */
+function OpponentPanel({
+  startAtMs,
+  opponentTimeMs,
+  opponentHasSmartCube,
+  opponentMoves,
+  scramble,
+}: {
+  startAtMs: number;
+  opponentTimeMs: number | null;
+  opponentHasSmartCube: boolean;
+  opponentMoves: RaceCubeMove[];
+  scramble: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-2">
+        Opponent
+        {opponentHasSmartCube && <Bluetooth size={10} className="text-accent" />}
+      </p>
+      {opponentTimeMs !== null ? (
+        <p className="tabular-timer w-full rounded-xl bg-bg-panel-2 py-6 text-center text-3xl font-bold text-foreground sm:text-4xl">
+          {formatTime(opponentTimeMs)}
+        </p>
+      ) : opponentHasSmartCube ? (
+        <div className="h-32 w-full overflow-hidden rounded-xl bg-bg-panel-2">
+          <LiveCubeMimic scramble={scramble} moves={opponentMoves} className="h-full w-full" />
+        </div>
+      ) : (
+        <OpponentClock startAtMs={startAtMs} />
+      )}
+    </div>
   );
 }
 
@@ -105,6 +170,9 @@ export function RaceMode() {
     raceState,
     myTimeMs,
     opponentTimeMs,
+    myHasSmartCube,
+    opponentHasSmartCube,
+    opponentMoves,
     startHosting,
     startJoining,
     submitOfferCode,
@@ -114,6 +182,8 @@ export function RaceMode() {
     rematch,
     disconnect,
     reset,
+    setMyHasSmartCube,
+    reportMove,
   } = useRaceStore();
 
   const [pasteValue, setPasteValue] = useState("");
@@ -135,6 +205,48 @@ export function RaceMode() {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [raceState, startAtMs]);
+
+  // Smart-cube side of the race: reuses the exact same scramble-match ->
+  // inspection -> arm flow the solo SmartCubeTimer drives off (see
+  // useSmartCubeFlow's own doc comment) — this hook is a safe no-op when no
+  // cube is connected, so it's always called rather than conditionally.
+  const smartCubeConnected = useSmartCubeStore((s) => s.connected);
+  const scMoves = useSmartCubeStore((s) => s.moves);
+  const scStartedAtMs = useSmartCubeStore((s) => s.startedAtMs);
+  const scSolvedAtMs = useSmartCubeStore((s) => s.solvedAtMs);
+  useSmartCubeFlow(scramble ?? "");
+
+  // Tell the opponent whether a smart cube is driving this side, so they
+  // know whether to expect a live cube visual from us or just a timer.
+  useEffect(() => {
+    if (connected) setMyHasSmartCube(smartCubeConnected);
+  }, [connected, smartCubeConnected, setMyHasSmartCube]);
+
+  // Relay every new move the instant it happens — same edge-triggered
+  // "everything from the last index I sent" approach as the auto-save
+  // effect in SmartCubeTimer.tsx, reset whenever a fresh arm() clears
+  // smartCubeStore's own move list back to empty (new scramble/rematch).
+  const lastRelayedCountRef = useRef(0);
+  useEffect(() => {
+    if (scMoves.length === 0) lastRelayedCountRef.current = 0;
+    if (!smartCubeConnected) return;
+    for (let i = lastRelayedCountRef.current; i < scMoves.length; i++) reportMove(scMoves[i].token, scMoves[i].timeStampMs);
+    lastRelayedCountRef.current = scMoves.length;
+  }, [scMoves, smartCubeConnected, reportMove]);
+
+  // Auto-finish for a smart-cube racer the instant the physical cube reads
+  // solved — mirrors SmartCubeTimer's own auto-record effect, including
+  // using the cube connection's own event-stream clock (solvedAtMs -
+  // startedAtMs) rather than wall time, since that's the actual solve
+  // duration untouched by main-thread jank.
+  const autoFinishedAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!smartCubeConnected || raceState !== "running" || myTimeMs !== null) return;
+    if (scSolvedAtMs === null || scStartedAtMs === null) return;
+    if (autoFinishedAtRef.current === scSolvedAtMs) return;
+    autoFinishedAtRef.current = scSolvedAtMs;
+    finish(scSolvedAtMs - scStartedAtMs);
+  }, [smartCubeConnected, raceState, myTimeMs, scSolvedAtMs, scStartedAtMs, finish]);
 
   if (!webrtcSupported) {
     return (
@@ -264,9 +376,11 @@ export function RaceMode() {
                 </div>
                 <p className="tabular-timer break-words text-center text-sm font-medium leading-relaxed text-foreground/90">{scramble}</p>
                 <div className="flex items-center justify-center gap-3 text-[11px]">
-                  <span className={cn("flex items-center gap-1", myReady ? "text-success" : "text-muted-2")}>You {myReady ? "ready" : "not ready"}</span>
+                  <span className={cn("flex items-center gap-1", myReady ? "text-success" : "text-muted-2")}>
+                    {myHasSmartCube && <Bluetooth size={11} />} You {myReady ? "ready" : "not ready"}
+                  </span>
                   <span className={cn("flex items-center gap-1", opponentReady ? "text-success" : "text-muted-2")}>
-                    Opponent {opponentReady ? "ready" : "not ready"}
+                    {opponentHasSmartCube && <Bluetooth size={11} />} Opponent {opponentReady ? "ready" : "not ready"}
                   </span>
                 </div>
                 <button
@@ -287,18 +401,40 @@ export function RaceMode() {
               <p className="py-8 text-center text-6xl font-bold text-accent">{countdownLabel}</p>
             )}
 
-            {raceState === "running" && myTimeMs === null && startAtMs !== null && (
-              <>
-                <RaceClock startAtMs={startAtMs} onStop={finish} />
-                <p className="text-center text-[11px] text-muted-2">tap the clock (or press space) to stop</p>
-              </>
-            )}
-
-            {raceState === "running" && myTimeMs !== null && (
-              <div className="flex flex-col items-center gap-2 py-6">
-                <p className="tabular-timer text-4xl font-bold text-foreground">{formatTime(myTimeMs)}</p>
-                <p className="text-xs text-muted-2">waiting for your opponent to finish…</p>
+            {raceState === "running" && startAtMs !== null && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col items-center gap-1.5">
+                  <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-2">
+                    You
+                    {myHasSmartCube && <Bluetooth size={10} className="text-accent" />}
+                  </p>
+                  {myTimeMs !== null ? (
+                    <p className="tabular-timer w-full rounded-xl bg-bg-panel-2 py-6 text-center text-3xl font-bold text-foreground sm:text-4xl">
+                      {formatTime(myTimeMs)}
+                    </p>
+                  ) : myHasSmartCube ? (
+                    <div className="flex h-32 w-full flex-col items-center justify-center gap-1.5 rounded-xl bg-bg-panel-2">
+                      <Bluetooth size={20} className="animate-pulse text-accent" />
+                      <p className="text-[11px] text-muted-2">solving on your cube…</p>
+                    </div>
+                  ) : (
+                    <RaceClock startAtMs={startAtMs} onStop={finish} />
+                  )}
+                </div>
+                <OpponentPanel
+                  startAtMs={startAtMs}
+                  opponentTimeMs={opponentTimeMs}
+                  opponentHasSmartCube={opponentHasSmartCube}
+                  opponentMoves={opponentMoves}
+                  scramble={scramble ?? ""}
+                />
               </div>
+            )}
+            {raceState === "running" && myTimeMs === null && !myHasSmartCube && (
+              <p className="text-center text-[11px] text-muted-2">tap the clock (or press space) to stop</p>
+            )}
+            {raceState === "running" && myTimeMs !== null && opponentTimeMs === null && (
+              <p className="text-center text-[11px] text-muted-2">waiting for your opponent to finish…</p>
             )}
 
             {raceState === "finished" && myTimeMs !== null && opponentTimeMs !== null && (

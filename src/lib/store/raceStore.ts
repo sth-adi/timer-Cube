@@ -13,17 +13,31 @@ import { getCubeEngineClient } from "@/lib/cube-engine/client";
  * one nearly every WebRTC demo and library defaults to) is used only so
  * each side can discover its own public address; no cube data, times, or
  * anything else passes through it.
+ *
+ * If a side has a smart cube connected, its moves stream over the same data
+ * channel (see the "move" WireMessage) so the other side can render a live
+ * LiveCubeMimic of it — see RaceMode.tsx, which owns arming/reading the
+ * local smartCubeStore and relaying it here; this store just carries the
+ * bytes and the already-relayed opponentMoves for whoever's watching.
  */
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
 const ICE_GATHER_TIMEOUT_MS = 6000;
 const COUNTDOWN_MS = 3000;
 
+/** Wire shape for a relayed smart-cube move — same fields as smartCubeStore's own SmartCubeMove, kept independent so raceStore never has to import that store's types. */
+export interface RaceCubeMove {
+  token: string;
+  timeStampMs: number;
+}
+
 type WireMessage =
   | { t: "scramble"; scramble: string }
   | { t: "ready"; ready: boolean }
   | { t: "start"; atMs: number }
-  | { t: "finished"; timeMs: number };
+  | { t: "finished"; timeMs: number }
+  | { t: "hasCube"; hasCube: boolean }
+  | { t: "move"; token: string; timeStampMs: number };
 
 export type RaceMode = "idle" | "hosting" | "joining";
 export type RaceState = "lobby" | "countdown" | "running" | "finished";
@@ -42,6 +56,11 @@ interface RaceStoreState {
   raceState: RaceState;
   myTimeMs: number | null;
   opponentTimeMs: number | null;
+  /** Whether a connected smart cube is driving this device's side of the race — reported the moment RaceMode knows, so the other side can decide whether to render a live cube visual or just a timer. */
+  myHasSmartCube: boolean;
+  opponentHasSmartCube: boolean;
+  /** Every move the opponent's smart cube has reported so far this attempt — feeds a LiveCubeMimic on this side, same shape it already consumes locally in SmartCubeTimer. */
+  opponentMoves: RaceCubeMove[];
 
   startHosting: () => Promise<void>;
   startJoining: () => void;
@@ -52,6 +71,8 @@ interface RaceStoreState {
   rematch: () => Promise<void>;
   disconnect: () => void;
   reset: () => void;
+  setMyHasSmartCube: (hasCube: boolean) => void;
+  reportMove: (token: string, timeStampMs: number) => void;
 }
 
 let pc: RTCPeerConnection | null = null;
@@ -115,6 +136,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
           raceState: "lobby",
           myTimeMs: null,
           opponentTimeMs: null,
+          opponentMoves: [],
         });
       } else if (msg.t === "ready") {
         set({ opponentReady: msg.ready });
@@ -125,6 +147,10 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         set({ opponentTimeMs: msg.timeMs });
         const { myTimeMs } = get();
         if (myTimeMs !== null) set({ raceState: "finished" });
+      } else if (msg.t === "hasCube") {
+        set({ opponentHasSmartCube: msg.hasCube });
+      } else if (msg.t === "move") {
+        set((s) => ({ opponentMoves: [...s.opponentMoves, { token: msg.token, timeStampMs: msg.timeStampMs }] }));
       }
     };
   }
@@ -168,6 +194,9 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
     raceState: "lobby",
     myTimeMs: null,
     opponentTimeMs: null,
+    myHasSmartCube: false,
+    opponentHasSmartCube: false,
+    opponentMoves: [],
 
     startHosting: async () => {
       teardown();
@@ -236,7 +265,16 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
     rematch: async () => {
       if (!isHost) return;
       const scramble = await getCubeEngineClient().generateScramble();
-      set({ scramble, myReady: false, opponentReady: false, startAtMs: null, raceState: "lobby", myTimeMs: null, opponentTimeMs: null });
+      set({
+        scramble,
+        myReady: false,
+        opponentReady: false,
+        startAtMs: null,
+        raceState: "lobby",
+        myTimeMs: null,
+        opponentTimeMs: null,
+        opponentMoves: [],
+      });
       send({ t: "scramble", scramble });
     },
 
@@ -254,6 +292,9 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         raceState: "lobby",
         myTimeMs: null,
         opponentTimeMs: null,
+        myHasSmartCube: false,
+        opponentHasSmartCube: false,
+        opponentMoves: [],
       });
     },
 
@@ -272,7 +313,19 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         raceState: "lobby",
         myTimeMs: null,
         opponentTimeMs: null,
+        myHasSmartCube: false,
+        opponentHasSmartCube: false,
+        opponentMoves: [],
       });
+    },
+
+    setMyHasSmartCube: (hasCube) => {
+      set({ myHasSmartCube: hasCube });
+      send({ t: "hasCube", hasCube });
+    },
+
+    reportMove: (token, timeStampMs) => {
+      send({ t: "move", token, timeStampMs });
     },
   };
 });
