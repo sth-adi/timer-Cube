@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bluetooth, Loader2, Radio, Swords, Trophy, Wifi, WifiOff } from "lucide-react";
+import { Bluetooth, ChevronDown, ChevronUp, Loader2, Radio, Swords, Trophy, Wifi, WifiOff, Zap } from "lucide-react";
 import { useRaceStore, type RaceCubeMove } from "@/lib/store/raceStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { useAuthStore } from "@/lib/store/authStore";
+import { fetchRaceLeaderboard, type RaceLeaderboard } from "@/lib/social/raceRating";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
@@ -152,6 +154,89 @@ function OpponentPanel({
   );
 }
 
+/** Small "1204" pill next to a ready-status label — only rendered once a rating is known (i.e. that side is signed in), so an anonymous racer's row just has no badge rather than a misleading placeholder. */
+function RatingBadge({ rating }: { rating: number }) {
+  return <span className="rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-2">{rating}</span>;
+}
+
+/**
+ * Top race ratings across every signed-in racer — a plain rank list fetched
+ * on demand (this data changes with every race in the whole app, so there's
+ * no good moment to keep it live-subscribed; a fresh pull whenever the
+ * panel opens is plenty for a casual leaderboard like this).
+ */
+function RaceLeaderboardPanel() {
+  const user = useAuthStore((s) => s.user);
+  const [open, setOpen] = useState(false);
+  const [board, setBoard] = useState<RaceLeaderboard | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const toggle = () => {
+    if (!open && !board) {
+      setLoading(true);
+      void fetchRaceLeaderboard(user?.id ?? null).then((result) => {
+        setBoard(result);
+        setLoading(false);
+      });
+    }
+    setOpen((v) => !v);
+  };
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <button type="button" onClick={toggle} className="flex w-full items-center justify-between text-[11px] font-medium text-muted">
+        <span className="flex items-center gap-1.5">
+          <Trophy size={12} className="text-warning" /> Race leaderboard
+        </span>
+        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+      </button>
+      {open && (
+        <div className="mt-2">
+          {loading && (
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-2">
+              <Loader2 size={12} className="animate-spin" /> Loading…
+            </p>
+          )}
+          {!loading && board && board.top.length === 0 && (
+            <p className="text-[11px] text-muted-2">No rated races yet — sign in and race someone to start the board.</p>
+          )}
+          {!loading && board && board.top.length > 0 && (
+            <>
+              {board.yourRank && (
+                <p className="mb-1.5 text-[11px] text-muted-2">
+                  You: #{board.yourRank} of {board.total}
+                </p>
+              )}
+              <ol className="flex flex-col gap-1">
+                {board.top.map((entry, i) => (
+                  <li
+                    key={entry.username}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg px-2 py-1 text-xs",
+                      entry.isYou ? "bg-accent-soft text-accent" : "text-foreground/90",
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="w-4 shrink-0 text-muted-2">{i + 1}</span>
+                      <span className="truncate">{entry.username}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="text-[10px] text-muted-2">
+                        {entry.wins}-{entry.losses}
+                      </span>
+                      <span className="tabular-nums font-semibold">{entry.rating}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Head-to-head racing over a direct WebRTC connection to another browser —
  * no account, no server we run, just a connection code you send your
@@ -176,11 +261,16 @@ export function RaceMode() {
     myHasSmartCube,
     opponentHasSmartCube,
     opponentMoves,
+    matchmaking,
+    myRating,
+    opponentRating,
+    ratingDelta,
     startJoining,
     submitOfferCode,
     submitAnswerCode,
     hostQuick,
     joinQuick,
+    quickMatch,
     setReady,
     finish,
     rematch,
@@ -291,14 +381,23 @@ export function RaceMode() {
         {mode === "idle" && (
           <>
             <p className="mb-3 text-xs leading-relaxed text-muted">
-              Race someone directly, browser to browser — no account. Host a race to get a short code, share it
-              however&apos;s easiest, and you&apos;re both on the same scramble racing live.
+              Race someone directly, browser to browser — no account. Quick Match pairs you with anyone else looking
+              for a race right now; hosting gets you a short code to share with someone specific.
             </p>
+            {quickConnectAvailable && (
+              <button
+                type="button"
+                onClick={() => void quickMatch()}
+                className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-accent-fg"
+              >
+                <Zap size={15} /> Quick Match
+              </button>
+            )}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => void hostQuick()}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-fg"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-semibold text-foreground"
               >
                 <Radio size={13} /> Host a race
               </button>
@@ -310,10 +409,21 @@ export function RaceMode() {
                 Join a race
               </button>
             </div>
+            <RaceLeaderboardPanel />
           </>
         )}
 
-        {mode === "hosting" && !connected && (
+        {matchmaking && !connected && (
+          <div className="flex flex-col items-center gap-2 py-6">
+            <Loader2 size={20} className="animate-spin text-accent" />
+            <p className="text-xs font-medium text-foreground">Finding an opponent…</p>
+            <p className="max-w-[16rem] text-center text-[11px] text-muted-2">
+              Matches you with anyone else looking for a quick race right now.
+            </p>
+          </div>
+        )}
+
+        {mode === "hosting" && !connected && !matchmaking && (
           <div className="flex flex-col gap-3">
             {busy && !roomCode && !localCode && (
               <p className="flex items-center gap-1.5 text-xs text-muted">
@@ -355,7 +465,7 @@ export function RaceMode() {
           </div>
         )}
 
-        {mode === "joining" && !connected && quickConnectAvailable && !manualJoin && (
+        {mode === "joining" && !connected && !matchmaking && quickConnectAvailable && !manualJoin && (
           <div className="flex flex-col gap-2">
             <p className="text-[11px] font-medium text-muted">Enter their room code</p>
             <div className="flex gap-2">
@@ -383,7 +493,7 @@ export function RaceMode() {
           </div>
         )}
 
-        {mode === "joining" && !connected && (!quickConnectAvailable || manualJoin) && (
+        {mode === "joining" && !connected && !matchmaking && (!quickConnectAvailable || manualJoin) && (
           <div className="flex flex-col gap-3">
             {!localCode ? (
               <>
@@ -428,9 +538,11 @@ export function RaceMode() {
                 <div className="flex items-center justify-center gap-3 text-[11px]">
                   <span className={cn("flex items-center gap-1", myReady ? "text-success" : "text-muted-2")}>
                     {myHasSmartCube && <Bluetooth size={11} />} You {myReady ? "ready" : "not ready"}
+                    {myRating !== null && <RatingBadge rating={myRating} />}
                   </span>
                   <span className={cn("flex items-center gap-1", opponentReady ? "text-success" : "text-muted-2")}>
                     {opponentHasSmartCube && <Bluetooth size={11} />} Opponent {opponentReady ? "ready" : "not ready"}
+                    {opponentRating !== null && <RatingBadge rating={opponentRating} />}
                   </span>
                 </div>
                 <button
@@ -507,6 +619,12 @@ export function RaceMode() {
                     <p className="tabular-timer text-lg font-medium">{formatTime(opponentTimeMs)}</p>
                   </div>
                 </div>
+                {ratingDelta !== null && myRating !== null && (
+                  <p className={cn("text-xs font-semibold", ratingDelta >= 0 ? "text-success" : "text-danger")}>
+                    {ratingDelta >= 0 ? "+" : ""}
+                    {ratingDelta} rating → {myRating}
+                  </p>
+                )}
                 {isHost ? (
                   <button
                     type="button"
