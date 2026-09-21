@@ -69,7 +69,13 @@ export function HintPanel() {
           : null;
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    // select-none (+ the webkit callout suppression) keeps this text from
+    // getting swept into a long-press text-selection gesture on mobile —
+    // this panel sits directly under the timer, whose own hold-to-start
+    // press is itself a long touch, so without this a thumb that lands a
+    // little low here triggers the browser's native selection UI instead
+    // of starting the timer, and the eventual touchend never reaches it.
+    <div className="flex flex-col items-center gap-3 select-none [-webkit-touch-callout:none]">
       <button
         type="button"
         onClick={onReveal}
