@@ -7,6 +7,7 @@ import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { crossHeuristic } from "@/lib/solvers/cross";
 import { bottomLayerSolved, orientationSolved } from "@/lib/solvers/oll";
 import { recognizeOll, recognizePll, isOllSkip, isPllSkip } from "@/lib/analysis/recognize";
+import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 
 /**
  * Bridges a real Bluetooth smart cube into this app via
@@ -166,7 +167,15 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
           return;
         }
 
-        const move: SmartCubeMove = { token: event.move, timeStampMs: event.timestamp };
+        // See mergesIntoDoubleTurn's own doc comment for why this merge
+        // (and its time gate) exists — short version: some cubes' firmware
+        // never reports an atomic 180° turn, only two 90° clicks.
+        const rawToken = event.move;
+        const lastMove = state.moves[state.moves.length - 1];
+        const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, event.timestamp);
+        const move: SmartCubeMove = isDoubleTurn
+          ? { token: `${rawToken[0]}2`, timeStampMs: event.timestamp }
+          : { token: rawToken, timeStampMs: event.timestamp };
         // Every milestone below is checked directly off the live cube object
         // (no re-parsing facelets) and only the first time it's reached, so a
         // coincidental alignment mid-scramble or mid-insertion can never
@@ -204,7 +213,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
           ollAtMs: ollJustSolved ? event.timestamp : s.ollAtMs,
           ollCaseName,
           pllCaseName,
-          moves: [...s.moves, move],
+          moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
           liveFacelets: facelets,
         }));
 
