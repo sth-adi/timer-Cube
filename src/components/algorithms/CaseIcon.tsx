@@ -8,7 +8,21 @@ import { CORNER_FACELETS, EDGE_FACELETS } from "@/lib/cube-engine/facePositions"
  * Community-standard OLL/PLL case diagram (the convention every reference
  * site — SpeedCubeDB, algdb, jperm.net — draws): the U face (top-down,
  * matching the algorithm library's own last-layer-on-U convention — see
- * ollData.ts) plus the single row of L/F/R/B stickers touching it.
+ * ollData.ts) with the 4 adjacent faces' touching stickers wrapped directly
+ * around its 4 edges as one strip each — a real unfolded net, not a single
+ * row concatenated underneath. The diagram's bounding box is a 5x5 grid:
+ * U occupies the center 3x3, one 3-cell strip sits flush against each side
+ * (B above, F below, L left, R right), and the 4 corner cells of the
+ * bounding box are left empty, giving the plus/cross silhouette every
+ * reference diagram has.
+ *
+ * Each strip's 3 global facelet indices come straight out of
+ * CORNER_FACELETS/EDGE_FACELETS, ordered so the two stickers belonging to
+ * the same physical corner piece land in the two strips that meet at that
+ * corner, directly adjacent to that corner's own U-face cell (verified
+ * against the U-face row/col adjacency in facePositions.ts). B and R read
+ * in reverse compared to F and L — expected, since unfolding a net mirrors
+ * whichever faces end up on the "far" side of the fold.
  *
  * OLL reads as yellow-for-oriented / gray-for-unoriented, with the side
  * stickers always gray since permutation is irrelevant to OLL. PLL reads
@@ -18,22 +32,16 @@ import { CORNER_FACELETS, EDGE_FACELETS } from "@/lib/cube-engine/facePositions"
  * just the SVG layout.
  */
 
-const FACE_BLOCK_START: Record<string, number> = { U: 0, R: 9, F: 18, D: 27, L: 36, B: 45 };
-const FACE_ORIGIN: Record<string, { col: number; row: number }> = {
-  U: { col: 3, row: 0 },
-  L: { col: 0, row: 3 },
-  F: { col: 3, row: 3 },
-  R: { col: 6, row: 3 },
-  B: { col: 9, row: 3 },
-};
-
-const COLS = 12;
-const ROWS = 4;
 const CELL = 10;
 const GAP = 1.2;
 const UNIT = CELL + GAP;
-const VB_W = COLS * UNIT - GAP;
-const VB_H = ROWS * UNIT - GAP;
+const GRID = 5;
+const VB = GRID * UNIT - GAP;
+
+const B_STRIP = [47, 46, 45] as const; // above U, left-to-right
+const F_STRIP = [18, 19, 20] as const; // below U, left-to-right
+const L_STRIP = [36, 37, 38] as const; // left of U, top-to-bottom
+const R_STRIP = [11, 10, 9] as const; // right of U, top-to-bottom
 
 interface Sticker {
   key: string;
@@ -44,19 +52,15 @@ interface Sticker {
 
 function buildStickers(facelets: Record<number, string>): Sticker[] {
   const stickers: Sticker[] = [];
-  const uOrigin = FACE_ORIGIN.U;
   for (let i = 0; i < 9; i++) {
     const r = Math.floor(i / 3);
     const c = i % 3;
-    stickers.push({ key: `U${i}`, color: facelets[i] ?? "#666", col: uOrigin.col + c, row: uOrigin.row + r });
+    stickers.push({ key: `U${i}`, color: facelets[i] ?? "#666", col: 1 + c, row: 1 + r });
   }
-  for (const face of ["L", "F", "R", "B"] as const) {
-    const start = FACE_BLOCK_START[face];
-    const origin = FACE_ORIGIN[face];
-    for (let c = 0; c < 3; c++) {
-      stickers.push({ key: `${face}${c}`, color: facelets[start + c] ?? "#666", col: origin.col + c, row: origin.row });
-    }
-  }
+  B_STRIP.forEach((idx, c) => stickers.push({ key: `B${c}`, color: facelets[idx] ?? "#666", col: 1 + c, row: 0 }));
+  F_STRIP.forEach((idx, c) => stickers.push({ key: `F${c}`, color: facelets[idx] ?? "#666", col: 1 + c, row: 4 }));
+  L_STRIP.forEach((idx, r) => stickers.push({ key: `L${r}`, color: facelets[idx] ?? "#666", col: 0, row: 1 + r }));
+  R_STRIP.forEach((idx, r) => stickers.push({ key: `R${r}`, color: facelets[idx] ?? "#666", col: 4, row: 1 + r }));
   return stickers;
 }
 
@@ -64,8 +68,8 @@ function buildStickers(facelets: Record<number, string>): Sticker[] {
 function uCellCenter(localIdx: number): { x: number; y: number } {
   const r = Math.floor(localIdx / 3);
   const c = localIdx % 3;
-  const col = FACE_ORIGIN.U.col + c;
-  const row = FACE_ORIGIN.U.row + r;
+  const col = 1 + c;
+  const row = 1 + r;
   return { x: col * UNIT + CELL / 2, y: row * UNIT + CELL / 2 };
 }
 
@@ -132,7 +136,7 @@ export function CaseIcon({ setupAlg, kind, className }: CaseIconProps) {
   }, []);
 
   return (
-    <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className={className} role="img" aria-label={`${kind} case diagram`}>
+    <svg viewBox={`0 0 ${VB} ${VB}`} className={className} role="img" aria-label={`${kind} case diagram`}>
       <defs>
         <marker id="arrowheadCorner" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 Z" fill="#111" />

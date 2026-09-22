@@ -23,7 +23,7 @@ function RowIcon({ row, scramble }: { row: PostSolvePhaseRow; scramble: string }
   }
   const algCase = row.group && row.caseName ? findCase(row.group, row.caseName) : undefined;
   if (!algCase) return null;
-  return <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={row.group!} className="h-4 w-7 shrink-0 overflow-hidden rounded-[2px]" />;
+  return <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={row.group!} className="h-7 w-7 shrink-0 overflow-hidden rounded-[2px]" />;
 }
 
 /**
