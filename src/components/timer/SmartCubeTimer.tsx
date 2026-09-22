@@ -22,9 +22,6 @@ import { cn } from "@/lib/utils/cn";
 
 const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
 
-/** How long the post-solve recap stays on screen before the next scramble arms itself — long enough to read the time and phase split, short enough that a session never needs a manual "next" click. */
-const AUTO_ADVANCE_MS = 2200;
-
 /** Cumulative phase-boundary ms (from solve start), null for a phase not yet reached. */
 interface PhaseBoundaries {
   cross: number | null;
@@ -288,14 +285,24 @@ export function SmartCubeTimer() {
   );
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
+  // The scramble the currently-shown recap belongs to. Captured the instant
+  // a solve saves (see the effect below) rather than read live, because
+  // this component silently rolls the next target scramble the moment a
+  // solve saves — so by the time anyone looks at `scramble` again while the
+  // recap is still on screen, it's already the *next* one. Everything the
+  // recap displays (LiveCubeMimic, "Full 3D analysis") needs to stay paired
+  // with the solve it's actually showing, not whatever's live in the store.
+  const [finishedScramble, setFinishedScramble] = useState("");
+
   // Saves the instant a solve finishes — no button, exactly like the
   // keyboard timer's own onComplete. Edge-triggered off solvedAtMs (a ref,
   // not state) so this fires exactly once per solve even though `finished`
-  // keeps being true across re-renders until the next scramble is armed.
+  // keeps being true across re-renders until the next scramble is matched.
   const autoSavedAtRef = useRef<number | null>(null);
   useEffect(() => {
     if (!finished || autoSavedAtRef.current === solvedAtMs) return;
     autoSavedAtRef.current = solvedAtMs;
+    setFinishedScramble(scramble);
     const reconstruction = moves.map((m) => m.token).join(" ");
     const moveTimestamps = moves.map((m) => m.timeStampMs - startedAtMs!);
     // Unlike the keyboard timer, a smart-cube solve has a real absolute
@@ -308,6 +315,15 @@ export function SmartCubeTimer() {
     void recordSolve(elapsedMs, scramble, splits, pendingEvent ?? undefined, reconstruction, heartRate, crossMs, moveTimestamps);
     if (soundEnabled) playSolveChime();
     setSaved(true);
+    // Rolls the next target scramble right away, in the background — but
+    // deliberately does NOT call cancel() here, so smartCubeStore's
+    // armed/recording/solvedAtMs (and therefore `finished`) stay exactly as
+    // they are. The recap this drives stays on screen the whole time you're
+    // physically re-scrambling; useSmartCubeFlow (watching the cube's live
+    // state against this new `scramble`) is what actually clears it, by
+    // calling arm() — which resets solvedAtMs to null — the instant you
+    // finish scrambling to match it. No fixed timer, no refresh for no reason.
+    void nextScramble();
   }, [
     finished,
     solvedAtMs,
@@ -321,35 +337,26 @@ export function SmartCubeTimer() {
     recordSolve,
     summarizeHeartRate,
     soundEnabled,
+    nextScramble,
   ]);
 
   const onAnalyze = () => {
     const reconstruction = moves.map((m) => m.token).join(" ");
     const moveTimestamps = moves.map((m) => m.timeStampMs - startedAtMs!);
-    requestAnalysis(scramble, elapsedMs, undefined, reconstruction, moveTimestamps);
+    requestAnalysis(finishedScramble, elapsedMs, undefined, reconstruction, moveTimestamps);
   };
 
-  const onNext = () => {
+  // A manual escape hatch for "I don't want to physically re-scramble to
+  // dismiss this" — jumps straight to the scrambling screen instead of
+  // waiting for a match. The next scramble is already rolled (see above),
+  // so this just clears the recap now rather than rolling another one.
+  const onDismiss = () => {
     cancel();
     setSaved(false);
     autoSavedAtRef.current = null;
-    void nextScramble();
   };
 
-  // Advances on its own once a solve has saved — no "Next scramble" click
-  // needed, exactly like the keyboard timer, where hitting space again just
-  // starts the next solve. Reads `saved` rather than `finished` so this
-  // can't fire before the reconstruction has actually been recorded, and
-  // manually pressing "Next scramble" (which flips `saved` back to false
-  // synchronously) cancels this the same tick, so it never double-fires.
-  // `saved` itself doubles as "the countdown is live" for the hint below —
-  // no separate state needed to track that.
-  useEffect(() => {
-    if (!saved) return undefined;
-    const timer = window.setTimeout(onNext, AUTO_ADVANCE_MS);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saved]);
+  const mimicScramble = finished ? finishedScramble : scramble;
 
   if (!supported) {
     return (
@@ -420,7 +427,7 @@ export function SmartCubeTimer() {
 
       {(armed || recording || finished) && (
         <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl">
-          <LiveCubeMimic scramble={scramble} moves={moves} className="h-full w-full" />
+          <LiveCubeMimic scramble={mimicScramble} moves={moves} className="h-full w-full" />
         </div>
       )}
 
@@ -440,30 +447,6 @@ export function SmartCubeTimer() {
         </div>
       )}
 
-      {!armed && !recording && !finished && flow.phase === "scrambling" && (
-        <div className="flex w-full flex-col items-center gap-3">
-          {scramble && (
-            <div className="w-full max-w-[13rem]">
-              <ScrambleNet scramble={scramble} className="w-full" />
-            </div>
-          )}
-          <p className="tabular-timer break-words text-center text-xs leading-relaxed text-muted-2">{scramble}</p>
-          {flow.correction && flow.correction.length > 0 ? (
-            <div className="flex flex-col items-center gap-1 rounded-lg bg-warning/10 px-3 py-2 text-center">
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
-                <AlertTriangle size={13} /> Off track — do this next
-              </p>
-              <p className="tabular-timer font-mono text-sm font-medium text-foreground">{flow.correction.join(" ")}</p>
-            </div>
-          ) : flow.correcting ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-2">
-              <Loader2 size={12} className="animate-spin" /> Checking your scramble…
-            </p>
-          ) : (
-            <p className="text-xs text-muted-2">Scramble your cube to this pattern — inspection starts automatically.</p>
-          )}
-        </div>
-      )}
       {finished && (
         <>
           <div className="flex items-center gap-4 text-xs text-muted">
@@ -503,18 +486,43 @@ export function SmartCubeTimer() {
             </button>
             <button
               type="button"
-              onClick={onNext}
+              onClick={onDismiss}
               className="rounded-full bg-bg-panel-2 px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground"
             >
-              Skip to next
+              Dismiss
             </button>
           </div>
-          {saved && (
-            <p className="flex items-center gap-1.5 text-[11px] text-muted-2">
-              <Loader2 size={11} className="animate-spin" /> Next scramble arming automatically…
+        </>
+      )}
+
+      {!armed && !recording && flow.phase === "scrambling" && (
+        <div className="flex w-full flex-col items-center gap-3">
+          {finished && (
+            <p className="border-t border-border pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+              Next scramble — this recap stays up until you scramble it
             </p>
           )}
-        </>
+          {scramble && (
+            <div className="w-full max-w-[13rem]">
+              <ScrambleNet scramble={scramble} className="w-full" />
+            </div>
+          )}
+          <p className="tabular-timer break-words text-center text-xs leading-relaxed text-muted-2">{scramble}</p>
+          {flow.correction && flow.correction.length > 0 ? (
+            <div className="flex flex-col items-center gap-1 rounded-lg bg-warning/10 px-3 py-2 text-center">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
+                <AlertTriangle size={13} /> Off track — do this next
+              </p>
+              <p className="tabular-timer font-mono text-sm font-medium text-foreground">{flow.correction.join(" ")}</p>
+            </div>
+          ) : flow.correcting ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-2">
+              <Loader2 size={12} className="animate-spin" /> Checking your scramble…
+            </p>
+          ) : (
+            <p className="text-xs text-muted-2">Scramble your cube to this pattern — inspection starts automatically.</p>
+          )}
+        </div>
       )}
     </div>
   );
