@@ -1,0 +1,120 @@
+import type { DnaAxis } from "@/lib/stats/dna";
+
+const WIDTH = 1080;
+const HEIGHT = 1080;
+const CENTER_X = WIDTH / 2;
+const CENTER_Y = 600;
+const MAX_RADIUS = 250;
+const RINGS = [1 / 3, 2 / 3, 1];
+const ACCENT = "#2dd4bf";
+
+function polar(radius: number, angle: number): { x: number; y: number } {
+  return { x: CENTER_X + radius * Math.sin(angle), y: CENTER_Y - radius * Math.cos(angle) };
+}
+
+function ringPath(ctx: CanvasRenderingContext2D, radius: number, n: number) {
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const p = polar(radius, (i / n) * Math.PI * 2);
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+}
+
+/**
+ * The shareable poster for a solver's "DNA" — the same self-referential
+ * radar axes the on-page RadarChart draws, re-rendered here on a canvas
+ * (rather than exporting the live SVG directly) so it gets the same
+ * dark-gradient poster treatment as drawShareCard, at export resolution
+ * rather than whatever size the on-page chart happens to be laid out at.
+ */
+export function drawDnaCard(opts: { sessionName: string; axes: DnaAxis[] }): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = WIDTH;
+  canvas.height = HEIGHT;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  const bg = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+  bg.addColorStop(0, "#12141a");
+  bg.addColorStop(1, "#050608");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  ctx.fillStyle = "rgba(124, 92, 255, 0.10)";
+  ctx.beginPath();
+  ctx.arc(WIDTH * 0.14, HEIGHT * 0.08, 260, 0, Math.PI * 2);
+  ctx.fill();
+
+  const marginX = 72;
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#7d8291";
+  ctx.font = "600 30px system-ui, sans-serif";
+  ctx.fillText(opts.sessionName.toUpperCase(), marginX, 110);
+
+  ctx.fillStyle = "#eef0f3";
+  ctx.font = "800 64px system-ui, sans-serif";
+  ctx.fillText("Cube DNA", marginX, 190);
+
+  const n = opts.axes.length;
+  if (n >= 3) {
+    for (const r of RINGS) {
+      ringPath(ctx, r * MAX_RADIUS, n);
+      ctx.strokeStyle = "rgba(255,255,255,0.10)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    for (let i = 0; i < n; i++) {
+      const p = polar(MAX_RADIUS, (i / n) * Math.PI * 2);
+      ctx.beginPath();
+      ctx.moveTo(CENTER_X, CENTER_Y);
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = "rgba(255,255,255,0.10)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    opts.axes.forEach((a, i) => {
+      const p = polar((a.score / 100) * MAX_RADIUS, (i / n) * Math.PI * 2);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = "rgba(45, 212, 191, 0.22)";
+    ctx.fill();
+    ctx.strokeStyle = ACCENT;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    opts.axes.forEach((a, i) => {
+      const p = polar((a.score / 100) * MAX_RADIUS, (i / n) * Math.PI * 2);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = ACCENT;
+      ctx.fill();
+    });
+
+    opts.axes.forEach((a, i) => {
+      const angle = (i / n) * Math.PI * 2;
+      const p = polar(MAX_RADIUS + 44, angle);
+      const sin = Math.sin(angle);
+      ctx.textAlign = sin > 0.3 ? "left" : sin < -0.3 ? "right" : "center";
+      ctx.fillStyle = "#eef0f3";
+      ctx.font = "700 23px system-ui, sans-serif";
+      ctx.fillText(a.label.toUpperCase(), p.x, p.y - 4);
+      ctx.fillStyle = "#7d8291";
+      ctx.font = "500 20px system-ui, sans-serif";
+      ctx.fillText(String(Math.round(a.score)), p.x, p.y + 20);
+    });
+  }
+
+  ctx.textAlign = "left";
+  const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  ctx.fillStyle = "#5b606c";
+  ctx.font = "500 28px system-ui, sans-serif";
+  ctx.fillText(date, marginX, HEIGHT - 64);
+
+  return canvas;
+}

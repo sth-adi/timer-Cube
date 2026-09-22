@@ -10,6 +10,8 @@ import { SolveList } from "@/components/sessions/SolveList";
 import { StatsPanel } from "@/components/stats/StatsPanel";
 import { InsightsPanel } from "@/components/stats/InsightsPanel";
 import { PhaseSplitsCard } from "@/components/stats/PhaseSplitsCard";
+import { CubeDnaCard } from "@/components/stats/CubeDnaCard";
+import { TriggerHeatmapCard } from "@/components/stats/TriggerHeatmapCard";
 import { ScrambleBar } from "@/components/scramble/ScrambleBar";
 import { EventTagSelector } from "@/components/timer/EventTagSelector";
 import { HintPanel } from "@/components/scramble/HintPanel";
@@ -260,6 +262,8 @@ function HomeInner() {
                 <SolveList limit={5} hideHeader />
               </div>
               <PhaseSplitsCard />
+              <CubeDnaCard />
+              <TriggerHeatmapCard />
               <InsightsPanel />
             </div>
           </aside>
