@@ -4,24 +4,68 @@ import { useState } from "react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { displayUsername } from "@/lib/auth/username";
+import { createSharedSolve } from "@/lib/social/shareSolve";
 import { formatResult, formatTime, parseTimeInput } from "@/lib/utils/time";
 import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Heart, MessageSquare, Plus, Wand2, X } from "lucide-react";
+import { Check, Heart, Link2, Loader2, MessageSquare, Plus, Wand2, X } from "lucide-react";
 
 function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: number; isBest: boolean; isWorst: boolean }) {
   const setPenalty = useSessionStore((s) => s.setPenalty);
   const setComment = useSessionStore((s) => s.setComment);
   const removeSolve = useSessionStore((s) => s.removeSolve);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
+  const sessions = useSessionStore((s) => s.sessions);
+  const user = useAuthStore((s) => s.user);
   const [open, setOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState(solve.comment ?? "");
+  const [shareState, setShareState] = useState<"idle" | "busy" | "copied" | "error">("idle");
 
   const cyclePenalty = (p: Penalty) => setPenalty(solve.id, p === solve.penalty ? "none" : p);
   const saveComment = () => {
     if (commentDraft !== (solve.comment ?? "")) setComment(solve.id, commentDraft);
+  };
+
+  // Real per-move timing only exists for a solve captured live off a smart
+  // cube — that's the whole point of a shared replay (it plays back at the
+  // cuber's actual pace, not a flat tempo), so sharing is only offered here.
+  // A DNF has no finish time worth showing on the other end either.
+  const shareable = !!solve.reconstruction && !!solve.moveTimestamps && solve.penalty !== "dnf";
+
+  const onShare = async () => {
+    const finalMs = solveFinalMs(solve);
+    if (!shareable || finalMs === null) return;
+    setShareState("busy");
+    const puzzle = sessions.find((s) => s.id === solve.sessionId)?.event ?? "333";
+    const id = await createSharedSolve({
+      scramble: solve.scramble,
+      reconstruction: solve.reconstruction!,
+      timeMs: finalMs,
+      moveTimestamps: solve.moveTimestamps ?? null,
+      puzzle,
+      event: solve.event ?? null,
+      username: user ? displayUsername(user) : null,
+    });
+    if (!id) {
+      setShareState("error");
+      setTimeout(() => setShareState("idle"), 2000);
+      return;
+    }
+    const url = `${window.location.origin}/solve/${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareState("copied");
+    } catch {
+      // Clipboard access can be denied — the link still exists, just show it instead of a silent failure.
+      window.prompt("Copy this link:", url);
+      setShareState("idle");
+      return;
+    }
+    setTimeout(() => setShareState("idle"), 2000);
   };
 
   return (
@@ -85,6 +129,27 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
             >
               <Wand2 size={12} /> Analyze
             </button>
+            {shareable && (
+              <button
+                type="button"
+                onClick={() => void onShare()}
+                disabled={shareState === "busy"}
+                title="Copy a shareable link to this solve's reconstruction and stats"
+                className={cn(
+                  "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium",
+                  shareState === "copied" ? "text-success" : shareState === "error" ? "text-danger" : "text-muted hover:text-accent",
+                )}
+              >
+                {shareState === "busy" ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : shareState === "copied" ? (
+                  <Check size={12} />
+                ) : (
+                  <Link2 size={12} />
+                )}
+                {shareState === "copied" ? "Copied" : shareState === "error" ? "Failed" : "Share"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => removeSolve(solve.id)}
