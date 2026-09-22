@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
@@ -21,6 +22,8 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const sessions = useSessionStore((s) => s.sessions);
   const user = useAuthStore((s) => s.user);
+  const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState(solve.comment ?? "");
   const [shareState, setShareState] = useState<"idle" | "busy" | "copied" | "error">("idle");
@@ -124,6 +127,11 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
               onClick={() => {
                 requestAnalysis(solve.scramble, solveFinalMs(solve), solve.id, solve.reconstruction, solve.moveTimestamps);
                 setOpen(false);
+                // The shell that owns the Analyze tab only lives on "/" — the
+                // solve list is also embedded on /solves, so a click there
+                // needs to actually navigate, not just bump the store (which
+                // nothing on this page is listening to switch tabs on).
+                if (pathname !== "/") router.push("/?jump=analyze");
               }}
               className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"
             >
@@ -223,8 +231,23 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function SolveList() {
-  const solves = useSessionStore((s) => s.solves);
+interface SolveListProps {
+  /** All solves to render — defaults to the active session's own list, but /solves passes a tab-filtered subset. */
+  solves?: Solve[];
+  /**
+   * Caps the list to the N most recent solves and drops the manual-entry
+   * control and internal scroll cap — for the aside's "recent solves"
+   * preview, which links out to the full /solves page for everything else
+   * rather than growing its own scroller.
+   */
+  limit?: number;
+  /** Hides the "Solves" header row + add-time button — the preview widget supplies its own heading instead. */
+  hideHeader?: boolean;
+}
+
+export function SolveList({ solves: solvesProp, limit, hideHeader }: SolveListProps = {}) {
+  const sessionSolves = useSessionStore((s) => s.solves);
+  const solves = solvesProp ?? sessionSolves;
   const [manualOpen, setManualOpen] = useState(false);
 
   const times = solves.map(comparableTime);
@@ -232,30 +255,35 @@ export function SolveList() {
   const best = finite.length ? Math.min(...finite) : null;
   const worst = finite.length ? Math.max(...finite) : null;
 
+  const ordered = [...solves].reverse();
+  const shown = limit !== undefined ? ordered.slice(0, limit) : ordered;
+
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between px-1">
-        <span className="text-[11px] uppercase tracking-wide text-muted-2">Solves</span>
-        <button
-          type="button"
-          onClick={() => setManualOpen((o) => !o)}
-          aria-label="Add manual time"
-          className={cn(
-            "tap-target -mr-2 rounded-full transition-colors",
-            manualOpen ? "text-accent" : "text-muted hover:text-foreground",
-          )}
-        >
-          <Plus size={16} />
-        </button>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] uppercase tracking-wide text-muted-2">Solves</span>
+          <button
+            type="button"
+            onClick={() => setManualOpen((o) => !o)}
+            aria-label="Add manual time"
+            className={cn(
+              "tap-target -mr-2 rounded-full transition-colors",
+              manualOpen ? "text-accent" : "text-muted hover:text-foreground",
+            )}
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      )}
 
-      {manualOpen && <ManualEntry onDone={() => setManualOpen(false)} />}
+      {!hideHeader && manualOpen && <ManualEntry onDone={() => setManualOpen(false)} />}
 
-      {solves.length === 0 ? (
+      {shown.length === 0 ? (
         <p className="text-muted-2 text-sm text-center py-8">No solves yet — hit space to start.</p>
       ) : (
-        <div className="flex flex-col gap-0.5 max-h-[55vh] overflow-y-auto pr-1">
-          {[...solves].reverse().map((solve, i) => {
+        <div className={cn("flex flex-col gap-0.5", limit === undefined && "max-h-[55vh] overflow-y-auto pr-1")}>
+          {shown.map((solve, i) => {
             const t = comparableTime(solve);
             return (
               <SolveRow

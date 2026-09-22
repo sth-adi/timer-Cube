@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Sparkles, Wand2 } from "lucide-react";
-import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
+import { useSmartCubeStore, type SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
@@ -16,9 +16,14 @@ import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
 import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
+import { OLL_CASES } from "@/lib/algorithms/ollData";
+import { PLL_CASES } from "@/lib/algorithms/pllData";
 import { cn } from "@/lib/utils/cn";
 
 const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
+
+/** How long the post-solve recap stays on screen before the next scramble arms itself — long enough to read the time and phase split, short enough that a session never needs a manual "next" click. */
+const AUTO_ADVANCE_MS = 2200;
 
 /** Cumulative phase-boundary ms (from solve start), null for a phase not yet reached. */
 interface PhaseBoundaries {
@@ -75,20 +80,101 @@ function PhaseSplitsRow({
   );
 }
 
+/** Case name → published alg text, for the live suggestion under each badge — smartCubeStore only tracks the name it matched, not the full case record. */
+function algFor(group: "OLL" | "PLL", caseName: string): string | undefined {
+  const cases = group === "OLL" ? OLL_CASES : PLL_CASES;
+  return cases.find((c) => c.name === caseName)?.alg;
+}
+
 function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; pllCaseName: string | null }) {
   if (!ollCaseName && !pllCaseName) return null;
+  const ollAlg = ollCaseName ? algFor("OLL", ollCaseName) : undefined;
+  const pllAlg = pllCaseName ? algFor("PLL", pllCaseName) : undefined;
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {ollCaseName && (
-        <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-          <Sparkles size={11} /> OLL: {ollCaseName}
+        <span className="flex flex-col items-center gap-0.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+          <span className="flex items-center gap-1">
+            <Sparkles size={11} /> OLL: {ollCaseName}
+          </span>
+          {ollAlg && <span className="font-mono text-[10px] font-normal text-accent/70">{ollAlg}</span>}
         </span>
       )}
       {pllCaseName && (
-        <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-          <Sparkles size={11} /> PLL: {pllCaseName}
+        <span className="flex flex-col items-center gap-0.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+          <span className="flex items-center gap-1">
+            <Sparkles size={11} /> PLL: {pllCaseName}
+          </span>
+          {pllAlg && <span className="font-mono text-[10px] font-normal text-accent/70">{pllAlg}</span>}
         </span>
       )}
+    </div>
+  );
+}
+
+interface RecognitionSplit {
+  /** Ms between the phase becoming solvable (case first visible) and the first move made toward it — the "reading the case" pause. */
+  recognitionMs: number | null;
+  /** Ms actually spent turning through the algorithm, from that first move to the phase finishing. */
+  executionMs: number | null;
+}
+
+/**
+ * Cubeast's signature stat: recognition and execution are two different
+ * skills, and lumping them into one phase time hides which one is actually
+ * the bottleneck. Both boundaries this needs (`phaseStartMs`, the instant
+ * the case became recognizable, and `phaseEndMs`, when it was solved) are
+ * already recognized live off the cube's own state — see smartCubeStore —
+ * so this is a pure readout over existing move timestamps, not a new
+ * tracking mechanism.
+ */
+function recognitionSplit(moves: SmartCubeMove[], phaseStartMs: number | null, phaseEndMs: number | null): RecognitionSplit {
+  if (phaseStartMs === null || phaseEndMs === null) return { recognitionMs: null, executionMs: null };
+  // A skip (OLL already oriented the instant F2L finishes, etc.) sets its
+  // start and end boundary to the same event timestamp — there's no
+  // algorithm to split into recognition/execution, and without this guard
+  // the search below would wrongly attribute the *next* phase's first move
+  // to this one.
+  if (phaseStartMs === phaseEndMs) return { recognitionMs: null, executionMs: null };
+  const firstMove = moves.find((m) => m.timeStampMs > phaseStartMs);
+  if (!firstMove) return { recognitionMs: null, executionMs: null };
+  return {
+    recognitionMs: firstMove.timeStampMs - phaseStartMs,
+    executionMs: phaseEndMs - firstMove.timeStampMs,
+  };
+}
+
+function RecognitionBreakdown({
+  ollCaseName,
+  pllCaseName,
+  ollSplit,
+  pllSplit,
+}: {
+  ollCaseName: string | null;
+  pllCaseName: string | null;
+  ollSplit: RecognitionSplit;
+  pllSplit: RecognitionSplit;
+}) {
+  const rows = [
+    { label: "OLL", caseName: ollCaseName, split: ollSplit },
+    { label: "PLL", caseName: pllCaseName, split: pllSplit },
+  ].filter((r) => r.caseName && r.split.recognitionMs !== null);
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="flex w-full flex-col gap-1 rounded-lg bg-bg-panel-2 px-3 py-2">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Recognition vs. execution</p>
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center justify-between gap-2 text-[11px]">
+          <span className="truncate text-muted">
+            {r.label} · {r.caseName}
+          </span>
+          <span className="flex shrink-0 items-center gap-2 tabular-nums">
+            <span className="text-accent">{formatTime(r.split.recognitionMs!)} reco</span>
+            <span className="text-muted-2">{formatTime(r.split.executionMs!)} exec</span>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -188,6 +274,18 @@ export function SmartCubeTimer() {
   const priorBoundaryMs =
     boundaries && currentPhaseIndex > 0 ? ([boundaries.cross, boundaries.f2l, boundaries.oll][currentPhaseIndex - 1] ?? 0) : 0;
   const liveCurrentMs = recording && currentPhaseIndex >= 0 ? elapsedMs - priorBoundaryMs : null;
+
+  // Absolute (not solve-relative) timestamps, matching `moves[i].timeStampMs` —
+  // computed once the solve is over, when both the phase-start and
+  // phase-end boundary are settled.
+  const ollSplit = useMemo(
+    () => recognitionSplit(moves, f2lAtMs, ollAtMs),
+    [moves, f2lAtMs, ollAtMs],
+  );
+  const pllSplit = useMemo(
+    () => recognitionSplit(moves, ollAtMs, finished ? solvedAtMs : null),
+    [moves, ollAtMs, finished, solvedAtMs],
+  );
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
   // Saves the instant a solve finishes — no button, exactly like the
@@ -237,6 +335,21 @@ export function SmartCubeTimer() {
     autoSavedAtRef.current = null;
     void nextScramble();
   };
+
+  // Advances on its own once a solve has saved — no "Next scramble" click
+  // needed, exactly like the keyboard timer, where hitting space again just
+  // starts the next solve. Reads `saved` rather than `finished` so this
+  // can't fire before the reconstruction has actually been recorded, and
+  // manually pressing "Next scramble" (which flips `saved` back to false
+  // synchronously) cancels this the same tick, so it never double-fires.
+  // `saved` itself doubles as "the countdown is live" for the hint below —
+  // no separate state needed to track that.
+  useEffect(() => {
+    if (!saved) return undefined;
+    const timer = window.setTimeout(onNext, AUTO_ADVANCE_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved]);
 
   if (!supported) {
     return (
@@ -362,6 +475,7 @@ export function SmartCubeTimer() {
 
           <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
           <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
+          <RecognitionBreakdown ollCaseName={ollCaseName} pllCaseName={pllCaseName} ollSplit={ollSplit} pllSplit={pllSplit} />
 
           {buckets.length > 1 && (
             <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">
@@ -389,9 +503,14 @@ export function SmartCubeTimer() {
               onClick={onNext}
               className="rounded-full bg-bg-panel-2 px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground"
             >
-              Next scramble
+              Skip to next
             </button>
           </div>
+          {saved && (
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-2">
+              <Loader2 size={11} className="animate-spin" /> Next scramble arming automatically…
+            </p>
+          )}
         </>
       )}
     </div>

@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Settings, Timer as TimerIcon, Repeat, Wand2 } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Settings, Timer as TimerIcon, Repeat, Wand2, ChevronRight } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { SolveList } from "@/components/sessions/SolveList";
@@ -27,10 +29,33 @@ import { useNavigationStore, type PendingTrainerNav } from "@/lib/store/navigati
 import { cn } from "@/lib/utils/cn";
 
 export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeInner />
+    </Suspense>
+  );
+}
+
+function HomeInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [tab, setTab] = useState<TabId>("timer");
+  // Cross-page deep link: the solve list also lives on /solves, whose
+  // "Analyze" click can't reach this component's own tab state directly (it
+  // isn't mounted there yet) — it navigates here with `?jump=analyze`
+  // instead, read straight into the initial tab below. A lazy initializer
+  // runs once at mount, which is exactly when this component is freshly
+  // mounted by that navigation, so it can't miss the request the way
+  // subscribing to a store's requestSeq diff after the fact would.
+  const [tab, setTab] = useState<TabId>(() => (searchParams.get("jump") === "analyze" ? "analyze" : "timer"));
   const [timerMode, setTimerMode] = useState<"keyboard" | "smartcube">("keyboard");
   const [pendingTrainerNav, setPendingTrainerNav] = useState<PendingTrainerNav | null>(null);
+
+  // Strips the one-shot `?jump=analyze` param once it's been consumed above,
+  // so it doesn't linger in the URL or get re-read on a later render.
+  useEffect(() => {
+    if (searchParams.get("jump") === "analyze") router.replace("/", { scroll: false });
+  }, [searchParams, router]);
 
   // "Analyze this solve" lives in the solve list, which has no way to change
   // tabs; it bumps a counter in the store instead and the shell follows. This
@@ -79,7 +104,6 @@ export default function Home() {
       "2": "trainer",
       "3": "analyze",
       "4": "stats",
-      "5": "solves",
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -93,6 +117,11 @@ export default function Home() {
         return;
       }
       if (settingsOpen) return;
+      if (e.key === "5") {
+        e.preventDefault();
+        router.push("/solves");
+        return;
+      }
       const nextTab = TAB_BY_DIGIT[e.key];
       if (nextTab) {
         e.preventDefault();
@@ -101,7 +130,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [settingsOpen]);
+  }, [settingsOpen, router]);
 
   return (
     <>
@@ -216,15 +245,22 @@ export default function Home() {
               "lg:flex",
             )}
           >
-            <div className={cn("flex-col gap-3", tab === "stats" ? "flex" : "hidden", "lg:flex")}>
+            <div className="flex flex-col gap-3">
               <StatsPanel />
+              <div className="card rounded-xl p-3">
+                <div className="mb-1 flex items-center justify-between px-1">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-2">Recent solves</span>
+                  <Link
+                    href="/solves"
+                    className="flex items-center gap-0.5 text-[11px] font-medium text-accent hover:brightness-110"
+                  >
+                    View all <ChevronRight size={12} />
+                  </Link>
+                </div>
+                <SolveList limit={5} hideHeader />
+              </div>
               <PhaseSplitsCard />
               <InsightsPanel />
-            </div>
-            <div className={cn("flex-col lg:flex-1", tab === "solves" ? "flex" : "hidden", "lg:flex")}>
-              <div className="card rounded-xl p-3 lg:flex-1">
-                <SolveList />
-              </div>
             </div>
           </aside>
         </main>
