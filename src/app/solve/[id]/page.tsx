@@ -67,7 +67,7 @@ export default function SharedSolvePage() {
   const phases = result?.ok ? result.phases : [];
 
   return (
-    <div className="flex min-h-full flex-col items-center gap-4 px-4 py-6">
+    <div className="flex flex-col items-center gap-4 px-4 py-6">
       <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
         <TimerIcon size={16} className="text-accent" />
         Cube
