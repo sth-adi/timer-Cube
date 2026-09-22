@@ -6,19 +6,21 @@ function move(token: string, timeStampMs: number): SmartCubeMove {
   return { token, timeStampMs };
 }
 
+const NO_PAIRS: (number | null)[] = [null, null, null, null];
+
 describe("buildPostSolveRows", () => {
-  it("returns all four CFOP phases, in order", () => {
+  it("returns Cross, 4 F2L pair rows, OLL, PLL, in that order", () => {
     const rows = buildPostSolveRows({
       moves: [],
       startedAtMs: null,
       crossAtMs: null,
-      f2lAtMs: null,
+      f2lPairAtMs: NO_PAIRS,
       ollAtMs: null,
       solvedAtMs: null,
       ollCaseName: null,
       pllCaseName: null,
     });
-    expect(rows.map((r) => r.label)).toEqual(["Cross", "F2L", "OLL", "PLL"]);
+    expect(rows.map((r) => r.label)).toEqual(["Cross", "F2L 1", "F2L 2", "F2L 3", "F2L 4", "OLL", "PLL"]);
     expect(rows.every((r) => r.totalMs === null)).toBe(true);
   });
 
@@ -28,7 +30,7 @@ describe("buildPostSolveRows", () => {
       moves: [move("F", 0), move("R", 400), move("U", 1000)],
       startedAtMs: 0,
       crossAtMs: 1000,
-      f2lAtMs: null,
+      f2lPairAtMs: NO_PAIRS,
       ollAtMs: null,
       solvedAtMs: null,
       ollCaseName: null,
@@ -40,31 +42,63 @@ describe("buildPostSolveRows", () => {
     expect(cross.executionMs).toBe(1000);
   });
 
-  it("computes a real recognition/execution split for F2L, OLL, and PLL", () => {
-    // Cross ends at t=1000 (last cross move). F2L's first move lands at
-    // t=1300 -> 300ms recognition, then F2L finishes at t=3000 -> 1700ms execution.
+  it("orders F2L pair rows chronologically by their own completion time, not fixed slot order", () => {
+    // Slot 3 (index 3) actually finishes first, then slot 0, then slot 2, then slot 1.
     const rows = buildPostSolveRows({
-      moves: [move("F", 0), move("U", 1000), move("R", 1300), move("U'", 3000)],
+      moves: [],
       startedAtMs: 0,
       crossAtMs: 1000,
-      f2lAtMs: 3000,
+      f2lPairAtMs: [2000, 5000, 4000, 1500],
       ollAtMs: null,
       solvedAtMs: null,
       ollCaseName: null,
       pllCaseName: null,
     });
-    const f2l = rows[1];
-    expect(f2l.totalMs).toBe(2000);
-    expect(f2l.recognitionMs).toBe(300);
-    expect(f2l.executionMs).toBe(1700);
+    const f2lRows = rows.filter((r) => r.f2lPairIndex !== null);
+    expect(f2lRows.map((r) => r.f2lPairIndex)).toEqual([3, 0, 2, 1]);
+    expect(f2lRows.map((r) => r.label)).toEqual(["F2L 1", "F2L 2", "F2L 3", "F2L 4"]);
   });
 
-  it("attaches the OLL/PLL case name to the right row only", () => {
+  it("computes a real recognition/execution split for the first F2L pair", () => {
+    // Cross ends at t=1000. First move toward the first pair lands at
+    // t=1300 -> 300ms recognition, pair finishes at t=3000 -> 1700ms execution.
+    const rows = buildPostSolveRows({
+      moves: [move("F", 0), move("U", 1000), move("R", 1300), move("U'", 3000)],
+      startedAtMs: 0,
+      crossAtMs: 1000,
+      f2lPairAtMs: [3000, null, null, null],
+      ollAtMs: null,
+      solvedAtMs: null,
+      ollCaseName: null,
+      pllCaseName: null,
+    });
+    const firstPair = rows.find((r) => r.f2lPairIndex === 0)!;
+    expect(firstPair.totalMs).toBe(2000);
+    expect(firstPair.recognitionMs).toBe(300);
+    expect(firstPair.executionMs).toBe(1700);
+  });
+
+  it("chains OLL's start off the last (chronologically) F2L pair, once all 4 are known", () => {
+    const rows = buildPostSolveRows({
+      moves: [move("U", 3500)],
+      startedAtMs: 0,
+      crossAtMs: 1000,
+      f2lPairAtMs: [1500, 2000, 2500, 3000],
+      ollAtMs: 4000,
+      solvedAtMs: null,
+      ollCaseName: "Sune",
+      pllCaseName: null,
+    });
+    const oll = rows.find((r) => r.label === "OLL")!;
+    expect(oll.totalMs).toBe(1000); // 4000 - 3000 (the latest pair)
+  });
+
+  it("attaches the OLL/PLL case name to the right row only, and leaves it null on Cross/F2L pairs", () => {
     const rows = buildPostSolveRows({
       moves: [],
       startedAtMs: 0,
       crossAtMs: 500,
-      f2lAtMs: 2000,
+      f2lPairAtMs: [1000, 1500, 1800, 2000],
       ollAtMs: 3000,
       solvedAtMs: 4000,
       ollCaseName: "Sune",
@@ -74,16 +108,16 @@ describe("buildPostSolveRows", () => {
     expect(rows.find((r) => r.label === "OLL")?.group).toBe("OLL");
     expect(rows.find((r) => r.label === "PLL")?.caseName).toBe("T-perm");
     expect(rows.find((r) => r.label === "Cross")?.caseName).toBeNull();
-    expect(rows.find((r) => r.label === "F2L")?.caseName).toBeNull();
+    for (const r of rows.filter((r) => r.f2lPairIndex !== null)) expect(r.caseName).toBeNull();
   });
 
   it("shows a skip (equal start/end boundary) as a zero-duration phase with no split", () => {
-    // OLL skip: f2lAtMs === ollAtMs (oriented the instant F2L finished).
+    // OLL skip: last F2L pair === ollAtMs (oriented the instant F2L finished).
     const rows = buildPostSolveRows({
       moves: [move("F", 0), move("U", 1000)],
       startedAtMs: 0,
       crossAtMs: 500,
-      f2lAtMs: 1000,
+      f2lPairAtMs: [700, 800, 900, 1000],
       ollAtMs: 1000,
       solvedAtMs: null,
       ollCaseName: "OLL skip",
@@ -101,7 +135,7 @@ describe("buildPostSolveRows", () => {
       moves: [],
       startedAtMs: 0,
       crossAtMs: 500,
-      f2lAtMs: 2000,
+      f2lPairAtMs: [800, 1200, 1600, 2000],
       ollAtMs: 3000,
       solvedAtMs: null,
       ollCaseName: "Sune",
@@ -111,5 +145,25 @@ describe("buildPostSolveRows", () => {
     expect(pll.totalMs).toBeNull();
     expect(pll.recognitionMs).toBeNull();
     expect(pll.executionMs).toBeNull();
+  });
+
+  it("appends not-yet-solved F2L pairs after the known ones, with a null total", () => {
+    const rows = buildPostSolveRows({
+      moves: [],
+      startedAtMs: 0,
+      crossAtMs: 500,
+      f2lPairAtMs: [1000, null, 1500, null],
+      ollAtMs: null,
+      solvedAtMs: null,
+      ollCaseName: null,
+      pllCaseName: null,
+    });
+    const f2lRows = rows.filter((r) => r.f2lPairIndex !== null);
+    // Known pairs (0 at 1000, 2 at 1500) come first in chronological order, then the two unknowns.
+    expect(f2lRows.map((r) => r.f2lPairIndex)).toEqual([0, 2, 1, 3]);
+    expect(f2lRows[0].totalMs).toBe(500);
+    expect(f2lRows[1].totalMs).toBe(500);
+    expect(f2lRows[2].totalMs).toBeNull();
+    expect(f2lRows[3].totalMs).toBeNull();
   });
 });

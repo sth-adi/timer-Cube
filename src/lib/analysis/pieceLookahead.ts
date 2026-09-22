@@ -1,6 +1,6 @@
 import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
 import { CORNER_FACELETS, EDGE_FACELETS, E_SLICE_EDGE_FACELETS, SOLVED_FACELET_STRING } from "@/lib/cube-engine/facePositions";
-import { EDGE } from "@/lib/cube-engine/engine";
+import { CORNER, EDGE } from "@/lib/cube-engine/engine";
 
 /** The 4 cross edges — see engine.ts's doc comment: the solver's cross lives on U. */
 const CROSS_EDGE_GROUPS: readonly (readonly number[])[] = [EDGE.UR, EDGE.UF, EDGE.UL, EDGE.UB].map((e) => EDGE_FACELETS[e]);
@@ -42,4 +42,19 @@ export function crossLookaheadFacelets(scramble: string): Set<number> {
 /** Same idea, for the 8 F2L pieces (4 corners + 4 edges) instead of the 4 cross edges. */
 export function f2lLookaheadFacelets(scramble: string): Set<number> {
   return highlightedFacelets(scrambleToFacelets(scramble), F2L_PIECE_GROUPS);
+}
+
+/** Slot order matching PostSolvePhaseRow.f2lPairIndex (0-3) — see f2lPairSolved in lib/solvers/oll.ts, the live detector this mirrors. */
+const F2L_PAIR_CORNERS = [CORNER.URF, CORNER.UFL, CORNER.ULB, CORNER.UBR] as const;
+const F2L_PAIR_EDGES = [EDGE.FR, EDGE.FL, EDGE.BL, EDGE.BR] as const;
+
+/**
+ * The 5 global facelet indices (3 corner + 2 edge) belonging to F2L slot
+ * `pairIndex` — unlike crossLookaheadFacelets/f2lLookaheadFacelets, this
+ * isn't conditional on the piece actually being solved: a post-solve pair
+ * icon shows *which slot this row is*, at the moment that slot just became
+ * solved by construction, so there's nothing to check.
+ */
+export function f2lPairSlotFacelets(pairIndex: 0 | 1 | 2 | 3): number[] {
+  return [...CORNER_FACELETS[F2L_PAIR_CORNERS[pairIndex]], ...E_SLICE_EDGE_FACELETS[F2L_PAIR_EDGES[pairIndex]]];
 }

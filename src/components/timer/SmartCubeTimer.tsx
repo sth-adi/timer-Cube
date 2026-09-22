@@ -179,6 +179,7 @@ export function SmartCubeTimer() {
     solvedAtMs,
     crossAtMs,
     f2lAtMs,
+    f2lPairAtMs,
     ollAtMs,
     ollCaseName,
     pllCaseName,
@@ -260,13 +261,13 @@ export function SmartCubeTimer() {
         moves,
         startedAtMs,
         crossAtMs,
-        f2lAtMs,
+        f2lPairAtMs,
         ollAtMs,
         solvedAtMs: finished ? solvedAtMs : null,
         ollCaseName,
         pllCaseName,
       }),
-    [moves, startedAtMs, crossAtMs, f2lAtMs, ollAtMs, finished, solvedAtMs, ollCaseName, pllCaseName],
+    [moves, startedAtMs, crossAtMs, f2lPairAtMs, ollAtMs, finished, solvedAtMs, ollCaseName, pllCaseName],
   );
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
@@ -458,7 +459,7 @@ export function SmartCubeTimer() {
             )}
           </div>
 
-          <PostSolveTable rows={postSolveRows} scramble={finishedScramble} />
+          <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} />
 
           {buckets.length > 1 && (
             <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">

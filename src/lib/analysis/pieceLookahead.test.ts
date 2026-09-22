@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { crossLookaheadFacelets, f2lLookaheadFacelets } from "./pieceLookahead";
+import { crossLookaheadFacelets, f2lLookaheadFacelets, f2lPairSlotFacelets } from "./pieceLookahead";
 import { CORNER_FACELETS, EDGE_FACELETS, E_SLICE_EDGE_FACELETS } from "@/lib/cube-engine/facePositions";
 import { CORNER, EDGE } from "@/lib/cube-engine/engine";
 
@@ -40,5 +40,23 @@ describe("f2lLookaheadFacelets", () => {
     for (const f of CORNER_FACELETS[CORNER.UBR]) expect(highlighted.has(f)).toBe(false);
     for (const f of E_SLICE_EDGE_FACELETS[EDGE.FR]) expect(highlighted.has(f)).toBe(false);
     for (const f of E_SLICE_EDGE_FACELETS[EDGE.BR]) expect(highlighted.has(f)).toBe(false);
+  });
+});
+
+describe("f2lPairSlotFacelets", () => {
+  it("returns exactly the 5 facelets (3 corner + 2 edge) of the right slot for every pair index, matching PostSolvePhaseRow.f2lPairIndex's URF/UFL/ULB/UBR order", () => {
+    const expectedCorners = [CORNER.URF, CORNER.UFL, CORNER.ULB, CORNER.UBR];
+    const expectedEdges = [EDGE.FR, EDGE.FL, EDGE.BL, EDGE.BR];
+    for (const i of [0, 1, 2, 3] as const) {
+      const facelets = f2lPairSlotFacelets(i);
+      expect(facelets.length).toBe(5);
+      const expected = [...CORNER_FACELETS[expectedCorners[i]], ...E_SLICE_EDGE_FACELETS[expectedEdges[i]]];
+      expect(new Set(facelets)).toEqual(new Set(expected));
+    }
+  });
+
+  it("returns disjoint facelet sets for every pair — no two slots share a sticker", () => {
+    const all = [0, 1, 2, 3].flatMap((i) => f2lPairSlotFacelets(i as 0 | 1 | 2 | 3));
+    expect(new Set(all).size).toBe(all.length);
   });
 });

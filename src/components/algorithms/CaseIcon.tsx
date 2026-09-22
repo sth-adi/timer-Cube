@@ -37,6 +37,17 @@ const GAP = 1.2;
 const UNIT = CELL + GAP;
 const GRID = 5;
 const VB = GRID * UNIT - GAP;
+/**
+ * How thin a side-strip sticker is drawn relative to a full U-face cell, in
+ * the direction pointing away from U — every reference diagram (SpeedCubeDB
+ * included) draws the wrap-around strip as a noticeably thinner bar flush
+ * against the U face's edge, not a full square matching the top face's own
+ * cells, so the top face reads as visually distinct from what's just
+ * "touching" it.
+ */
+const STRIP_TAPER = 0.5;
+
+type StripDir = "top" | "bottom" | "left" | "right" | null;
 
 const B_STRIP = [47, 46, 45] as const; // above U, left-to-right
 const F_STRIP = [18, 19, 20] as const; // below U, left-to-right
@@ -48,6 +59,8 @@ interface Sticker {
   color: string;
   col: number;
   row: number;
+  /** null for a U-face cell (drawn full-size); which way it tapers otherwise — see STRIP_TAPER. */
+  strip: StripDir;
 }
 
 function buildStickers(facelets: Record<number, string>): Sticker[] {
@@ -55,13 +68,32 @@ function buildStickers(facelets: Record<number, string>): Sticker[] {
   for (let i = 0; i < 9; i++) {
     const r = Math.floor(i / 3);
     const c = i % 3;
-    stickers.push({ key: `U${i}`, color: facelets[i] ?? "#666", col: 1 + c, row: 1 + r });
+    stickers.push({ key: `U${i}`, color: facelets[i] ?? "#666", col: 1 + c, row: 1 + r, strip: null });
   }
-  B_STRIP.forEach((idx, c) => stickers.push({ key: `B${c}`, color: facelets[idx] ?? "#666", col: 1 + c, row: 0 }));
-  F_STRIP.forEach((idx, c) => stickers.push({ key: `F${c}`, color: facelets[idx] ?? "#666", col: 1 + c, row: 4 }));
-  L_STRIP.forEach((idx, r) => stickers.push({ key: `L${r}`, color: facelets[idx] ?? "#666", col: 0, row: 1 + r }));
-  R_STRIP.forEach((idx, r) => stickers.push({ key: `R${r}`, color: facelets[idx] ?? "#666", col: 4, row: 1 + r }));
+  B_STRIP.forEach((idx, c) => stickers.push({ key: `B${c}`, color: facelets[idx] ?? "#666", col: 1 + c, row: 0, strip: "top" }));
+  F_STRIP.forEach((idx, c) => stickers.push({ key: `F${c}`, color: facelets[idx] ?? "#666", col: 1 + c, row: 4, strip: "bottom" }));
+  L_STRIP.forEach((idx, r) => stickers.push({ key: `L${r}`, color: facelets[idx] ?? "#666", col: 0, row: 1 + r, strip: "left" }));
+  R_STRIP.forEach((idx, r) => stickers.push({ key: `R${r}`, color: facelets[idx] ?? "#666", col: 4, row: 1 + r, strip: "right" }));
   return stickers;
+}
+
+/** A sticker's actual drawn rect — full CELL x CELL for a U-face cell, or a thinner bar flush against the U face's edge for a strip cell (see STRIP_TAPER). */
+function stickerRect(s: Sticker): { x: number; y: number; width: number; height: number } {
+  const cellX = s.col * UNIT;
+  const cellY = s.row * UNIT;
+  const thin = CELL * STRIP_TAPER;
+  switch (s.strip) {
+    case "top":
+      return { x: cellX, y: cellY + (CELL - thin), width: CELL, height: thin };
+    case "bottom":
+      return { x: cellX, y: cellY, width: CELL, height: thin };
+    case "left":
+      return { x: cellX + (CELL - thin), y: cellY, width: thin, height: CELL };
+    case "right":
+      return { x: cellX, y: cellY, width: thin, height: CELL };
+    default:
+      return { x: cellX, y: cellY, width: CELL, height: CELL };
+  }
 }
 
 /** Pixel center of a U-face local index (0-8) within the SVG's coordinate space — every arrow endpoint lives here, since PLL only ever cycles pieces within the U layer. */
@@ -145,19 +177,10 @@ export function CaseIcon({ setupAlg, kind, className }: CaseIconProps) {
           <path d="M0,0 L10,5 L0,10 Z" fill="#111" />
         </marker>
       </defs>
-      {stickers.map((s) => (
-        <rect
-          key={s.key}
-          x={s.col * UNIT}
-          y={s.row * UNIT}
-          width={CELL}
-          height={CELL}
-          rx={1}
-          fill={s.color}
-          stroke="rgba(0,0,0,0.35)"
-          strokeWidth={0.5}
-        />
-      ))}
+      {stickers.map((s) => {
+        const { x, y, width, height } = stickerRect(s);
+        return <rect key={s.key} x={x} y={y} width={width} height={height} rx={1} fill={s.color} stroke="rgba(0,0,0,0.35)" strokeWidth={0.5} />;
+      })}
       {diagram.arrows.map((a, i) => (
         <ArrowLine key={i} arrow={a} cornerSlot={cornerSlot} edgeSlot={edgeSlot} />
       ))}

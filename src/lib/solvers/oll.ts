@@ -19,6 +19,20 @@ export function bottomLayerSolved(cube: CubeJSInstance): boolean {
   return true;
 }
 
+/**
+ * True once one specific F2L pair (corner slot `pairIndex` 0-3, paired with
+ * edge slot `pairIndex` within F2L_EDGES — URF/FR, UFL/FL, ULB/BL, UBR/BR,
+ * by construction of F2L_CORNERS/F2L_EDGES above) is in its home position
+ * and oriented, independent of the other 3 pairs or the cross. Lets a live
+ * smart-cube solve detect each pair's own completion moment, not just "all
+ * four done."
+ */
+export function f2lPairSolved(cube: CubeJSInstance, pairIndex: 0 | 1 | 2 | 3): boolean {
+  const corner = F2L_CORNERS[pairIndex];
+  const edge = F2L_EDGES[pairIndex];
+  return cube.cp[corner] === corner && cube.co[corner] === 0 && cube.ep[edge] === edge && cube.eo[edge] === 0;
+}
+
 /** True once every last-layer piece faces up, regardless of permutation. */
 export function orientationSolved(cube: CubeJSInstance): boolean {
   for (const s of LL_CORNERS) if (cube.co[s] !== 0) return false;

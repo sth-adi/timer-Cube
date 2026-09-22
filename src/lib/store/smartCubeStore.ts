@@ -5,7 +5,7 @@ import type { Subscription } from "rxjs";
 import type { SmartCubeConnection, SmartCubeEvent } from "smartcube-web-bluetooth";
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { crossHeuristic } from "@/lib/solvers/cross";
-import { bottomLayerSolved, orientationSolved } from "@/lib/solvers/oll";
+import { bottomLayerSolved, orientationSolved, f2lPairSolved } from "@/lib/solvers/oll";
 import { recognizeOll, recognizePll, isOllSkip, isPllSkip } from "@/lib/analysis/recognize";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 
@@ -57,6 +57,14 @@ interface SmartCubeState {
   crossAtMs: number | null;
   /** When all four F2L pairs (cross + F2L corners/edges) first read solved, same live-detection as crossAtMs. */
   f2lAtMs: number | null;
+  /**
+   * When each individual F2L pair (index 0-3 = URF/FR, UFL/FL, ULB/BL,
+   * UBR/BR — see f2lPairSolved) first read solved, independent of the other
+   * 3 and of the cross. A cuber inserts pairs in whatever order they find
+   * them, not this fixed index order — the post-solve table sorts these
+   * chronologically itself.
+   */
+  f2lPairAtMs: (number | null)[];
   /** When the last layer first read fully oriented (F2L still intact), i.e. OLL complete. */
   ollAtMs: number | null;
   /**
@@ -113,6 +121,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   solvedAtMs: null,
   crossAtMs: null,
   f2lAtMs: null,
+  f2lPairAtMs: [null, null, null, null],
   ollAtMs: null,
   ollCaseName: null,
   pllCaseName: null,
@@ -186,6 +195,9 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         const crossJustSolved = state.crossAtMs === null && crossHeuristic(liveCube) === 0;
         const f2lJustSolved = state.f2lAtMs === null && bottomLayerSolved(liveCube);
         const ollJustSolved = state.ollAtMs === null && orientationSolved(liveCube) && bottomLayerSolved(liveCube);
+        const f2lPairAtMs = state.f2lPairAtMs.map((at, i) =>
+          at === null && f2lPairSolved(liveCube, i as 0 | 1 | 2 | 3) ? event.timestamp : at,
+        );
 
         // Case recognition wants the algorithm library's last-layer-on-U
         // convention, the mirror of this store's cross-on-U cube — an x2
@@ -210,6 +222,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
           startedAtMs: s.startedAtMs ?? event.timestamp,
           crossAtMs: crossJustSolved ? event.timestamp : s.crossAtMs,
           f2lAtMs: f2lJustSolved ? event.timestamp : s.f2lAtMs,
+          f2lPairAtMs,
           ollAtMs: ollJustSolved ? event.timestamp : s.ollAtMs,
           ollCaseName,
           pllCaseName,
@@ -266,6 +279,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       solvedAtMs: null,
       crossAtMs: null,
       f2lAtMs: null,
+      f2lPairAtMs: [null, null, null, null],
       ollAtMs: null,
       ollCaseName: null,
       pllCaseName: null,
@@ -281,6 +295,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       solvedAtMs: null,
       crossAtMs: null,
       f2lAtMs: null,
+      f2lPairAtMs: [null, null, null, null],
       ollAtMs: null,
       ollCaseName: null,
       pllCaseName: null,
