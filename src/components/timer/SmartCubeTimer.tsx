@@ -365,11 +365,14 @@ export function SmartCubeTimer() {
   if (!connected) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-        <Bluetooth size={28} className="text-accent" />
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft">
+          <Bluetooth size={26} className="text-accent" />
+        </div>
+        <h1 className="text-lg font-semibold text-foreground">Connect your smart cube</h1>
         <p className="max-w-xs text-sm text-muted">
-          Connect a GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) smart cube to
-          time and record solves straight from your physical turns — no spacebar, and the reconstruction is
-          captured automatically.
+          A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves
+          straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case
+          names and all.
         </p>
         <button
           type="button"

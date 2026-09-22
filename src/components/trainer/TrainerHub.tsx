@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Brain, CalendarCheck, Crosshair, Dumbbell, GitCompare, Library as LibraryIcon, ScanEye, Swords } from "lucide-react";
 import { TrainerView } from "./TrainerView";
 import { AlgorithmsView } from "@/components/algorithms/AlgorithmsView";
 import { RecognitionTrainer } from "@/components/algorithms/RecognitionTrainer";
@@ -14,17 +15,28 @@ import { useTrainerStore } from "@/lib/store/trainerStore";
 import { cn } from "@/lib/utils/cn";
 
 const MODES = [
-  { id: "drill", label: "Drill" },
-  { id: "cross", label: "Cross" },
-  { id: "recognize", label: "Recognize" },
-  { id: "daily", label: "Daily" },
-  { id: "bld", label: "BLD memo" },
-  { id: "race", label: "Race" },
-  { id: "replay", label: "Dual replay" },
-  { id: "library", label: "Library" },
+  { id: "drill", label: "Drill", icon: Dumbbell },
+  { id: "cross", label: "Cross", icon: Crosshair },
+  { id: "recognize", label: "Recognize", icon: ScanEye },
+  { id: "daily", label: "Daily", icon: CalendarCheck },
+  { id: "bld", label: "BLD memo", icon: Brain },
+  { id: "race", label: "Race", icon: Swords },
+  { id: "replay", label: "Dual replay", icon: GitCompare },
+  { id: "library", label: "Library", icon: LibraryIcon },
 ] as const;
 
 type Mode = (typeof MODES)[number]["id"];
+
+const MODE_BLURB: Record<Mode, string> = {
+  drill: "Solve timed reps of a single algorithm set until it's automatic.",
+  cross: "Plan an optimal cross before you touch the cube.",
+  recognize: "Flashcard drill — name the case fast, no algorithm required.",
+  daily: "One curated scramble a day, same for everyone.",
+  bld: "Voice-guided memo practice for blindfolded attempts.",
+  race: "Live head-to-head against another connected solver.",
+  replay: "Watch two solves side by side, synced move for move.",
+  library: "Every OLL/PLL/ZBLL case, spaced-repetition review included.",
+};
 
 interface TrainerHubProps {
   /** Set by page.tsx when the daily practice plan card asks to land on a specific drill sub-mode or the Library, rather than just the Trainer tab's default view. */
@@ -74,21 +86,32 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
   }, [pendingNav, setTrainerMode, onConsumedNav]);
 
   return (
-    <div className="flex w-full flex-1 flex-col items-center gap-3">
-      <div className="flex flex-wrap justify-center gap-2">
-        {MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => setMode(m.id)}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              mode === m.id ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
-            )}
-          >
-            {m.label}
-          </button>
-        ))}
+    <div className="flex w-full flex-1 flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-0.5 text-center">
+        <h1 className="text-lg font-semibold text-foreground">Trainer</h1>
+        <p className="max-w-sm text-xs text-muted-2">{MODE_BLURB[mode]}</p>
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-1.5">
+        {MODES.map((m) => {
+          const Icon = m.icon;
+          const active = mode === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setMode(m.id)}
+              aria-pressed={active}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
+                active ? "bg-accent-soft text-accent" : "text-muted hover:bg-bg-panel-2 hover:text-foreground",
+              )}
+            >
+              <Icon size={14} />
+              {m.label}
+            </button>
+          );
+        })}
       </div>
 
       {mode === "drill" ? (

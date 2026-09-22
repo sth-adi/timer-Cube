@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Bookmark, BookmarkCheck, Loader2, Wand2 } from "lucide-react";
+import { AlertTriangle, Bookmark, BookmarkCheck, Gauge, Loader2, Target, Wand2, Zap } from "lucide-react";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -144,7 +144,7 @@ export function AnalyzerView() {
         <>
           <div className="card animate-fade-in-up rounded-xl p-3">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-sm leading-relaxed">{result.summary}</p>
+              <p className="text-base font-medium leading-relaxed text-foreground">{result.summary}</p>
               {solveId && (
                 <button
                   type="button"
@@ -160,17 +160,20 @@ export function AnalyzerView() {
                 </button>
               )}
             </div>
-            <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
-              <span>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-border pt-2.5 text-[11px] text-muted">
+              <span className="flex items-center gap-1">
+                <Target size={11} className="text-accent" />
                 Cross on <span className="text-foreground">{result.crossFace}</span>
               </span>
-              <span>
+              <span className="flex items-center gap-1">
+                <Zap size={11} className="text-accent" />
                 <span className="text-foreground">{result.metrics.stm}</span> STM ·{" "}
                 <span className="text-foreground">{result.metrics.qtm}</span> QTM ·{" "}
                 <span className="text-foreground">{result.metrics.rotations}</span> rotations
               </span>
               {result.tps !== undefined && (
-                <span>
+                <span className="flex items-center gap-1">
+                  <Gauge size={11} className="text-accent" />
                   <span className="text-foreground">{result.tps.toFixed(1)}</span> TPS
                 </span>
               )}
