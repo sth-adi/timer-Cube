@@ -458,7 +458,7 @@ export function SmartCubeTimer() {
             )}
           </div>
 
-          <PostSolveTable rows={postSolveRows} />
+          <PostSolveTable rows={postSolveRows} scramble={finishedScramble} />
 
           {buckets.length > 1 && (
             <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">

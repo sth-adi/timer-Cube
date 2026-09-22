@@ -23,7 +23,7 @@ function CaseCard({ algCase, onOpen }: { algCase: AlgCase; onOpen: () => void })
       onClick={onOpen}
       className="card flex flex-col items-start gap-1.5 rounded-lg p-3 text-left transition-colors hover:bg-bg-panel-2"
     >
-      <CaseIcon setupAlg={invertAlg(algCase.alg)} className="w-full" />
+      <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={algCase.group} className="w-full" />
       <div className="flex w-full items-center justify-between">
         <span className="text-sm font-medium">{algCase.name}</span>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[status])} />
