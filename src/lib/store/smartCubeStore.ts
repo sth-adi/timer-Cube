@@ -77,10 +77,16 @@ interface SmartCubeState {
    * it continuously, not just during a solve.
    */
   liveFacelets: string;
+  /** Whether this cube's protocol can report a battery level at all — not every brand/model does. */
+  batterySupported: boolean;
+  /** 0-100, or null before the first reading has come back. */
+  batteryLevel: number | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   arm: () => void;
   cancel: () => void;
+  /** Asks the cube to report its battery level again — cubes don't push this on their own on any regular schedule, so this is also fired once right after connecting. */
+  refreshBattery: () => void;
 }
 
 let conn: SmartCubeConnection | null = null;
@@ -111,6 +117,8 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   pllCaseName: null,
   moves: [],
   liveFacelets: SOLVED_FACELETS,
+  batterySupported: false,
+  batteryLevel: null,
 
   connect: async () => {
     if (!get().supported) {
@@ -131,8 +139,20 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
 
       sub = connection.events$.subscribe((event: SmartCubeEvent) => {
         if (event.type === "DISCONNECT") {
-          set({ connected: false, deviceName: null, protocolName: null, armed: false, recording: false });
+          set({
+            connected: false,
+            deviceName: null,
+            protocolName: null,
+            armed: false,
+            recording: false,
+            batterySupported: false,
+            batteryLevel: null,
+          });
           teardown();
+          return;
+        }
+        if (event.type === "BATTERY") {
+          set({ batteryLevel: event.batteryLevel });
           return;
         }
         if (event.type !== "MOVE") return;
@@ -199,7 +219,10 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         deviceName: connection.deviceName || connection.protocol.name,
         protocolName: connection.protocol.name,
         liveFacelets: SOLVED_FACELETS,
+        batterySupported: connection.capabilities.battery,
+        batteryLevel: null,
       });
+      if (connection.capabilities.battery) get().refreshBattery();
     } catch (err) {
       // The user cancelling the browser's device picker throws too — that's
       // not a real error, just "never mind".
@@ -215,7 +238,15 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   disconnect: () => {
     void conn?.disconnect();
     teardown();
-    set({ connected: false, deviceName: null, protocolName: null, armed: false, recording: false });
+    set({
+      connected: false,
+      deviceName: null,
+      protocolName: null,
+      armed: false,
+      recording: false,
+      batterySupported: false,
+      batteryLevel: null,
+    });
   },
 
   arm: () =>
@@ -246,4 +277,14 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       pllCaseName: null,
       moves: [],
     }),
+
+  refreshBattery: () => {
+    if (!conn || !get().batterySupported) return;
+    // Fire-and-forget: the reading itself comes back later as a BATTERY
+    // event through the same events$ subscription above, not as this
+    // command's return value — a cube that doesn't answer just leaves
+    // batteryLevel at whatever it was, no error surfaced for something
+    // this optional.
+    void conn.sendCommand({ type: "REQUEST_BATTERY" }).catch(() => {});
+  },
 }));

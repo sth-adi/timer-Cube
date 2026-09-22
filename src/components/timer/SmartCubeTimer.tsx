@@ -1,7 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Bluetooth, BluetoothConnected, Check, Loader2, Radio, Sparkles, Wand2 } from "lucide-react";
+import {
+  AlertTriangle,
+  BatteryFull,
+  BatteryLow,
+  BatteryMedium,
+  BatteryWarning,
+  Bluetooth,
+  BluetoothConnected,
+  Check,
+  Loader2,
+  Radio,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import { useSmartCubeStore, type SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -177,6 +190,37 @@ function RecognitionBreakdown({
 }
 
 /**
+ * A tappable battery readout for the connected cube — most Bluetooth cubes
+ * (GAN, MoYu's AI models, QiYi) report this, but nothing in this app asked
+ * for it before now. Tapping it re-requests a fresh reading rather than
+ * waiting for the cube to push one on its own schedule (some protocols
+ * don't push updates at all outside of an explicit request).
+ */
+function BatteryBadge({ level, onRefresh }: { level: number | null; onRefresh: () => void }) {
+  if (level === null) {
+    return (
+      <button type="button" onClick={onRefresh} className="flex items-center gap-1 text-muted-2 hover:text-muted">
+        <BatteryWarning size={13} />
+        <span className="text-[11px]">…</span>
+      </button>
+    );
+  }
+  const Icon = level > 66 ? BatteryFull : level > 33 ? BatteryMedium : level > 12 ? BatteryLow : BatteryWarning;
+  const colorClass = level > 33 ? "text-muted" : level > 12 ? "text-warning" : "text-danger";
+  return (
+    <button
+      type="button"
+      onClick={onRefresh}
+      title="Tap to refresh"
+      className={cn("flex items-center gap-1 tabular-nums", colorClass)}
+    >
+      <Icon size={13} />
+      <span className="text-[11px] font-medium">{level}%</span>
+    </button>
+  );
+}
+
+/**
  * Timing driven by a real Bluetooth smart cube instead of the keyboard:
  * scramble it, and this verifies the physical state against the target
  * scramble live — matching it starts inspection automatically, and pausing
@@ -209,9 +253,12 @@ export function SmartCubeTimer() {
     ollCaseName,
     pllCaseName,
     moves,
+    batterySupported,
+    batteryLevel,
     connect,
     disconnect,
     cancel,
+    refreshBattery,
   } = useSmartCubeStore();
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
@@ -404,6 +451,12 @@ export function SmartCubeTimer() {
       <div className="flex items-center gap-1.5 text-xs text-success">
         <BluetoothConnected size={14} />
         {deviceName}
+        {batterySupported && (
+          <>
+            <span className="text-border">·</span>
+            <BatteryBadge level={batteryLevel} onRefresh={refreshBattery} />
+          </>
+        )}
         <button type="button" onClick={disconnect} className="ml-2 text-muted-2 underline hover:text-muted">
           Disconnect
         </button>
