@@ -5,13 +5,11 @@ import dynamic from "next/dynamic";
 import { X } from "lucide-react";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import { computeReplayGaps } from "@/lib/analysis/replayGaps";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
 });
-
-/** Per-move pace used when there's no real capture to pace against — matches SolveReplay's own fallback. */
-const FALLBACK_GAP_MS = 280;
 
 interface InstantReplaySheetProps {
   scramble: string;
@@ -33,18 +31,7 @@ interface InstantReplaySheetProps {
 export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimestamps, onClose }: InstantReplaySheetProps) {
   const moves = useMemo(() => reconstruction.trim().split(/\s+/).filter(Boolean), [reconstruction]);
 
-  const { gaps, hasRealTiming } = useMemo(() => {
-    if (moveTimestamps && moveTimestamps.length === moves.length) {
-      const fullGaps: number[] = [];
-      let prev = 0;
-      for (const t of moveTimestamps) {
-        fullGaps.push(Math.max(0, t - prev));
-        prev = t;
-      }
-      return { gaps: fullGaps, hasRealTiming: true };
-    }
-    return { gaps: moves.map(() => FALLBACK_GAP_MS), hasRealTiming: false };
-  }, [moveTimestamps, moves]);
+  const { gaps, hasRealTiming } = useMemo(() => computeReplayGaps(moves, moveTimestamps), [moveTimestamps, moves]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>

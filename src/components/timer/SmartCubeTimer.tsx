@@ -26,10 +26,12 @@ import { useNowTick } from "@/hooks/useNowTick";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
+import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
 import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
 import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
+import { computeSessionStats, normalSolves } from "@/lib/stats/stats";
 import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
@@ -195,6 +197,7 @@ export function SmartCubeTimer() {
   const nextScramble = useScrambleStore((s) => s.nextScramble);
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
+  const sessionSolves = useSessionStore((s) => s.solves);
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
@@ -270,6 +273,13 @@ export function SmartCubeTimer() {
     [moves, startedAtMs, crossAtMs, f2lPairAtMs, ollAtMs, finished, solvedAtMs, ollCaseName, pllCaseName],
   );
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
+
+  // For the post-solve coach card: this session's own mean/best, read
+  // whether or not this exact solve has landed in `sessionSolves` yet (the
+  // store refetches asynchronously after recordSolve, and the coach card
+  // only needs an approximate "compared to your usual pace" framing, not a
+  // stat that must exclude this solve to the millisecond).
+  const coachSessionStats = useMemo(() => computeSessionStats(normalSolves(sessionSolves)), [sessionSolves]);
 
   // Shared by "Full 3D analysis", "View reconstruction", and the auto-save
   // effect below — computed once here rather than re-derived at each call site.
@@ -460,6 +470,14 @@ export function SmartCubeTimer() {
           </div>
 
           <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} />
+
+          <PostSolveCoachCard
+            rows={postSolveRows}
+            totalMs={elapsedMs}
+            tps={avgTps}
+            sessionMeanMs={coachSessionStats.mean}
+            isNewPB={coachSessionStats.best !== null && elapsedMs <= coachSessionStats.best}
+          />
 
           {buckets.length > 1 && (
             <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { AlertTriangle, CheckCircle2, Info, Lightbulb, Play } from "lucide-react";
 import { findingsForPhase, type Finding, type PhaseAnalysis, type Severity } from "@/lib/analysis/analyze";
+import { FALLBACK_GAP_MS, gapsFromTimestamps } from "@/lib/analysis/replayGaps";
 import { cn } from "@/lib/utils/cn";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
@@ -16,9 +17,6 @@ const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string }>
   low: { icon: Info, className: "text-muted" },
   good: { icon: CheckCircle2, className: "text-success" },
 };
-
-/** Per-move pace used when there's no real capture to pace against — close to a relaxed turn cadence. */
-const FALLBACK_GAP_MS = 280;
 
 interface SolveReplayProps {
   scramble: string;
@@ -82,12 +80,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
   // reconstruction can never pace playback against the wrong moves.
   const { gaps, hasRealTiming } = useMemo(() => {
     if (moveTimestamps && moveTimestamps.length === moves.length) {
-      const fullGaps: number[] = [];
-      let prev = 0;
-      for (const t of moveTimestamps) {
-        fullGaps.push(Math.max(0, t - prev));
-        prev = t;
-      }
+      const fullGaps = gapsFromTimestamps(moveTimestamps);
       const startIdx = movesBefore.length;
       const slice = fullGaps.slice(startIdx, startIdx + viewMoves.length);
       if (slice.length === viewMoves.length) return { gaps: slice, hasRealTiming: true };

@@ -349,6 +349,22 @@ body {
   animation: sheet-in 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* --- Rhythm game note fall -------------------------------------------------
+   Each note's fall timing is known in advance (see rhythmGame.ts), so it's
+   scheduled with a per-note `animation-delay` (can be negative — a note due
+   very early starts already partway fallen) rather than a JS rAF loop
+   repositioning every note every frame. */
+@keyframes rhythm-fall {
+  from {
+    transform: translateY(-220px);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* --- Aurora background ---------------------------------------------------
    Two large, slowly drifting radial blobs behind everything, tinted by the
    active theme. Pure CSS (no canvas/WebGL) so it costs no JS frame time and
