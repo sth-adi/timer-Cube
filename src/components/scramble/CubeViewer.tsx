@@ -131,6 +131,16 @@ export function CubeViewer({ alg, setupAlg, className, onReady }: CubeViewerProp
       player.style.width = "100%";
       player.style.height = "100%";
       player.style.transform = "rotate(180deg)";
+      // The player's own drag-to-orbit handler calls preventDefault() on
+      // every pointerdown regardless of direction, which — on a touchscreen
+      // — cancels the browser's native scroll for that whole gesture, not
+      // just the drag. Restricting the element to vertical panning means a
+      // mostly-vertical touch starting on the cube scrolls the page (or
+      // whatever scrollable ancestor it's in) like normal, while a
+      // mostly-horizontal drag still reaches the player to orbit the camera
+      // — arrow keys and tilt-to-rotate (below) still cover full orbit
+      // control either way, so nothing is lost outright.
+      player.style.touchAction = "pan-y";
       container.appendChild(player);
       playerRef.current = player;
       setPlayerReady(true);

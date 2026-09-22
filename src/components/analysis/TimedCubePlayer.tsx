@@ -77,6 +77,12 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       // white (U), and has to be a real 180° rotation (not a mirror) to
       // keep the cube's turns looking correctly handed.
       player.style.transform = "rotate(180deg)";
+      // See CubeViewer.tsx's matching comment: without this, the player's
+      // drag-to-orbit handler preventDefault()s every pointerdown and blocks
+      // the page/pane from scrolling past it on a touchscreen. Restricting
+      // to vertical panning lets a mostly-vertical touch scroll normally
+      // while a mostly-horizontal drag still orbits the camera.
+      player.style.touchAction = "pan-y";
       container.appendChild(player);
       playerRef.current = player;
 
