@@ -62,7 +62,11 @@ function setupCube(setupAlg: string) {
  */
 export function buildOllDiagram(setupAlg: string): OllPllDiagram {
   const cube = setupCube(setupAlg);
-  const targetColor = FACELET_COLORS.U;
+  // Community diagrams (SpeedCubeDB etc.) always draw the last layer's target
+  // color as yellow, matching how a solver actually holds the cube — see
+  // CubeViewer's "yellow-up" doc comment — even though this setup alg's own
+  // convention treats the case as living on the engine's U face (white).
+  const targetColor = FACELET_COLORS.D;
   // The U face's own center (facelet 4) never moves and belongs to no
   // piece, so nothing below ever assigns it a color — without this it'd
   // fall through to buildStickers' gray placeholder and look like a stray,
@@ -94,7 +98,8 @@ export function buildOllDiagram(setupAlg: string): OllPllDiagram {
  */
 export function buildPllDiagram(setupAlg: string): OllPllDiagram {
   const cube = setupCube(setupAlg);
-  const targetColor = FACELET_COLORS.U;
+  // See buildOllDiagram's matching comment — target color is always yellow.
+  const targetColor = FACELET_COLORS.D;
   const raw = cube.asString();
   const facelets: Record<number, string> = { 4: targetColor }; // see buildOllDiagram's matching comment
 

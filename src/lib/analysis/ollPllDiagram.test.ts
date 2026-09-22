@@ -50,12 +50,12 @@ describe("buildArrows (cycle decomposition)", () => {
 describe("buildOllDiagram", () => {
   it("shows every U-layer piece in the target color when solved", () => {
     const d = buildOllDiagram("");
-    for (const [uFacelet] of Object.values(CORNER_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.U);
-    for (const [uFacelet] of Object.values(EDGE_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.U);
+    for (const [uFacelet] of Object.values(CORNER_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.D);
+    for (const [uFacelet] of Object.values(EDGE_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.D);
   });
 
   it("colors the U face's own center — no piece owns it, but it should never fall through to a placeholder", () => {
-    expect(buildOllDiagram("R U2 R' U' R U' R'").facelets[4]).toBe(FACELET_COLORS.U);
+    expect(buildOllDiagram("R U2 R' U' R U' R'").facelets[4]).toBe(FACELET_COLORS.D);
   });
 
   it("never shows a real color on a side-strip sticker — only gray, oriented or not", () => {
@@ -72,10 +72,10 @@ describe("buildOllDiagram", () => {
     const cube = cubeFromAlg(setupAlg);
     const d = buildOllDiagram(setupAlg);
     for (const [cornerStr, [uFacelet]] of Object.entries(CORNER_FACELETS)) {
-      expect(d.facelets[uFacelet]).toBe(cube.co[Number(cornerStr)] === 0 ? FACELET_COLORS.U : MUTED_GRAY);
+      expect(d.facelets[uFacelet]).toBe(cube.co[Number(cornerStr)] === 0 ? FACELET_COLORS.D : MUTED_GRAY);
     }
     for (const [edgeStr, [uFacelet]] of Object.entries(EDGE_FACELETS)) {
-      expect(d.facelets[uFacelet]).toBe(cube.eo[Number(edgeStr)] === 0 ? FACELET_COLORS.U : MUTED_GRAY);
+      expect(d.facelets[uFacelet]).toBe(cube.eo[Number(edgeStr)] === 0 ? FACELET_COLORS.D : MUTED_GRAY);
     }
   });
 
@@ -87,13 +87,13 @@ describe("buildOllDiagram", () => {
 describe("buildPllDiagram", () => {
   it("shows the target color on every U-layer position and no arrows when solved", () => {
     const d = buildPllDiagram("");
-    for (const [uFacelet] of Object.values(CORNER_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.U);
-    for (const [uFacelet] of Object.values(EDGE_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.U);
+    for (const [uFacelet] of Object.values(CORNER_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.D);
+    for (const [uFacelet] of Object.values(EDGE_FACELETS)) expect(d.facelets[uFacelet]).toBe(FACELET_COLORS.D);
     expect(d.arrows).toEqual([]);
   });
 
   it("colors the U face's own center", () => {
-    expect(buildPllDiagram(pllSetup("T Perm")).facelets[4]).toBe(FACELET_COLORS.U);
+    expect(buildPllDiagram(pllSetup("T Perm")).facelets[4]).toBe(FACELET_COLORS.D);
   });
 
   it("paints every side-strip sticker with the cube's own real color at that facelet", () => {
