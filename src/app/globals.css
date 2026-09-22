@@ -237,7 +237,17 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  overflow-x: hidden;
+  /* overflow-x is deliberately only set on html, not here too: per the CSS
+     Overflow spec, setting only one axis makes the *other* axis' computed
+     value "auto" as well (never a bare "visible" next to a non-visible
+     value) — so a redundant overflow-x: hidden here would also turn this
+     element into its OWN independent auto-overflow-y scroll container,
+     nested inside html's. That doubly-nested setup (rather than a single
+     scroll root) is what let mobile Safari get stuck treating a page as
+     non-scrollable after its content grew taller via JS post-paint (see
+     app/solve/[id]/page.tsx's ResizeObserver nudge for the same bug from
+     the other side) — pinch-zoom panning, which bypasses normal scroll
+     entirely, was the tell. */
   /* Prevent iOS's default pull-to-refresh / rubber-band scroll and the
      double-tap-to-zoom delay, which fights with the tap-to-arm timer. */
   overscroll-behavior-y: none;

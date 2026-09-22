@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AlertTriangle, Loader2, Timer as TimerIcon } from "lucide-react";
@@ -29,6 +29,37 @@ export default function SharedSolvePage() {
   const [state, setState] = useState<LoadState>("loading");
   const [solve, setSolve] = useState<SharedSolve | null>(null);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // This page's content grows in several async steps after the initial,
+  // much-shorter "Loading solve…" paint — the fetch resolving, the analysis
+  // finishing, the 3D replay's own dynamically-imported player mounting and
+  // sizing its canvas. Mobile Safari in particular sometimes never
+  // re-evaluates a page's scrollable extent after JS grows its height post
+  // paint, leaving a visitor stuck unable to scroll to content that's
+  // genuinely there — pinch-zooming (which pans independently of the
+  // page's own scroll state) is the giveaway. A tiny, real scroll nudge
+  // (not a same-position no-op, which some engines short-circuit) forces a
+  // fresh recalculation every time the content's height actually changes.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    let raf = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+        const y = window.scrollY;
+        window.scrollTo(window.scrollX, y + 1);
+        window.scrollTo(window.scrollX, y);
+      });
+    });
+    observer.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +104,7 @@ export default function SharedSolvePage() {
         Cube
       </Link>
 
-      <div className="flex w-full max-w-2xl flex-col gap-3 pb-8">
+      <div ref={contentRef} className="flex w-full max-w-2xl flex-col gap-3 pb-8">
         {state === "loading" && (
           <div className="card flex flex-col items-center gap-2 rounded-xl p-8">
             <Loader2 size={20} className="animate-spin text-accent" />
