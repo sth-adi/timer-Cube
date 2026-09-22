@@ -2,7 +2,7 @@ import { cubeFromAlg } from "@/lib/cube-engine/engine";
 import { CORNER_FACELETS, EDGE_FACELETS } from "@/lib/cube-engine/facePositions";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 
-/** Community-standard OLL diagram convention: unoriented pieces (and, for OLL specifically, every side sticker regardless of orientation) read as neutral gray rather than a real color, since permutation doesn't matter for OLL recognition — only which way each piece faces. */
+/** Community-standard OLL diagram convention: every sticker that isn't the "target-colored" one for its piece reads as neutral gray rather than a real color, since permutation doesn't matter for OLL recognition — only which way each piece faces. */
 export const MUTED_GRAY = "#5b606c";
 
 export interface DiagramArrow {
@@ -54,11 +54,24 @@ function setupCube(setupAlg: string) {
 }
 
 /**
- * OLL diagram: the U-face sticker of each of the 8 last-layer pieces reads
- * as the target color when that piece is already oriented, gray otherwise —
- * the "dot/cross/fish/etc." shapes every OLL reference site draws. Every
- * side-strip sticker is always gray: OLL doesn't care about permutation at
- * all, so showing real colors there would just be noise.
+ * OLL diagram: every last-layer piece has exactly one sticker that's "target
+ * colored" in a truly solved cube (the one that started out on U before
+ * scrambling) — the "dot/cross/fish/etc." shapes every OLL reference site
+ * draws come from painting *that specific sticker* yellow wherever it
+ * currently sits, and every other sticker of that piece gray, rather than
+ * only ever checking the U-facing position.
+ *
+ * A piece that's actually oriented has that sticker still facing up, so it
+ * paints the U-facelet — matching the old logic. An unoriented piece has it
+ * rotated onto a side facelet instead, and it's exactly that rotation this
+ * diagram needs to show: which side lights up (and thus the overall shape)
+ * is real recognition information, not noise, so a side sticker is *not*
+ * unconditionally gray the way permutation-driven PLL color would be.
+ *
+ * Empirically verified (see facePositions.ts's methodology) against every
+ * real OLL_CASES setup: corner orientation co∈{0,1,2} maps the target
+ * sticker to {uFacelet, side1, side2} respectively — never split across two
+ * sides — and edge orientation eo∈{0,1} maps it to {uFacelet, side}.
  */
 export function buildOllDiagram(setupAlg: string): OllPllDiagram {
   const cube = setupCube(setupAlg);
@@ -74,15 +87,15 @@ export function buildOllDiagram(setupAlg: string): OllPllDiagram {
   const facelets: Record<number, string> = { 4: targetColor };
 
   for (const [cornerStr, [uFacelet, side1, side2]] of Object.entries(CORNER_FACELETS)) {
-    const corner = Number(cornerStr);
-    facelets[uFacelet] = cube.co[corner] === 0 ? targetColor : MUTED_GRAY;
-    facelets[side1] = MUTED_GRAY;
-    facelets[side2] = MUTED_GRAY;
+    const co = cube.co[Number(cornerStr)];
+    facelets[uFacelet] = co === 0 ? targetColor : MUTED_GRAY;
+    facelets[side1] = co === 1 ? targetColor : MUTED_GRAY;
+    facelets[side2] = co === 2 ? targetColor : MUTED_GRAY;
   }
   for (const [edgeStr, [uFacelet, side]] of Object.entries(EDGE_FACELETS)) {
-    const edge = Number(edgeStr);
-    facelets[uFacelet] = cube.eo[edge] === 0 ? targetColor : MUTED_GRAY;
-    facelets[side] = MUTED_GRAY;
+    const eo = cube.eo[Number(edgeStr)];
+    facelets[uFacelet] = eo === 0 ? targetColor : MUTED_GRAY;
+    facelets[side] = eo === 0 ? MUTED_GRAY : targetColor;
   }
 
   return { facelets, arrows: [] };

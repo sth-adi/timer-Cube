@@ -5,11 +5,19 @@ import { CORNER_FACELETS, EDGE_FACELETS } from "@/lib/cube-engine/facePositions"
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import { PLL_CASES } from "@/lib/algorithms/pllData";
+import { OLL_CASES } from "@/lib/algorithms/ollData";
 
 /** A real, valid last-layer-only PLL algorithm — arbitrary full-cube move sequences (like a raw "R2 U2 R2...") aren't guaranteed to keep permutation confined to the last layer the way an actual PLL alg is by construction. */
 function pllSetup(name: string): string {
   const c = PLL_CASES.find((p) => p.name === name);
   if (!c) throw new Error(`test fixture: no PLL case named "${name}"`);
+  return invertAlg(c.alg);
+}
+
+/** Same reasoning as pllSetup, for OLL — a real OLL alg only reorients last-layer pieces, keeping every one of them in its U-layer slot, which an arbitrary move sequence isn't guaranteed to do. */
+function ollSetup(name: string): string {
+  const c = OLL_CASES.find((o) => o.name === name);
+  if (!c) throw new Error(`test fixture: no OLL case named "${name}"`);
   return invertAlg(c.alg);
 }
 
@@ -55,32 +63,38 @@ describe("buildOllDiagram", () => {
   });
 
   it("colors the U face's own center — no piece owns it, but it should never fall through to a placeholder", () => {
-    expect(buildOllDiagram("R U2 R' U' R U' R'").facelets[4]).toBe(FACELET_COLORS.D);
+    expect(buildOllDiagram(ollSetup("Dot 1")).facelets[4]).toBe(FACELET_COLORS.D);
   });
 
-  it("never shows a real color on a side-strip sticker — only gray, oriented or not", () => {
-    const d = buildOllDiagram("R U2 R' U' R U' R'");
-    for (const [, side1, side2] of Object.values(CORNER_FACELETS)) {
-      expect(d.facelets[side1]).toBe(MUTED_GRAY);
-      expect(d.facelets[side2]).toBe(MUTED_GRAY);
-    }
-    for (const [, side] of Object.values(EDGE_FACELETS)) expect(d.facelets[side]).toBe(MUTED_GRAY);
-  });
-
-  it("colors a U-layer sticker gray exactly when the cube itself reports that piece unoriented", () => {
-    const setupAlg = "R U2 R' U' R U' R'";
+  /**
+   * Every piece has exactly one sticker that's "target colored" (the one
+   * that started on U before scrambling) — an oriented piece still shows it
+   * on the U-facelet, but an unoriented one shows it on a side facelet
+   * instead, which is real recognition information a reference diagram must
+   * draw, not noise to gray out. Checked against every real OLL case so the
+   * co∈{0,1,2}→{uFacelet,side1,side2} and eo∈{0,1}→{uFacelet,side} mapping
+   * (derived empirically, see buildOllDiagram's doc comment) holds
+   * universally, not just for one fixture.
+   */
+  it.each(OLL_CASES.map((c) => c.name))("colors exactly one sticker per piece target-colored, matching co/eo, for %s", (name) => {
+    const setupAlg = ollSetup(name);
     const cube = cubeFromAlg(setupAlg);
     const d = buildOllDiagram(setupAlg);
-    for (const [cornerStr, [uFacelet]] of Object.entries(CORNER_FACELETS)) {
-      expect(d.facelets[uFacelet]).toBe(cube.co[Number(cornerStr)] === 0 ? FACELET_COLORS.D : MUTED_GRAY);
+    for (const [cornerStr, [uFacelet, side1, side2]] of Object.entries(CORNER_FACELETS)) {
+      const co = cube.co[Number(cornerStr)];
+      expect(d.facelets[uFacelet]).toBe(co === 0 ? FACELET_COLORS.D : MUTED_GRAY);
+      expect(d.facelets[side1]).toBe(co === 1 ? FACELET_COLORS.D : MUTED_GRAY);
+      expect(d.facelets[side2]).toBe(co === 2 ? FACELET_COLORS.D : MUTED_GRAY);
     }
-    for (const [edgeStr, [uFacelet]] of Object.entries(EDGE_FACELETS)) {
-      expect(d.facelets[uFacelet]).toBe(cube.eo[Number(edgeStr)] === 0 ? FACELET_COLORS.D : MUTED_GRAY);
+    for (const [edgeStr, [uFacelet, side]] of Object.entries(EDGE_FACELETS)) {
+      const eo = cube.eo[Number(edgeStr)];
+      expect(d.facelets[uFacelet]).toBe(eo === 0 ? FACELET_COLORS.D : MUTED_GRAY);
+      expect(d.facelets[side]).toBe(eo === 0 ? MUTED_GRAY : FACELET_COLORS.D);
     }
   });
 
   it("never produces arrows — permutation is irrelevant to OLL", () => {
-    expect(buildOllDiagram("R U2 R' U' R U' R'").arrows).toEqual([]);
+    expect(buildOllDiagram(ollSetup("Dot 1")).arrows).toEqual([]);
   });
 });
 
