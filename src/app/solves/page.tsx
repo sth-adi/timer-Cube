@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Timer as TimerIcon, Sparkles, Music, FlaskConical } from "lucide-react";
+import { Timer as TimerIcon, Sparkles, Music, FlaskConical, ScanLine } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -41,7 +41,14 @@ export default function SolvesPage() {
         <div className="flex w-full max-w-2xl flex-col gap-3 pb-8">
           <div className="flex items-center justify-between px-1">
             <h1 className="text-lg font-semibold text-foreground">Solves</h1>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap justify-end gap-1.5">
+              <Link
+                href="/xray"
+                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
+              >
+                <ScanLine size={13} />
+                X-Ray
+              </Link>
               <Link
                 href="/lab"
                 className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"

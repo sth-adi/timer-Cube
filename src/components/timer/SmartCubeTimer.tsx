@@ -26,6 +26,7 @@ import { GyroReconstructionCard } from "@/components/lab/GyroReconstructionCard"
 import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
 import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
 import { analyzeMistakes } from "@/lib/analysis/mistakeRadar";
+import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { useCubeGestures } from "@/hooks/useCubeGestures";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -384,6 +385,8 @@ export function SmartCubeTimer() {
     protocolName,
   ]);
 
+  const moveTokens = useMemo(() => moves.map((m) => m.token), [moves]);
+
   // Mistake Radar: a full move-by-move replay of the finished solve against
   // its scramble — only once it's finished and its scramble is pinned.
   const mistakeReport = useMemo(
@@ -604,6 +607,8 @@ export function SmartCubeTimer() {
           )}
 
           {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
+
+          {finishedScramble && <XrayTeaser scramble={finishedScramble} moves={moveTokens} timesMs={moveTimestampsRel} />}
 
           <PostSolveCoachCard
             rows={postSolveRows}

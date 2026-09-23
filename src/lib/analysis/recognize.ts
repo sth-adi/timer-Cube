@@ -30,6 +30,37 @@ export interface CaseMatch {
   algMoves: number;
 }
 
+/** Where each corner / edge position lands under an x2 rotation (U↔D, F↔B; R and L stay put). */
+const X2_CORNER = [7, 6, 5, 4, 3, 2, 1, 0];
+const X2_EDGE = [4, 7, 6, 5, 0, 3, 2, 1, 11, 10, 9, 8];
+
+/**
+ * Re-expresses a cube from the solver's cross-on-U frame in the algorithm
+ * library's last-layer-on-U frame: the same physical cube, turned over with
+ * an x2, with every piece renamed to match.
+ *
+ * `cube.move("x2")` is *not* a substitute: it moves pieces between positions
+ * but keeps their old identities, so after it the last layer's pieces still
+ * carry D-layer ids (4-7). Orientation survives that (OLL recognition works
+ * either way) but permutation doesn't — PLL recognition and skip checks
+ * need the real relabelling. Orientation values carry over unchanged:
+ * every piece's reference sticker (its U/D, or for middle-layer edges F/B,
+ * face) maps to the reference sticker of its new position in the same
+ * cyclic order.
+ */
+export function toLibraryFrame(cube: CubeJSInstance): CubeJSInstance {
+  const out = cube.clone();
+  for (let s = 0; s < 8; s++) {
+    out.cp[X2_CORNER[s]] = X2_CORNER[cube.cp[s]];
+    out.co[X2_CORNER[s]] = cube.co[s];
+  }
+  for (let s = 0; s < 12; s++) {
+    out.ep[X2_EDGE[s]] = X2_EDGE[cube.ep[s]];
+    out.eo[X2_EDGE[s]] = cube.eo[s];
+  }
+  return out;
+}
+
 function orientationKey(cube: CubeJSInstance): string {
   return [...LL_CORNERS.map((s) => cube.co[s]), ...LL_EDGES.map((s) => cube.eo[s])].join(",");
 }

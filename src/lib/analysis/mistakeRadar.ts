@@ -1,6 +1,6 @@
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { bottomLayerSolved, f2lPairSolved, orientationSolved } from "@/lib/solvers/oll";
-import { isPllSkip, recognizeOll, recognizePll } from "@/lib/analysis/recognize";
+import { isPllSkip, recognizeOll, recognizePll, toLibraryFrame } from "@/lib/analysis/recognize";
 
 /**
  * Mistake Radar: replays a smart-cube solve move by move against its
@@ -84,8 +84,7 @@ interface Snapshot {
 function snapshot(cube: CubeJSInstance): Snapshot {
   const f2l = bottomLayerSolved(cube);
   const oriented = f2l && orientationSolved(cube);
-  const libraryFrame = cube.clone();
-  libraryFrame.move("x2");
+  const libraryFrame = toLibraryFrame(cube);
   return {
     cross: crossSolved(cube),
     pairs: [0, 1, 2, 3].map((i) => f2lPairSolved(cube, i as 0 | 1 | 2 | 3)),

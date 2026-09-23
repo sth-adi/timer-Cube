@@ -6,7 +6,7 @@ import type { SmartCubeConnection, SmartCubeEvent } from "smartcube-web-bluetoot
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { crossHeuristic } from "@/lib/solvers/cross";
 import { bottomLayerSolved, orientationSolved, f2lPairSolved } from "@/lib/solvers/oll";
-import { recognizeOll, recognizePll, isOllSkip, isPllSkip } from "@/lib/analysis/recognize";
+import { recognizeOll, recognizePll, isOllSkip, isPllSkip, toLibraryFrame } from "@/lib/analysis/recognize";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 import type { GyroSample } from "@/lib/gyro/orientation";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
@@ -248,14 +248,12 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         // the state the cuber was looking at when they read the case.
         let ollCaseName = state.ollCaseName;
         if (f2lJustSolved) {
-          const libraryFrame = liveCube.clone();
-          libraryFrame.move("x2");
+          const libraryFrame = toLibraryFrame(liveCube);
           ollCaseName = isOllSkip(libraryFrame) ? "OLL skip" : (recognizeOll(libraryFrame)?.case.name ?? null);
         }
         let pllCaseName = state.pllCaseName;
         if (ollJustSolved) {
-          const libraryFrame = liveCube.clone();
-          libraryFrame.move("x2");
+          const libraryFrame = toLibraryFrame(liveCube);
           pllCaseName = isPllSkip(libraryFrame) ? "PLL skip" : (recognizePll(libraryFrame)?.case.name ?? null);
         }
 

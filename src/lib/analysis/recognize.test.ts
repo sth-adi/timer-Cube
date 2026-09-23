@@ -3,7 +3,7 @@ import { Cube } from "../cube-engine/engine";
 import { OLL_CASES } from "../algorithms/ollData";
 import { PLL_CASES } from "../algorithms/pllData";
 import { invertAlg } from "../algorithms/algUtils";
-import { isOllSkip, isPllSkip, recognizeOll, recognizePll } from "./recognize";
+import { isOllSkip, isPllSkip, recognizeOll, recognizePll, toLibraryFrame } from "./recognize";
 
 const AUF = ["", "U", "U2", "U'"];
 
@@ -64,3 +64,45 @@ describe("last-layer recognition", () => {
     expect(isPllSkip(realCase)).toBe(false);
   });
 });
+
+describe("toLibraryFrame", () => {
+  /** Library-frame move → the same physical turn in the cross-on-U solver frame (x2: U↔D, F↔B). */
+  const toSolverFrame = (alg: string) =>
+    alg
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((t) => ({ U: "D", D: "U", F: "B", B: "F", R: "R", L: "L" })[t[0] as "U"] + t.slice(1))
+      .join(" ");
+
+  /** Only algs of plain face turns relabel by a simple face swap (wide turns / rotations would need more). */
+  const faceTurnsOnly = (alg: string) => alg.split(/\s+/).filter(Boolean).every((t) => /^[URFDLB]['2]?$/.test(t));
+
+  it("recognizes PLLs (and OLLs) set up in the solver frame", () => {
+    const plls = PLL_CASES.filter((c) => faceTurnsOnly(c.alg));
+    expect(plls.length).toBeGreaterThan(5);
+    for (const c of plls) {
+      const cube = new Cube();
+      cube.move(toSolverFrame(`${invertAlg(c.alg)} U`));
+      expect(recognizePll(toLibraryFrame(cube))?.case.name).toBe(c.name);
+      expect(isPllSkip(toLibraryFrame(cube))).toBe(false);
+    }
+    for (const c of OLL_CASES.filter((o) => faceTurnsOnly(o.alg))) {
+      const cube = new Cube();
+      cube.move(toSolverFrame(invertAlg(c.alg)));
+      expect(recognizeOll(toLibraryFrame(cube))?.case.name).toBe(recognizeOll(stateOf(invertAlg(c.alg)))?.case.name);
+    }
+  });
+
+  it("reads a solved (or AUF-only) solver-frame cube as a PLL skip", () => {
+    expect(isPllSkip(toLibraryFrame(new Cube()))).toBe(true);
+    const auf = new Cube();
+    auf.move("D2");
+    expect(isPllSkip(toLibraryFrame(auf))).toBe(true);
+  });
+});
+
+function stateOf(alg: string) {
+  const c = new Cube();
+  c.move(alg);
+  return c;
+}
