@@ -81,7 +81,7 @@ const TOOLS = [
   { href: "/rotations", icon: Rotate3d, title: "Rotation Audit", blurb: "Which slots make you rotate, and what it costs (gyro)." },
   { href: "/auf", icon: RefreshCcw, title: "AUF Audit", blurb: "Time and turns lost adjusting the last layer." },
   { href: "/blindcross", icon: EyeClosed, title: "Blind Cross", blurb: "Inspect, close your eyes, solve the cross — graded turn by turn." },
-  { href: "/blindspots", icon: Crosshair, title: "F2L Blind Spots", blurb: "Which pair situations your lookahead can't see." },
+  { href: "/blindspots", icon: Crosshair, title: "F2L Pause Map", blurb: "Which hand-off between pairs stalls you — and a drill from those exact positions." },
   { href: "/pacer", icon: Gauge, title: "Split Pacer", blurb: "Hear ahead / behind at every milestone of a solve." },
   { href: "/gym", icon: Dumbbell, title: "Alg Gym", blurb: "OLL/PLL drills set up on your cube, timed and checked." },
   { href: "/tempo", icon: Metronome, title: "Tempo Trainer", blurb: "Solve to a metronome — every turn scored on the beat." },

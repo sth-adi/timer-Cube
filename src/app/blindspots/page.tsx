@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Crosshair, Timer as TimerIcon } from "lucide-react";
+import { Crosshair, PauseCircle, Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -18,6 +18,9 @@ import {
   type SpotCell,
 } from "@/lib/blindspots/blindSpots";
 import { cn } from "@/lib/utils/cn";
+import { buildPauseMap, type SolveCapture } from "@/lib/pausemap/pauseMap";
+import { PauseMapCard } from "@/components/pausemap/PauseMapCard";
+import { HandoffDrillPanel } from "@/components/pausemap/HandoffDrillPanel";
 
 const HISTORY = 200;
 
@@ -59,15 +62,20 @@ export default function BlindSpotsPage() {
   const allSolves = useSessionStore((s) => s.allSolves);
   const [metric, setMetric] = useState<Metric>("findMs");
 
-  const report = useMemo(() => {
-    const eligible = allSolves
-      .filter((s) => s.scramble && s.reconstruction && s.moveTimestamps && s.moveTimestamps.length > 0)
-      .sort((a, b) => a.date - b.date)
-      .slice(-HISTORY);
-    return buildBlindSpots(
-      eligible.map((s) => pairSegments({ scramble: s.scramble, moves: s.reconstruction!.split(/\s+/).filter(Boolean), timesMs: s.moveTimestamps! })),
-    );
-  }, [allSolves]);
+  const [drilling, setDrilling] = useState(false);
+
+  const captures = useMemo<SolveCapture[]>(
+    () =>
+      allSolves
+        .filter((s) => s.scramble && s.reconstruction && s.moveTimestamps && s.moveTimestamps.length > 0)
+        .sort((a, b) => a.date - b.date)
+        .slice(-HISTORY)
+        .map((s) => ({ id: s.id, date: s.date, scramble: s.scramble, moves: s.reconstruction!.split(/\s+/).filter(Boolean), timesMs: s.moveTimestamps! })),
+    [allSolves],
+  );
+  const captureById = useMemo(() => new Map(captures.map((c) => [c.id, c])), [captures]);
+  const pauseMap = useMemo(() => buildPauseMap(captures), [captures]);
+  const report = useMemo(() => buildBlindSpots(captures.map((c) => pairSegments({ scramble: c.scramble, moves: c.moves, timesMs: c.timesMs }))), [captures]);
 
   const m = METRICS.find((x) => x.key === metric)!;
   const maxPair = report ? Math.max(1, ...report.byPair.map((p) => p.totalMs ?? 0)) : 1;
@@ -85,8 +93,32 @@ export default function BlindSpotsPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Crosshair size={17} className="text-accent" /> F2L Blind Spots
+              <PauseCircle size={17} className="text-accent" /> F2L Pause Map
             </h1>
+            <p className="text-[11px] text-muted-2">
+              Where your F2L stops: each hand-off between pairs split into finding the next pair, stalling inside it, and turning — and a drill
+              built from the exact positions where you stalled.
+            </p>
+          </div>
+
+          {pauseMap && (
+            <>
+              <PauseMapCard report={pauseMap} onDrill={pauseMap.examples.length > 0 && !drilling ? () => setDrilling(true) : null} />
+              {drilling && pauseMap.worst && pauseMap.examples.length > 0 && (
+                <HandoffDrillPanel
+                  examples={pauseMap.examples}
+                  captures={captureById}
+                  label={pauseMap.worst.label}
+                  onClose={() => setDrilling(false)}
+                />
+              )}
+            </>
+          )}
+
+          <div className="mt-2 flex flex-col gap-0.5 px-1">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Crosshair size={15} className="text-accent" /> Blind spots
+            </h2>
             <p className="text-[11px] text-muted-2">Every F2L pair you&apos;ve solved on a smart cube, filed by where its pieces were when you went looking for it.</p>
           </div>
 
