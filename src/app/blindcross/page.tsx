@@ -6,7 +6,9 @@ import { CheckCircle2, EyeClosed, Flame, Loader2, Play, RotateCcw, Timer as Time
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { ConnectGate } from "@/components/smartcube/ConnectGate";
-import { RouteChips, turnArrow } from "@/components/smartcube/RouteChips";
+import { RouteChips } from "@/components/smartcube/RouteChips";
+import { TurnChip } from "@/components/smartcube/TurnChip";
+import { CountdownRing } from "@/components/smartcube/CountdownRing";
 import { GazeCard } from "@/components/gaze/GazeCard";
 import { useCubeSetup } from "@/hooks/useCubeSetup";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
@@ -15,7 +17,7 @@ import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
 import { useBlindCrossStore } from "@/lib/store/blindCrossStore";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { Cube } from "@/lib/cube-engine/engine";
-import { FACELET_COLORS, scrambleToFacelets } from "@/lib/cube-engine/facelets";
+import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
 import { gradeBlindCross, isBlindTargetDone, summarizeBlind, type BlindCrossResult, type BlindLevel } from "@/lib/blindcross/grade";
 import { analyzeGaze, type GazeReport } from "@/lib/gaze/gaze";
@@ -59,22 +61,6 @@ function useBeeper() {
     });
   }, []);
   return { unlock, beep };
-}
-
-function TurnChip({ token, bad }: { token: string; bad?: boolean }) {
-  const light = token[0] === "U" || token[0] === "D";
-  return (
-    <span
-      className={cn(
-        "flex h-7 w-7 items-center justify-center rounded-md text-xs font-black ring-1 ring-black/25",
-        light ? "text-black/80" : "text-white",
-        bad && "ring-2 ring-danger ring-offset-1 ring-offset-bg-panel",
-      )}
-      style={{ background: FACELET_COLORS[token[0]] }}
-    >
-      {turnArrow(token)}
-    </span>
-  );
 }
 
 /** Cross distance after every turn — a staircase that should only ever step down. */
@@ -361,22 +347,7 @@ function BlindCross() {
 
       {phase === "inspect" && (
         <div className="card flex flex-col items-center gap-4 rounded-xl p-6 text-center">
-          <div className="relative flex h-28 w-28 items-center justify-center">
-            <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90">
-              <circle cx={50} cy={50} r={45} fill="none" stroke="var(--bg-panel-2)" strokeWidth={8} />
-              <circle
-                cx={50}
-                cy={50}
-                r={45}
-                fill="none"
-                stroke={remaining < 4000 ? "var(--danger)" : remaining < 8000 ? "var(--warning)" : "var(--accent)"}
-                strokeWidth={8}
-                strokeLinecap="round"
-                strokeDasharray={`${(remaining / INSPECTION_MS) * 283} 283`}
-              />
-            </svg>
-            <span className="tabular-timer text-4xl font-bold text-foreground">{Math.ceil(remaining / 1000)}</span>
-          </div>
+          <CountdownRing remainingMs={remaining} totalMs={INSPECTION_MS} />
           <p className="text-sm font-semibold text-foreground">Plan the whole {level === "xcross" ? "x-cross" : "cross"}</p>
           <p className="max-w-xs text-[11px] text-muted">When you&apos;re ready, close your eyes and start turning. No peeking until it beeps.</p>
           <button

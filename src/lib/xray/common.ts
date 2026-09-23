@@ -56,7 +56,7 @@ function findOrientation(pred: (m: Mat3) => boolean): Mat3 {
 const near = (a: readonly number[], b: readonly number[]) => a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
 
 /** Body-frame position of each F2L pair's corner (engine frame: white U on top). */
-const PAIR_CORNER_VECTORS: [number, number, number][] = [
+export const PAIR_CORNER_VECTORS: readonly [number, number, number][] = [
   [1, 1, 1],
   [-1, 1, 1],
   [-1, 1, -1],

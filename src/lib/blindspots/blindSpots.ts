@@ -47,6 +47,9 @@ export interface PairSegment {
   execMs: number;
   totalMs: number;
   turns: number;
+  /** Move index the pair's stretch starts after (the previous milestone) and the move that finished it. */
+  fromIndex: number;
+  toIndex: number;
 }
 
 function cornerSpot(cube: CubeJSInstance, pair: number): Spot {
@@ -94,6 +97,8 @@ export function pairSegments({ scramble, moves, timesMs }: XraySolveInput): Pair
         execMs: totalMs - findMs,
         totalMs,
         turns: i - prevIdx,
+        fromIndex: prevIdx,
+        toIndex: i,
       });
     }
     best = now.length;

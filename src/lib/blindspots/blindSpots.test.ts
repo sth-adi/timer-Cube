@@ -57,6 +57,8 @@ describe("buildBlindSpots", () => {
     execMs: 800,
     totalMs: findMs + 800,
     turns: 7,
+    fromIndex: 0,
+    toIndex: 7,
   });
 
   it("flags the situation that's slow to find", () => {

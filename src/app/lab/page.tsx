@@ -20,8 +20,12 @@ import {
   Metronome,
   Navigation,
   Radar,
+  RefreshCcw,
+  Rotate3d,
   ScanLine,
   Stethoscope,
+  Swords,
+  Target,
   Timer as TimerIcon,
 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
@@ -55,6 +59,10 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
 }
 
 const TOOLS = [
+  { href: "/xcross", icon: Target, title: "X-Cross Hunter", blurb: "Scrambles with a hidden x-cross — can you find it?" },
+  { href: "/rematch", icon: Swords, title: "Solve Rematch", blurb: "Re-solve any past scramble and diff it with the original." },
+  { href: "/rotations", icon: Rotate3d, title: "Rotation Audit", blurb: "Which slots make you rotate, and what it costs (gyro)." },
+  { href: "/auf", icon: RefreshCcw, title: "AUF Audit", blurb: "Time and turns lost adjusting the last layer." },
   { href: "/blindcross", icon: EyeClosed, title: "Blind Cross", blurb: "Inspect, close your eyes, solve the cross — graded turn by turn." },
   { href: "/blindspots", icon: Crosshair, title: "F2L Blind Spots", blurb: "Which pair situations your lookahead can't see." },
   { href: "/pacer", icon: Gauge, title: "Split Pacer", blurb: "Hear ahead / behind at every milestone of a solve." },
