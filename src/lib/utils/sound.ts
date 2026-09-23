@@ -43,3 +43,21 @@ export function playPBChime(): void {
 export function playInspectionBeep(): void {
   beep(660, 0, 70, 0.045);
 }
+
+/**
+ * Split Pacer's pace call: bright and rising when you're ahead of the
+ * target split, a single mid note when you're on it, low and falling when
+ * you're behind. Louder than the chimes — it has to cut through turning.
+ */
+export function playPaceTone(verdict: "ahead" | "on" | "behind"): void {
+  void getContext()?.resume();
+  if (verdict === "ahead") {
+    beep(784, 0, 70, 0.12);
+    beep(1175, 0.08, 90, 0.12);
+  } else if (verdict === "on") {
+    beep(988, 0, 110, 0.1);
+  } else {
+    beep(392, 0, 90, 0.14);
+    beep(262, 0.1, 140, 0.14);
+  }
+}

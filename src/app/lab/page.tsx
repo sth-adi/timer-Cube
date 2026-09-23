@@ -6,10 +6,13 @@ import {
   Bluetooth,
   Clapperboard,
   Compass,
+  Crosshair,
   Dumbbell,
+  EyeClosed,
   Eye,
   Fingerprint,
   FlaskConical,
+  Gauge,
   Hand,
   HeartPulse,
   History,
@@ -52,6 +55,9 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
 }
 
 const TOOLS = [
+  { href: "/blindcross", icon: EyeClosed, title: "Blind Cross", blurb: "Inspect, close your eyes, solve the cross — graded turn by turn." },
+  { href: "/blindspots", icon: Crosshair, title: "F2L Blind Spots", blurb: "Which pair situations your lookahead can't see." },
+  { href: "/pacer", icon: Gauge, title: "Split Pacer", blurb: "Hear ahead / behind at every milestone of a solve." },
   { href: "/gym", icon: Dumbbell, title: "Alg Gym", blurb: "OLL/PLL drills set up on your cube, timed and checked." },
   { href: "/tempo", icon: Metronome, title: "Tempo Trainer", blurb: "Solve to a metronome — every turn scored on the beat." },
   { href: "/bld", icon: Stethoscope, title: "BLD Doctor", blurb: "Blindfolded attempts, and exactly why a DNF happened." },
@@ -130,7 +136,7 @@ export default function LabPage() {
           <Section
             icon={<Compass size={15} className="text-accent" />}
             title="Gyro Twin"
-            subtitle="A live 3D copy of the cube in your hands — stickers and orientation. Whole-cube rotations are named as they happen and written into your reconstructions."
+            subtitle="A live 3D copy of the cube in your hands — stickers and orientation. Whole-cube rotations are named as they happen and written into your reconstructions, and every solve's recap maps which sides you actually looked at during inspection."
           >
             {!connected ? (
               <div className="flex flex-col items-center gap-2 py-4">

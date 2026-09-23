@@ -19,6 +19,8 @@ const FACE_ORIGIN: Record<string, { col: number; row: number }> = {
 
 interface Sticker {
   key: string;
+  face: string;
+  index: number;
   color: string;
   col: number;
   row: number;
@@ -35,6 +37,8 @@ function buildStickers(facelets: string): Sticker[] {
       const c = i % 3;
       stickers.push({
         key: `${face}${i}`,
+        face,
+        index: start + i,
         color: FACELET_COLORS[letter] ?? "#666",
         col: origin.col + c,
         row: origin.row + r,
@@ -49,8 +53,22 @@ export function ScrambleNet({ scramble, className }: { scramble: string; classNa
   return <FaceletNet facelets={facelets} className={className} />;
 }
 
-/** The same net drawn straight from a 54-char facelet string (e.g. a live or recorded cube state). */
-export function FaceletNet({ facelets, className }: { facelets: string; className?: string }) {
+/**
+ * The same net drawn straight from a 54-char facelet string (e.g. a live or
+ * recorded cube state). `dimFaces` fades whole faces (by face letter) and
+ * `ringFacelets` outlines individual stickers (global 0-53 indices).
+ */
+export function FaceletNet({
+  facelets,
+  className,
+  dimFaces,
+  ringFacelets,
+}: {
+  facelets: string;
+  className?: string;
+  dimFaces?: readonly string[];
+  ringFacelets?: readonly number[];
+}) {
   const stickers = useMemo(() => buildStickers(facelets), [facelets]);
 
   return (
@@ -75,6 +93,10 @@ export function FaceletNet({ facelets, className }: { facelets: string; classNam
             background: s.color,
             borderRadius: 2,
             border: "1px solid rgba(0,0,0,0.35)",
+            opacity: dimFaces?.includes(s.face) ? 0.25 : 1,
+            outline: ringFacelets?.includes(s.index) ? "2px solid var(--danger)" : undefined,
+            outlineOffset: 1,
+            zIndex: ringFacelets?.includes(s.index) ? 1 : undefined,
           }}
         />
       ))}

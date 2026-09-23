@@ -29,6 +29,12 @@ import { analyzeMistakes } from "@/lib/analysis/mistakeRadar";
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
 import { inspectionReport } from "@/lib/inspection/report";
+import { GazeCard } from "@/components/gaze/GazeCard";
+import { analyzeGaze, type GazeReport } from "@/lib/gaze/gaze";
+import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
+import { PaceChip, PaceLadderCard } from "@/components/pacer/PaceCards";
+import { useSplitPacer } from "@/hooks/useSplitPacer";
+import { liveMilestones } from "@/lib/pacer/pacer";
 import { useCubeGestures } from "@/hooks/useCubeGestures";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -227,6 +233,7 @@ export function SmartCubeTimer() {
   // machine. Only meaningful before `arm()` has been called; once armed,
   // the existing recording/solved-detection below takes over.
   const flow = useSmartCubeFlow(scramble);
+  const pacer = useSplitPacer();
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
   const lastMoveMs = moves[moves.length - 1]?.timeStampMs ?? startedAtMs ?? 0;
@@ -321,6 +328,9 @@ export function SmartCubeTimer() {
   // log, which isn't reactive state, so it's captured here alongside the
   // scramble rather than re-derived on render.
   const [finishedGyro, setFinishedGyro] = useState<SolveGyroSummary | null>(null);
+  // Where the cuber's eyes went during inspection (gyro cubes only): the
+  // samples logged from arm() — the moment inspection began — to the first turn.
+  const [finishedGaze, setFinishedGaze] = useState<{ report: GazeReport; facelets: string } | null>(null);
 
   // Saves the instant a solve finishes — no button, exactly like the
   // keyboard timer's own onComplete. Edge-triggered off solvedAtMs (a ref,
@@ -339,6 +349,14 @@ export function SmartCubeTimer() {
       startedAtMs!,
     );
     setFinishedGyro(gyro);
+    const gyroLog = getGyroLog();
+    const gazeRef = useGyroStore.getState().ref;
+    const startFacelets = scrambleToFacelets(scramble);
+    const gaze =
+      gazeRef && gyroLog.length > 0
+        ? analyzeGaze(gyroLog, gazeRef, calibrationFor(protocolName).calibration, gyroLog[0].atMs, startedAtMs!, startFacelets)
+        : null;
+    setFinishedGaze(gaze ? { report: gaze, facelets: startFacelets } : null);
     // Unlike the keyboard timer, a smart-cube solve has a real absolute
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
@@ -589,6 +607,7 @@ export function SmartCubeTimer() {
         <div className="flex flex-col items-center gap-1.5">
           <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>
           <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
+          {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
           <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
         </div>
       )}
@@ -615,6 +634,16 @@ export function SmartCubeTimer() {
           )}
 
           {inspection && <InspectionGradeCard report={inspection} />}
+
+          {pacer.enabled && (
+            <PaceLadderCard
+              actual={liveMilestones({ startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs, solvedAtMs })}
+              targets={pacer.targets}
+              targetMs={pacer.targetMs}
+            />
+          )}
+
+          {finishedGaze && <GazeCard report={finishedGaze.report} facelets={finishedGaze.facelets} />}
 
           {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
 
