@@ -22,11 +22,15 @@ import {
   Radar,
   RefreshCcw,
   Rotate3d,
+  Scale,
+  Sigma,
   ScanLine,
   Stethoscope,
   Swords,
   Target,
+  Thermometer,
   Timer as TimerIcon,
+  TrendingUp,
 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
@@ -59,6 +63,10 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
 }
 
 const TOOLS = [
+  { href: "/autopsy", icon: Scale, title: "Fast vs Slow Autopsy", blurb: "What separates your good solves from your bad ones." },
+  { href: "/consistency", icon: Sigma, title: "Consistency Lab", blurb: "Which phase your spread comes from, and what fixing it is worth." },
+  { href: "/progress", icon: TrendingUp, title: "Progress Forecast", blurb: "Learning curves per phase, plateaus, and your next goal's ETA." },
+  { href: "/stamina", icon: Thermometer, title: "Warm-up & Fatigue", blurb: "How long you take to warm up, and when you start to fade." },
   { href: "/xcross", icon: Target, title: "X-Cross Hunter", blurb: "Scrambles with a hidden x-cross — can you find it?" },
   { href: "/rematch", icon: Swords, title: "Solve Rematch", blurb: "Re-solve any past scramble and diff it with the original." },
   { href: "/rotations", icon: Rotate3d, title: "Rotation Audit", blurb: "Which slots make you rotate, and what it costs (gyro)." },

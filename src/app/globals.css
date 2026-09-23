@@ -36,6 +36,12 @@
   --timer-glow: 26px;
 
   /* Aurora background layer — two drifting blobs tinted per theme. */
+  /* Chart palette for the four solve phases (Cross, F2L, OLL, PLL), in that
+     fixed order — validated for CVD separation on the dark panel surfaces. */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
   --aurora-1: rgba(124, 92, 255, 0.30);
   --aurora-2: rgba(53, 230, 197, 0.20);
   --aurora-opacity: 1;
@@ -198,6 +204,11 @@
   --timer-glow: 0px;
   --shadow-sm: 0 1px 2px rgba(15, 17, 25, 0.06);
   --shadow-md: 0 8px 24px rgba(15, 17, 25, 0.08);
+  /* Light-surface steps of the same four phase hues. */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
   --aurora-1: rgba(91, 61, 245, 0.13);
   --aurora-2: rgba(2, 132, 199, 0.10);
   color-scheme: light;
