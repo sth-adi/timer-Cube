@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useTimer, type TimerResult } from "@/hooks/useTimer";
+import { useEffect, useMemo, useRef } from "react";
+import { useTimer } from "@/hooks/useTimer";
+import { useSolveCompletion } from "@/hooks/useSolveCompletion";
 import { useTimerInput } from "@/hooks/useTimerInput";
 import { isTextField } from "@/lib/timer/timerInput";
 import { PHASE_LABELS, type PhaseCount, useSettingsStore } from "@/lib/store/settingsStore";
@@ -11,9 +12,8 @@ import { formatTime } from "@/lib/utils/time";
 import { computePhaseSplits, computeSessionStats, normalSolves } from "@/lib/stats/stats";
 import type { PhaseAverage } from "@/lib/stats/stats";
 import { EVENT_TAGS } from "@/types";
-import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { cn } from "@/lib/utils/cn";
-import { playSolveChime, playInspectionBeep } from "@/lib/utils/sound";
+import { playInspectionBeep } from "@/lib/utils/sound";
 import { InspectionRing } from "./InspectionRing";
 import { PredictionBadge } from "./PredictionBadge";
 import { GhostPaceBar } from "./GhostPaceBar";
@@ -104,34 +104,15 @@ export function TimerView() {
   const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
   const phaseCount = useSettingsStore((s) => s.phaseCount);
   const timerStyle = useSettingsStore((s) => s.timerStyle);
-  const recordSolve = useSessionStore((s) => s.recordSolve);
   const scramble = useScrambleStore((s) => s.scramble);
-  const nextScramble = useScrambleStore((s) => s.nextScramble);
-
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
-  const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
-
-  const onComplete = useCallback(
-    ({ timeMs, splits: solveSplits, penalty }: TimerResult) => {
-      // The keyboard timer doesn't carry an absolute start timestamp — only
-      // an elapsed duration — so "now minus that duration" is the best
-      // available anchor for pulling in the heart-rate samples logged
-      // during this solve. A few milliseconds of render latency here is
-      // irrelevant next to a multi-second bpm sampling interval.
-      const heartRate = summarizeHeartRate(Date.now() - timeMs) ?? undefined;
-      // The inspection penalty (+2 past 15s, DNF past 17s) is saved with the
-      // solve itself, so stats treat it exactly like a penalty added by hand.
-      recordSolve(timeMs, scramble, solveSplits, pendingEvent ?? undefined, undefined, heartRate, undefined, undefined, undefined, penalty);
-      if (soundEnabled) playSolveChime();
-      void nextScramble();
-    },
-    [recordSolve, scramble, nextScramble, soundEnabled, pendingEvent, summarizeHeartRate],
-  );
+  const { onStart, onComplete } = useSolveCompletion();
 
   const { phase, displayMs, inspectionRemainingMs, pendingPenalty, lastResult, splits, phaseIndex, press, release, cancel, reset } = useTimer({
     inspectionEnabled,
     holdToStartMs,
     phaseCount,
+    onStart,
     onComplete,
   });
 
@@ -229,9 +210,11 @@ export function TimerView() {
       playInspectionBeep();
     }
   }, [showInspection, soundEnabled, inspectionRemainingMs]);
+  // Re-arm once inspection is over — not on "idle", which back-to-back
+  // attempts never pass through (stopped → press goes straight to inspecting).
   useEffect(() => {
-    if (phase === "idle") beepedRef.current = { eight: false, twelve: false };
-  }, [phase]);
+    if (!showInspection) beepedRef.current = { eight: false, twelve: false };
+  }, [showInspection]);
 
   return (
     <div

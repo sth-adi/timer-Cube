@@ -24,7 +24,10 @@ export function useTimerInput({ press, release, cancel, reset, enabled = true }:
   useEffect(() => {
     if (!enabled) return undefined;
     const onKey = (e: KeyboardEvent) => {
-      const action = keyAction({ type: e.type as "keydown" | "keyup", code: e.code, repeat: e.repeat, inField: isTextField(e.target) });
+      const inField = isTextField(e.target);
+      const action = keyAction({ type: e.type as "keydown" | "keyup", code: e.code, repeat: e.repeat, inField });
+      // Auto-repeated Space does nothing to the timer, but must still not scroll the page or click a focused button.
+      if (e.code === "Space" && !inField) e.preventDefault();
       if (!action) return;
       if (action === "reset" && !reset) return;
       e.preventDefault();

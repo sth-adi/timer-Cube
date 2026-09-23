@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Settings, Timer as TimerIcon, Repeat, Wand2, ChevronRight } from "lucide-react";
+import { Settings, Timer as TimerIcon, Repeat, Wand2, ChevronDown, ChevronRight } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { SolveList } from "@/components/sessions/SolveList";
@@ -50,6 +50,7 @@ function HomeInner() {
   // mounted by that navigation, so it can't miss the request the way
   // subscribing to a store's requestSeq diff after the fact would.
   const [tab, setTab] = useState<TabId>(() => (searchParams.get("jump") === "analyze" ? "analyze" : "timer"));
+  const [moreInsights, setMoreInsights] = useState(false);
   const [timerMode, setTimerMode] = useState<"keyboard" | "smartcube">("keyboard");
   const [pendingTrainerNav, setPendingTrainerNav] = useState<PendingTrainerNav | null>(null);
 
@@ -262,9 +263,23 @@ function HomeInner() {
                 <SolveList limit={5} hideHeader />
               </div>
               <PhaseSplitsCard />
-              <CubeDnaCard />
-              <TriggerHeatmapCard />
-              <InsightsPanel />
+              {/* The essentials above stay in view; the deeper cards wait behind one tap. */}
+              <button
+                type="button"
+                onClick={() => setMoreInsights((v) => !v)}
+                aria-expanded={moreInsights}
+                className="flex items-center justify-center gap-1 rounded-xl py-2 text-xs font-medium text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
+              >
+                {moreInsights ? "Fewer insights" : "More insights"}
+                <ChevronDown size={13} className={cn("transition-transform", moreInsights && "rotate-180")} />
+              </button>
+              {moreInsights && (
+                <>
+                  <CubeDnaCard />
+                  <TriggerHeatmapCard />
+                  <InsightsPanel />
+                </>
+              )}
             </div>
           </aside>
         </main>

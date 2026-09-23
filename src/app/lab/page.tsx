@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   Bluetooth,
@@ -50,6 +50,7 @@ import { useCubeGestures } from "@/hooks/useCubeGestures";
 import { GESTURE_BINDINGS, type GestureAction } from "@/lib/smartcube/gestures";
 import { buildCubeHealthReport } from "@/lib/analysis/cubeHealth";
 import { cn } from "@/lib/utils/cn";
+import { parseUsage, rankTools, readUsageRaw, subscribeUsage } from "@/lib/usage/toolUsage";
 
 function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; title: string; subtitle: string; children: React.ReactNode }) {
   return (
@@ -93,6 +94,29 @@ const TOOLS = [
   { href: "/xray", icon: ScanLine, title: "Solve X-Ray", blurb: "F2L flow, last-slot oracle, alg microscope, neutrality." },
 ] as const;
 
+function ToolGrid({ tools, usage }: { tools: readonly (typeof TOOLS)[number][]; usage: ReturnType<typeof parseUsage> }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {tools.map((tool) => (
+        <Link
+          key={tool.href}
+          href={tool.href}
+          className="card flex flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-bg-panel-2/60"
+        >
+          <tool.icon size={18} className="text-accent" />
+          <span className="text-xs font-semibold text-foreground">{tool.title}</span>
+          <span className="text-[10px] leading-snug text-muted-2">{tool.blurb}</span>
+          {usage[tool.href] && (
+            <span className="mt-auto text-[10px] tabular-nums text-muted">
+              opened {usage[tool.href].count}×
+            </span>
+          )}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 /** Every gesture's handler just confirms it was recognized — the Lab is for building the muscle memory, not for acting on it. */
 const PRACTICE_HANDLERS = Object.fromEntries(
   GESTURE_BINDINGS.map((b) => [b.action, () => `${b.label} ✓`]),
@@ -116,6 +140,10 @@ export default function LabPage() {
   const setGesturesOn = useSettingsStore((s) => s.setCubeGestures);
   const [calibrating, setCalibrating] = useState(false);
   const toast = useCubeGestures(PRACTICE_HANDLERS);
+  // Local-only visit counts (lib/usage/toolUsage.ts): the tools you use come first.
+  const usageRaw = useSyncExternalStore(subscribeUsage, readUsageRaw, () => null);
+  const usage = useMemo(() => parseUsage(usageRaw), [usageRaw]);
+  const { used, unused } = useMemo(() => rankTools(TOOLS, usage), [usage]);
 
   const health = useMemo(
     () =>
@@ -143,19 +171,23 @@ export default function LabPage() {
             <h1 className="text-lg font-semibold text-foreground">Smart Cube Lab</h1>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {TOOLS.map((tool) => (
-              <Link
-                key={tool.href}
-                href={tool.href}
-                className="card flex flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-bg-panel-2/60"
-              >
-                <tool.icon size={18} className="text-accent" />
-                <span className="text-xs font-semibold text-foreground">{tool.title}</span>
-                <span className="text-[10px] leading-snug text-muted-2">{tool.blurb}</span>
-              </Link>
-            ))}
-          </div>
+          {used.length > 0 && (
+            <>
+              <h2 className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Your tools</h2>
+              <ToolGrid tools={used} usage={usage} />
+            </>
+          )}
+          {unused.length > 0 && (
+            <>
+              <h2 className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+                {used.length > 0 ? "Not opened yet" : "Tools"}
+              </h2>
+              <ToolGrid tools={unused} usage={usage} />
+            </>
+          )}
+          <p className="px-1 text-[10px] text-muted-2">
+            Ordered by how often you open each tool — counted on this device only, never sent anywhere.
+          </p>
 
           <Section
             icon={<Compass size={15} className="text-accent" />}

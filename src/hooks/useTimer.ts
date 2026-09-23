@@ -15,6 +15,8 @@ export interface UseTimerOptions {
    * last one stops the clock.
    */
   phaseCount?: number;
+  /** Called when an attempt begins (inspection or hold starts from idle/stopped). */
+  onStart?: () => void;
   /** Called once per finished attempt, with the inspection result and the penalty it earned. */
   onComplete: (result: TimerResult) => void;
 }
@@ -45,7 +47,7 @@ export interface TimerEngine {
  * all the rules — this hook only feeds it performance.now(), arms holds on
  * time, and re-renders on animation frames while something is changing.
  */
-export function useTimer({ inspectionEnabled, holdToStartMs, phaseCount = 1, onComplete }: UseTimerOptions): TimerEngine {
+export function useTimer({ inspectionEnabled, holdToStartMs, phaseCount = 1, onStart, onComplete }: UseTimerOptions): TimerEngine {
   // One machine for the component's lifetime; it's mutated in place and the
   // view below is the rendered snapshot of it.
   const [machine] = useState(() => new TimerMachine({ inspectionEnabled, holdToStartMs, phaseCount }));
@@ -56,9 +58,11 @@ export function useTimer({ inspectionEnabled, holdToStartMs, phaseCount = 1, onC
   }, [machine, inspectionEnabled, holdToStartMs, phaseCount]);
 
   const onCompleteRef = useRef(onComplete);
+  const onStartRef = useRef(onStart);
   useEffect(() => {
     onCompleteRef.current = onComplete;
-  }, [onComplete]);
+    onStartRef.current = onStart;
+  }, [onComplete, onStart]);
 
   const rafId = useRef<number | null>(null);
   const holdTimeoutId = useRef<number | null>(null);
@@ -85,7 +89,9 @@ export function useTimer({ inspectionEnabled, holdToStartMs, phaseCount = 1, onC
   }, [machine, sync]);
 
   const press = useCallback(() => {
+    const before = machine.phase;
     const result = machine.press(performance.now());
+    if ((before === "idle" || before === "stopped") && machine.phase !== before) onStartRef.current?.();
     sync();
     schedule();
     if (result) onCompleteRef.current(result);
