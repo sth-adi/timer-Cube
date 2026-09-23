@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Timer as TimerIcon, Sparkles, Music } from "lucide-react";
+import { Timer as TimerIcon, Sparkles, Music, FlaskConical } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -42,6 +42,13 @@ export default function SolvesPage() {
           <div className="flex items-center justify-between px-1">
             <h1 className="text-lg font-semibold text-foreground">Solves</h1>
             <div className="flex gap-1.5">
+              <Link
+                href="/lab"
+                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
+              >
+                <FlaskConical size={13} />
+                Lab
+              </Link>
               <Link
                 href="/rhythm"
                 className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"

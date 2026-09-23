@@ -27,6 +27,8 @@ export interface SessionExport {
     heartRate?: { avg: number; max: number };
     crossMs?: number;
     moveTimestamps?: number[];
+    rotations?: { atMs: number; token: string }[];
+    orientedReconstruction?: string;
   }>;
 }
 
@@ -47,6 +49,8 @@ export function buildSessionExport(sessionName: string, solves: Solve[]): Sessio
       heartRate: s.heartRate,
       crossMs: s.crossMs,
       moveTimestamps: s.moveTimestamps,
+      rotations: s.rotations,
+      orientedReconstruction: s.orientedReconstruction,
     })),
   };
 }
@@ -64,6 +68,19 @@ export function downloadJson(filename: string, data: unknown): void {
 }
 
 const VALID_PENALTIES: Penalty[] = ["none", "plus2", "dnf"];
+
+function isRotationList(v: unknown): v is { atMs: number; token: string }[] {
+  return (
+    Array.isArray(v) &&
+    v.every(
+      (r) =>
+        typeof r === "object" &&
+        r !== null &&
+        typeof (r as { atMs?: unknown }).atMs === "number" &&
+        typeof (r as { token?: unknown }).token === "string",
+    )
+  );
+}
 
 /** Validates and normalizes a parsed JSON blob into an import-ready solve list. Throws with a human-readable message on invalid input. */
 export function parseSessionExport(raw: unknown): SessionExport["solves"] {
@@ -98,6 +115,8 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
         Array.isArray(s.moveTimestamps) && s.moveTimestamps.every((v) => typeof v === "number" && Number.isFinite(v))
           ? (s.moveTimestamps as number[])
           : undefined,
+      rotations: isRotationList(s.rotations) ? s.rotations : undefined,
+      orientedReconstruction: typeof s.orientedReconstruction === "string" ? s.orientedReconstruction : undefined,
     };
   });
 }

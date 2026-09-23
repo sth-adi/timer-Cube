@@ -12,6 +12,8 @@ export async function addSolve(input: {
   heartRate?: { avg: number; max: number };
   crossMs?: number;
   moveTimestamps?: number[];
+  rotations?: { atMs: number; token: string }[];
+  orientedReconstruction?: string;
 }): Promise<Solve> {
   const solve: Solve = {
     id: newId(),
@@ -28,6 +30,8 @@ export async function addSolve(input: {
     ...(input.heartRate ? { heartRate: input.heartRate } : {}),
     ...(input.crossMs !== undefined ? { crossMs: input.crossMs } : {}),
     ...(input.moveTimestamps && input.moveTimestamps.length > 0 ? { moveTimestamps: input.moveTimestamps } : {}),
+    ...(input.rotations ? { rotations: input.rotations } : {}),
+    ...(input.orientedReconstruction ? { orientedReconstruction: input.orientedReconstruction } : {}),
   };
   await db.solves.add(solve);
   return solve;
@@ -60,7 +64,19 @@ export async function importSolves(
   solves: Array<
     Pick<
       Solve,
-      "timeMs" | "penalty" | "scramble" | "date" | "comment" | "splits" | "event" | "reconstruction" | "heartRate" | "crossMs" | "moveTimestamps"
+      | "timeMs"
+      | "penalty"
+      | "scramble"
+      | "date"
+      | "comment"
+      | "splits"
+      | "event"
+      | "reconstruction"
+      | "heartRate"
+      | "crossMs"
+      | "moveTimestamps"
+      | "rotations"
+      | "orientedReconstruction"
     >
   >,
 ): Promise<number> {
@@ -78,6 +94,8 @@ export async function importSolves(
     ...(s.heartRate ? { heartRate: s.heartRate } : {}),
     ...(s.crossMs !== undefined ? { crossMs: s.crossMs } : {}),
     ...(s.moveTimestamps && s.moveTimestamps.length > 0 ? { moveTimestamps: s.moveTimestamps } : {}),
+    ...(s.rotations ? { rotations: s.rotations } : {}),
+    ...(s.orientedReconstruction ? { orientedReconstruction: s.orientedReconstruction } : {}),
   }));
   await db.solves.bulkAdd(rows);
   return rows.length;

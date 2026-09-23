@@ -365,6 +365,33 @@ body {
   }
 }
 
+/* Gyro Twin: a detected whole-cube rotation chip pops in. */
+@keyframes gyro-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Cube Gestures: toast slides up and fades in. */
+@keyframes gesture-toast {
+  from {
+    transform: translate(-50%, 16px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
 /* --- Aurora background ---------------------------------------------------
    Two large, slowly drifting radial blobs behind everything, tinted by the
    active theme. Pure CSS (no canvas/WebGL) so it costs no JS frame time and

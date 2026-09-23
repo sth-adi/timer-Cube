@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   BatteryFull,
@@ -10,13 +11,22 @@ import {
   Bluetooth,
   BluetoothConnected,
   Check,
+  FlaskConical,
   Loader2,
   Play,
   Radio,
   Sparkles,
   Wand2,
 } from "lucide-react";
-import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
+import { useSmartCubeStore, getGyroLog } from "@/lib/store/smartCubeStore";
+import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
+import { summarizeSolveGyro, type SolveGyroSummary } from "@/lib/gyro/solveGyro";
+import { GyroTwin } from "@/components/lab/GyroTwin";
+import { GyroReconstructionCard } from "@/components/lab/GyroReconstructionCard";
+import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
+import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
+import { analyzeMistakes } from "@/lib/analysis/mistakeRadar";
+import { useCubeGestures } from "@/hooks/useCubeGestures";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
@@ -188,6 +198,8 @@ export function SmartCubeTimer() {
     moves,
     batterySupported,
     batteryLevel,
+    gyroActive,
+    protocolName,
     connect,
     disconnect,
     cancel,
@@ -195,6 +207,10 @@ export function SmartCubeTimer() {
   } = useSmartCubeStore();
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
+  const previousScramble = useScrambleStore((s) => s.previousScramble);
+  const canGoBack = useScrambleStore((s) => s.canGoBack);
+  const setPenalty = useSessionStore((s) => s.setPenalty);
+  const cubeGesturesOn = useSettingsStore((s) => s.cubeGestures);
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
   const sessionSolves = useSessionStore((s) => s.solves);
@@ -297,6 +313,11 @@ export function SmartCubeTimer() {
   // recap displays (LiveCubeMimic, "Full 3D analysis") needs to stay paired
   // with the solve it's actually showing, not whatever's live in the store.
   const [finishedScramble, setFinishedScramble] = useState("");
+  // The gyro's read on the solve that just finished (regrips, oriented
+  // reconstruction) — computed once at save time from the module-level gyro
+  // log, which isn't reactive state, so it's captured here alongside the
+  // scramble rather than re-derived on render.
+  const [finishedGyro, setFinishedGyro] = useState<SolveGyroSummary | null>(null);
 
   // Saves the instant a solve finishes — no button, exactly like the
   // keyboard timer's own onComplete. Edge-triggered off solvedAtMs (a ref,
@@ -307,6 +328,14 @@ export function SmartCubeTimer() {
     if (!finished || autoSavedAtRef.current === solvedAtMs) return;
     autoSavedAtRef.current = solvedAtMs;
     setFinishedScramble(scramble);
+    const gyro = summarizeSolveGyro(
+      getGyroLog(),
+      useGyroStore.getState().ref,
+      calibrationFor(protocolName).calibration,
+      moves,
+      startedAtMs!,
+    );
+    setFinishedGyro(gyro);
     // Unlike the keyboard timer, a smart-cube solve has a real absolute
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
@@ -314,7 +343,17 @@ export function SmartCubeTimer() {
     const splits = boundaries && boundaries.f2l !== null && boundaries.oll !== null
       ? [boundaries.cross!, boundaries.f2l, boundaries.oll]
       : undefined;
-    void recordSolve(elapsedMs, scramble, splits, pendingEvent ?? undefined, reconstruction, heartRate, crossMs, moveTimestampsRel);
+    void recordSolve(
+      elapsedMs,
+      scramble,
+      splits,
+      pendingEvent ?? undefined,
+      reconstruction,
+      heartRate,
+      crossMs,
+      moveTimestampsRel,
+      gyro ? { rotations: gyro.rotations, orientedReconstruction: gyro.orientedReconstruction } : undefined,
+    );
     if (soundEnabled) playSolveChime();
     setSaved(true);
     // Rolls the next target scramble right away, in the background — but
@@ -342,13 +381,37 @@ export function SmartCubeTimer() {
     nextScramble,
     reconstruction,
     moveTimestampsRel,
+    protocolName,
   ]);
+
+  // Mistake Radar: a full move-by-move replay of the finished solve against
+  // its scramble — only once it's finished and its scramble is pinned.
+  const mistakeReport = useMemo(
+    () =>
+      finished && finishedScramble
+        ? analyzeMistakes({
+            scramble: finishedScramble,
+            moves: moves.map((m) => m.token),
+            timesMs: moveTimestampsRel,
+            totalMs: elapsedMs,
+          })
+        : null,
+    [finished, finishedScramble, moves, moveTimestampsRel, elapsedMs],
+  );
 
   const onAnalyze = () => {
     requestAnalysis(finishedScramble, elapsedMs, undefined, reconstruction, moveTimestampsRel);
   };
 
   const [showReplay, setShowReplay] = useState(false);
+  // A replay opened by gesture for the last *saved* solve, when there's no
+  // live recap on screen to replay instead.
+  const [savedReplay, setSavedReplay] = useState<{
+    scramble: string;
+    reconstruction: string;
+    timeMs: number;
+    moveTimestamps?: number[];
+  } | null>(null);
 
   // A manual escape hatch for "I don't want to physically re-scramble to
   // dismiss this" — jumps straight to the scrambling screen instead of
@@ -361,6 +424,59 @@ export function SmartCubeTimer() {
   };
 
   const mimicScramble = finished ? finishedScramble : scramble;
+
+  // Cube Gestures — hands-free control between solves, straight from the
+  // cube (see lib/smartcube/gestures.ts). Each handler says what it did, or
+  // null when there was nothing to act on.
+  const lastSolve = sessionSolves[sessionSolves.length - 1];
+  const gestureToast = useCubeGestures({
+    nextScramble: () => {
+      void nextScramble();
+      return "Next scramble";
+    },
+    previousScramble: () => {
+      if (!canGoBack()) return null;
+      previousScramble();
+      return "Previous scramble";
+    },
+    replayLast: () => {
+      if (finished) {
+        setShowReplay(true);
+        return "Replaying your solve";
+      }
+      if (!lastSolve?.reconstruction) return null;
+      setSavedReplay({
+        scramble: lastSolve.scramble,
+        reconstruction: lastSolve.reconstruction,
+        timeMs: lastSolve.timeMs,
+        moveTimestamps: lastSolve.moveTimestamps,
+      });
+      return "Replaying last solve";
+    },
+    plusTwoLast: () => {
+      if (!lastSolve) return null;
+      const next = lastSolve.penalty === "plus2" ? "none" : "plus2";
+      void setPenalty(lastSolve.id, next);
+      return next === "plus2" ? "+2 on last solve" : "+2 removed";
+    },
+    dnfLast: () => {
+      if (!lastSolve) return null;
+      const next = lastSolve.penalty === "dnf" ? "none" : "dnf";
+      void setPenalty(lastSolve.id, next);
+      return next === "dnf" ? "Last solve DNF" : "DNF removed";
+    },
+    clearPenaltyLast: () => {
+      if (!lastSolve || lastSolve.penalty === "none") return null;
+      void setPenalty(lastSolve.id, "none");
+      return "Penalty cleared";
+    },
+    dismissRecap: () => {
+      if (!finished) return null;
+      onDismiss();
+      return "Recap dismissed";
+    },
+    recenterGyro: () => (useGyroStore.getState().recenter() ? "Gyro re-centered" : null),
+  });
 
   if (!supported) {
     return (
@@ -414,6 +530,9 @@ export function SmartCubeTimer() {
             <BatteryBadge level={batteryLevel} onRefresh={refreshBattery} />
           </>
         )}
+        <Link href="/lab" className="ml-2 flex items-center gap-1 text-accent hover:underline">
+          <FlaskConical size={12} /> Lab
+        </Link>
         <button type="button" onClick={disconnect} className="ml-2 text-muted-2 underline hover:text-muted">
           Disconnect
         </button>
@@ -435,10 +554,16 @@ export function SmartCubeTimer() {
         )
       )}
 
-      {(armed || recording || finished) && (
-        <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl">
-          <LiveCubeMimic scramble={mimicScramble} moves={moves} className="h-full w-full" />
-        </div>
+      {(armed || recording) && gyroActive ? (
+        // A gyro cube gets the live twin instead: same stickers, but it also
+        // tilts and turns with the cube in your hands, and names regrips live.
+        <GyroTwin size={84} showControls={false} />
+      ) : (
+        (armed || recording || finished) && (
+          <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl">
+            <LiveCubeMimic scramble={mimicScramble} moves={moves} className="h-full w-full" />
+          </div>
+        )
       )}
 
       {armed && !recording && flow.phase !== "inspecting" && (
@@ -470,6 +595,15 @@ export function SmartCubeTimer() {
           </div>
 
           <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} />
+
+          {finishedGyro && startedAtMs !== null && (
+            <GyroReconstructionCard
+              summary={finishedGyro}
+              phases={postSolveRows.map((r) => ({ label: r.label, endMs: r.atMs !== null ? r.atMs - startedAtMs : null }))}
+            />
+          )}
+
+          {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
 
           <PostSolveCoachCard
             rows={postSolveRows}
@@ -518,6 +652,17 @@ export function SmartCubeTimer() {
         </>
       )}
 
+      <GestureToast toast={gestureToast} />
+      {savedReplay && (
+        <InstantReplaySheet
+          scramble={savedReplay.scramble}
+          reconstruction={savedReplay.reconstruction}
+          timeMs={savedReplay.timeMs}
+          moveTimestamps={savedReplay.moveTimestamps}
+          onClose={() => setSavedReplay(null)}
+        />
+      )}
+
       {showReplay && (
         <InstantReplaySheet
           scramble={finishedScramble}
@@ -555,6 +700,7 @@ export function SmartCubeTimer() {
           ) : (
             <p className="text-xs text-muted-2">Scramble your cube to this pattern — inspection starts automatically.</p>
           )}
+          {cubeGesturesOn && <GestureHint />}
         </div>
       )}
     </div>

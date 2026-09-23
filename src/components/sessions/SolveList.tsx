@@ -101,6 +101,14 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
           {solve.crossMs !== undefined && (
             <p className="mb-2 text-[11px] text-muted">cross {formatTime(solve.crossMs)}</p>
           )}
+          {solve.orientedReconstruction && (
+            <div className="mb-2">
+              <p className="text-[10px] font-medium text-accent">
+                Gyro reconstruction · {solve.rotations?.length ?? 0} regrip{solve.rotations?.length === 1 ? "" : "s"}
+              </p>
+              <p className="max-h-20 overflow-y-auto break-words font-mono text-[10px] leading-snug text-muted">{solve.orientedReconstruction}</p>
+            </div>
+          )}
           <div className="flex items-center gap-1 mb-2">
             <button
               type="button"

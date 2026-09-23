@@ -58,6 +58,19 @@ export interface Solve {
    * to look, the bursts to execute) instead of a uniform per-move tempo.
    */
   moveTimestamps?: number[];
+  /**
+   * Whole-cube rotations (x, y, z…) a gyro-equipped smart cube saw during
+   * this solve, each at its elapsed ms from solve start. Kept separate from
+   * `reconstruction` — which stays the physical, center-color-named move
+   * list — so `moveTimestamps` still lines up with it one-to-one.
+   */
+  rotations?: { atMs: number; token: string }[];
+  /**
+   * The rotation-aware reconstruction: inspection rotation, then every move
+   * re-expressed in the solver's own frame with regrips inserted where they
+   * happened — what a cuber would write by hand. Only present for gyro solves.
+   */
+  orientedReconstruction?: string;
 }
 
 export interface Session {

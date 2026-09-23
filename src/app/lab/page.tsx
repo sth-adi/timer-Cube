@@ -1,0 +1,176 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { Bluetooth, Compass, FlaskConical, Hand, HeartPulse, Loader2, Radar, Timer as TimerIcon } from "lucide-react";
+import { AppBootstrap } from "@/components/AppBootstrap";
+import { AppBackground } from "@/components/chrome/AppBackground";
+import { GyroTwin } from "@/components/lab/GyroTwin";
+import { GyroCalibration } from "@/components/lab/GyroCalibration";
+import { GestureLegend, GestureToast } from "@/components/lab/GestureToast";
+import { MistakeHistory } from "@/components/lab/MistakeHistory";
+import { CubeHealthPanel } from "@/components/lab/CubeHealthPanel";
+import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
+import { useSessionStore } from "@/lib/store/sessionStore";
+import { useSettingsStore } from "@/lib/store/settingsStore";
+import { useCubeGestures } from "@/hooks/useCubeGestures";
+import { GESTURE_BINDINGS, type GestureAction } from "@/lib/smartcube/gestures";
+import { buildCubeHealthReport } from "@/lib/analysis/cubeHealth";
+import { cn } from "@/lib/utils/cn";
+
+function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <section className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-0.5">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          {icon}
+          {title}
+        </h2>
+        <p className="text-[11px] text-muted-2">{subtitle}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Every gesture's handler just confirms it was recognized — the Lab is for building the muscle memory, not for acting on it. */
+const PRACTICE_HANDLERS = Object.fromEntries(
+  GESTURE_BINDINGS.map((b) => [b.action, () => `${b.label} ✓`]),
+) as Record<GestureAction, () => string>;
+
+/**
+ * The Smart Cube Lab: everything that only exists because the cube itself
+ * is a sensor. The live gyro twin and its calibration, a practice pad for
+ * cube gestures, and two whole-history reports — Mistake Radar (the solver)
+ * and Cube Health (the hardware).
+ */
+export default function LabPage() {
+  const connected = useSmartCubeStore((s) => s.connected);
+  const connecting = useSmartCubeStore((s) => s.connecting);
+  const supported = useSmartCubeStore((s) => s.supported);
+  const gyroActive = useSmartCubeStore((s) => s.gyroActive);
+  const deviceName = useSmartCubeStore((s) => s.deviceName);
+  const connect = useSmartCubeStore((s) => s.connect);
+  const allSolves = useSessionStore((s) => s.allSolves);
+  const gesturesOn = useSettingsStore((s) => s.cubeGestures);
+  const setGesturesOn = useSettingsStore((s) => s.setCubeGestures);
+  const [calibrating, setCalibrating] = useState(false);
+  const toast = useCubeGestures(PRACTICE_HANDLERS);
+
+  const health = useMemo(
+    () =>
+      buildCubeHealthReport(
+        allSolves
+          .filter((s) => s.reconstruction && s.moveTimestamps)
+          .map((s) => ({ date: s.date, reconstruction: s.reconstruction!, moveTimestamps: s.moveTimestamps! })),
+      ),
+    [allSolves],
+  );
+
+  return (
+    <>
+      <AppBootstrap />
+      <AppBackground />
+      <div className="flex flex-col items-center gap-4 px-4 py-6">
+        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <TimerIcon size={16} className="text-accent" />
+          Cube
+        </Link>
+
+        <div className="flex w-full max-w-xl flex-col gap-3 pb-10">
+          <div className="flex items-center gap-2 px-1">
+            <FlaskConical size={16} className="text-accent" />
+            <h1 className="text-lg font-semibold text-foreground">Smart Cube Lab</h1>
+          </div>
+
+          <Section
+            icon={<Compass size={15} className="text-accent" />}
+            title="Gyro Twin"
+            subtitle="A live 3D copy of the cube in your hands — stickers and orientation. Whole-cube rotations are named as they happen and written into your reconstructions."
+          >
+            {!connected ? (
+              <div className="flex flex-col items-center gap-2 py-4">
+                <GyroTwin size={90} showControls={false} />
+                <button
+                  type="button"
+                  onClick={() => void connect()}
+                  disabled={connecting || !supported}
+                  className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg disabled:opacity-50"
+                >
+                  {connecting ? <Loader2 size={14} className="animate-spin" /> : <Bluetooth size={14} />}
+                  {supported ? (connecting ? "Connecting…" : "Connect smart cube") : "Web Bluetooth unavailable"}
+                </button>
+                <p className="max-w-xs text-center text-[11px] text-muted-2">
+                  Connect it solved, held yellow top and green front — that grip is the gyro&apos;s home.
+                </p>
+              </div>
+            ) : calibrating ? (
+              <div className="flex flex-col items-center gap-4 py-2">
+                <GyroTwin size={80} showControls={false} />
+                <GyroCalibration onClose={() => setCalibrating(false)} />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <GyroTwin size={110} />
+                <p className="text-[11px] text-muted-2">{deviceName}</p>
+                {gyroActive ? (
+                  <button
+                    type="button"
+                    onClick={() => setCalibrating(true)}
+                    className="text-xs font-medium text-accent underline-offset-2 hover:underline"
+                  >
+                    Calibrate gyro axes
+                  </button>
+                ) : (
+                  <p className="max-w-xs text-center text-[11px] text-muted-2">
+                    This cube isn&apos;t streaming orientation. Gyro needs a GAN Gen2+ or MoYu AI cube — stickers still mirror live.
+                  </p>
+                )}
+              </div>
+            )}
+          </Section>
+
+          <Section
+            icon={<Hand size={15} className="text-accent" />}
+            title="Cube Gestures"
+            subtitle="Spin one face four times quickly (a full 360°, so the cube is untouched) to control the app hands-free between solves."
+          >
+            <label className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2">
+              <span className="text-xs font-medium text-foreground">Enable gestures on the timer</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={gesturesOn}
+                onClick={() => setGesturesOn(!gesturesOn)}
+                className={cn("relative h-5 w-9 rounded-full transition-colors", gesturesOn ? "bg-accent" : "bg-border")}
+              >
+                <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", gesturesOn ? "left-[18px]" : "left-0.5")} />
+              </button>
+            </label>
+            <GestureLegend />
+            <p className="text-center text-[11px] text-muted-2">
+              {connected ? (gesturesOn ? "Try one now — it lights up below." : "Turn gestures on to practice them here.") : "Connect a cube to practice."}
+            </p>
+            <GestureToast toast={toast} />
+          </Section>
+
+          <Section
+            icon={<Radar size={15} className="text-accent" />}
+            title="Mistake Radar"
+            subtitle="Every smart-cube solve replayed move by move: knocked-out pairs, broken crosses, extra OLL/PLL looks, and wasted turns — priced in seconds."
+          >
+            <MistakeHistory solves={allSolves} />
+          </Section>
+
+          <Section
+            icon={<HeartPulse size={15} className="text-accent" />}
+            title="Cube Health"
+            subtitle="Diagnostics for the hardware itself, per physical face: overshoot catches, drag mid-flurry, and wear over time — with what to adjust."
+          >
+            <CubeHealthPanel report={health} />
+          </Section>
+        </div>
+      </div>
+    </>
+  );
+}

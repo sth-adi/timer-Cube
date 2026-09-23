@@ -53,6 +53,7 @@ interface SessionState {
     heartRate?: { avg: number; max: number },
     crossMs?: number,
     moveTimestamps?: number[],
+    gyro?: { rotations: { atMs: number; token: string }[]; orientedReconstruction: string },
   ) => Promise<void>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
@@ -138,7 +139,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps) => {
+  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return;
     // PB detection and achievements only ever look at ordinary 2-handed
@@ -158,6 +159,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       heartRate,
       crossMs,
       moveTimestamps,
+      rotations: gyro?.rotations,
+      orientedReconstruction: gyro?.orientedReconstruction,
     });
     const solves = await getSessionSolves(activeSessionId);
     const allSolves = await getAllSolves();

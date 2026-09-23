@@ -8,6 +8,9 @@ import { crossHeuristic } from "@/lib/solvers/cross";
 import { bottomLayerSolved, orientationSolved, f2lPairSolved } from "@/lib/solvers/oll";
 import { recognizeOll, recognizePll, isOllSkip, isPllSkip } from "@/lib/analysis/recognize";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
+import type { GyroSample } from "@/lib/gyro/orientation";
+import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
+import { useGyroStore } from "./gyroStore";
 
 /**
  * Bridges a real Bluetooth smart cube into this app via
@@ -90,6 +93,13 @@ interface SmartCubeState {
   batterySupported: boolean;
   /** 0-100, or null before the first reading has come back. */
   batteryLevel: number | null;
+  /**
+   * True once this connection has actually streamed an orientation sample.
+   * Detected from the data rather than read off the protocol's static
+   * capability flag, because some drivers (MoYu32 among them) switch the
+   * gyro on at connect and stream it despite advertising no gyroscope.
+   */
+  gyroActive: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
   arm: () => void;
@@ -101,6 +111,20 @@ interface SmartCubeState {
 let conn: SmartCubeConnection | null = null;
 let sub: Subscription | null = null;
 let liveCube: CubeJSInstance = newCube();
+/**
+ * Every gyro sample since the current solve was armed — the raw material
+ * for rotation detection once it finishes (see lib/gyro/orientation.ts's
+ * detectRotations). Module-level rather than store state for the same
+ * reason the gyro bus exists: it grows by dozens of entries a second and
+ * nothing needs to re-render when it does. Starts at arm (not first move)
+ * so the orientation held during inspection is captured too.
+ */
+let gyroLog: GyroSample[] = [];
+
+/** The gyro samples recorded for the current (or just-finished) solve. */
+export function getGyroLog(): readonly GyroSample[] {
+  return gyroLog;
+}
 
 function teardown(): void {
   sub?.unsubscribe();
@@ -129,6 +153,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   liveFacelets: SOLVED_FACELETS,
   batterySupported: false,
   batteryLevel: null,
+  gyroActive: false,
 
   connect: async () => {
     if (!get().supported) {
@@ -146,6 +171,9 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       const connection = await connectSmartCube({ enableAddressSearch: true });
       conn = connection;
       liveCube = newCube();
+      gyroLog = [];
+      resetLatestGyro();
+      useGyroStore.getState().setRef(null);
 
       sub = connection.events$.subscribe((event: SmartCubeEvent) => {
         if (event.type === "DISCONNECT") {
@@ -157,8 +185,21 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
             recording: false,
             batterySupported: false,
             batteryLevel: null,
+            gyroActive: false,
           });
           teardown();
+          return;
+        }
+        if (event.type === "GYRO") {
+          const sample = { atMs: event.timestamp, q: event.quaternion };
+          emitGyro(sample);
+          // First sample of a connection doubles as the home reference —
+          // a best guess (the connect screen asks for the yellow-top grip)
+          // that Re-center or the calibration wizard can correct any time.
+          if (!useGyroStore.getState().ref) useGyroStore.getState().setRef(sample.q);
+          if (!get().gyroActive) set({ gyroActive: true });
+          // Capped (~10 min at 50Hz) so an armed-and-forgotten cube can't grow it without bound.
+          if ((get().armed || get().recording) && gyroLog.length < 30000) gyroLog.push(sample);
           return;
         }
         if (event.type === "BATTERY") {
@@ -167,6 +208,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         }
         if (event.type !== "MOVE") return;
 
+        emitRawMove({ token: event.move, timeStampMs: event.timestamp });
         liveCube.move(event.move);
         const facelets = liveCube.asString();
 
@@ -243,6 +285,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         liveFacelets: SOLVED_FACELETS,
         batterySupported: connection.capabilities.battery,
         batteryLevel: null,
+        gyroActive: false,
       });
       if (connection.capabilities.battery) get().refreshBattery();
     } catch (err) {
@@ -268,10 +311,12 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       recording: false,
       batterySupported: false,
       batteryLevel: null,
+      gyroActive: false,
     });
   },
 
-  arm: () =>
+  arm: () => {
+    gyroLog = [];
     set({
       armed: true,
       recording: false,
@@ -285,7 +330,8 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       pllCaseName: null,
       moves: [],
       error: null,
-    }),
+    });
+  },
 
   cancel: () =>
     set({

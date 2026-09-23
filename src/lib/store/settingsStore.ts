@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { GyroCalibration } from "@/lib/gyro/orientation";
 
 export type InputMethod = "spacebar" | "tap";
 
@@ -71,6 +72,15 @@ export interface SettingsState {
   hideTimeWhileSolving: boolean;
   /** Number of phases each solve is timed in; 1 means a plain single-stop timer. */
   phaseCount: PhaseCount;
+  /**
+   * How each smart-cube protocol's IMU is mounted, learned by the gyro
+   * calibration wizard — keyed by protocol name ("GAN Gen3", "MoYu32"…)
+   * since the mounting is a property of the hardware family, not of one
+   * particular cube. Absent means "use the GAN default".
+   */
+  gyroCalibrations: Record<string, GyroCalibration>;
+  /** Whether identity-sequence gestures on a connected smart cube (e.g. U U U U) trigger app actions. */
+  cubeGestures: boolean;
   setInspectionEnabled: (v: boolean) => void;
   setInputMethod: (v: InputMethod) => void;
   setHoldToStartMs: (v: number) => void;
@@ -82,6 +92,8 @@ export interface SettingsState {
   setDailyGoal: (v: number) => void;
   setHideTimeWhileSolving: (v: boolean) => void;
   setPhaseCount: (v: PhaseCount) => void;
+  setGyroCalibration: (protocol: string, calibration: GyroCalibration | null) => void;
+  setCubeGestures: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -98,6 +110,8 @@ export const useSettingsStore = create<SettingsState>()(
       dailyGoal: 20,
       hideTimeWhileSolving: false,
       phaseCount: 1,
+      gyroCalibrations: {},
+      cubeGestures: true,
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
@@ -109,6 +123,14 @@ export const useSettingsStore = create<SettingsState>()(
       setDailyGoal: (v) => set({ dailyGoal: v }),
       setHideTimeWhileSolving: (v) => set({ hideTimeWhileSolving: v }),
       setPhaseCount: (v) => set({ phaseCount: v }),
+      setGyroCalibration: (protocol, calibration) =>
+        set((s) => {
+          const next = { ...s.gyroCalibrations };
+          if (calibration) next[protocol] = calibration;
+          else delete next[protocol];
+          return { gyroCalibrations: next };
+        }),
+      setCubeGestures: (v) => set({ cubeGestures: v }),
     }),
     {
       name: "cube-timer-settings",
