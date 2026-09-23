@@ -65,7 +65,7 @@ describe("aggregateWeakness", () => {
       analysis([phase({ phase: "oll", label: "OLL", lost: 2, caseName: "Sune" })]),
     ];
     const report = aggregateWeakness(solves);
-    expect(report.cases).toEqual([
+    expect(report.cases).toMatchObject([
       { label: "T Shape 1", totalLost: 10, occurrences: 2, avgLost: 5 },
       { label: "Sune", totalLost: 2, occurrences: 1, avgLost: 2 },
     ]);
@@ -84,5 +84,49 @@ describe("aggregateWeakness", () => {
   it("reports analyzedCount as the number of analyses given", () => {
     const solves = [analysis([]), analysis([]), analysis([])];
     expect(aggregateWeakness(solves).analyzedCount).toBe(3);
+  });
+
+  describe("ranked by time, not moves", () => {
+    // 4 cross moves turned at 100ms each, then an OLL that was recognised
+    // slowly (a 1.2s pause) but executed in the fewest moves, and a PLL
+    // with 3 extra moves turned quickly (80ms each).
+    const moves = ["R", "U", "F", "D", "R", "U", "R'", "U'", "L", "B", "L'"];
+    const timed = (): SolveAnalysis => ({
+      ...analysis([
+        phase({ phase: "cross", label: "Cross", moves: moves.slice(0, 4), lost: 0 }),
+        phase({ phase: "oll", label: "OLL", moves: moves.slice(4, 8), lost: 0, caseName: "Sune" }),
+        phase({ phase: "pll", label: "PLL", moves: moves.slice(8), lost: 3, caseName: "T Perm" }),
+      ]),
+      moves,
+    });
+    //                   R    U    F    D  | R     U     R'    U'  | L     B     L'
+    const timestamps = [100, 200, 300, 400, 1600, 1700, 1800, 1900, 1980, 2060, 2140];
+
+    it("a slow recognition outranks a few quickly-turned extra moves", () => {
+      const report = aggregateWeakness([{ analysis: timed(), moveTimestamps: timestamps }]);
+      expect(report.phases.map((p) => p.label)).toEqual(["OLL", "PLL"]);
+      const oll = report.phases[0];
+      expect(oll.pauseMs).toBe(1200);
+      expect(oll.totalLost).toBe(0);
+      const pll = report.phases[1];
+      expect(pll.extraMoveMs).toBeCloseTo(3 * 80);
+      expect(pll.pauseMs).toBe(0);
+      expect(report.cases.map((c) => c.label)).toEqual(["Sune", "T Perm"]);
+      expect(report.timedCount).toBe(1);
+    });
+
+    it("without per-move timing, prices extra moves at the solve's average pace and marks it estimated", () => {
+      const a = { ...timed(), timeMs: 2200 };
+      const report = aggregateWeakness([a]);
+      expect(report.phases.map((p) => p.label)).toEqual(["PLL"]);
+      expect(report.phases[0].extraMoveMs).toBeCloseTo((3 * 2200) / moves.length);
+      expect(report.phases[0].estimated).toBe(1);
+      expect(report.timedCount).toBe(0);
+    });
+
+    it("ignores timestamps that don't line up with the moves", () => {
+      const report = aggregateWeakness([{ analysis: timed(), moveTimestamps: timestamps.slice(1) }]);
+      expect(report.phases[0].estimated).toBe(1);
+    });
   });
 });

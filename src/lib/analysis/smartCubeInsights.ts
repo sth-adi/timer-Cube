@@ -11,6 +11,7 @@
 
 import type { Solve } from "@/types";
 import { solveFinalMs } from "@/types";
+import { PAUSE_MS } from "@/lib/analytics/pause";
 
 const FACE_LETTERS = ["U", "R", "F", "D", "L", "B"] as const;
 export type Face = (typeof FACE_LETTERS)[number];
@@ -22,41 +23,53 @@ function faceOf(token: string): Face | null {
 
 export interface FaceSpeedStat {
   face: Face;
-  /** Average time (ms) this face's turns took, measured as the gap ending on that move. */
+  /** Average time (ms) of this face's turns *within turning bursts* — pauses excluded. */
   avgGapMs: number;
   turnCount: number;
+  /** How many times a pause (a look, not a turn) came right before this face's move — left out of avgGapMs. */
+  pausesBefore: number;
 }
 
 /**
- * Per-face turn-speed fingerprint: which face costs you the most time per
- * turn, averaged across every smart-cube solve that has real per-move
- * timing. A move's "speed" is the gap between it and the previous move —
- * the regrip-and-turn time that move actually cost, whichever face it was on.
+ * Per-face turn-speed fingerprint: which face is slowest *to turn*, averaged
+ * across every smart-cube solve with real per-move timing. A move's cost is
+ * the gap since the previous move — but only while you're turning. A gap of
+ * PAUSE_MS or more is you looking for the next case or pair, and charging
+ * that to whichever face you happened to turn next would make a face look
+ * mechanically slow when the real cost was recognition. Those gaps are
+ * counted separately (pausesBefore), as is the first move, whose gap runs
+ * from the start of the timer.
  */
 export function computeFaceSpeedFingerprint(solves: readonly Solve[]): FaceSpeedStat[] {
-  const sums = new Map<Face, { totalMs: number; count: number }>();
+  const sums = new Map<Face, { totalMs: number; count: number; pauses: number }>();
+  const entry = (face: Face) => {
+    const e = sums.get(face) ?? { totalMs: 0, count: 0, pauses: 0 };
+    sums.set(face, e);
+    return e;
+  };
 
   for (const solve of solves) {
     if (!solve.reconstruction || !solve.moveTimestamps) continue;
     const tokens = solve.reconstruction.trim().split(/\s+/).filter(Boolean);
     if (tokens.length !== solve.moveTimestamps.length) continue;
 
-    let prev = 0;
-    for (let i = 0; i < tokens.length; i++) {
-      const gap = solve.moveTimestamps[i] - prev;
-      prev = solve.moveTimestamps[i];
+    for (let i = 1; i < tokens.length; i++) {
+      const gap = solve.moveTimestamps[i] - solve.moveTimestamps[i - 1];
       const face = faceOf(tokens[i]);
       if (face === null || gap <= 0) continue;
-      const entry = sums.get(face) ?? { totalMs: 0, count: 0 };
-      entry.totalMs += gap;
-      entry.count += 1;
-      sums.set(face, entry);
+      if (gap >= PAUSE_MS) {
+        entry(face).pauses += 1;
+        continue;
+      }
+      const e = entry(face);
+      e.totalMs += gap;
+      e.count += 1;
     }
   }
 
   return FACE_LETTERS.map((face) => {
-    const entry = sums.get(face);
-    return { face, avgGapMs: entry ? entry.totalMs / entry.count : 0, turnCount: entry?.count ?? 0 };
+    const e = sums.get(face);
+    return { face, avgGapMs: e && e.count ? e.totalMs / e.count : 0, turnCount: e?.count ?? 0, pausesBefore: e?.pauses ?? 0 };
   }).filter((s) => s.turnCount > 0);
 }
 
@@ -147,7 +160,7 @@ export function computeCoachTip(solves: readonly Solve[]): CoachTip | null {
 
   if (lookahead && lookahead.sampleSize >= 3 && lookahead.avgPauseMs > 600) {
     tips.push({
-      title: "Work on lookahead",
+      title: "Work on last-layer lookahead",
       detail: `You're averaging a ${(lookahead.avgPauseMs / 1000).toFixed(1)}s pause right as F2L and OLL finish, before the next phase's first move — try spotting the next case while finishing the current one instead of after.`,
     });
   }
@@ -156,10 +169,10 @@ export function computeCoachTip(solves: readonly Solve[]): CoachTip | null {
     const bySpeed = [...faces].sort((a, b) => b.avgGapMs - a.avgGapMs);
     const slowest = bySpeed[0];
     const fastest = bySpeed[bySpeed.length - 1];
-    if (slowest.turnCount >= 8 && fastest.avgGapMs > 0 && slowest.avgGapMs > fastest.avgGapMs * 1.4) {
+    if (slowest.turnCount >= 20 && fastest.turnCount >= 20 && fastest.avgGapMs > 0 && slowest.avgGapMs > fastest.avgGapMs * 1.4) {
       tips.push({
-        title: `${slowest.face} turns are your bottleneck`,
-        detail: `${slowest.face} moves average ${Math.round(slowest.avgGapMs)}ms versus ${Math.round(fastest.avgGapMs)}ms for your fastest face (${fastest.face}) — a few minutes of dedicated ${slowest.face}-turn drilling on an empty cube should show up fast.`,
+        title: `${slowest.face} turns are your slowest to execute`,
+        detail: `Mid-flow (pauses to look left out), ${slowest.face} moves average ${Math.round(slowest.avgGapMs)}ms versus ${Math.round(fastest.avgGapMs)}ms for your fastest face (${fastest.face}) — a few minutes of ${slowest.face}-turn fingertricks on an empty cube should show up fast.`,
       });
     }
   }

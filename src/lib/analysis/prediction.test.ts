@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Solve } from "@/types";
 import { predictSolveTime } from "./prediction";
+import { computeScrambleFeatures, featureVector } from "./scrambleFeatures";
 
 /** Cheap pseudo-random scramble generator for test fixtures — doesn't need to be WCA-legal, just varied. */
 function makeScramble(seed: number, length: number): string {
@@ -43,14 +44,14 @@ describe("predictSolveTime", () => {
     expect(predictSolveTime(solves, "")).toBeNull();
   });
 
-  it("predicts once there's enough history, and reports a PB probability", () => {
+  it("predicts once there's enough history, but withholds the PB chance until it has been checked", () => {
     const solves = SCRAMBLES.map((s, i) => makeSolve(`${i}`, s, 8000 + i * 200));
     const result = predictSolveTime(solves, SCRAMBLES[0]);
     expect(result).not.toBeNull();
     expect(result!.predictedMs).toBeGreaterThan(0);
-    expect(result!.pbProbability).not.toBeNull();
-    expect(result!.pbProbability).toBeGreaterThanOrEqual(0);
-    expect(result!.pbProbability).toBeLessThanOrEqual(1);
+    // 20 solves is enough to fit, not enough to backtest on later solves.
+    expect(result!.skill).toBeNull();
+    expect(result!.pbProbability).toBeNull();
   });
 
   it("ignores DNFs when finding the current PB and when training", () => {
@@ -68,5 +69,30 @@ describe("predictSolveTime", () => {
       )!.pbProbability,
     );
     expect(realBest).toBe(8000);
+  });
+
+  describe("backtest against your recent average", () => {
+    const many = Array.from({ length: 60 }, (_, i) => makeScramble(i + 101, 20));
+    let x = 7;
+    const noise = () => ((x = (x * 16807) % 2147483647) / 2147483647 - 0.5) * 2; // −1..1
+
+    it("shows the PB chance when scrambles really do explain your times", () => {
+      const solves = many.map((s, i) => {
+        const [crossLen] = featureVector(computeScrambleFeatures(s));
+        return makeSolve(`${i}`, s, 9000 + crossLen * 900 + noise() * 150, { date: i });
+      });
+      const result = predictSolveTime(solves, many[0])!;
+      expect(result.skill!.useful).toBe(true);
+      expect(result.skill!.modelMaeMs).toBeLessThan(result.skill!.baselineMaeMs);
+      expect(result.pbProbability).not.toBeNull();
+    });
+
+    it("hides it when times are unrelated to the scramble", () => {
+      const solves = many.map((s, i) => makeSolve(`${i}`, s, 11_000 + noise() * 1500, { date: i }));
+      const result = predictSolveTime(solves, many[0])!;
+      expect(result.skill).not.toBeNull();
+      expect(result.skill!.useful).toBe(false);
+      expect(result.pbProbability).toBeNull();
+    });
   });
 });

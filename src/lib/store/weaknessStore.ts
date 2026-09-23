@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { aggregateWeakness, type WeaknessReport } from "@/lib/analysis/weaknessReport";
-import type { SolveAnalysis } from "@/lib/analysis/analyze";
+import type { WeaknessInput } from "@/lib/analysis/weaknessReport";
 import type { Solve } from "@/types";
 import { solveFinalMs } from "@/types";
 
@@ -56,7 +56,7 @@ export const useWeaknessStore = create<WeaknessState>((set) => ({
       const client = getCubeEngineClient();
       await client.ready();
 
-      const analyses: SolveAnalysis[] = [];
+      const analyses: WeaknessInput[] = [];
       for (const solve of candidates) {
         const result = await client.analyzeSolve({
           scramble: solve.scramble,
@@ -66,7 +66,7 @@ export const useWeaknessStore = create<WeaknessState>((set) => ({
         // A saved reconstruction can go stale (the solve's scramble field
         // was edited, say) — skip anything that no longer analyzes rather
         // than failing the whole report over one bad entry.
-        if (result.ok) analyses.push(result);
+        if (result.ok) analyses.push({ analysis: result, moveTimestamps: solve.moveTimestamps });
         set((s) => ({ progress: { done: s.progress.done + 1, total: candidates.length } }));
       }
 

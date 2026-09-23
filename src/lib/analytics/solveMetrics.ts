@@ -18,8 +18,9 @@ import type { Solve } from "@/types";
  * them apart is the whole point of asking "why was that solve slow?".
  */
 
-/** A gap between turns at least this long is a pause to look, not execution. */
-export const PAUSE_MS = 400;
+import { PAUSE_MS } from "./pause";
+
+export { PAUSE_MS };
 
 export const PHASES = ["Cross", "F2L", "OLL", "PLL"] as const;
 export type PhaseName = (typeof PHASES)[number];

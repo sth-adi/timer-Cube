@@ -6,18 +6,27 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { candidateSolves, useWeaknessStore } from "@/lib/store/weaknessStore";
 import type { WeaknessEntry } from "@/lib/analysis/weaknessReport";
 
-function Row({ entry, max }: { entry: WeaknessEntry; max: number }) {
+const secs = (ms: number) => `${(ms / 1000).toFixed(ms >= 10_000 ? 1 : 2)}s`;
+
+/** Bar split into pausing (to look) and extra moves (priced at your turning speed). */
+function Row({ entry, max, byTime }: { entry: WeaknessEntry; max: number; byTime: boolean }) {
+  const value = byTime ? entry.lostMs : entry.totalLost;
+  const pauseShare = entry.lostMs > 0 ? entry.pauseMs / entry.lostMs : 0;
+  const width = max > 0 ? (value / max) * 100 : 0;
   return (
     <div className="flex items-center gap-2 text-xs">
       <span className="w-24 shrink-0 truncate text-muted">{entry.label}</span>
-      <div className="relative h-4 flex-1 overflow-hidden rounded bg-bg-panel-2">
-        <div
-          className="absolute inset-y-0 left-0 bg-warning/45"
-          style={{ width: `${max > 0 ? (entry.totalLost / max) * 100 : 0}%` }}
-        />
+      <div className="relative flex h-4 flex-1 overflow-hidden rounded bg-bg-panel-2">
+        <div className="flex h-full" style={{ width: `${width}%` }}>
+          {byTime && <div className="h-full bg-danger/45" style={{ width: `${pauseShare * 100}%` }} />}
+          <div className="h-full flex-1 bg-warning/45" />
+        </div>
       </div>
-      <span className="w-20 shrink-0 text-right tabular-nums text-muted-2">
-        +{entry.totalLost} · ×{entry.occurrences}
+      <span
+        className="w-24 shrink-0 text-right tabular-nums text-muted-2"
+        title={`${entry.totalLost} extra move${entry.totalLost === 1 ? "" : "s"}; ${secs(entry.pauseMs)} pausing${entry.estimated ? `; ${entry.estimated} estimated without move timing` : ""}`}
+      >
+        {byTime ? `${entry.estimated ? "~" : ""}${secs(entry.lostMs)}` : `+${entry.totalLost}`} · ×{entry.occurrences}
       </span>
     </div>
   );
@@ -37,8 +46,11 @@ export function WeaknessReportCard() {
 
   if (candidates.length === 0) return null;
 
-  const maxPhase = report ? Math.max(1, ...report.phases.map((p) => p.totalLost)) : 1;
-  const maxCase = report ? Math.max(1, ...report.cases.map((c) => c.totalLost)) : 1;
+  // Rank and draw by time whenever any timing (measured or estimated) exists; only fall back to moves without it.
+  const byTime = !!report && [...report.phases, ...report.cases].some((e) => e.lostMs > 0);
+  const size = (e: WeaknessEntry) => (byTime ? e.lostMs : e.totalLost);
+  const maxPhase = report ? Math.max(1, ...report.phases.map(size)) : 1;
+  const maxCase = report ? Math.max(1, ...report.cases.map(size)) : 1;
 
   return (
     <div className="card rounded-xl p-4">
@@ -86,7 +98,7 @@ export function WeaknessReportCard() {
                 <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">By phase</p>
                 <div className="space-y-1">
                   {report.phases.map((p) => (
-                    <Row key={p.label} entry={p} max={maxPhase} />
+                    <Row key={p.label} entry={p} max={maxPhase} byTime={byTime} />
                   ))}
                 </div>
               </div>
@@ -95,15 +107,24 @@ export function WeaknessReportCard() {
                   <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">By case</p>
                   <div className="space-y-1">
                     {report.cases.slice(0, 5).map((c) => (
-                      <Row key={c.label} entry={c} max={maxCase} />
+                      <Row key={c.label} entry={c} max={maxCase} byTime={byTime} />
                     ))}
                   </div>
                 </div>
               )}
               <p className="text-[11px] leading-relaxed text-muted-2">
-                Across the last {report.analyzedCount} analyzed solve{report.analyzedCount === 1 ? "" : "s"}. Bar and
-                first number are total extra moves lost to that phase or case; ×N is how many of those solves it
-                showed up in.
+                Across the last {report.analyzedCount} analyzed solve{report.analyzedCount === 1 ? "" : "s"}.{" "}
+                {byTime ? (
+                  <>
+                    Ranked by time lost: <span className="text-danger">pausing to look</span> plus{" "}
+                    <span className="text-warning">extra moves</span> priced at your own turning speed.{" "}
+                    {report.timedCount < report.analyzedCount &&
+                      `${report.analyzedCount - report.timedCount} had no per-move timing, so their pauses are unknown and moves are priced at the solve's average pace (~). `}
+                  </>
+                ) : (
+                  "No timing available, so this ranks by extra moves. "
+                )}
+                ×N is how many of those solves it showed up in.
               </p>
             </div>
           )}

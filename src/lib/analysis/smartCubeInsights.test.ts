@@ -31,29 +31,38 @@ describe("computeFaceSpeedFingerprint", () => {
     ).toEqual([]);
   });
 
-  it("attributes each move's gap to its face, averaged across solves", () => {
-    // R at 100ms (gap 100), U at 300ms (gap 200), R at 350ms (gap 50)
-    const solves = [makeSolve({ reconstruction: "R U R", moveTimestamps: [100, 300, 350] })];
+  it("attributes each move's gap to its face, skipping the first move (its gap runs from the timer start)", () => {
+    // R at 100ms (first move, skipped), U at 300ms (gap 200), R at 350ms (gap 50), R at 420 (gap 70)
+    const solves = [makeSolve({ reconstruction: "R U R R", moveTimestamps: [100, 300, 350, 420] })];
     const result = computeFaceSpeedFingerprint(solves);
     const r = result.find((f) => f.face === "R")!;
     const u = result.find((f) => f.face === "U")!;
     expect(r.turnCount).toBe(2);
-    expect(r.avgGapMs).toBeCloseTo((100 + 50) / 2);
+    expect(r.avgGapMs).toBeCloseTo((50 + 70) / 2);
     expect(u.turnCount).toBe(1);
     expect(u.avgGapMs).toBeCloseTo(200);
   });
 
+  it("a long look before a move doesn't make that face look slow to turn", () => {
+    // Quick U turns throughout, but every U follows a 1.5s recognition pause once.
+    const solves = [makeSolve({ reconstruction: "R U U R U", moveTimestamps: [100, 1600, 1700, 1800, 1900] })];
+    const u = computeFaceSpeedFingerprint(solves).find((f) => f.face === "U")!;
+    expect(u.avgGapMs).toBeCloseTo(100);
+    expect(u.turnCount).toBe(2);
+    expect(u.pausesBefore).toBe(1);
+  });
+
   it("ignores rotations and slices, which have no single face", () => {
-    const solves = [makeSolve({ reconstruction: "x R y", moveTimestamps: [50, 150, 250] })];
+    const solves = [makeSolve({ reconstruction: "U x R y", moveTimestamps: [0, 50, 150, 250] })];
     const result = computeFaceSpeedFingerprint(solves);
     expect(result).toHaveLength(1);
     expect(result[0].face).toBe("R");
   });
 
   it("counts wide moves toward their base face", () => {
-    const solves = [makeSolve({ reconstruction: "Rw", moveTimestamps: [120] })];
+    const solves = [makeSolve({ reconstruction: "U Rw", moveTimestamps: [0, 120] })];
     const result = computeFaceSpeedFingerprint(solves);
-    expect(result).toEqual([{ face: "R", avgGapMs: 120, turnCount: 1 }]);
+    expect(result).toEqual([{ face: "R", avgGapMs: 120, turnCount: 1, pausesBefore: 0 }]);
   });
 });
 

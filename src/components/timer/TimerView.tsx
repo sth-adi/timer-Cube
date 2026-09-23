@@ -151,7 +151,7 @@ export function TimerView() {
   useEffect(() => {
     if (phase === "running" && prevPhaseForAuraRef.current !== "running") {
       const prediction = scramble ? predictSolveTime(normalSolves(solves), scramble) : null;
-      auraTargetRef.current = prediction?.predictedMs ?? normalPbMs ?? null;
+      auraTargetRef.current = (prediction?.skill?.useful ? prediction.predictedMs : null) ?? normalPbMs ?? null;
     }
     if (phase !== "running") {
       auraTargetRef.current = null;

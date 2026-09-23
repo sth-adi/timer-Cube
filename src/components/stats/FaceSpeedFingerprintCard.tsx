@@ -4,11 +4,12 @@ import { useMemo } from "react";
 import { Gauge } from "lucide-react";
 import type { Solve } from "@/types";
 import { computeFaceSpeedFingerprint } from "@/lib/analysis/smartCubeInsights";
+import { PAUSE_MS } from "@/lib/analytics/pause";
 
 /**
- * Which face costs you the most time per turn, averaged across every
- * smart-cube-captured solve. Pure client-side stat — no re-analysis, just
- * the real per-move timestamps a smart cube already gave us.
+ * Which face is slowest to turn, averaged across every smart-cube-captured
+ * solve — measured only while you're turning, so a pause to recognize a
+ * case isn't blamed on the face you turned next.
  */
 export function FaceSpeedFingerprintCard({ solves }: { solves: Solve[] }) {
   const faces = useMemo(() => computeFaceSpeedFingerprint(solves), [solves]);
@@ -41,8 +42,8 @@ export function FaceSpeedFingerprintCard({ solves }: { solves: Solve[] }) {
         ))}
       </div>
       <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2">
-        Average time each face&apos;s turns took, from your smart-cube solves&apos; real move timing — longest bar is
-        your bottleneck face.
+        Average time per turn for each face while you&apos;re turning. Gaps of {PAUSE_MS}ms or more are you looking,
+        not turning, so they&apos;re left out — see the F2L pause map for where those land.
       </p>
     </div>
   );
