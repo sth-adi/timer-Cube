@@ -14,7 +14,28 @@
 --     overwrite a newer one, or revive a deleted row — even if a device
 --     running an older version of the app pushes stale data.
 --
--- Safe to run more than once. Run it in the Supabase SQL editor.
+-- Safe to run more than once.
+
+-- The original schema had updated_at as a NOT NULL timestamptz defaulting to
+-- now(): the server's upload time, not when the row was last changed. Kept,
+-- it would make every old cloud copy look newer than edits on a device, so
+-- those values are cleared rather than converted. A null updated_at means
+-- "never edited under revisions", and the app falls back to the solve's date
+-- (or the session's created_at) for it.
+do $$
+declare t text;
+begin
+  foreach t in array array['sessions', 'solves'] loop
+    if exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = t and column_name = 'updated_at' and data_type <> 'bigint'
+    ) then
+      execute format('alter table public.%I alter column updated_at drop default', t);
+      execute format('alter table public.%I alter column updated_at drop not null', t);
+      execute format('alter table public.%I alter column updated_at type bigint using null', t);
+    end if;
+  end loop;
+end $$;
 
 alter table public.sessions add column if not exists updated_at bigint;
 alter table public.solves add column if not exists updated_at bigint;
@@ -40,7 +61,7 @@ create policy "deletions are private to their owner" on public.deletions
 -- null from a BEFORE trigger silently skips that row, so a stale upsert
 -- succeeds without changing anything.
 create or replace function public.sync_guard() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = '' as $$
 begin
   if exists (
     select 1 from public.deletions d
@@ -66,7 +87,7 @@ create trigger solves_sync_guard before insert or update on public.solves
 -- Recording a deletion removes the row (and, for a session, its solves)
 -- unless the row has been changed since.
 create or replace function public.apply_deletion() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = '' as $$
 begin
   if new.kind = 'solve' then
     delete from public.solves
