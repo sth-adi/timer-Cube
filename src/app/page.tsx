@@ -250,6 +250,15 @@ function HomeInner() {
           >
             <div className="flex flex-col gap-3">
               <StatsPanel />
+              <Link
+                href="/cases"
+                className="card flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium text-foreground hover:bg-bg-panel-2/60"
+              >
+                <span>
+                  Case history <span className="font-normal text-muted-2">· every OLL, PLL & F2L case you&apos;ve had</span>
+                </span>
+                <ChevronRight size={14} className="text-muted-2" />
+              </Link>
               <div className="card rounded-xl p-3">
                 <div className="mb-1 flex items-center justify-between px-1">
                   <span className="text-[11px] uppercase tracking-wide text-muted-2">Recent solves</span>

@@ -12,6 +12,8 @@ export interface PostSolvePhaseRow {
    * lets a row's icon still show the right physical pair.
    */
   f2lPairIndex: 0 | 1 | 2 | 3 | null;
+  /** Absolute timestamp this phase became reachable at (the previous phase's end) — the moment its case was in front of you. */
+  startMs: number | null;
   /** Absolute timestamp (same clock as SmartCubeMove.timeStampMs) this phase finished at — lets a row's icon reconstruct exactly the cube state at that moment by replaying `moves` up to here, without re-deriving it from totalMs arithmetic. Null wherever the boundary itself is still unknown. */
   atMs: number | null;
   totalMs: number | null;
@@ -79,6 +81,7 @@ function buildF2lPairRows(
       group: null,
       caseName: null,
       f2lPairIndex: pairIndex,
+      startMs: prevBoundary,
       atMs,
       totalMs,
       recognitionMs: split.recognitionMs,
@@ -117,6 +120,7 @@ export function buildPostSolveRows(opts: {
     group: null,
     caseName: null,
     f2lPairIndex: null,
+    startMs: startedAtMs,
     atMs: crossAtMs,
     totalMs: crossTotalMs,
     // Cross is a special case: its start boundary (startedAtMs) *is* the
@@ -139,6 +143,7 @@ export function buildPostSolveRows(opts: {
     group: "OLL",
     caseName: ollCaseName,
     f2lPairIndex: null,
+    startMs: f2lEndMs,
     atMs: ollAtMs,
     totalMs: f2lEndMs !== null && ollAtMs !== null ? ollAtMs - f2lEndMs : null,
     recognitionMs: ollSplit.recognitionMs,
@@ -151,6 +156,7 @@ export function buildPostSolveRows(opts: {
     group: "PLL",
     caseName: pllCaseName,
     f2lPairIndex: null,
+    startMs: ollAtMs,
     atMs: solvedAtMs,
     totalMs: ollAtMs !== null && solvedAtMs !== null ? solvedAtMs - ollAtMs : null,
     recognitionMs: pllSplit.recognitionMs,

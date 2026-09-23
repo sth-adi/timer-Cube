@@ -68,6 +68,7 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
 }
 
 const TOOLS = [
+  { href: "/cases", icon: Shapes, title: "Case History", blurb: "Every OLL, PLL and F2L case you've had — how often, and recognise vs execute." },
   { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up — and your golds." },
   { href: "/luck", icon: Clover, title: "Luck Meter", blurb: "How much each solve was the scramble, and your luck-free leaderboard." },
   { href: "/archetypes", icon: Shapes, title: "Solve Archetypes", blurb: "The shapes your solves come in, clustered, and what each costs." },

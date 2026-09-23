@@ -10,6 +10,7 @@ import {
   Bluetooth,
   BluetoothConnected,
   Check,
+  ChevronDown,
   FlaskConical,
   Loader2,
   Play,
@@ -229,6 +230,8 @@ export function SmartCubeTimer() {
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const [saved, setSaved] = useState(false);
+  // The post-solve extras (coach, mistakes, inspection, pace, gyro, X-ray) wait behind one tap.
+  const [showDetails, setShowDetails] = useState(false);
 
   // Auto-verifies the physical scramble against `scramble` and hands off to
   // inspection the instant it matches — see the hook for the full state
@@ -596,7 +599,7 @@ export function SmartCubeTimer() {
         // tilts and turns with the cube in your hands, and names regrips live.
         <GyroTwin size={84} showControls={false} />
       ) : (
-        (armed || recording || finished) && (
+        (armed || recording) && (
           <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl">
             <LiveCubeMimic scramble={mimicScramble} moves={moves} className="h-full w-full" />
           </div>
@@ -623,9 +626,9 @@ export function SmartCubeTimer() {
 
       {finished && (
         <>
-          <div className="flex items-center gap-4 text-xs text-muted">
+          <div className="flex items-center gap-3 text-xs text-muted">
             <span>{moves.length} moves</span>
-            {avgTps !== null && <span>{avgTps.toFixed(2)} avg TPS</span>}
+            {avgTps !== null && <span>{avgTps.toFixed(2)} TPS</span>}
             {saved && (
               <span className="flex items-center gap-1 text-success">
                 <Check size={12} /> Saved
@@ -635,73 +638,95 @@ export function SmartCubeTimer() {
 
           <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} />
 
-          {finishedGyro && startedAtMs !== null && (
-            <GyroReconstructionCard
-              summary={finishedGyro}
-              phases={postSolveRows.map((r) => ({ label: r.label, endMs: r.atMs !== null ? r.atMs - startedAtMs : null }))}
-            />
-          )}
-
-          {inspection && <InspectionGradeCard report={inspection} />}
-
-          {pacer.enabled && (
-            <PaceLadderCard
-              actual={liveMilestones({ startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs, solvedAtMs })}
-              targets={pacer.targets}
-              targetMs={pacer.targetMs}
-            />
-          )}
-
-          {finishedGaze && <GazeCard report={finishedGaze.report} facelets={finishedGaze.facelets} />}
-
-          {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
-
-          {finishedScramble && <XrayTeaser scramble={finishedScramble} moves={moveTokens} timesMs={moveTimestampsRel} />}
-
-          <PostSolveCoachCard
-            rows={postSolveRows}
-            totalMs={elapsedMs}
-            tps={avgTps}
-            sessionMeanMs={coachSessionStats.mean}
-            isNewPB={coachSessionStats.best !== null && elapsedMs <= coachSessionStats.best}
-          />
-
-          {buckets.length > 1 && (
-            <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">
-              {buckets.map((b, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-sm bg-accent/70"
-                  style={{ height: `${Math.max(6, (b.tps / maxBucket) * 100)}%` }}
-                  title={`${b.tps.toFixed(1)} TPS`}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex w-full gap-2">
             <button
               type="button"
               onClick={() => setShowReplay(true)}
-              className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-accent px-3 py-2.5 text-sm font-semibold text-accent-fg"
             >
-              <Play size={14} /> View reconstruction
+              <Play size={14} /> Replay
             </button>
             <button
               type="button"
               onClick={onAnalyze}
-              className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-bg-panel-2 px-3 py-2.5 text-sm font-medium text-muted hover:text-foreground"
             >
-              <Wand2 size={14} /> Full analysis
+              <Wand2 size={14} /> Analyze
             </button>
             <button
               type="button"
               onClick={onDismiss}
-              className="rounded-full bg-bg-panel-2 px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground"
+              className="flex-1 rounded-full bg-bg-panel-2 px-3 py-2.5 text-sm font-medium text-muted hover:text-foreground"
             >
-              Dismiss
+              Done
             </button>
           </div>
+
+          <div className="flex w-full items-center justify-between px-1">
+            <button
+              type="button"
+              onClick={() => setShowDetails((v) => !v)}
+              aria-expanded={showDetails}
+              className="flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground"
+            >
+              {showDetails ? "Fewer details" : "More details"}
+              <ChevronDown size={13} className={cn("transition-transform", showDetails && "rotate-180")} />
+            </button>
+            <Link href="/cases" className="text-xs font-medium text-accent hover:underline">
+              All your cases →
+            </Link>
+          </div>
+
+          {showDetails && (
+            <div className="flex w-full flex-col gap-3">
+              <PostSolveCoachCard
+                rows={postSolveRows}
+                totalMs={elapsedMs}
+                tps={avgTps}
+                sessionMeanMs={coachSessionStats.mean}
+                isNewPB={coachSessionStats.best !== null && elapsedMs <= coachSessionStats.best}
+              />
+
+              {buckets.length > 1 && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Turn speed through the solve</p>
+                  <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">
+                    {buckets.map((b, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 rounded-sm bg-accent/70"
+                        style={{ height: `${Math.max(6, (b.tps / maxBucket) * 100)}%` }}
+                        title={`${b.tps.toFixed(1)} TPS`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
+
+              {inspection && <InspectionGradeCard report={inspection} />}
+
+              {pacer.enabled && (
+                <PaceLadderCard
+                  actual={liveMilestones({ startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs, solvedAtMs })}
+                  targets={pacer.targets}
+                  targetMs={pacer.targetMs}
+                />
+              )}
+
+              {finishedGyro && startedAtMs !== null && (
+                <GyroReconstructionCard
+                  summary={finishedGyro}
+                  phases={postSolveRows.map((r) => ({ label: r.label, endMs: r.atMs !== null ? r.atMs - startedAtMs : null }))}
+                />
+              )}
+
+              {finishedGaze && <GazeCard report={finishedGaze.report} facelets={finishedGaze.facelets} />}
+
+              {finishedScramble && <XrayTeaser scramble={finishedScramble} moves={moveTokens} timesMs={moveTimestampsRel} />}
+            </div>
+          )}
         </>
       )}
 
@@ -733,7 +758,7 @@ export function SmartCubeTimer() {
               Next scramble — this recap stays up until you scramble it
             </p>
           )}
-          {scramble && (
+          {scramble && !finished && (
             <div className="w-full max-w-[13rem]">
               <ScrambleNet scramble={scramble} className="w-full" />
             </div>

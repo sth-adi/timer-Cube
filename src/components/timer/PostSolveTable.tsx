@@ -5,87 +5,125 @@ import type { PostSolvePhaseRow } from "@/lib/analysis/postSolveTable";
 import type { SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
 import { invertAlg } from "@/lib/algorithms/algUtils";
-import { crossLookaheadFacelets, f2lPairSlotFacelets } from "@/lib/analysis/pieceLookahead";
+import { crossLookaheadFacelets } from "@/lib/analysis/pieceLookahead";
+import { recognizeF2lCase, type F2lCase } from "@/lib/analysis/f2lCase";
+import { Cube } from "@/lib/cube-engine/engine";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
-import { CubeLookaheadIcon } from "@/components/timer/CubeLookaheadIcon";
+import { F2lCaseIcon } from "@/components/algorithms/F2lCaseIcon";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
-function fmt(ms: number | null): string {
-  return ms === null ? "—" : formatTime(ms);
+const secs = (ms: number) => (ms / 1000).toFixed(2);
+
+/** The cube exactly as it was at `atMs`: the scramble plus every move made up to then. */
+function cubeAt(scramble: string, moves: SmartCubeMove[], atMs: number | null): InstanceType<typeof Cube> {
+  const cube = new Cube();
+  const tokens = atMs === null ? [] : moves.filter((m) => m.timeStampMs <= atMs).map((m) => m.token);
+  const alg = [scramble, ...tokens].join(" ").trim();
+  if (alg) cube.move(alg);
+  return cube;
 }
 
-/** Human labels for f2lPairIndex's physical slots (0=URF/FR..3=UBR/BR — see pieceLookahead.ts). */
-const F2L_SLOT_LABEL = ["Front-right", "Front-left", "Back-left", "Back-right"] as const;
+const ICON = "h-10 w-10 shrink-0";
 
-/** The scramble plus every recorded move up to (and including) `atMs`, as one alg string — reconstructs exactly the cube state at that instant so a pair's icon can show it as it actually looked the moment that pair went in, not the post-scramble look-ahead. */
-function algUpTo(scramble: string, moves: SmartCubeMove[], atMs: number | null): string {
-  if (atMs === null) return scramble;
-  const tokens = moves.filter((m) => m.timeStampMs <= atMs).map((m) => m.token);
-  return tokens.length ? `${scramble} ${tokens.join(" ")}` : scramble;
+/** A white cross on the yellow-up cube's bottom face, drawn flat. */
+function CrossGlyph() {
+  return (
+    <svg viewBox="0 0 3 3" className={cn(ICON, "p-1.5")} aria-hidden>
+      {[
+        [0, 0], [2, 0], [0, 2], [2, 2],
+      ].map(([x, y]) => (
+        <rect key={`${x}${y}`} x={x + 0.08} y={y + 0.08} width={0.84} height={0.84} rx={0.12} fill="#3a3d46" />
+      ))}
+      {[
+        [1, 0], [0, 1], [1, 1], [2, 1], [1, 2],
+      ].map(([x, y]) => (
+        <rect key={`c${x}${y}`} x={x + 0.08} y={y + 0.08} width={0.84} height={0.84} rx={0.12} fill="#f5f5f0" />
+      ))}
+    </svg>
+  );
 }
 
-function RowIcon({ row, scramble, moves }: { row: PostSolvePhaseRow; scramble: string; moves: SmartCubeMove[] }) {
+interface RowView {
+  row: PostSolvePhaseRow;
+  icon: React.ReactNode;
+  caseName: string | null;
+}
+
+function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[]): RowView {
   if (row.label === "Cross") {
-    return <CubeLookaheadIcon scramble={scramble} highlighted={crossLookaheadFacelets(scramble)} className="h-7 w-7 shrink-0" />;
+    const solvedEdges = crossLookaheadFacelets(scramble).size / 2;
+    return { row, caseName: solvedEdges > 0 ? `${solvedEdges} edge${solvedEdges === 1 ? "" : "s"} already solved` : null, icon: <CrossGlyph /> };
   }
   if (row.f2lPairIndex !== null) {
-    const stateAlg = algUpTo(scramble, moves, row.atMs);
-    const highlighted = new Set(f2lPairSlotFacelets(row.f2lPairIndex));
-    return <CubeLookaheadIcon scramble={stateAlg} highlighted={highlighted} className="h-9 w-9 shrink-0" />;
+    // The case is what was in front of you when you *started* the pair.
+    const f2l: F2lCase | null = row.startMs !== null ? recognizeF2lCase(cubeAt(scramble, moves, row.startMs), row.f2lPairIndex) : null;
+    return {
+      row,
+      caseName: f2l?.name ?? null,
+      icon: f2l ? <F2lCaseIcon facelets={f2l.facelets} pairFacelets={f2l.pairFacelets} className={ICON} /> : <span className={ICON} />,
+    };
   }
   const algCase = row.group && row.caseName ? findCase(row.group, row.caseName) : undefined;
-  if (!algCase) return null;
-  return <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={row.group!} className="h-7 w-7 shrink-0 overflow-hidden rounded-[2px]" />;
+  return {
+    row,
+    caseName: row.caseName,
+    icon: algCase ? (
+      <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={row.group!} className={cn(ICON, "overflow-hidden rounded-[3px] p-0.5")} />
+    ) : (
+      <span className={ICON} />
+    ),
+  };
 }
 
 /**
- * The Cubeast-style post-solve breakdown: one row per CFOP phase (F2L
- * expanded into one row per pair, in the order it was actually solved) with
- * its case (icon + name, where one applies), total time, and how much of
- * that total was spent recognizing the case versus actually executing it. A
- * real table rather than the scattered pills this used to be — see
- * buildPostSolveRows for where every number comes from.
- *
- * Cross doesn't have a "case" the way OLL/PLL do, so its icon shows
- * something different but just as useful: a 3D look-ahead view of the
- * scrambled cube with whichever cross pieces the scramble happened to
- * already leave solved highlighted. Each F2L pair's icon instead shows the
- * cube exactly as it looked the instant that pair was completed, with just
- * that one pair's 5 stickers highlighted — a real "picture of the case",
- * not a lookahead — reconstructed by replaying the recorded moves up to
- * that pair's own timestamp (see lib/analysis/pieceLookahead.ts).
+ * The post-solve breakdown: one row per step (each F2L pair in the order you
+ * solved it), with the case you had, the time, and a bar split into
+ * recognising the case (light) and turning through it (solid).
  */
 export function PostSolveTable({ rows, scramble, moves }: { rows: PostSolvePhaseRow[]; scramble: string; moves: SmartCubeMove[] }) {
-  const rowIcons = useMemo(
-    () => rows.map((row) => <RowIcon key={row.label} row={row} scramble={scramble} moves={moves} />),
-    [rows, scramble, moves],
-  );
+  const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves)), [rows, scramble, moves]);
+  const max = Math.max(1, ...rows.map((r) => r.totalMs ?? 0));
 
   return (
-    <div className="w-full rounded-xl bg-bg-panel-2 p-2.5">
-      <div className="grid grid-cols-[minmax(0,1fr)_3.2rem_3.2rem_3.2rem] items-center gap-x-2 gap-y-2.5 text-[11px]">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Phase</span>
-        <span className="text-right text-[10px] font-medium uppercase tracking-wide text-muted-2">Total</span>
-        <span className="text-right text-[10px] font-medium uppercase tracking-wide text-muted-2">Reco</span>
-        <span className="text-right text-[10px] font-medium uppercase tracking-wide text-muted-2">Exec</span>
-
-        {rows.map((row, i) => (
-          <div key={row.label} className="contents">
-            <span className="flex min-w-0 items-center gap-2">
-              {rowIcons[i]}
-              <span className="truncate">
-                <span className={cn("font-medium", row.totalMs !== null ? "text-foreground" : "text-muted-2")}>{row.label}</span>
-                {row.caseName && <span className="text-muted-2"> · {row.caseName}</span>}
-                {row.f2lPairIndex !== null && <span className="text-muted-2"> · {F2L_SLOT_LABEL[row.f2lPairIndex]}</span>}
-              </span>
-            </span>
-            <span className="text-right tabular-nums text-foreground">{fmt(row.totalMs)}</span>
-            <span className="text-right tabular-nums text-muted-2">{fmt(row.recognitionMs)}</span>
-            <span className="text-right tabular-nums text-muted-2">{fmt(row.executionMs)}</span>
-          </div>
-        ))}
+    <div className="w-full rounded-xl bg-bg-panel-2 p-3">
+      <div className="flex flex-col gap-2.5">
+        {views.map(({ row, icon, caseName }) => {
+          const look = row.recognitionMs ?? 0;
+          const turn = row.executionMs ?? row.totalMs ?? 0;
+          return (
+            <div key={row.label} className="flex items-center gap-2.5">
+              {icon}
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="min-w-0 text-xs leading-tight" title={caseName ?? undefined}>
+                  <span className={cn("font-semibold", row.totalMs !== null ? "text-foreground" : "text-muted-2")}>{row.label}</span>
+                  {caseName && <span className="block truncate text-[11px] text-muted-2">{caseName}</span>}
+                </p>
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-bg-elevated">
+                  <div className="h-full bg-warning/50" style={{ width: `${(look / max) * 100}%` }} />
+                  <div className="h-full bg-accent" style={{ width: `${(turn / max) * 100}%` }} />
+                </div>
+              </div>
+              <div className="w-14 shrink-0 text-right">
+                <p className="text-sm font-semibold tabular-nums text-foreground">{row.totalMs === null ? "—" : formatTime(row.totalMs)}</p>
+                {row.recognitionMs !== null && row.executionMs !== null && (
+                  <p className="text-[10px] tabular-nums text-muted-2">
+                    {secs(row.recognitionMs)} + {secs(row.executionMs)}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
+      <p className="mt-2.5 flex items-center justify-center gap-3 text-[10px] text-muted-2">
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-3 rounded-full bg-warning/50" /> recognising
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-3 rounded-full bg-accent" /> turning
+        </span>
+      </p>
     </div>
   );
 }
