@@ -3,7 +3,8 @@
 import { useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { RotateCcw } from "lucide-react";
-import { useTimer } from "@/hooks/useTimer";
+import { useTimer, type TimerResult } from "@/hooks/useTimer";
+import { useTimerInput } from "@/hooks/useTimerInput";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useTrainerStore } from "@/lib/store/trainerStore";
 import { averageOfN } from "@/lib/stats/stats";
@@ -50,43 +51,20 @@ export function TrainerView() {
   }, []);
 
   const onComplete = useCallback(
-    (ms: number) => {
+    ({ timeMs: ms }: TimerResult) => {
       recordTime(ms);
       void loadNext();
     },
     [recordTime, loadNext],
   );
 
-  const { phase, displayMs, press, release, reset } = useTimer({
+  const { phase, displayMs, press, release, cancel, reset } = useTimer({
     inspectionEnabled: false,
     holdToStartMs,
     onComplete,
   });
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const inField = !!target && ["INPUT", "TEXTAREA"].includes(target.tagName);
-      if (e.code === "Space" && !e.repeat && !inField) {
-        e.preventDefault();
-        press();
-      } else if (e.code === "Escape" && !inField) {
-        e.preventDefault();
-        reset();
-      }
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      e.preventDefault();
-      release();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-  }, [press, release, reset]);
+  const touch = useTimerInput({ press, release, cancel, reset });
 
   const best = times.length > 0 ? Math.min(...times) : null;
   const mean = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : null;
@@ -126,14 +104,7 @@ export function TrainerView() {
 
       <div
         className="flex flex-1 flex-col items-center justify-center gap-2 select-none touch-none"
-        onTouchStart={(e) => {
-          e.preventDefault();
-          press();
-        }}
-        onTouchEnd={(e) => {
-          e.preventDefault();
-          release();
-        }}
+        {...touch}
       >
         <p className={cn("tabular-timer text-[16vw] leading-none font-bold sm:text-7xl", PHASE_COLOR[phase])}>
           {formatTime(displayMs)}

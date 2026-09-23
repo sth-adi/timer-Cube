@@ -1,15 +1,20 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { Session, Solve } from "@/types";
+import type { Deletion, Session, Solve } from "@/types";
 
 export class CubeTimerDB extends Dexie {
   sessions!: EntityTable<Session, "id">;
   solves!: EntityTable<Solve, "id">;
+  /** Records of deleted sessions/solves, so sync can propagate deletions (see lib/db/merge.ts). */
+  deletions!: EntityTable<Deletion, "id">;
 
   constructor() {
     super("cube-timer-db");
     this.version(1).stores({
       sessions: "id, order, createdAt",
       solves: "id, sessionId, date, [sessionId+date]",
+    });
+    this.version(2).stores({
+      deletions: "id, kind, deletedAt",
     });
   }
 }
@@ -34,6 +39,7 @@ export async function ensureDefaultSession(): Promise<Session> {
       event: "333",
       createdAt: Date.now(),
       order: 0,
+      updatedAt: Date.now(),
     };
     await db.sessions.add(session);
     return session;

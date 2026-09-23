@@ -32,6 +32,7 @@ import { inspectionReport } from "@/lib/inspection/report";
 import { GazeCard } from "@/components/gaze/GazeCard";
 import { analyzeGaze, type GazeReport } from "@/lib/gaze/gaze";
 import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
+import { inspectionPenalty } from "@/lib/timer/timerMachine";
 import { PaceChip, PaceLadderCard } from "@/components/pacer/PaceCards";
 import { useSplitPacer } from "@/hooks/useSplitPacer";
 import { liveMilestones } from "@/lib/pacer/pacer";
@@ -374,6 +375,9 @@ export function SmartCubeTimer() {
       crossMs,
       moveTimestampsRel,
       gyro ? { rotations: gyro.rotations, orientedReconstruction: gyro.orientedReconstruction } : undefined,
+      // Inspection ran from the moment the scramble matched to the first
+      // turn: +2 past 15s, DNF past 17s — same rule as the keyboard timer.
+      flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs! - flow.inspectionStartedAtMs) : undefined,
     );
     if (soundEnabled) playSolveChime();
     setSaved(true);
@@ -388,6 +392,7 @@ export function SmartCubeTimer() {
     void nextScramble();
   }, [
     finished,
+    flow.inspectionStartedAtMs,
     solvedAtMs,
     moves,
     startedAtMs,
@@ -575,7 +580,7 @@ export function SmartCubeTimer() {
 
       {armed && !recording && flow.phase === "inspecting" ? (
         <p className="tabular-timer text-center text-6xl font-bold text-danger">
-          {Math.ceil(flow.inspectionRemainingMs / 1000)}
+          {flow.pendingPenalty === "plus2" ? "+2" : flow.pendingPenalty === "dnf" ? "DNF" : Math.ceil(flow.inspectionRemainingMs / 1000)}
         </p>
       ) : (
         (armed || recording || finished) && (
@@ -597,7 +602,8 @@ export function SmartCubeTimer() {
 
       {armed && !recording && flow.phase !== "inspecting" && (
         <p className="flex items-center gap-1.5 text-sm text-accent">
-          <Radio size={14} className="animate-pulse" /> Waiting for your first move…
+          <Radio size={14} className="animate-pulse" />{" "}
+          {flow.pendingPenalty === "dnf" ? "Inspection ran past 17s — this attempt will be saved as a DNF" : "Waiting for your first move…"}
         </p>
       )}
       {armed && !recording && flow.phase === "inspecting" && (

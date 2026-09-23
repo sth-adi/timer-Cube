@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { useAuthStore } from "./authStore";
 import { useSessionStore } from "./sessionStore";
-import { pullAll, pushAll, pushPublicStats, SyncTimeoutError } from "@/lib/db/cloudSync";
+import { pushPublicStats, syncWithCloud, SyncTimeoutError } from "@/lib/db/cloudSync";
 import { displayUsername } from "@/lib/auth/username";
 
 export type CloudSyncStatus = "idle" | "syncing" | "synced" | "error";
@@ -80,9 +80,10 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
     }
     set({ status: "syncing", error: null });
     try {
-      await pushAll(user.id);
-      const result = await pullAll(user.id);
-      if (result.addedSessions > 0 || result.addedSolves > 0) {
+      // Pull-then-push: merging the cloud's state in first means what gets
+      // pushed is already the most recent version of everything.
+      const result = await syncWithCloud(user.id);
+      if (result.addedSessions > 0 || result.addedSolves > 0 || result.updated > 0 || result.removed > 0) {
         await useSessionStore.getState().refreshFromDb();
         await useSessionStore.getState().adoptSyncedSessionIfLocalEmpty();
       }

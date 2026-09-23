@@ -3,7 +3,6 @@ import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
 import { addSolve, deleteSolve, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
-import { deleteRemoteSolve, deleteRemoteSession } from "@/lib/db/cloudSync";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { computeAchievements, computeSessionStats, normalSolves, type AchievementState } from "@/lib/stats/stats";
@@ -54,6 +53,8 @@ interface SessionState {
     crossMs?: number,
     moveTimestamps?: number[],
     gyro?: { rotations: { atMs: number; token: string }[]; orientedReconstruction: string },
+    /** A penalty earned before the solve started (inspection overrun: +2 or DNF). */
+    penalty?: Penalty,
   ) => Promise<void>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
@@ -125,8 +126,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   removeSession: async (id) => {
+    // Recorded as a deletion locally; the next sync (triggered by this very
+    // change) carries it to the cloud and every other device.
     await deleteSession(id);
-    void deleteRemoteSession(id);
     const sessions = await listSessions();
     const active = get().activeSessionId;
     const allSolves = await getAllSolves();
@@ -139,7 +141,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro) => {
+  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return;
     // PB detection and achievements only ever look at ordinary 2-handed
@@ -153,6 +155,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       sessionId: activeSessionId,
       timeMs,
       scramble,
+      penalty,
       splits,
       event: event ?? undefined,
       reconstruction,
@@ -210,7 +213,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   removeSolve: async (solveId) => {
     await deleteSolve(solveId);
-    void deleteRemoteSolve(solveId);
     const { activeSessionId } = get();
     if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
   },

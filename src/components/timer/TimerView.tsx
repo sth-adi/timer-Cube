@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useTimer } from "@/hooks/useTimer";
+import { useTimer, type TimerResult } from "@/hooks/useTimer";
+import { useTimerInput } from "@/hooks/useTimerInput";
+import { isTextField } from "@/lib/timer/timerInput";
 import { PHASE_LABELS, type PhaseCount, useSettingsStore } from "@/lib/store/settingsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -110,21 +112,23 @@ export function TimerView() {
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
 
   const onComplete = useCallback(
-    (timeMs: number, solveSplits: number[]) => {
+    ({ timeMs, splits: solveSplits, penalty }: TimerResult) => {
       // The keyboard timer doesn't carry an absolute start timestamp — only
       // an elapsed duration — so "now minus that duration" is the best
       // available anchor for pulling in the heart-rate samples logged
       // during this solve. A few milliseconds of render latency here is
       // irrelevant next to a multi-second bpm sampling interval.
       const heartRate = summarizeHeartRate(Date.now() - timeMs) ?? undefined;
-      recordSolve(timeMs, scramble, solveSplits, pendingEvent ?? undefined, undefined, heartRate);
+      // The inspection penalty (+2 past 15s, DNF past 17s) is saved with the
+      // solve itself, so stats treat it exactly like a penalty added by hand.
+      recordSolve(timeMs, scramble, solveSplits, pendingEvent ?? undefined, undefined, heartRate, undefined, undefined, undefined, penalty);
       if (soundEnabled) playSolveChime();
       void nextScramble();
     },
     [recordSolve, scramble, nextScramble, soundEnabled, pendingEvent, summarizeHeartRate],
   );
 
-  const { phase, displayMs, inspectionRemainingMs, splits, phaseIndex, press, release, reset } = useTimer({
+  const { phase, displayMs, inspectionRemainingMs, pendingPenalty, lastResult, splits, phaseIndex, press, release, cancel, reset } = useTimer({
     inspectionEnabled,
     holdToStartMs,
     phaseCount,
@@ -182,44 +186,24 @@ export function TimerView() {
 
   useEffect(() => () => resetPerformanceAura(), []);
 
+  const touch = useTimerInput({ press, release, cancel, reset });
+
+  // Delete/Backspace removes the most recent solve — but only when not
+  // typing anywhere and the timer isn't live, so it can't eat a real
+  // keystroke or nuke a solve mid-attempt.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const inField = !!target && ["INPUT", "TEXTAREA"].includes(target.tagName);
-
-      if (e.code === "Space" && !e.repeat && !inField) {
+      if ((e.code !== "Delete" && e.code !== "Backspace") || isTextField(e.target)) return;
+      if (phase !== "idle" && phase !== "stopped") return;
+      const last = solves[solves.length - 1];
+      if (last) {
         e.preventDefault();
-        press();
-        return;
+        void removeSolve(last.id);
       }
-      if (e.code === "Escape" && !inField) {
-        e.preventDefault();
-        reset();
-        return;
-      }
-      // Delete/Backspace removes the most recent solve — but only when not
-      // typing anywhere and the timer isn't live, so it can't eat a real
-      // keystroke or nuke a solve mid-attempt.
-      if ((e.code === "Delete" || e.code === "Backspace") && !inField && (phase === "idle" || phase === "stopped")) {
-        const last = solves[solves.length - 1];
-        if (last) {
-          e.preventDefault();
-          void removeSolve(last.id);
-        }
-      }
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      e.preventDefault();
-      release();
     };
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-  }, [press, release, reset, phase, solves, removeSolve]);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase, solves, removeSolve]);
 
   // Deliberately no auto-reset here: the just-finished time stays on screen
   // (this is "stopped", not "idle") until the next attempt actually begins —
@@ -252,20 +236,15 @@ export function TimerView() {
   return (
     <div
       className="flex flex-1 flex-col items-center justify-center gap-6 select-none touch-none"
-      onTouchStart={(e) => {
-        e.preventDefault();
-        press();
-      }}
-      onTouchEnd={(e) => {
-        e.preventDefault();
-        release();
-      }}
+      {...touch}
     >
       <InspectionRing remainingMs={inspectionRemainingMs} active={showInspection} />
 
       {showInspection && (
-        <p className={cn("tabular-timer text-2xl font-medium", inspectionRemainingMs < 5000 ? "text-danger" : "text-muted")}>
-          {Math.ceil(inspectionRemainingMs / 1000)}
+        // Past 15s the countdown is replaced by the penalty a start would now
+        // earn — WCA: +2 until 17s, DNF after.
+        <p className={cn("tabular-timer text-2xl font-medium", inspectionRemainingMs < 5000 || pendingPenalty !== "none" ? "text-danger" : "text-muted")}>
+          {pendingPenalty === "plus2" ? "+2" : pendingPenalty === "dnf" ? "DNF" : Math.ceil(inspectionRemainingMs / 1000)}
         </p>
       )}
       {pendingEvent && (
@@ -311,6 +290,11 @@ export function TimerView() {
           </p>
           <PredictionBadge />
         </>
+      )}
+      {phase === "stopped" && lastResult && lastResult.penalty !== "none" && (
+        <p className="rounded-full bg-danger/15 px-3 py-1 text-sm font-semibold text-danger">
+          {lastResult.penalty === "dnf" ? "DNF" : "+2"} — started {((lastResult.inspection?.elapsedMs ?? 0) / 1000).toFixed(2)}s into inspection
+        </p>
       )}
       {phase === "stopped" && <p className="text-muted-2 text-sm">space for next scramble</p>}
     </div>

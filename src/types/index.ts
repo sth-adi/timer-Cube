@@ -71,6 +71,14 @@ export interface Solve {
    * happened — what a cuber would write by hand. Only present for gyro solves.
    */
   orientedReconstruction?: string;
+  /**
+   * When this row last changed (ms, epoch) — set on create and on every edit
+   * (penalty, comment, reconstruction). Sync resolves conflicts with it:
+   * the most recent change to an id wins, deletions included (see
+   * lib/db/merge.ts). Absent on rows from before sync revisions existed,
+   * where `date` stands in for it.
+   */
+  updatedAt?: number;
 }
 
 export interface Session {
@@ -79,6 +87,19 @@ export interface Session {
   event: WcaEvent;
   createdAt: number;
   order: number;
+  /** Last change (ms, epoch); `createdAt` stands in for rows that predate it. See Solve.updatedAt. */
+  updatedAt?: number;
+}
+
+/**
+ * A record that something was deleted, kept so sync can tell "deleted on
+ * another device" apart from "never seen here" — without it, any device
+ * that still had the row would quietly bring it back.
+ */
+export interface Deletion {
+  id: string;
+  kind: "solve" | "session";
+  deletedAt: number;
 }
 
 /** Final time including +2 penalty, or null for DNF. */

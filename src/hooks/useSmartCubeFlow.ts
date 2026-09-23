@@ -5,6 +5,8 @@ import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { isScrambleComplete } from "@/lib/analysis/scrambleVerify";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
+import { INSPECTION_DNF_MS, INSPECTION_MS, inspectionPenalty } from "@/lib/timer/timerMachine";
+import type { Penalty } from "@/types";
 
 /**
  * How long the cube has to sit still, still not matching the scramble,
@@ -15,8 +17,8 @@ import { getCubeEngineClient } from "@/lib/cube-engine/client";
  */
 const PAUSE_BEFORE_CORRECTION_MS = 1500;
 
-/** Same WCA 15s window the keyboard timer's inspection uses (see useTimer.ts). */
-export const SMART_CUBE_INSPECTION_MS = 15_000;
+/** Same WCA 15s window the keyboard timer's inspection uses (see lib/timer/timerMachine.ts). */
+export const SMART_CUBE_INSPECTION_MS = INSPECTION_MS;
 
 export type SmartCubeScramblePhase = "scrambling" | "inspecting" | "ready-to-solve";
 
@@ -27,6 +29,10 @@ export interface SmartCubeFlow {
   /** True while a correction is being computed on the worker. */
   correcting: boolean;
   inspectionRemainingMs: number;
+  /** The penalty the first turn would earn right now: +2 past 15s of inspection, DNF past 17s. */
+  pendingPenalty: Penalty;
+  /** performance.now() when inspection began (the scramble matched), or null with inspection off. */
+  inspectionStartedAtMs: number | null;
 }
 
 /**
@@ -49,6 +55,8 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   const [correction, setCorrection] = useState<string[] | null>(null);
   const [correcting, setCorrecting] = useState(false);
   const [inspectionRemainingMs, setInspectionRemainingMs] = useState(SMART_CUBE_INSPECTION_MS);
+  const [pendingPenalty, setPendingPenalty] = useState<Penalty>("none");
+  const [inspectionStartedAtMs, setInspectionStartedAtMs] = useState<number | null>(null);
 
   const requestIdRef = useRef(0);
 
@@ -66,6 +74,8 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     if (correction !== null) setCorrection(null);
     if (correcting) setCorrecting(false);
     if (inspectionRemainingMs !== SMART_CUBE_INSPECTION_MS) setInspectionRemainingMs(SMART_CUBE_INSPECTION_MS);
+    if (pendingPenalty !== "none") setPendingPenalty("none");
+    if (inspectionStartedAtMs !== null) setInspectionStartedAtMs(null);
   }
 
   const matched = phase === "scrambling" && connected && scramble !== "" && isScrambleComplete(liveFacelets, scramble);
@@ -82,6 +92,8 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
       setCorrection(null);
       setCorrecting(false);
       arm();
+      setInspectionStartedAtMs(inspectionEnabled ? performance.now() : null);
+      setPendingPenalty("none");
       setPhase(inspectionEnabled ? "inspecting" : "ready-to-solve");
     }
     prevMatchedRef.current = matched;
@@ -127,16 +139,18 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     return () => window.clearTimeout(timer);
   }, [liveFacelets, scramble, phase, matched]);
 
-  // WCA-style inspection countdown — display only, see above; the solve is
-  // already armed and recording moves regardless of what this shows.
+  // WCA-style inspection countdown. The solve is already armed and records
+  // moves regardless; past 15s the countdown shows the penalty the first
+  // turn will earn (+2, then DNF past 17s), which the timer applies when it
+  // saves the solve — see inspectionPenalty.
   useEffect(() => {
-    if (phase !== "inspecting") return undefined;
+    if (phase !== "inspecting" || inspectionStartedAtMs === null) return undefined;
     let raf: number;
-    const start = performance.now();
     const tick = () => {
-      const remaining = Math.max(0, SMART_CUBE_INSPECTION_MS - (performance.now() - start));
-      setInspectionRemainingMs(remaining);
-      if (remaining <= 0) {
+      const elapsed = performance.now() - inspectionStartedAtMs;
+      setInspectionRemainingMs(Math.max(0, SMART_CUBE_INSPECTION_MS - elapsed));
+      setPendingPenalty(inspectionPenalty(elapsed));
+      if (elapsed > INSPECTION_DNF_MS) {
         setPhase("ready-to-solve");
         return;
       }
@@ -144,7 +158,7 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [phase]);
+  }, [phase, inspectionStartedAtMs]);
 
-  return { phase, correction, correcting, inspectionRemainingMs };
+  return { phase, correction, correcting, inspectionRemainingMs, pendingPenalty, inspectionStartedAtMs };
 }

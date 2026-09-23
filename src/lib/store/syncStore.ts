@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { exportSyncPayload, mergeSyncPayload, type SyncPayload } from "@/lib/db/sync";
+import { exportSyncPayload, mergeSyncPayload, type MergeResult, type SyncPayload } from "@/lib/db/sync";
 import { useSessionStore } from "@/lib/store/sessionStore";
 
 /**
@@ -9,8 +9,9 @@ import { useSessionStore } from "@/lib/store/sessionStore";
  * server we run, exactly the same no-signaling-server handshake raceStore.ts
  * already uses for live racing (see there for why this is safe without a
  * backend). Once connected, both sides just dump their entire session/solve
- * history at each other and merge in whatever the other side has that this
- * one doesn't — additive only, see lib/db/sync.ts.
+ * history (and deletion records) at each other and merge by one rule: for
+ * each solve or session the most recent change wins, deletions included —
+ * see lib/db/merge.ts.
  */
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
@@ -35,7 +36,7 @@ interface SyncStoreState {
   phase: SyncPhase;
   sentPct: number;
   receivedPct: number;
-  result: { addedSessions: number; addedSolves: number } | null;
+  result: MergeResult | null;
 
   startHosting: () => Promise<void>;
   startJoining: () => void;

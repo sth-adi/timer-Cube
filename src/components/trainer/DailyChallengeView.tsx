@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Flame, Trophy } from "lucide-react";
 import { useTimer } from "@/hooks/useTimer";
+import { useTimerInput } from "@/hooks/useTimerInput";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { displayUsername } from "@/lib/auth/username";
@@ -36,33 +37,13 @@ export function DailyChallengeView() {
   const done = scrambles.length === DAILY_CHALLENGE_LENGTH && currentIndex === -1;
   const scramble = currentIndex >= 0 ? scrambles[currentIndex] : "";
 
-  const { phase, displayMs, press, release } = useTimer({
+  const { phase, displayMs, press, release, cancel } = useTimer({
     inspectionEnabled: false,
     holdToStartMs,
-    onComplete: (ms) => recordTime(ms),
+    onComplete: ({ timeMs }) => recordTime(timeMs),
   });
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const inField = !!target && ["INPUT", "TEXTAREA"].includes(target.tagName);
-      if (e.code === "Space" && !e.repeat && !inField && !done) {
-        e.preventDefault();
-        press();
-      }
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      e.preventDefault();
-      release();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-  }, [press, release, done]);
+  const touch = useTimerInput({ press, release, cancel, enabled: !done });
 
   const ao5 = useMemo(() => {
     if (times.some((t) => t === null)) return null;
@@ -155,14 +136,7 @@ export function DailyChallengeView() {
   return (
     <div
       className="flex w-full max-w-md flex-1 flex-col items-center gap-3 py-2 select-none touch-none"
-      onTouchStart={(e) => {
-        e.preventDefault();
-        press();
-      }}
-      onTouchEnd={(e) => {
-        e.preventDefault();
-        release();
-      }}
+      {...touch}
     >
       <div className="flex items-center gap-1.5 text-xs text-muted">
         <Flame size={12} className="text-warning" />

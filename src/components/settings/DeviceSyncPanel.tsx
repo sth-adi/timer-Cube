@@ -196,11 +196,7 @@ export function DeviceSyncPanel() {
           {phase === "done" && result && (
             <p className="flex items-center gap-1.5 text-xs text-success">
               <CheckCircle2 size={13} />
-              {result.addedSolves === 0 && result.addedSessions === 0
-                ? "Already up to date — nothing new on either side."
-                : `Added ${result.addedSolves} solve${result.addedSolves === 1 ? "" : "s"}${
-                    result.addedSessions > 0 ? ` across ${result.addedSessions} new session${result.addedSessions === 1 ? "" : "s"}` : ""
-                  }.`}
+              {syncSummary(result)}
             </p>
           )}
         </div>
@@ -213,4 +209,19 @@ export function DeviceSyncPanel() {
       )}
     </div>
   );
+}
+
+/** "Added 3 solves, updated 1, removed 2." — or up to date. */
+function syncSummary(r: { addedSolves: number; addedSessions: number; updated: number; removed: number }): string {
+  const parts: string[] = [];
+  if (r.addedSolves > 0 || r.addedSessions > 0) {
+    parts.push(
+      `added ${r.addedSolves} solve${r.addedSolves === 1 ? "" : "s"}${r.addedSessions > 0 ? ` in ${r.addedSessions} new session${r.addedSessions === 1 ? "" : "s"}` : ""}`,
+    );
+  }
+  if (r.updated > 0) parts.push(`updated ${r.updated}`);
+  if (r.removed > 0) parts.push(`removed ${r.removed} deleted on the other device`);
+  if (parts.length === 0) return "Already up to date on this device.";
+  const text = parts.join(", ");
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
 }

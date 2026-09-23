@@ -1,9 +1,9 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { withTimeout, SupabaseTimeoutError } from "@/lib/supabase/withTimeout";
 import { db } from "./db";
-import { mergeSyncPayload, type SyncPayload } from "./sync";
+import { mergeSyncPayload, readLocalState, type MergeResult } from "./sync";
 import { computeSessionStats } from "@/lib/stats/stats";
-import type { Session, Solve } from "@/types";
+import type { Deletion, Session, Solve } from "@/types";
 
 // Kept as a re-export so existing imports of SyncTimeoutError from here (cloudSyncStore.ts) don't need to change.
 export { SupabaseTimeoutError as SyncTimeoutError };
@@ -19,6 +19,7 @@ interface SessionRow {
   event: string;
   created_at: number;
   order: number;
+  updated_at: number | null;
 }
 
 interface SolveRow {
@@ -36,14 +37,57 @@ interface SolveRow {
   heart_rate: { avg: number; max: number } | null;
   cross_ms: number | null;
   move_timestamps: number[] | null;
+  rotations: { atMs: number; token: string }[] | null;
+  oriented_reconstruction: string | null;
+  updated_at: number | null;
+}
+
+interface DeletionRow {
+  user_id: string;
+  id: string;
+  kind: "solve" | "session";
+  deleted_at: number;
+}
+
+/**
+ * Shown when the Supabase project hasn't had the sync-revisions migration
+ * applied (no `deletions` table / `updated_at` columns yet). Syncing without
+ * them would bring back the old problems — deletions undone, edits lost —
+ * so it stops with instructions instead.
+ */
+export const MIGRATION_NEEDED =
+  "Cloud sync needs a one-time database update: run supabase/migrations/20260923000000_sync_revisions.sql in your Supabase project's SQL editor, then sync again.";
+
+function isMissingSchema(err: { code?: string; message?: string } | null): boolean {
+  if (!err) return false;
+  return (
+    err.code === "42P01" ||
+    err.code === "42703" ||
+    err.code === "PGRST204" ||
+    err.code === "PGRST205" ||
+    /updated_at|deletions|rotations|oriented_reconstruction/.test(err.message ?? "")
+  );
+}
+
+function check(err: { code?: string; message?: string } | null): void {
+  if (!err) return;
+  if (isMissingSchema(err)) throw new Error(MIGRATION_NEEDED);
+  throw err;
 }
 
 function sessionToRow(s: Session, userId: string): SessionRow {
-  return { id: s.id, user_id: userId, name: s.name, event: s.event, created_at: s.createdAt, order: s.order };
+  return { id: s.id, user_id: userId, name: s.name, event: s.event, created_at: s.createdAt, order: s.order, updated_at: s.updatedAt ?? null };
 }
 
 function rowToSession(r: SessionRow): Session {
-  return { id: r.id, name: r.name, event: r.event as Session["event"], createdAt: r.created_at, order: r.order };
+  return {
+    id: r.id,
+    name: r.name,
+    event: r.event as Session["event"],
+    createdAt: r.created_at,
+    order: r.order,
+    ...(r.updated_at !== null && r.updated_at !== undefined ? { updatedAt: r.updated_at } : {}),
+  };
 }
 
 function solveToRow(s: Solve, userId: string): SolveRow {
@@ -70,6 +114,9 @@ function solveToRow(s: Solve, userId: string): SolveRow {
     heart_rate: s.heartRate ?? null,
     cross_ms: s.crossMs !== undefined ? Math.round(s.crossMs) : null,
     move_timestamps: s.moveTimestamps ?? null,
+    rotations: s.rotations ?? null,
+    oriented_reconstruction: s.orientedReconstruction ?? null,
+    updated_at: s.updatedAt ?? null,
   };
 }
 
@@ -88,26 +135,37 @@ function rowToSolve(r: SolveRow): Solve {
     ...(r.heart_rate ? { heartRate: r.heart_rate } : {}),
     ...(r.cross_ms !== null ? { crossMs: r.cross_ms } : {}),
     ...(r.move_timestamps ? { moveTimestamps: r.move_timestamps } : {}),
+    ...(r.rotations ? { rotations: r.rotations } : {}),
+    ...(r.oriented_reconstruction ? { orientedReconstruction: r.oriented_reconstruction } : {}),
+    ...(r.updated_at !== null && r.updated_at !== undefined ? { updatedAt: r.updated_at } : {}),
   };
 }
 
 /**
- * Pushes every local session/solve to the account's cloud tables. Plain
- * upserts keyed by id, so calling this repeatedly (every solve, every
- * reconnect) is cheap and idempotent — the remote row always ends up
- * matching whatever this device last had locally.
+ * Pushes this device's state — every session, solve and deletion record —
+ * after a pull has merged the cloud's state in (see syncWithCloud), so what
+ * goes up is already the merged, most-recent version of everything.
+ * Upserts are safe to repeat; and the database itself refuses to let an
+ * older version overwrite a newer one or revive a deleted row (the
+ * sync_guard trigger in the migration), so a stale device — even one on an
+ * older version of this app — can't undo anything.
  */
 export async function pushAll(userId: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
-  const [sessions, solves] = await Promise.all([db.sessions.toArray(), db.solves.toArray()]);
+  const { sessions, solves, deletions } = await readLocalState();
+  if (deletions.length > 0) {
+    const rows: DeletionRow[] = deletions.map((d) => ({ user_id: userId, id: d.id, kind: d.kind, deleted_at: d.deletedAt }));
+    const { error } = await withTimeout(supabase.from("deletions").upsert(rows, { onConflict: "user_id,id" }));
+    check(error);
+  }
   if (sessions.length > 0) {
     const { error } = await withTimeout(supabase.from("sessions").upsert(sessions.map((s) => sessionToRow(s, userId))));
-    if (error) throw error;
+    check(error);
   }
   if (solves.length > 0) {
     const { error } = await withTimeout(supabase.from("solves").upsert(solves.map((s) => solveToRow(s, userId))));
-    if (error) throw error;
+    check(error);
   }
 }
 
@@ -145,59 +203,34 @@ export async function pushPublicStats(userId: string, username: string): Promise
 }
 
 /**
- * Deletes propagate to the cloud copy the moment they happen locally —
- * fire-and-forget from the caller (removeSolve/removeSession in
- * sessionStore.ts), not awaited, so deleting feels instant regardless of
- * network. Without this, a deleted solve looked gone until the next sync's
- * pullAll() fetched the whole remote table again and additively merged the
- * still-there remote row right back in — sync bringing a "deleted" solve
- * back from the dead. RLS (auth.uid() = user_id) means this is safe to call
- * even signed out or against an id that isn't this account's: it just
- * deletes zero rows.
- *
- * This is a best-effort, one-device-at-a-time fix, not a full tombstone
- * system: if a second device deletes nothing locally and syncs later, its
- * own pushAll() will upsert the solve straight back into the cloud table
- * (and from there back to every other device on their next pull) — the
- * same fundamental limitation the device-to-device WebRTC sync already has
- * (see lib/db/sync.ts's own doc comment). Deleting on every device you've
- * synced to is still the only fully reliable way to make a solve gone
- * everywhere.
+ * Pulls everything this account has in the cloud — rows and deletion
+ * records — and merges it into local storage under the sync rule: the most
+ * recent change to each id wins, deletions included (lib/db/merge.ts).
  */
-export async function deleteRemoteSolve(id: string): Promise<void> {
+export async function pullAll(userId: string): Promise<MergeResult> {
   const supabase = getSupabaseClient();
-  if (!supabase) return;
-  await withTimeout(supabase.from("solves").delete().eq("id", id)).catch(() => {});
-}
-
-/** Mirrors deleteSession's local cascade (lib/db/sessions.ts): its solves first, then the session row itself. */
-export async function deleteRemoteSession(id: string): Promise<void> {
-  const supabase = getSupabaseClient();
-  if (!supabase) return;
-  await withTimeout(supabase.from("solves").delete().eq("session_id", id)).catch(() => {});
-  await withTimeout(supabase.from("sessions").delete().eq("id", id)).catch(() => {});
-}
-
-/**
- * Pulls everything this account has in the cloud and merges it into local
- * storage — additive only, same semantics as the existing device-to-device
- * WebRTC sync (lib/db/sync.ts): a row that already exists locally is left
- * exactly as it is, so a stale or older remote copy can never clobber an
- * edit made on this device since the last sync. Deletions likewise don't
- * propagate either direction, matching that same existing tradeoff.
- */
-export async function pullAll(userId: string): Promise<{ addedSessions: number; addedSolves: number }> {
-  const supabase = getSupabaseClient();
-  if (!supabase) return { addedSessions: 0, addedSolves: 0 };
-  const [{ data: sessionRows, error: sessionErr }, { data: solveRows, error: solveErr }] = await Promise.all([
+  if (!supabase) return { addedSessions: 0, addedSolves: 0, updated: 0, removed: 0 };
+  const [sessionRes, solveRes, deletionRes] = await Promise.all([
     withTimeout(supabase.from("sessions").select("*").eq("user_id", userId)),
     withTimeout(supabase.from("solves").select("*").eq("user_id", userId)),
+    withTimeout(supabase.from("deletions").select("*").eq("user_id", userId)),
   ]);
-  if (sessionErr) throw sessionErr;
-  if (solveErr) throw solveErr;
-  const payload: SyncPayload = {
-    sessions: (sessionRows ?? []).map((r) => rowToSession(r as SessionRow)),
-    solves: (solveRows ?? []).map((r) => rowToSolve(r as SolveRow)),
-  };
-  return mergeSyncPayload(payload);
+  check(sessionRes.error);
+  check(solveRes.error);
+  check(deletionRes.error);
+  return mergeSyncPayload({
+    sessions: (sessionRes.data ?? []).map((r) => rowToSession(r as SessionRow)),
+    solves: (solveRes.data ?? []).map((r) => rowToSolve(r as SolveRow)),
+    deletions: (deletionRes.data ?? []).map((r) => {
+      const d = r as DeletionRow;
+      return { id: d.id, kind: d.kind, deletedAt: d.deleted_at } satisfies Deletion;
+    }),
+  });
+}
+
+/** One full cloud sync: pull and merge first, then push the merged result. */
+export async function syncWithCloud(userId: string): Promise<MergeResult> {
+  const result = await pullAll(userId);
+  await pushAll(userId);
+  return result;
 }

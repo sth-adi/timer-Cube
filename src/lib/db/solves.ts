@@ -22,6 +22,7 @@ export async function addSolve(input: {
     penalty: input.penalty ?? "none",
     scramble: input.scramble,
     date: Date.now(),
+    updatedAt: Date.now(),
     // Omitted rather than stored empty, so "was this solve phase-timed?" is a
     // simple presence check everywhere downstream.
     ...(input.splits && input.splits.length > 0 ? { splits: input.splits } : {}),
@@ -37,12 +38,17 @@ export async function addSolve(input: {
   return solve;
 }
 
+/** Every edit bumps updatedAt — the revision sync uses to decide which version of a solve wins. */
 export async function updateSolve(id: string, changes: Partial<Omit<Solve, "id">>): Promise<void> {
-  await db.solves.update(id, changes);
+  await db.solves.update(id, { ...changes, updatedAt: Date.now() });
 }
 
+/** Deletes a solve and records the deletion, so syncing can't bring it back from another device. */
 export async function deleteSolve(id: string): Promise<void> {
-  await db.solves.delete(id);
+  await db.transaction("rw", db.solves, db.deletions, async () => {
+    await db.solves.delete(id);
+    await db.deletions.put({ id, kind: "solve", deletedAt: Date.now() });
+  });
 }
 
 export async function getSessionSolves(sessionId: string): Promise<Solve[]> {
@@ -55,7 +61,12 @@ export async function getAllSolves(): Promise<Solve[]> {
 }
 
 export async function deleteAllSolvesForSession(sessionId: string): Promise<void> {
-  await db.solves.where("sessionId").equals(sessionId).delete();
+  await db.transaction("rw", db.solves, db.deletions, async () => {
+    const ids = (await db.solves.where("sessionId").equals(sessionId).primaryKeys()) as string[];
+    const deletedAt = Date.now();
+    await db.solves.bulkDelete(ids);
+    await db.deletions.bulkPut(ids.map((id) => ({ id, kind: "solve" as const, deletedAt })));
+  });
 }
 
 /** Bulk-imports solves into a session, assigning fresh ids so they never collide with existing rows. */
@@ -80,9 +91,11 @@ export async function importSolves(
     >
   >,
 ): Promise<number> {
+  const now = Date.now();
   const rows: Solve[] = solves.map((s) => ({
     id: newId(),
     sessionId,
+    updatedAt: now,
     timeMs: s.timeMs,
     penalty: s.penalty,
     scramble: s.scramble,
