@@ -96,7 +96,7 @@ export function HintPanel() {
                 tab === "cross" ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
               )}
             >
-              Best Cross
+              Optimal Cross
             </button>
             <button
               type="button"
@@ -106,7 +106,7 @@ export function HintPanel() {
                 tab === "cfop" ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
               )}
             >
-              Full CFOP Solution
+              Example CFOP Solve
             </button>
           </div>
 
@@ -134,9 +134,17 @@ export function HintPanel() {
 
           {!hintLoading && tab === "cfop" && cfopHint && (
             <div className="space-y-3">
-              <p className="text-muted-2 text-xs uppercase tracking-wide">{cfopHint.totalMoves} moves total</p>
               <div>
-                <p className="text-accent text-xs font-semibold mb-1">CROSS ({cfopHint.cross.length})</p>
+                <p className="text-muted-2 text-xs uppercase tracking-wide">
+                  A valid computed CFOP solve &middot; {cfopHint.totalMoves} moves
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Verified to solve this scramble. The cross is optimal; the F2L pairs are solved one at a time, so
+                  this is one good way through — not guaranteed to be the shortest CFOP solve.
+                </p>
+              </div>
+              <div>
+                <p className="text-accent text-xs font-semibold mb-1">CROSS ({cfopHint.cross.length}, optimal)</p>
                 <p
                   className="cursor-pointer hover:text-accent transition-colors"
                   onClick={() => setPreviewKind("cfop-cross")}

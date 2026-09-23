@@ -1,15 +1,15 @@
 # Cube
 
-A fast, aesthetic, local-first speedcubing timer for 3x3, built to be genuinely better than the timers already out there.
+A fast, aesthetic, local-first speedcubing timer built around 3x3 (2x2, 4x4 and 5x5 sessions are supported too), built to be genuinely better than the timers already out there.
 
 ## Highlights
 
-- **True WCA-legal scrambles** — random-*state* (not random-move) 3x3 scrambles, generated the same way official WCA scramblers do: pick a uniformly random valid cube state, solve it optimally, invert the solution.
+- **WCA-style random-state 3x3 scrambles** — random-*state* (not random-move) 3x3 scrambles, generated the way official WCA scramblers do: pick a uniformly random valid cube state, solve it, invert the solution. **This applies to 3x3 only.** 2x2, 4x4 and 5x5 sessions get random-*move* scrambles, which are fine for practice but not competition-grade; the app labels them as such wherever you pick an event and above every such scramble.
 - **Real timer UX** — WCA-style hold-to-arm spacebar timing, optional 15s inspection, millisecond precision, +2/DNF penalties, touch support for mobile.
 - **Sessions & stats** — multiple sessions, full solve history, ao5/ao12/ao50/ao100 (WCA trimmed-mean rules), best/worst/mean, best-ever averages — all persisted locally (IndexedDB), no account or backend needed.
 - **Hidden solve hints** — a "solve hints" reveal (off by default, so it's never visible mid-solve) shows:
   - The **optimal cross** (guaranteed shortest, computed with a full exact pruning table).
-  - A **full CFOP solution** — cross, then all 4 F2L pairs (cheapest-first, keeping earlier work intact), then OLL, then PLL — computed from scratch via IDA* search against the actual cube engine, not a canned algorithm list. Every solution is verified to actually solve the cube before it's shown.
+  - An **example CFOP solve** — the optimal cross, then the 4 F2L pairs, then OLL, then PLL — computed from scratch via IDA* search against the actual cube engine, not a canned algorithm list. Every solution is verified to actually solve the cube before it's shown. It's a *valid* CFOP solve, not the most efficient one: the F2L pairs are chosen one at a time (cheapest-looking first), so a different pair order or a multi-slot could be shorter. Only the cross is guaranteed optimal.
 - **Phase splits** — time a solve in 2, 3 or 4 phases: each press marks a boundary and only the last one stops the clock, so Stats can show what your Cross/F2L/OLL/PLL actually cost, and how far your average sits from your own best for each.
 - **Cross trainer** — plan a cross during inspection, type it, and get graded against the provably shortest cross for that scramble (exact, from a complete lookup table). Works whether you hold the cross on the bottom or the top.
 - **Solve analyzer** — paste a reconstruction and get a phase-by-phase post-mortem: where the cross, each F2L slot, OLL and PLL began and ended, what each phase cost, and what it could have cost *from the position you were actually in*. See below.

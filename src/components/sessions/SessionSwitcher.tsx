@@ -53,31 +53,40 @@ export function SessionSwitcher() {
             >
               {s.name}
               {s.event !== "333" && (
-                <span className="text-[10px] font-medium text-muted-2">
-                  {WCA_EVENTS.find((e) => e.id === s.event)?.label}
+                <span className="text-[10px] font-medium text-muted-2" title="Random-move scrambles — not WCA-legal">
+                  {WCA_EVENTS.find((e) => e.id === s.event)?.label} · random-move
                 </span>
               )}
             </button>
           ))}
           <div className="my-1 h-px bg-border" />
           {pickingEvent ? (
-            <div className="flex items-center gap-1 px-1 py-1">
-              {WCA_EVENTS.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => {
-                    const count = sessions.filter((s) => s.event === e.id).length;
-                    const name = e.id === "333" ? `Session ${count + 1}` : `${e.label} Session ${count + 1}`;
-                    addSession(name, e.id);
-                    setPickingEvent(false);
-                    setOpen(false);
-                  }}
-                  className="flex-1 rounded-lg py-1.5 text-center text-xs font-medium text-muted hover:text-accent hover:bg-bg-panel-2 transition-colors"
-                >
-                  {e.label}
-                </button>
-              ))}
+            <div className="px-1 py-1">
+              <div className="flex items-center gap-1">
+                {WCA_EVENTS.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => {
+                      const count = sessions.filter((s) => s.event === e.id).length;
+                      const name = e.id === "333" ? `Session ${count + 1}` : `${e.label} Session ${count + 1}`;
+                      addSession(name, e.id);
+                      setPickingEvent(false);
+                      setOpen(false);
+                    }}
+                    className="flex flex-1 flex-col items-center rounded-lg py-1.5 text-center text-xs font-medium text-muted hover:text-accent hover:bg-bg-panel-2 transition-colors"
+                  >
+                    {e.label}
+                    <span className={cn("text-[9px] font-normal", e.randomState ? "text-muted-2" : "text-warning")}>
+                      {e.randomState ? "random-state" : "random-move"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 max-w-56 px-2 text-[10px] leading-snug text-muted-2">
+                Only 3x3 scrambles are WCA-style random-state. 2x2, 4x4 and 5x5 use random-move scrambles — fine for
+                practice, not competition-grade.
+              </p>
             </div>
           ) : (
             <button

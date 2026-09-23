@@ -65,6 +65,27 @@ interface ScrambleState {
 // can await it instead of racing it — see the comment on loadCrossHint.
 let initPromise: Promise<void> | null = null;
 
+/**
+ * Every action that decides what the current scramble is (init, setEvent,
+ * nextScramble, previousScramble, loadExternalScramble) takes a new request
+ * number. A generated scramble is only applied if its request is still the
+ * latest when it arrives — so a slow generation can never replace the
+ * scramble of a newer selection (say, the 4x4 you switched to while the
+ * first 3x3 was still being generated).
+ */
+let latestRequest = 0;
+const claimRequest = () => ++latestRequest;
+const isLatest = (request: number) => request === latestRequest;
+
+/** Clears everything derived from the previous scramble. */
+const FRESH_HINTS = { crossHint: null, cfopHint: null, hintVisible: false, hintError: null, hintLoading: false } as const;
+
+/** Test-only: forget the bootstrap so each test starts from a cold store. */
+export function resetScrambleRequestsForTests() {
+  initPromise = null;
+  latestRequest = 0;
+}
+
 export const useScrambleStore = create<ScrambleState>((set, get) => ({
   scramble: "",
   history: [],
@@ -86,16 +107,8 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
   loadExternalScramble: (scramble) => {
     const { history } = get();
     const trimmed = [...history, scramble].slice(-HISTORY_LIMIT);
-    set({
-      scramble,
-      history: trimmed,
-      historyIndex: trimmed.length - 1,
-      loadingScramble: false,
-      crossHint: null,
-      cfopHint: null,
-      hintVisible: false,
-      hintError: null,
-    });
+    claimRequest();
+    set({ scramble, history: trimmed, historyIndex: trimmed.length - 1, loadingScramble: false, ...FRESH_HINTS });
   },
 
   init: () => {
@@ -106,12 +119,18 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
         // loadCfopHint await for engine readiness. setEvent (called by
         // sessionStore once the active session is known) takes it from here
         // if that session turns out to be a different puzzle.
+        const request = claimRequest();
         const client = getCubeEngineClient();
         set({ loadingScramble: true });
-        await client.ready();
-        set({ engineReady: true });
-        const scramble = await client.generateScramble();
-        set({ scramble, history: [scramble], historyIndex: 0, loadingScramble: false });
+        try {
+          await client.ready();
+          set({ engineReady: true });
+          const scramble = await client.generateScramble();
+          if (isLatest(request)) set({ scramble, history: [scramble], historyIndex: 0, loadingScramble: false });
+        } catch (err) {
+          if (isLatest(request)) set({ loadingScramble: false });
+          throw err;
+        }
       })();
     }
     return initPromise;
@@ -119,66 +138,54 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
 
   setEvent: async (event) => {
     if (get().event === event) return;
-    set({
-      event,
-      loadingScramble: true,
-      crossHint: null,
-      cfopHint: null,
-      hintVisible: false,
-      hintError: null,
-    });
-    const scramble = await generateForEvent(event);
-    // A rapid second switch may have landed while this was in flight —
-    // only apply this result if it's still the event actually selected.
-    if (get().event !== event) return;
-    set({ scramble, history: [scramble], historyIndex: 0, loadingScramble: false });
+    const request = claimRequest();
+    set({ event, loadingScramble: true, ...FRESH_HINTS });
+    try {
+      const scramble = await generateForEvent(event);
+      if (isLatest(request)) set({ scramble, history: [scramble], historyIndex: 0, loadingScramble: false });
+    } catch (err) {
+      if (isLatest(request)) set({ loadingScramble: false });
+      throw err;
+    }
   },
 
   nextScramble: async () => {
+    // Advancing is disabled while a scramble is being generated: a second
+    // press would otherwise skip past the one on its way, or append to a
+    // history that's about to change underneath it.
+    if (get().loadingScramble) return;
     const { history, historyIndex } = get();
     // Stepping forward after going back replays the scramble already stored
     // there rather than burning a fresh one, so back/forward is symmetric.
     if (historyIndex >= 0 && historyIndex < history.length - 1) {
-      const scramble = history[historyIndex + 1];
-      set({
-        scramble,
-        historyIndex: historyIndex + 1,
-        crossHint: null,
-        cfopHint: null,
-        hintVisible: false,
-        hintError: null,
-      });
+      claimRequest();
+      set({ scramble: history[historyIndex + 1], historyIndex: historyIndex + 1, ...FRESH_HINTS });
       return;
     }
 
+    const request = claimRequest();
     const { practiceMode, practiceLength, event } = get();
     set({ loadingScramble: true });
-    const scramble =
-      event === "333" && practiceMode ? generatePracticeScramble(practiceLength) : await generateForEvent(event);
-    const trimmed = [...history, scramble].slice(-HISTORY_LIMIT);
-    set({
-      scramble,
-      history: trimmed,
-      historyIndex: trimmed.length - 1,
-      loadingScramble: false,
-      crossHint: null,
-      cfopHint: null,
-      hintVisible: false,
-      hintError: null,
-    });
+    try {
+      const scramble =
+        event === "333" && practiceMode ? generatePracticeScramble(practiceLength) : await generateForEvent(event);
+      // Superseded (the event changed, you went back, a challenge link
+      // loaded): that selection owns the scramble now — drop this one.
+      if (!isLatest(request)) return;
+      const trimmed = [...get().history, scramble].slice(-HISTORY_LIMIT);
+      set({ scramble, history: trimmed, historyIndex: trimmed.length - 1, loadingScramble: false, ...FRESH_HINTS });
+    } catch (err) {
+      if (isLatest(request)) set({ loadingScramble: false });
+      throw err;
+    }
   },
 
   previousScramble: () => {
     const { history, historyIndex } = get();
     if (historyIndex <= 0) return;
-    set({
-      scramble: history[historyIndex - 1],
-      historyIndex: historyIndex - 1,
-      crossHint: null,
-      cfopHint: null,
-      hintVisible: false,
-      hintError: null,
-    });
+    // Going back is always allowed, and cancels a generation still in flight.
+    claimRequest();
+    set({ scramble: history[historyIndex - 1], historyIndex: historyIndex - 1, loadingScramble: false, ...FRESH_HINTS });
   },
 
   canGoBack: () => get().historyIndex > 0,
@@ -199,8 +206,11 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
     set({ hintLoading: true, hintError: null });
     try {
       const moves = await getCubeEngineClient().solveCross(scramble);
+      // The scramble moved on while this was solving: the hint is for a different cube.
+      if (get().scramble !== scramble) return;
       set({ crossHint: moves, hintLoading: false });
     } catch (err) {
+      if (get().scramble !== scramble) return;
       set({ hintLoading: false, hintError: err instanceof Error ? err.message : String(err) });
     }
   },
@@ -213,11 +223,14 @@ export const useScrambleStore = create<ScrambleState>((set, get) => ({
     set({ hintLoading: true, hintError: null });
     try {
       const solution = await getCubeEngineClient().solveCFOP(scramble);
+      // The scramble moved on while this was solving: the hint is for a different cube.
+      if (get().scramble !== scramble) return;
       set({ cfopHint: solution, hintLoading: false });
     } catch (err) {
+      if (get().scramble !== scramble) return;
       set({ hintLoading: false, hintError: err instanceof Error ? err.message : String(err) });
     }
   },
 
-  clearHints: () => set({ crossHint: null, cfopHint: null, hintVisible: false, hintError: null }),
+  clearHints: () => set(FRESH_HINTS),
 }));

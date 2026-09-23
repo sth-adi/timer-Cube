@@ -251,7 +251,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">
             {practiceMode
               ? "Random-move scrambles at a fixed length you pick — not WCA-legal, and never scored against official stats. Good for drilling lookahead on long scrambles or isolating a stage on short ones."
-              : "Off uses real WCA-legal random-state scrambles, same as competition."}
+              : "Off, 3x3 uses random-state scrambles, the same kind competitions use. (2x2, 4x4 and 5x5 always use random-move scrambles.)"}
           </p>
         </div>
 

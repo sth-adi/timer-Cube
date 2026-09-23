@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Cube — the speedcubing timer",
   description:
-    "A fast, aesthetic WCA-legal 3x3 speedcubing timer with session stats, and hidden cross/CFOP solve hints.",
+    "A fast, aesthetic speedcubing timer with random-state 3x3 scrambles, session stats, and hidden cross/CFOP solve hints.",
 };
 
 export const viewport: Viewport = {

@@ -2,11 +2,17 @@ export type Penalty = "none" | "plus2" | "dnf";
 
 /** WCA puzzle event a session times. */
 export type WcaEvent = "222" | "333" | "444" | "555";
-export const WCA_EVENTS: { id: WcaEvent; label: string }[] = [
-  { id: "222", label: "2x2" },
-  { id: "333", label: "3x3" },
-  { id: "444", label: "4x4" },
-  { id: "555", label: "5x5" },
+/**
+ * `randomState`: whether this app's scrambles for the event are WCA-style
+ * random-state ones. Only 3x3 is; the others are random-move practice
+ * scrambles (see lib/cube-engine/multiScramble.ts) — shown wherever an
+ * event is chosen, so nobody mistakes them for competition scrambles.
+ */
+export const WCA_EVENTS: { id: WcaEvent; label: string; randomState: boolean }[] = [
+  { id: "222", label: "2x2", randomState: false },
+  { id: "333", label: "3x3", randomState: true },
+  { id: "444", label: "4x4", randomState: false },
+  { id: "555", label: "5x5", randomState: false },
 ];
 
 /** Practice category a solve was done under, for filtering stats separately from normal 2-handed solving. */
