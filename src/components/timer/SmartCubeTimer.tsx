@@ -27,6 +27,8 @@ import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
 import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
 import { analyzeMistakes } from "@/lib/analysis/mistakeRadar";
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
+import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
+import { inspectionReport } from "@/lib/inspection/report";
 import { useCubeGestures } from "@/hooks/useCubeGestures";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -402,6 +404,12 @@ export function SmartCubeTimer() {
     [finished, finishedScramble, moves, moveTimestampsRel, elapsedMs],
   );
 
+  // Inspection Report Card: graded from how the cross came out.
+  const inspection = useMemo(
+    () => (finished && finishedScramble ? inspectionReport(finishedScramble, moveTokens, moveTimestampsRel) : null),
+    [finished, finishedScramble, moveTokens, moveTimestampsRel],
+  );
+
   const onAnalyze = () => {
     requestAnalysis(finishedScramble, elapsedMs, undefined, reconstruction, moveTimestampsRel);
   };
@@ -605,6 +613,8 @@ export function SmartCubeTimer() {
               phases={postSolveRows.map((r) => ({ label: r.label, endMs: r.atMs !== null ? r.atMs - startedAtMs : null }))}
             />
           )}
+
+          {inspection && <InspectionGradeCard report={inspection} />}
 
           {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
 

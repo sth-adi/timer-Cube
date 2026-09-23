@@ -6,15 +6,19 @@ import {
   Bluetooth,
   Clapperboard,
   Compass,
+  Dumbbell,
+  Eye,
   Fingerprint,
   FlaskConical,
   Hand,
   HeartPulse,
   History,
   Loader2,
+  Metronome,
   Navigation,
   Radar,
   ScanLine,
+  Stethoscope,
   Timer as TimerIcon,
 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
@@ -48,6 +52,10 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
 }
 
 const TOOLS = [
+  { href: "/gym", icon: Dumbbell, title: "Alg Gym", blurb: "OLL/PLL drills set up on your cube, timed and checked." },
+  { href: "/tempo", icon: Metronome, title: "Tempo Trainer", blurb: "Solve to a metronome — every turn scored on the beat." },
+  { href: "/bld", icon: Stethoscope, title: "BLD Doctor", blurb: "Blindfolded attempts, and exactly why a DNF happened." },
+  { href: "/inspection", icon: Eye, title: "Inspection Grade", blurb: "Your inspection graded from how the cross came out." },
   { href: "/satnav", icon: Navigation, title: "Solve Sat-Nav", blurb: "Turn-by-turn directions that recalculate when you go off-route." },
   { href: "/timemachine", icon: History, title: "Time Machine", blurb: "Rewind your physical cube to any moment since you connected." },
   { href: "/algid", icon: Fingerprint, title: "Alg Identifier", blurb: "Do any sequence — find out exactly what it is." },
