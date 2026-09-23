@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Boxes, Check, ChevronLeft, Copy, RefreshCw, Swords } from "lucide-react";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
+import { useScrambleGuideStore } from "@/lib/store/scrambleGuideStore";
 import { WCA_EVENTS } from "@/types";
 import { cn } from "@/lib/utils/cn";
 import { ScrambleNet } from "./ScrambleNet";
@@ -15,6 +16,10 @@ export function ScrambleBar({ className }: { className?: string }) {
   const historyIndex = useScrambleStore((s) => s.historyIndex);
   const practiceMode = useScrambleStore((s) => s.practiceMode);
   const event = useScrambleStore((s) => s.event);
+  // While a smart cube is being scrambled, the steps light up as you make them.
+  const guide = useScrambleGuideStore();
+  const guided = guide.scramble === scramble && !guide.rerouted && guide.view ? guide.view : null;
+  const offTrack = !!guided && (guided.undo.length > 0 || guided.fix !== null);
   // The 2D scramble diagram is a hardcoded 3x3 net — not meaningful for other puzzle sizes.
   const netAvailable = event === "333";
   const [netOpen, setNetOpen] = useState(false);
@@ -68,7 +73,26 @@ export function ScrambleBar({ className }: { className?: string }) {
       </div>
       <div className="flex items-start justify-center gap-2">
         <p className="tabular-timer max-w-3xl text-center text-lg sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
-          {loading && !scramble ? "Generating scramble…" : scramble}
+          {loading && !scramble
+            ? "Generating scramble…"
+            : guided
+              ? guided.steps.map((t, i) => (
+                  <span key={i}>
+                    {i > 0 && " "}
+                    <span
+                      className={cn(
+                        "inline-block rounded px-[0.15em] transition-colors",
+                        i < guided.index && "text-muted-2 opacity-50",
+                        i === guided.index &&
+                          (offTrack ? "text-warning ring-1 ring-warning" : "bg-accent text-accent-fg"),
+                      )}
+                    >
+                      {t}
+                      {i === guided.index && guided.partial && <sup className="ml-0.5 text-[0.6em]">½</sup>}
+                    </span>
+                  </span>
+                ))
+              : scramble}
         </p>
         <div className="flex shrink-0 items-center gap-0.5">
           <button

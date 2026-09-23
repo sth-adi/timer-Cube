@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  AlertTriangle,
   BatteryFull,
   BatteryLow,
   BatteryMedium,
@@ -42,6 +41,8 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
+import { useScrambleGuide } from "@/hooks/useScrambleGuide";
+import { ScrambleGuidePanel } from "@/components/smartcube/ScrambleGuidePanel";
 import { useNowTick } from "@/hooks/useNowTick";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
@@ -175,9 +176,9 @@ function BatteryBadge({ level, onRefresh }: { level: number | null; onRefresh: (
 /**
  * Timing driven by a real Bluetooth smart cube instead of the keyboard:
  * scramble it, and this verifies the physical state against the target
- * scramble live — matching it starts inspection automatically, and pausing
- * mid-scramble with the wrong state offers the exact moves to fix it (see
- * useSmartCubeFlow). Once inspection ends, your first physical turn starts
+ * scramble live — matching it starts inspection automatically — and walks
+ * you through it step by step, with live undo instructions the moment a
+ * turn goes wrong (see useScrambleGuide). Once inspection ends, your first physical turn starts
  * the clock, and the moment the cube itself reports solved, the clock
  * stops and the solve saves itself — no spacebar, no save button, exactly
  * like the keyboard timer's own onComplete — and the exact moves you made
@@ -234,6 +235,8 @@ export function SmartCubeTimer() {
   // machine. Only meaningful before `arm()` has been called; once armed,
   // the existing recording/solved-detection below takes over.
   const flow = useSmartCubeFlow(scramble);
+  // Step-by-step scramble guidance, with live undo instructions for wrong turns.
+  useScrambleGuide(scramble, connected && !armed && !recording && flow.phase === "scrambling");
   const pacer = useSplitPacer();
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
@@ -735,21 +738,8 @@ export function SmartCubeTimer() {
               <ScrambleNet scramble={scramble} className="w-full" />
             </div>
           )}
-          <p className="tabular-timer break-words text-center text-xs leading-relaxed text-muted-2">{scramble}</p>
-          {flow.correction && flow.correction.length > 0 ? (
-            <div className="flex flex-col items-center gap-1 rounded-lg bg-warning/10 px-3 py-2 text-center">
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
-                <AlertTriangle size={13} /> Off track — do this next
-              </p>
-              <p className="tabular-timer font-mono text-sm font-medium text-foreground">{flow.correction.join(" ")}</p>
-            </div>
-          ) : flow.correcting ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-2">
-              <Loader2 size={12} className="animate-spin" /> Checking your scramble…
-            </p>
-          ) : (
-            <p className="text-xs text-muted-2">Scramble your cube to this pattern — inspection starts automatically.</p>
-          )}
+          <ScrambleGuidePanel />
+          <p className="text-[11px] text-muted-2">Inspection starts automatically once it matches.</p>
           {cubeGesturesOn && <GestureHint />}
         </div>
       )}

@@ -4,18 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { isScrambleComplete } from "@/lib/analysis/scrambleVerify";
-import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { INSPECTION_DNF_MS, INSPECTION_MS, inspectionPenalty } from "@/lib/timer/timerMachine";
 import type { Penalty } from "@/types";
-
-/**
- * How long the cube has to sit still, still not matching the scramble,
- * before this offers a correction. Long enough that an ordinary regrip
- * pause mid-scramble never triggers it (those are well under a second even
- * with repositioning), short enough that it still feels responsive once
- * someone's actually stopped and is wondering what went wrong.
- */
-const PAUSE_BEFORE_CORRECTION_MS = 1500;
 
 /** Same WCA 15s window the keyboard timer's inspection uses (see lib/timer/timerMachine.ts). */
 export const SMART_CUBE_INSPECTION_MS = INSPECTION_MS;
@@ -24,10 +14,6 @@ export type SmartCubeScramblePhase = "scrambling" | "inspecting" | "ready-to-sol
 
 export interface SmartCubeFlow {
   phase: SmartCubeScramblePhase;
-  /** The exact moves to make right now to get back onto the target scramble — null while on track or not yet computed. */
-  correction: string[] | null;
-  /** True while a correction is being computed on the worker. */
-  correcting: boolean;
   inspectionRemainingMs: number;
   /** The penalty the first turn would earn right now: +2 past 15s of inspection, DNF past 17s. */
   pendingPenalty: Penalty;
@@ -38,8 +24,8 @@ export interface SmartCubeFlow {
 /**
  * Drives the smart-cube scramble → inspection handoff: watches the cube's
  * live state against the target scramble (see lib/analysis/scrambleVerify.ts),
- * auto-starts inspection the instant it matches, and offers exact corrective
- * moves if the cuber pauses partway through with the wrong state. Once
+ * and auto-starts inspection the instant it matches (step-by-step guidance
+ * while scrambling is useScrambleGuide's job). Once
  * inspection ends it arms the existing smartCubeStore solve-detection and
  * gets out of the way — from there the component drives off smartCubeStore's
  * own armed/recording/solvedAtMs fields, same as before this existed.
@@ -52,13 +38,9 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
 
   const [phase, setPhase] = useState<SmartCubeScramblePhase>("scrambling");
-  const [correction, setCorrection] = useState<string[] | null>(null);
-  const [correcting, setCorrecting] = useState(false);
   const [inspectionRemainingMs, setInspectionRemainingMs] = useState(SMART_CUBE_INSPECTION_MS);
   const [pendingPenalty, setPendingPenalty] = useState<Penalty>("none");
   const [inspectionStartedAtMs, setInspectionStartedAtMs] = useState<number | null>(null);
-
-  const requestIdRef = useRef(0);
 
   // A new target scramble (or a fresh connection) makes any prior
   // verification state meaningless — reset for it. This adjusts state
@@ -71,8 +53,6 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   if (connected && prevResetKey !== currentResetKey) {
     setPrevResetKey(currentResetKey);
     if (phase !== "scrambling") setPhase("scrambling");
-    if (correction !== null) setCorrection(null);
-    if (correcting) setCorrecting(false);
     if (inspectionRemainingMs !== SMART_CUBE_INSPECTION_MS) setInspectionRemainingMs(SMART_CUBE_INSPECTION_MS);
     if (pendingPenalty !== "none") setPendingPenalty("none");
     if (inspectionStartedAtMs !== null) setInspectionStartedAtMs(null);
@@ -89,8 +69,6 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   const prevMatchedRef = useRef(false);
   useEffect(() => {
     if (matched && !prevMatchedRef.current) {
-      setCorrection(null);
-      setCorrecting(false);
       arm();
       setInspectionStartedAtMs(inspectionEnabled ? performance.now() : null);
       setPendingPenalty("none");
@@ -111,33 +89,6 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     }
     prevRecordingRef.current = recording;
   }, [phase, recording]);
-
-  // Still scrambling and not (yet) matched: clear any stale suggestion the
-  // moment the state changes, then offer a fresh one after a genuine pause.
-  const prevFaceletsRef = useRef(liveFacelets);
-  useEffect(() => {
-    if (phase !== "scrambling" || matched || !scramble) return undefined;
-
-    if (prevFaceletsRef.current !== liveFacelets) setCorrection(null);
-    prevFaceletsRef.current = liveFacelets;
-
-    const requestId = ++requestIdRef.current;
-    const timer = window.setTimeout(() => {
-      setCorrecting(true);
-      void getCubeEngineClient()
-        .computeCorrectiveMoves(scramble, liveFacelets)
-        .then((moves) => {
-          if (requestIdRef.current !== requestId) return; // superseded by a later move or scramble
-          setCorrection(moves);
-          setCorrecting(false);
-        })
-        .catch(() => {
-          if (requestIdRef.current !== requestId) return;
-          setCorrecting(false);
-        });
-    }, PAUSE_BEFORE_CORRECTION_MS);
-    return () => window.clearTimeout(timer);
-  }, [liveFacelets, scramble, phase, matched]);
 
   // WCA-style inspection countdown. The solve is already armed and records
   // moves regardless; past 15s the countdown shows the penalty the first
@@ -160,5 +111,5 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     return () => cancelAnimationFrame(raf);
   }, [phase, inspectionStartedAtMs]);
 
-  return { phase, correction, correcting, inspectionRemainingMs, pendingPenalty, inspectionStartedAtMs };
+  return { phase, inspectionRemainingMs, pendingPenalty, inspectionStartedAtMs };
 }
