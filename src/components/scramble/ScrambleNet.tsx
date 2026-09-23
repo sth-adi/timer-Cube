@@ -45,7 +45,13 @@ function buildStickers(facelets: string): Sticker[] {
 }
 
 export function ScrambleNet({ scramble, className }: { scramble: string; className?: string }) {
-  const stickers = useMemo(() => buildStickers(scrambleToFacelets(scramble)), [scramble]);
+  const facelets = useMemo(() => scrambleToFacelets(scramble), [scramble]);
+  return <FaceletNet facelets={facelets} className={className} />;
+}
+
+/** The same net drawn straight from a 54-char facelet string (e.g. a live or recorded cube state). */
+export function FaceletNet({ facelets, className }: { facelets: string; className?: string }) {
+  const stickers = useMemo(() => buildStickers(facelets), [facelets]);
 
   return (
     <div

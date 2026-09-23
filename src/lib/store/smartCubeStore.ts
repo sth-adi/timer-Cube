@@ -11,6 +11,7 @@ import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 import type { GyroSample } from "@/lib/gyro/orientation";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
 import { useGyroStore } from "./gyroStore";
+import { recordTimeMachineMove, resetTimeMachine } from "@/lib/smartcube/timeMachine";
 
 /**
  * Bridges a real Bluetooth smart cube into this app via
@@ -173,6 +174,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       liveCube = newCube();
       gyroLog = [];
       resetLatestGyro();
+      resetTimeMachine();
       useGyroStore.getState().setRef(null);
 
       sub = connection.events$.subscribe((event: SmartCubeEvent) => {
@@ -209,6 +211,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         if (event.type !== "MOVE") return;
 
         emitRawMove({ token: event.move, timeStampMs: event.timestamp });
+        recordTimeMachineMove(event.move, event.timestamp);
         liveCube.move(event.move);
         const facelets = liveCube.asString();
 

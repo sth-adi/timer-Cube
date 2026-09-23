@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Timer as TimerIcon, Sparkles, Music, FlaskConical, ScanLine } from "lucide-react";
+import { Timer as TimerIcon, Music, FlaskConical, ScanLine, Clapperboard } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -50,6 +50,13 @@ export default function SolvesPage() {
                 X-Ray
               </Link>
               <Link
+                href="/reel"
+                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
+              >
+                <Clapperboard size={13} />
+                Reel
+              </Link>
+              <Link
                 href="/lab"
                 className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
               >
@@ -62,13 +69,6 @@ export default function SolvesPage() {
               >
                 <Music size={13} />
                 Rhythm
-              </Link>
-              <Link
-                href="/constellation"
-                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
-              >
-                <Sparkles size={13} />
-                Constellation
               </Link>
             </div>
           </div>

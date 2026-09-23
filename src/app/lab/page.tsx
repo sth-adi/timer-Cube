@@ -2,7 +2,21 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Bluetooth, Compass, FlaskConical, Hand, HeartPulse, Loader2, Radar, Timer as TimerIcon } from "lucide-react";
+import {
+  Bluetooth,
+  Clapperboard,
+  Compass,
+  Fingerprint,
+  FlaskConical,
+  Hand,
+  HeartPulse,
+  History,
+  Loader2,
+  Navigation,
+  Radar,
+  ScanLine,
+  Timer as TimerIcon,
+} from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { GyroTwin } from "@/components/lab/GyroTwin";
@@ -32,6 +46,14 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
     </section>
   );
 }
+
+const TOOLS = [
+  { href: "/satnav", icon: Navigation, title: "Solve Sat-Nav", blurb: "Turn-by-turn directions that recalculate when you go off-route." },
+  { href: "/timemachine", icon: History, title: "Time Machine", blurb: "Rewind your physical cube to any moment since you connected." },
+  { href: "/algid", icon: Fingerprint, title: "Alg Identifier", blurb: "Do any sequence — find out exactly what it is." },
+  { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve into a shareable video." },
+  { href: "/xray", icon: ScanLine, title: "Solve X-Ray", blurb: "F2L flow, last-slot oracle, alg microscope, neutrality." },
+] as const;
 
 /** Every gesture's handler just confirms it was recognized — the Lab is for building the muscle memory, not for acting on it. */
 const PRACTICE_HANDLERS = Object.fromEntries(
@@ -81,6 +103,20 @@ export default function LabPage() {
           <div className="flex items-center gap-2 px-1">
             <FlaskConical size={16} className="text-accent" />
             <h1 className="text-lg font-semibold text-foreground">Smart Cube Lab</h1>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {TOOLS.map((tool) => (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="card flex flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-bg-panel-2/60"
+              >
+                <tool.icon size={18} className="text-accent" />
+                <span className="text-xs font-semibold text-foreground">{tool.title}</span>
+                <span className="text-[10px] leading-snug text-muted-2">{tool.blurb}</span>
+              </Link>
+            ))}
           </div>
 
           <Section
