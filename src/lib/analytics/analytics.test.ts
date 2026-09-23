@@ -35,6 +35,8 @@ describe("solveMetrics", () => {
     expect(m.pauseCount).toBe(1);
     expect(m.pauseMs).toBe(1050);
     expect(m.execTps).toBeCloseTo(1000 / 150, 5);
+    expect(m.segments.reduce((a, b) => a + b, 0)).toBe(solve.timeMs);
+    expect(m.pauses).toEqual([{ atMs: 7 * 150, ms: 1050 }]);
   });
 });
 
@@ -49,6 +51,9 @@ function synth(n: number, opts: { f2l?: (i: number) => number; date?: (i: number
       date: opts.date ? opts.date(i) : 1_700_000_000_000 + i * 40_000,
       totalMs,
       phases,
+      segments: [phases[0], phases[1] / 4, phases[1] / 4, phases[1] / 4, phases[1] / 4, phases[2], phases[3]],
+      phaseEnds: [phases[0], phases[0] + phases[1], phases[0] + phases[1] + phases[2], totalMs],
+      pauses: [{ atMs: phases[0] + 100, ms: f2l - 4000 }],
       turns: 55,
       tps: 55 / (totalMs / 1000),
       execTps: 8,

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Bluetooth,
+  Clover,
   Clapperboard,
   Compass,
   Crosshair,
@@ -11,18 +12,21 @@ import {
   EyeClosed,
   Eye,
   Fingerprint,
+  Flame,
   FlaskConical,
   Gauge,
   Hand,
   HeartPulse,
   History,
   Loader2,
+  Medal,
   Metronome,
   Navigation,
   Radar,
   RefreshCcw,
   Rotate3d,
   Scale,
+  Shapes,
   Sigma,
   ScanLine,
   Stethoscope,
@@ -63,6 +67,10 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
 }
 
 const TOOLS = [
+  { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up — and your golds." },
+  { href: "/luck", icon: Clover, title: "Luck Meter", blurb: "How much each solve was the scramble, and your luck-free leaderboard." },
+  { href: "/archetypes", icon: Shapes, title: "Solve Archetypes", blurb: "The shapes your solves come in, clustered, and what each costs." },
+  { href: "/stalls", icon: Flame, title: "Stall Map", blurb: "A heatmap of where in each phase your pauses land." },
   { href: "/autopsy", icon: Scale, title: "Fast vs Slow Autopsy", blurb: "What separates your good solves from your bad ones." },
   { href: "/consistency", icon: Sigma, title: "Consistency Lab", blurb: "Which phase your spread comes from, and what fixing it is worth." },
   { href: "/progress", icon: TrendingUp, title: "Progress Forecast", blurb: "Learning curves per phase, plateaus, and your next goal's ETA." },

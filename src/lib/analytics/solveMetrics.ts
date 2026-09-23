@@ -6,10 +6,10 @@ import { milestoneTimes } from "@/lib/pacer/pacer";
 import type { Solve } from "@/types";
 
 /**
- * One row per smart-cube solve: everything the history analytics (Fast vs
- * Slow Autopsy, Consistency Lab, Progress Forecast, Warm-up & Fatigue)
- * slice and compare, computed once from the stored reconstruction and its
- * per-move timestamps.
+ * One row per smart-cube solve: everything the history analytics (the
+ * Autopsy, Consistency Lab, Progress Forecast, Warm-up & Fatigue, Sum of
+ * Best, Luck Meter, Solve Archetypes and the Stall Map) slice and compare,
+ * computed once from the stored reconstruction and its per-move timestamps.
  *
  * Metrics split into two families on purpose. **Skill** metrics are things
  * you do: how long each phase took, how much you paused, how fast you
@@ -24,12 +24,21 @@ export const PAUSE_MS = 400;
 export const PHASES = ["Cross", "F2L", "OLL", "PLL"] as const;
 export type PhaseName = (typeof PHASES)[number];
 
+/** The seven stretches of a CFOP solve, between consecutive milestones. */
+export const SEGMENTS = ["Cross", "Pair 1", "Pair 2", "Pair 3", "Pair 4", "OLL", "PLL"] as const;
+
 export interface SolveMetrics {
   id: string;
   date: number;
   totalMs: number;
   /** Time in each phase (ms), in PHASES order. */
   phases: [number, number, number, number];
+  /** Finer stretches (ms), in SEGMENTS order: cross, each pair, OLL, PLL. */
+  segments: number[];
+  /** Ms from start at which each phase ended (Cross, F2L, OLL, solved). */
+  phaseEnds: [number, number, number, number];
+  /** Every pause: when it started (ms from start) and how long it was. */
+  pauses: { atMs: number; ms: number }[];
   turns: number;
   /** Turns per second over the whole solve. */
   tps: number;
@@ -65,6 +74,7 @@ export function solveMetrics(solve: Solve): SolveMetrics | null {
   const end = solve.timeMs;
   const phases: [number, number, number, number] = [m[0], m[4] - m[0], m[5] - m[4], Math.max(0, end - m[5])];
 
+  const pauses: { atMs: number; ms: number }[] = [];
   let pauseMs = 0;
   let pauseCount = 0;
   let longestPauseMs = 0;
@@ -74,6 +84,7 @@ export function solveMetrics(solve: Solve): SolveMetrics | null {
   for (let i = 1; i < timesMs.length; i++) {
     const gap = timesMs[i] - timesMs[i - 1];
     if (gap >= PAUSE_MS) {
+      pauses.push({ atMs: timesMs[i - 1], ms: gap });
       pauseMs += gap;
       pauseCount++;
       longestPauseMs = Math.max(longestPauseMs, gap);
@@ -95,6 +106,9 @@ export function solveMetrics(solve: Solve): SolveMetrics | null {
     date: solve.date,
     totalMs: end,
     phases,
+    segments: [m[0], m[1]! - m[0], m[2]! - m[1]!, m[3]! - m[2]!, m[4] - m[3]!, m[5] - m[4], Math.max(0, end - m[5])],
+    phaseEnds: [m[0], m[4], m[5], end],
+    pauses,
     turns,
     tps: turns / Math.max(0.001, end / 1000),
     execTps: execGaps > 0 ? execGaps / Math.max(0.001, execMs / 1000) : 0,
