@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BatteryFull,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useSmartCubeStore, getGyroLog } from "@/lib/store/smartCubeStore";
 import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
-import { summarizeSolveGyro, type SolveGyroSummary } from "@/lib/gyro/solveGyro";
+import { summarizeSolveGyro } from "@/lib/gyro/solveGyro";
 import { GyroTwin } from "@/components/lab/GyroTwin";
 import { GyroReconstructionCard } from "@/components/lab/GyroReconstructionCard";
 import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
@@ -30,7 +30,7 @@ import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
 import { inspectionReport } from "@/lib/inspection/report";
 import { GazeCard } from "@/components/gaze/GazeCard";
-import { analyzeGaze, type GazeReport } from "@/lib/gaze/gaze";
+import { analyzeGaze } from "@/lib/gaze/gaze";
 import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
 import { inspectionPenalty } from "@/lib/timer/timerMachine";
 import { PaceChip, PaceLadderCard } from "@/components/pacer/PaceCards";
@@ -42,6 +42,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
+import { useRecapStore } from "@/lib/store/recapStore";
 import { useScrambleGuide } from "@/hooks/useScrambleGuide";
 import { ScrambleGuidePanel } from "@/components/smartcube/ScrambleGuidePanel";
 import { useNowTick } from "@/hooks/useNowTick";
@@ -229,7 +230,6 @@ export function SmartCubeTimer() {
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
-  const [saved, setSaved] = useState(false);
   // The post-solve extras (coach, mistakes, inspection, pace, gyro, X-ray) wait behind one tap.
   const [showDetails, setShowDetails] = useState(false);
 
@@ -329,25 +329,29 @@ export function SmartCubeTimer() {
   // recap is still on screen, it's already the *next* one. Everything the
   // recap displays (LiveCubeMimic, "Full 3D analysis") needs to stay paired
   // with the solve it's actually showing, not whatever's live in the store.
-  const [finishedScramble, setFinishedScramble] = useState("");
+  const storedRecap = useRecapStore((s) => s.recap);
+  const recap = storedRecap && storedRecap.solvedAtMs === solvedAtMs ? storedRecap : null;
+  const finishedScramble = recap?.scramble ?? "";
+  const finishedGyro = recap?.gyro ?? null;
+  const finishedGaze = recap?.gaze ?? null;
+  // Honest about what's on disk: a recap whose solve you deleted says so.
+  const savedSolveExists = useSessionStore((s) =>
+    finishedScramble ? s.solves.some((x) => x.scramble === finishedScramble && x.reconstruction === moves.map((m) => m.token).join(" ")) : false,
+  );
   // The gyro's read on the solve that just finished (regrips, oriented
   // reconstruction) — computed once at save time from the module-level gyro
   // log, which isn't reactive state, so it's captured here alongside the
   // scramble rather than re-derived on render.
-  const [finishedGyro, setFinishedGyro] = useState<SolveGyroSummary | null>(null);
   // Where the cuber's eyes went during inspection (gyro cubes only): the
   // samples logged from arm() — the moment inspection began — to the first turn.
-  const [finishedGaze, setFinishedGaze] = useState<{ report: GazeReport; facelets: string } | null>(null);
 
   // Saves the instant a solve finishes — no button, exactly like the
   // keyboard timer's own onComplete. Edge-triggered off solvedAtMs (a ref,
   // not state) so this fires exactly once per solve even though `finished`
   // keeps being true across re-renders until the next scramble is matched.
-  const autoSavedAtRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!finished || autoSavedAtRef.current === solvedAtMs) return;
-    autoSavedAtRef.current = solvedAtMs;
-    setFinishedScramble(scramble);
+    // Saved already — including before this component last unmounted.
+    if (!finished || solvedAtMs === null || useRecapStore.getState().recap?.solvedAtMs === solvedAtMs) return;
     const gyro = summarizeSolveGyro(
       getGyroLog(),
       useGyroStore.getState().ref,
@@ -355,7 +359,6 @@ export function SmartCubeTimer() {
       moves,
       startedAtMs!,
     );
-    setFinishedGyro(gyro);
     const gyroLog = getGyroLog();
     const gazeRef = useGyroStore.getState().ref;
     const startFacelets = scrambleToFacelets(scramble);
@@ -363,7 +366,7 @@ export function SmartCubeTimer() {
       gazeRef && gyroLog.length > 0
         ? analyzeGaze(gyroLog, gazeRef, calibrationFor(protocolName).calibration, gyroLog[0].atMs, startedAtMs!, startFacelets)
         : null;
-    setFinishedGaze(gaze ? { report: gaze, facelets: startFacelets } : null);
+    useRecapStore.setState({ recap: { solvedAtMs, scramble, gyro, gaze: gaze ? { report: gaze, facelets: startFacelets } : null } });
     // Unlike the keyboard timer, a smart-cube solve has a real absolute
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
@@ -386,7 +389,6 @@ export function SmartCubeTimer() {
       flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs! - flow.inspectionStartedAtMs) : undefined,
     );
     if (soundEnabled) playSolveChime();
-    setSaved(true);
     // Rolls the next target scramble right away, in the background — but
     // deliberately does NOT call cancel() here, so smartCubeStore's
     // armed/recording/solvedAtMs (and therefore `finished`) stay exactly as
@@ -459,8 +461,6 @@ export function SmartCubeTimer() {
   // so this just clears the recap now rather than rolling another one.
   const onDismiss = () => {
     cancel();
-    setSaved(false);
-    autoSavedAtRef.current = null;
   };
 
   const mimicScramble = finished ? finishedScramble : scramble;
@@ -629,11 +629,14 @@ export function SmartCubeTimer() {
           <div className="flex items-center gap-3 text-xs text-muted">
             <span>{moves.length} moves</span>
             {avgTps !== null && <span>{avgTps.toFixed(2)} TPS</span>}
-            {saved && (
-              <span className="flex items-center gap-1 text-success">
-                <Check size={12} /> Saved
-              </span>
-            )}
+            {finishedScramble &&
+              (savedSolveExists ? (
+                <span className="flex items-center gap-1 text-success">
+                  <Check size={12} /> Saved
+                </span>
+              ) : (
+                <span className="text-muted-2">Deleted</span>
+              ))}
           </div>
 
           <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} />

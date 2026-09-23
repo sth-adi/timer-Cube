@@ -13,9 +13,19 @@ import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Check, Heart, Link2, Loader2, MessageSquare, Plus, Wand2, X } from "lucide-react";
+import { Check, Heart, Link2, Loader2, MessageSquare, Plus, Trash2, Wand2 } from "lucide-react";
 
-function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: number; isBest: boolean; isWorst: boolean }) {
+function SolveRow({
+  solve,
+  index,
+  isBest,
+  isWorst,
+}: {
+  solve: Solve;
+  index: number;
+  isBest: boolean;
+  isWorst: boolean;
+}) {
   const setPenalty = useSessionStore((s) => s.setPenalty);
   const setComment = useSessionStore((s) => s.setComment);
   const removeSolve = useSessionStore((s) => s.removeSolve);
@@ -84,13 +94,11 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
       >
         <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
         <span className="tabular-timer flex-1 text-left ml-2">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
-        {solve.reconstruction && (
-          <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />
-        )}
+        {solve.reconstruction && <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />}
         {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-64 rounded-lg glass-panel p-2.5 shadow-lg animate-fade-in-up">
+        <div className="absolute right-0 top-full z-20 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-bg-elevated p-2.5 shadow-lg animate-fade-in-up">
           <p className="text-muted-2 text-[11px] font-mono leading-snug mb-2 break-words">{solve.scramble}</p>
           {solve.heartRate && (
             <p className="mb-2 flex items-center gap-1 text-[11px] text-danger">
@@ -106,10 +114,12 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
               <p className="text-[10px] font-medium text-accent">
                 Gyro reconstruction · {solve.rotations?.length ?? 0} regrip{solve.rotations?.length === 1 ? "" : "s"}
               </p>
-              <p className="max-h-20 overflow-y-auto break-words font-mono text-[10px] leading-snug text-muted">{solve.orientedReconstruction}</p>
+              <p className="max-h-20 overflow-y-auto break-words font-mono text-[10px] leading-snug text-muted">
+                {solve.orientedReconstruction}
+              </p>
             </div>
           )}
-          <div className="flex items-center gap-1 mb-2">
+          <div className="mb-2 flex flex-wrap items-center gap-1">
             <button
               type="button"
               onClick={() => cyclePenalty("plus2")}
@@ -133,7 +143,13 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
             <button
               type="button"
               onClick={() => {
-                requestAnalysis(solve.scramble, solveFinalMs(solve), solve.id, solve.reconstruction, solve.moveTimestamps);
+                requestAnalysis(
+                  solve.scramble,
+                  solveFinalMs(solve),
+                  solve.id,
+                  solve.reconstruction,
+                  solve.moveTimestamps,
+                );
                 setOpen(false);
                 // The shell that owns the Analyze tab only lives on "/" — the
                 // solve list is also embedded on /solves, so a click there
@@ -153,7 +169,11 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
                 title="Copy a shareable link to this solve's reconstruction and stats"
                 className={cn(
                   "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium",
-                  shareState === "copied" ? "text-success" : shareState === "error" ? "text-danger" : "text-muted hover:text-accent",
+                  shareState === "copied"
+                    ? "text-success"
+                    : shareState === "error"
+                      ? "text-danger"
+                      : "text-muted hover:text-accent",
                 )}
               >
                 {shareState === "busy" ? (
@@ -166,25 +186,30 @@ function SolveRow({ solve, index, isBest, isWorst }: { solve: Solve; index: numb
                 {shareState === "copied" ? "Copied" : shareState === "error" ? "Failed" : "Share"}
               </button>
             )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <input
+              value={commentDraft}
+              onChange={(e) => setCommentDraft(e.target.value)}
+              onBlur={saveComment}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+              placeholder="Add a note…"
+              className="min-w-0 flex-1 rounded-md bg-bg-panel-2 border border-border px-2 py-1 text-xs text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent"
+            />
             <button
               type="button"
-              onClick={() => removeSolve(solve.id)}
-              className="tap-target -mr-1.5 rounded text-muted hover:text-danger"
+              onClick={() => {
+                setOpen(false);
+                void removeSolve(solve.id);
+              }}
+              className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
               aria-label="Delete solve"
             >
-              <X size={14} />
+              <Trash2 size={12} /> Delete
             </button>
           </div>
-          <input
-            value={commentDraft}
-            onChange={(e) => setCommentDraft(e.target.value)}
-            onBlur={saveComment}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            }}
-            placeholder="Add a note…"
-            className="w-full rounded-md bg-bg-panel-2 border border-border px-2 py-1 text-xs text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent"
-          />
         </div>
       )}
     </div>
