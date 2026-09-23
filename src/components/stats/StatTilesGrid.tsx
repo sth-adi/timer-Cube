@@ -52,12 +52,13 @@ export function StatTilesGrid({ solves, rawSolves }: { solves: Solve[]; rawSolve
         {grouped.map(([category, categoryTiles]) => (
           <div key={category}>
             <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">{category}</p>
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            {/* Columns by the card's own width, not the screen's: in the desktop sidebar this card is narrow. */}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-1.5">
               {categoryTiles.map((tile) => (
                 <div key={tile.id} className="rounded-lg bg-bg-panel-2 px-2.5 py-2">
-                  <p className="truncate text-[10px] text-muted-2">{tile.label}</p>
+                  <p className="text-[10px] leading-snug text-muted-2">{tile.label}</p>
                   <p className="tabular-nums text-sm font-semibold text-foreground">{tile.result.value}</p>
-                  {tile.result.sub && <p className="truncate text-[10px] text-muted-2">{tile.result.sub}</p>}
+                  {tile.result.sub && <p className="text-[10px] leading-snug text-muted-2">{tile.result.sub}</p>}
                 </div>
               ))}
             </div>
