@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Timer as TimerIcon, BarChart3, ListOrdered, Repeat, Wand2 } from "lucide-react";
+import { Timer as TimerIcon, BarChart3, Gamepad2, ListOrdered, Repeat, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const TABS = [
@@ -20,7 +20,8 @@ export type TabId = (typeof TABS)[number]["id"] | "solves";
  *
  * "Solves" is a real route (/solves), not one of these in-shell tabs — it
  * got its own full page instead of living in the stats aside's scroller, so
- * it navigates away rather than flipping local tab state.
+ * it navigates away rather than flipping local tab state. "Play" (the cube
+ * games) is its own route the same way.
  */
 export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: TabId) => void }) {
   return (
@@ -47,6 +48,13 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: T
           </button>
         );
       })}
+      <Link
+        href="/play"
+        className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-2 transition-colors"
+      >
+        <Gamepad2 size={20} strokeWidth={2} />
+        Play
+      </Link>
       <Link
         href="/solves"
         className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-2 transition-colors"

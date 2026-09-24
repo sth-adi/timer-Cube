@@ -576,3 +576,171 @@ body {
     animation: none;
   }
 }
+
+/* ===========================================================
+   Play: the arcade side of the app. Its own fixed look — a
+   dark cabinet with per-game neon — whatever theme is active,
+   so the games read as a different place from the tools.
+   =========================================================== */
+
+.play-root {
+  --play-bg: #07060d;
+  --play-panel: rgba(255, 255, 255, 0.045);
+  --play-line: rgba(255, 255, 255, 0.09);
+  --play-ink: #f4f1ff;
+  --play-dim: #8d88a8;
+  --play-accent: #b36bff;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--play-accent) 22%, transparent), transparent 70%),
+    radial-gradient(800px 500px at 110% 110%, rgba(56, 225, 255, 0.08), transparent 70%),
+    var(--play-bg);
+  color: var(--play-ink);
+}
+
+.play-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(var(--play-line) 1px, transparent 1px), linear-gradient(90deg, var(--play-line) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 65%);
+  opacity: 0.35;
+}
+
+.play-panel {
+  background: var(--play-panel);
+  border: 1px solid var(--play-line);
+  backdrop-filter: blur(6px);
+}
+
+.play-title {
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  background: linear-gradient(180deg, #fff 10%, var(--play-accent) 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.play-glow {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--play-accent) 55%, transparent),
+    0 0 32px -6px color-mix(in srgb, var(--play-accent) 70%, transparent);
+}
+
+.play-btn {
+  background: var(--play-accent);
+  color: #0a0712;
+  font-weight: 800;
+  border-radius: 999px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.play-btn:hover {
+  filter: brightness(1.12);
+}
+.play-btn:active {
+  transform: scale(0.96);
+}
+.play-btn:disabled {
+  opacity: 0.4;
+}
+
+@keyframes play-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.play-float {
+  animation: play-float 5s ease-in-out infinite;
+}
+
+@keyframes play-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.play-pulse {
+  animation: play-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes play-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-7px);
+  }
+  40%,
+  80% {
+    transform: translateX(7px);
+  }
+}
+.play-shake {
+  animation: play-shake 0.4s ease;
+}
+
+@keyframes play-unlock {
+  0% {
+    opacity: 0;
+    filter: blur(14px);
+    transform: scale(0.94);
+    letter-spacing: 0.4em;
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+    letter-spacing: normal;
+  }
+}
+.play-unlock {
+  animation: play-unlock 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes play-alarm {
+  0%,
+  100% {
+    background-color: rgba(255, 70, 40, 0.1);
+  }
+  50% {
+    background-color: rgba(255, 70, 40, 0.45);
+  }
+}
+.play-alarm {
+  animation: play-alarm 0.9s ease-in-out infinite;
+}
+
+@keyframes play-key {
+  from {
+    transform: scale(0.8);
+    opacity: 0.2;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.play-key {
+  animation: play-key 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .play-float,
+  .play-pulse,
+  .play-alarm {
+    animation: none;
+  }
+}

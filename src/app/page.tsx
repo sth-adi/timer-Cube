@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Settings, Timer as TimerIcon, Repeat, Wand2, ChevronDown, ChevronRight } from "lucide-react";
+import { Settings, Timer as TimerIcon, Repeat, Wand2, ChevronDown, ChevronRight, Gamepad2 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { SolveList } from "@/components/sessions/SolveList";
@@ -125,6 +125,11 @@ function HomeInner() {
         router.push("/solves");
         return;
       }
+      if (e.key === "6") {
+        e.preventDefault();
+        router.push("/play");
+        return;
+      }
       const nextTab = TAB_BY_DIGIT[e.key];
       if (nextTab) {
         e.preventDefault();
@@ -176,6 +181,9 @@ function HomeInner() {
             >
               <Wand2 size={13} /> Analyze
             </button>
+            <Link href="/play" className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground">
+              <Gamepad2 size={13} /> Play
+            </Link>
           </div>
 
           <div className="flex items-center gap-2">
