@@ -77,9 +77,18 @@ describe("summarizeInsertions", () => {
   const solo = (n: number, turns: number, ms: number): InsertionEvent[] => Array.from({ length: n }, () => ({ pairs: 1, turns, ms }));
   const multi = (n: number, pairs: number, turns: number, ms: number): InsertionEvent[] => Array.from({ length: n }, () => ({ pairs, turns, ms }));
 
-  it("returns null under MIN_EVENTS, or with no multi events at all", () => {
+  it("returns null under MIN_EVENTS", () => {
     expect(summarizeInsertions(solo(MIN_EVENTS - 1, 6, 900))).toBeNull();
-    expect(summarizeInsertions(solo(MIN_EVENTS + 5, 6, 900))).toBeNull(); // no multi events
+  });
+
+  it("still reports when every insertion was solo — never multi-slotting is a real finding, not missing data", () => {
+    const report = summarizeInsertions(solo(MIN_EVENTS + 5, 6, 900))!;
+    expect(report).not.toBeNull();
+    expect(report.soloEvents).toBe(MIN_EVENTS + 5);
+    expect(report.multiEvents).toBe(0);
+    expect(report.multiPairShare).toBe(0);
+    expect(report.faster).toBeNull();
+    expect(report.headline).toMatch(/you don't multi-slot pairs/);
   });
 
   it("computes per-pair turns/ms and calls multi-slotting faster when it genuinely is", () => {

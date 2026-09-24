@@ -69,11 +69,18 @@ export const MIN_EVENTS = 15;
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
 
-/** Aggregates already-extracted events (see f2lInsertionEvents) into the report — split out so the maths is testable without solves. */
+/**
+ * Aggregates already-extracted events (see f2lInsertionEvents) into the
+ * report — split out so the maths is testable without solves. Never
+ * multi-slotting is itself a real finding, not a "not enough data" state,
+ * so this only gates on total event count, not on multi.length being
+ * nonzero — a report where every insertion was solo just skips the
+ * faster/slower comparison.
+ */
 export function summarizeInsertions(events: readonly InsertionEvent[]): MultiSlotReport | null {
   const solo = events.filter((e) => e.pairs === 1);
   const multi = events.filter((e) => e.pairs >= 2);
-  if (solo.length + multi.length < MIN_EVENTS || multi.length === 0) return null;
+  if (solo.length + multi.length < MIN_EVENTS) return null;
 
   const perPair = (list: readonly InsertionEvent[], key: "turns" | "ms") => avg(list.flatMap((e) => Array(e.pairs).fill(e[key] / e.pairs)));
   const avgTurnsPerPairSolo = perPair(solo, "turns");
@@ -85,14 +92,18 @@ export function summarizeInsertions(events: readonly InsertionEvent[]): MultiSlo
   const multiPairs = multi.reduce((s, e) => s + e.pairs, 0);
   const multiPairShare = totalPairs > 0 ? multiPairs / totalPairs : 0;
 
-  const faster: MultiSlotReport["faster"] = avgMsPerPairMulti < avgMsPerPairSolo ? "multi" : avgMsPerPairSolo < avgMsPerPairMulti ? "solo" : null;
+  const faster: MultiSlotReport["faster"] = multi.length === 0 ? null : avgMsPerPairMulti < avgMsPerPairSolo ? "multi" : avgMsPerPairSolo < avgMsPerPairMulti ? "solo" : null;
 
   const parts: string[] = [];
-  parts.push(`${Math.round(multiPairShare * 100)}% of your F2L pairs arrive as part of a multi-pair insertion, the rest one at a time.`);
-  if (faster === "multi") {
-    parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo — multi-slotting is genuinely saving you time.`);
-  } else if (faster === "solo") {
-    parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo — the extra recognition is costing more than it saves.`);
+  if (multi.length === 0) {
+    parts.push(`Every one of your ${solo.length} tracked F2L insertions has been solo — you don't multi-slot pairs.`);
+  } else {
+    parts.push(`${Math.round(multiPairShare * 100)}% of your F2L pairs arrive as part of a multi-pair insertion, the rest one at a time.`);
+    if (faster === "multi") {
+      parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo — multi-slotting is genuinely saving you time.`);
+    } else if (faster === "solo") {
+      parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo — the extra recognition is costing more than it saves.`);
+    }
   }
 
   return { soloEvents: solo.length, multiEvents: multi.length, multiPairShare, avgTurnsPerPairSolo, avgTurnsPerPairMulti, avgMsPerPairSolo, avgMsPerPairMulti, faster, headline: parts.join(" ") };
