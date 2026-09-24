@@ -24,6 +24,7 @@ import {
   Loader2,
   Medal,
   Metronome,
+  Minimize2,
   Navigation,
   Palette,
   Radar,
@@ -32,14 +33,18 @@ import {
   RotateCw,
   Scale,
   Shapes,
+  Shuffle,
   Sigma,
   ScanLine,
+  SlidersHorizontal,
+  Snowflake,
   Stethoscope,
   Swords,
   Target,
   Thermometer,
   Timer as TimerIcon,
   TrendingUp,
+  Zap,
 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
@@ -103,6 +108,11 @@ const TOOLS = [
   { href: "/spin", icon: RotateCw, title: "Spin", blurb: "Clockwise vs counter-clockwise, and which side of each axis is slower." },
   { href: "/crosscolor", icon: Palette, title: "Cross Color Advisor", blurb: "How long your cross would have been on every other color." },
   { href: "/tilt", icon: AlertTriangle, title: "Tilt Meter", blurb: "Does a mistake early in a solve bleed into the phase right after?" },
+  { href: "/momentum", icon: Zap, title: "Momentum Meter", blurb: "Do fast solves cluster together, or is every solve independent of the last?" },
+  { href: "/coldstart", icon: Snowflake, title: "Cold Start Tax", blurb: "Are your first few turns after a pause slower than your steady speed?" },
+  { href: "/eventmix", icon: Shuffle, title: "Event Mix", blurb: "Every puzzle and category you do, ranked against your ordinary 3x3." },
+  { href: "/bottleneck", icon: SlidersHorizontal, title: "Bottleneck Report", blurb: "Is each slow case costing you recognition time, or execution time?" },
+  { href: "/economy", icon: Minimize2, title: "Move Economy Trend", blurb: "A learning curve for your move count, not your time." },
 ] as const;
 
 function ToolGrid({ tools, usage }: { tools: readonly (typeof TOOLS)[number][]; usage: ReturnType<typeof parseUsage> }) {
