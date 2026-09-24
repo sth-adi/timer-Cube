@@ -3,6 +3,8 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
+  Activity,
+  AlertTriangle,
   Bluetooth,
   Clover,
   Clapperboard,
@@ -18,13 +20,16 @@ import {
   Hand,
   HeartPulse,
   History,
+  Layers,
   Loader2,
   Medal,
   Metronome,
   Navigation,
+  Palette,
   Radar,
   RefreshCcw,
   Rotate3d,
+  RotateCw,
   Scale,
   Shapes,
   Sigma,
@@ -93,6 +98,11 @@ const TOOLS = [
   { href: "/algid", icon: Fingerprint, title: "Alg Identifier", blurb: "Do any sequence — find out exactly what it is." },
   { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve into a shareable video." },
   { href: "/xray", icon: ScanLine, title: "Solve X-Ray", blurb: "F2L flow, last-slot oracle, alg microscope, neutrality." },
+  { href: "/cadence", icon: Activity, title: "Cadence", blurb: "How steady your turn-to-turn spacing is — smooth stream or stutters." },
+  { href: "/multislot", icon: Layers, title: "Multi-Slot Report", blurb: "Pairs solved together vs one at a time — and which is actually faster." },
+  { href: "/spin", icon: RotateCw, title: "Spin", blurb: "Clockwise vs counter-clockwise, and which side of each axis is slower." },
+  { href: "/crosscolor", icon: Palette, title: "Cross Color Advisor", blurb: "How long your cross would have been on every other color." },
+  { href: "/tilt", icon: AlertTriangle, title: "Tilt Meter", blurb: "Does a mistake early in a solve bleed into the phase right after?" },
 ] as const;
 
 function ToolGrid({ tools, usage }: { tools: readonly (typeof TOOLS)[number][]; usage: ReturnType<typeof parseUsage> }) {
