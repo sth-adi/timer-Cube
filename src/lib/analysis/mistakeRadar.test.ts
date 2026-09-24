@@ -78,6 +78,18 @@ describe("analyzeMistakes", () => {
     const wasted = report.mistakes.filter((m) => m.kind === "wasted-turns");
     expect(wasted.map((m) => m.title)).toEqual(["Turn undone", "Turn could have been one"]);
   });
+
+  it("does not flag a half turn made of two identical quarter turns — how smart cubes report D2", () => {
+    const report = analyzeMistakes(solve(["R D D R' D' D' R"]));
+    expect(report.mistakes.filter((m) => m.kind === "wasted-turns")).toEqual([]);
+  });
+
+  it("flags three quarter turns in a row as one turn done in three", () => {
+    const report = analyzeMistakes(solve(["R D D D R'"]));
+    const wasted = report.mistakes.filter((m) => m.kind === "wasted-turns");
+    expect(wasted).toHaveLength(1);
+    expect(wasted[0].detail).toMatch(/D D D is just D' done in 3/);
+  });
 });
 
 describe("aggregateMistakes", () => {

@@ -51,11 +51,15 @@ export function rollingMean(xs: readonly number[], w = WINDOW): number[] {
   return xs.map((_, i) => avg(xs.slice(Math.max(0, i - w + 1), i + 1)));
 }
 
-/** Power-law learning curve over solve number 1..n, plus a plateau test on the most recent stretch. */
-export function fitCurve(ys: readonly number[]): Curve {
+/**
+ * Power-law learning curve over solve number 1..n, plus a plateau test on
+ * the most recent stretch. `floor` keeps a near-zero value out of the log —
+ * 100 suits milliseconds (a skipped OLL); a series in other units (move
+ * counts) must pass its own, or every value gets flattened to the floor.
+ */
+export function fitCurve(ys: readonly number[], floor = 100): Curve {
   const xs = ys.map((_, i) => Math.log(i + 1));
-  // Floored so a skipped OLL (a ~0ms phase) doesn't blow up the log.
-  const ls = ys.map((y) => Math.log(Math.max(100, y)));
+  const ls = ys.map((y) => Math.log(Math.max(floor, y)));
   const { a, b } = fitLine(xs, ls);
   const c = Math.exp(a);
   const p = -b;

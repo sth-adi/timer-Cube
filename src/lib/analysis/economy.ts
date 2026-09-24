@@ -44,7 +44,7 @@ export interface EconomyReport {
 export function summarizeEconomy(rows: readonly EconomySolve[]): EconomyReport | null {
   if (rows.length < MIN_SOLVES) return null;
   const series = rows.map((r) => r.moves);
-  const curve = fitCurve(series);
+  const curve = fitCurve(series, 1);
   const rolling = rollingMean(series);
 
   const parts: string[] = [

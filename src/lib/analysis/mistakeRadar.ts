@@ -252,23 +252,36 @@ export function analyzeMistakes({ scramble, moves, timesMs, totalMs }: MistakeRa
     }
   }
 
-  // 5. Wasted turns: the same face turned twice in a row (the double-turn
-  //    merge already folded quick R R into R2), so the pair either cancels
-  //    outright (R R') or could have been one turn (R R2 = R').
-  for (let i = 1; i < moves.length; i++) {
-    if (moves[i][0] !== moves[i - 1][0]) continue;
-    const net = (quarterTurns(moves[i - 1]) + quarterTurns(moves[i])) % 4;
+  // 5. Wasted turns: a run of turns on the same face that does less than it
+  //    took. Smart cubes report a half turn as two quarter turns (R R), and
+  //    stored reconstructions keep them that way, so an identical pair of
+  //    quarter turns is just how a half turn is done — not a mistake. What
+  //    is: a run that cancels (R R'), or overshoots and comes back (R R2,
+  //    R R R).
+  for (let start = 0; start < moves.length; ) {
+    let end = start;
+    while (end + 1 < moves.length && moves[end + 1][0] === moves[start][0]) end++;
+    const run = moves.slice(start, end + 1);
+    const first = start;
+    start = end + 1;
+    if (run.length < 2) continue;
+    const halfTurnFlicks = run.length === 2 && run[0] === run[1] && !run[0].includes("2");
+    if (halfTurnFlicks) continue;
+    const net = run.reduce((s, m) => s + quarterTurns(m), 0) % 4;
     const cancelled = net === 0;
+    const minimal = cancelled ? 0 : net === 2 && run.every((m) => !m.includes("2")) ? 2 : 1;
+    const extra = run.length - minimal;
+    if (extra <= 0) continue;
+    const face = run[0][0];
+    const target = net === 1 ? face : net === 2 ? `${face}2` : `${face}'`;
     mistakes.push({
       kind: "wasted-turns",
-      phase: phaseAt(i),
-      atMs: t(i - 1),
-      costMs: cancelled ? t(i) - t(i - 1) + typicalGap : typicalGap,
-      moveIndex: i - 1,
+      phase: phaseAt(end),
+      atMs: t(first),
+      costMs: cancelled ? t(end) - t(first) + typicalGap : extra * typicalGap,
+      moveIndex: first,
       title: cancelled ? "Turn undone" : "Turn could have been one",
-      detail: cancelled
-        ? `${moves[i - 1]} ${moves[i]} cancel out — two moves that did nothing.`
-        : `${moves[i - 1]} ${moves[i]} is just one turn done in two.`,
+      detail: cancelled ? `${run.join(" ")} cancel out — ${run.length} moves that did nothing.` : `${run.join(" ")} is just ${target} done in ${run.length}.`,
     });
   }
 

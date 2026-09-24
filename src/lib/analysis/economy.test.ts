@@ -36,6 +36,9 @@ describe("summarizeEconomy", () => {
     expect(report).not.toBeNull();
     expect(report.solves).toBe(40);
     expect(report.curve.plateau).toBe(false);
+    // Move counts sit well under 100 — a fit that floored them at 100 (as
+    // Progress Forecast does for ms) would flatten this to 0% improvement.
+    expect(report.curve.per100).toBeGreaterThan(0.05);
     expect(report.headline).toMatch(/trimming about/);
     expect(report.headline).toMatch(/Down from .* turns\/solve early on to .* now\./);
   });

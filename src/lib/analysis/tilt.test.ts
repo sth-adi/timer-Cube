@@ -29,6 +29,14 @@ describe("aggregateTilt", () => {
     expect(report.headline).toMatch(/you tilt/i);
   });
 
+  it("says so when phases after a mistake are actually faster, instead of calling it 'barely different'", () => {
+    const mistake: TiltEntry[] = Array.from({ length: MIN_SAMPLE + 2 }, () => ({ hasMistake: true, ratio: 0.95 }));
+    const clean: TiltEntry[] = Array.from({ length: MIN_SAMPLE + 2 }, () => ({ hasMistake: false, ratio: 1.07 }));
+    const report = aggregateTilt([...mistake, ...clean])!;
+    expect(report.tilts).toBe(false);
+    expect(report.headline).toMatch(/sharpens you up/);
+  });
+
   it("does not flag a tilt when the gap is under the threshold", () => {
     const mistake: TiltEntry[] = Array.from({ length: MIN_SAMPLE + 2 }, () => ({ hasMistake: true, ratio: 1.02 }));
     const clean: TiltEntry[] = Array.from({ length: MIN_SAMPLE + 2 }, () => ({ hasMistake: false, ratio: 1.0 }));

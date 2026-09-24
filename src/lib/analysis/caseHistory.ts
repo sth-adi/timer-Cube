@@ -3,6 +3,8 @@ import { replayStates } from "@/lib/xray/common";
 import { isOllSkip, isPllSkip, recognizeOll, recognizePll, toLibraryFrame } from "@/lib/analysis/recognize";
 import { pairSegments } from "@/lib/blindspots/blindSpots";
 import { recognizeF2lCase } from "@/lib/analysis/f2lCase";
+import { simplify } from "@/lib/smartcube/route";
+import { PAUSE_MS } from "@/lib/analytics/pause";
 import type { Solve } from "@/types";
 
 /**
@@ -26,6 +28,10 @@ export interface CaseOccurrence {
   date: number;
   recognitionMs: number;
   executionMs: number;
+  /** Turns executed on this step (same-face quarter turns merged, so a smart cube's D D counts as one D2). */
+  turns: number;
+  /** Time inside the execution spent in pauses (gaps of PAUSE_MS or more) — a second look, a lost piece. */
+  execPauseMs: number;
   /** F2L only: how to draw it. */
   f2l?: { facelets: string; pairFacelets: number[] };
 }
@@ -57,11 +63,19 @@ export function solveCases(solve: Solve): CaseOccurrence[] {
   if (!after[after.length - 1].isSolved()) return [];
   const out: CaseOccurrence[] = [];
   const base = { solveId: solve.id, date: solve.date };
+  /** Turns from the move after `from` through `to`, merged the same way the rest of the app counts turns. */
+  const turnsBetween = (from: number, to: number) => simplify(moves.slice(from + 1, to + 1)).length;
+  /** Pauses between the first turn after `from` and the move at `to`. */
+  const pausesBetween = (from: number, to: number) => {
+    let ms = 0;
+    for (let i = from + 2; i <= to; i++) if (t[i] - t[i - 1] >= PAUSE_MS) ms += t[i] - t[i - 1];
+    return ms;
+  };
 
   for (const seg of pairSegments({ scramble: solve.scramble, moves, timesMs: t })) {
     const c = recognizeF2lCase(after[seg.fromIndex], seg.pair as 0 | 1 | 2 | 3);
     if (!c) continue;
-    out.push({ ...base, group: "F2L", key: c.key, name: c.name, recognitionMs: seg.findMs, executionMs: seg.execMs, f2l: { facelets: c.facelets, pairFacelets: c.pairFacelets } });
+    out.push({ ...base, group: "F2L", key: c.key, name: c.name, recognitionMs: seg.findMs, executionMs: seg.execMs, turns: turnsBetween(seg.fromIndex, seg.toIndex), execPauseMs: pausesBetween(seg.fromIndex, seg.toIndex), f2l: { facelets: c.facelets, pairFacelets: c.pairFacelets } });
   }
 
   const f2lDone = after.findIndex((c) => bottomLayerSolved(c));
@@ -75,7 +89,7 @@ export function solveCases(solve: Solve): CaseOccurrence[] {
   }
   const last = after.length - 1;
   /** Recognition from the step finishing at `from` to the next turn; execution from there to `to`. */
-  const split = (from: number, to: number) => ({ recognitionMs: t[from + 1] - t[from], executionMs: t[to] - t[from + 1] });
+  const split = (from: number, to: number) => ({ recognitionMs: t[from + 1] - t[from], executionMs: t[to] - t[from + 1], turns: turnsBetween(from, to), execPauseMs: pausesBetween(from, to) });
 
   if (ollDone > f2lDone) {
     const lib = toLibraryFrame(after[f2lDone]);

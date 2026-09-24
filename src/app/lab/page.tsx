@@ -13,13 +13,18 @@ import {
   Dumbbell,
   EyeClosed,
   Eye,
+  Binoculars,
+  ChevronRight,
   Fingerprint,
+  Flag,
   Flame,
   FlaskConical,
   Gauge,
+  GraduationCap,
   Hand,
   HeartPulse,
   History,
+  Hourglass,
   Layers,
   Loader2,
   Medal,
@@ -27,6 +32,7 @@ import {
   Minimize2,
   Navigation,
   Palette,
+  Puzzle,
   Radar,
   RefreshCcw,
   Rotate3d,
@@ -59,6 +65,7 @@ import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useCubeGestures } from "@/hooks/useCubeGestures";
 import { GESTURE_BINDINGS, type GestureAction } from "@/lib/smartcube/gestures";
 import { buildCubeHealthReport } from "@/lib/analysis/cubeHealth";
+import { analyzeCoach } from "@/lib/analysis/labCoach";
 import { cn } from "@/lib/utils/cn";
 import { parseUsage, rankTools, readUsageRaw, subscribeUsage } from "@/lib/usage/toolUsage";
 
@@ -78,6 +85,11 @@ function Section({ icon, title, subtitle, children }: { icon: React.ReactNode; t
 }
 
 const TOOLS = [
+  { href: "/coach", icon: GraduationCap, title: "Coach", blurb: "Where your time goes, ranked by what fixing it is worth." },
+  { href: "/goal", icon: Flag, title: "Goal Planner", blurb: "Pick a target time — get a phase budget from your own good days." },
+  { href: "/algspeed", icon: Hourglass, title: "Alg Speed Check", blurb: "Which OLLs and PLLs are slow — a second look, a stop, or slow fingers." },
+  { href: "/f2lcases", icon: Puzzle, title: "F2L Case Consistency", blurb: "Your best turn count on each F2L case against your usual one." },
+  { href: "/lookahead", icon: Binoculars, title: "Lookahead Tradeoff", blurb: "Does turning F2L calmer shorten your next pause — and is it worth it?" },
   { href: "/cases", icon: Shapes, title: "Case History", blurb: "Every OLL, PLL and F2L case you've had — how often, and recognise vs execute." },
   { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up — and your golds." },
   { href: "/luck", icon: Clover, title: "Luck Meter", blurb: "How much each solve was the scramble, and your luck-free leaderboard." },
@@ -166,6 +178,8 @@ export default function LabPage() {
   const usage = useMemo(() => parseUsage(usageRaw), [usageRaw]);
   const { used, unused } = useMemo(() => rankTools(TOOLS, usage), [usage]);
 
+  const coach = useMemo(() => analyzeCoach(allSolves), [allSolves]);
+
   const health = useMemo(
     () =>
       buildCubeHealthReport(
@@ -191,6 +205,29 @@ export default function LabPage() {
             <FlaskConical size={16} className="text-accent" />
             <h1 className="text-lg font-semibold text-foreground">Smart Cube Lab</h1>
           </div>
+
+          {coach && coach.findings.length > 0 && (
+            <Link href="/coach" className="card flex flex-col gap-2 rounded-xl p-4 transition-colors hover:bg-bg-panel-2/60">
+              <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <GraduationCap size={15} className="text-accent" />
+                Coach
+              </p>
+              <p className="text-[12px] leading-relaxed text-foreground">{coach.headline}</p>
+              <ol className="flex flex-col gap-1">
+                {coach.findings.slice(0, 3).map((f, i) => (
+                  <li key={f.id} className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="truncate text-muted">
+                      {i + 1}. {f.title}
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums text-accent">{(f.msPerSolve / 1000).toFixed(2)}s</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="flex items-center justify-end gap-1 text-[11px] font-medium text-foreground">
+                Full plan <ChevronRight size={13} className="text-muted-2" />
+              </p>
+            </Link>
+          )}
 
           {used.length > 0 && (
             <>

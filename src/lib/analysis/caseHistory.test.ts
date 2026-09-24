@@ -58,6 +58,9 @@ describe("solveCases", () => {
       expect(pllHit.recognitionMs).toBe(650);
       expect(ollHit.executionMs).toBe((oll.alg.split(" ").length - 1) * 120);
       expect(pllHit.executionMs).toBe((pll.alg.split(" ").length - 1) * 120);
+      expect(ollHit.turns).toBe(oll.alg.split(" ").length);
+      expect(pllHit.turns).toBe(pll.alg.split(" ").length);
+      expect(ollHit.execPauseMs).toBe(0);
     }
   });
 
@@ -82,10 +85,10 @@ describe("solveCases", () => {
 describe("caseStats", () => {
   it("counts, averages and shares per case, most frequent first", () => {
     const occ = [
-      { group: "OLL" as const, key: "Sune", name: "Sune", solveId: "a", date: 1, recognitionMs: 400, executionMs: 800 },
-      { group: "OLL" as const, key: "Sune", name: "Sune", solveId: "b", date: 3, recognitionMs: 600, executionMs: 1000 },
-      { group: "OLL" as const, key: "H", name: "H", solveId: "c", date: 2, recognitionMs: 300, executionMs: 900 },
-      { group: "PLL" as const, key: "T", name: "T", solveId: "a", date: 1, recognitionMs: 1, executionMs: 1 },
+      { group: "OLL" as const, key: "Sune", name: "Sune", solveId: "a", date: 1, recognitionMs: 400, executionMs: 800, turns: 7, execPauseMs: 0 },
+      { group: "OLL" as const, key: "Sune", name: "Sune", solveId: "b", date: 3, recognitionMs: 600, executionMs: 1000, turns: 7, execPauseMs: 0 },
+      { group: "OLL" as const, key: "H", name: "H", solveId: "c", date: 2, recognitionMs: 300, executionMs: 900, turns: 8, execPauseMs: 0 },
+      { group: "PLL" as const, key: "T", name: "T", solveId: "a", date: 1, recognitionMs: 1, executionMs: 1, turns: 14, execPauseMs: 0 },
     ];
     const stats = caseStats(occ, "OLL", 4);
     expect(stats.map((s) => s.key)).toEqual(["Sune", "H"]);
