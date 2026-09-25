@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Brain, CalendarCheck, Crosshair, Dumbbell, GitCompare, Library as LibraryIcon, ScanEye, Swords } from "lucide-react";
+import { Bluetooth, Brain, CalendarCheck, Crosshair, Dumbbell, GitCompare, Library as LibraryIcon, ScanEye, Swords } from "lucide-react";
 import { TrainerView } from "./TrainerView";
 import { AlgorithmsView } from "@/components/algorithms/AlgorithmsView";
 import { RecognitionTrainer } from "@/components/algorithms/RecognitionTrainer";
+import { AlgGymTrainer } from "@/components/gym/AlgGymTrainer";
 import { CrossDrill } from "./CrossDrill";
 import { BldMemoTrainer } from "./BldMemoTrainer";
 import { RaceMode } from "./RaceMode";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils/cn";
 
 const MODES = [
   { id: "drill", label: "Drill", icon: Dumbbell },
+  { id: "gym", label: "Gym", icon: Bluetooth },
   { id: "cross", label: "Cross", icon: Crosshair },
   { id: "recognize", label: "Recognize", icon: ScanEye },
   { id: "daily", label: "Daily", icon: CalendarCheck },
@@ -29,6 +31,7 @@ type Mode = (typeof MODES)[number]["id"];
 
 const MODE_BLURB: Record<Mode, string> = {
   drill: "Solve timed reps of a single algorithm set until it's automatic.",
+  gym: "OLL/PLL set up on your real cube and timed off its turns — any grip.",
   cross: "Plan an optimal cross before you touch the cube.",
   recognize: "Flashcard drill — name the case fast, no algorithm required.",
   daily: "One curated scramble a day, same for everyone.",
@@ -116,6 +119,8 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
 
       {mode === "drill" ? (
         <TrainerView />
+      ) : mode === "gym" ? (
+        <AlgGymTrainer />
       ) : mode === "cross" ? (
         <CrossDrill />
       ) : mode === "recognize" ? (
