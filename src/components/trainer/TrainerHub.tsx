@@ -31,7 +31,7 @@ type Mode = (typeof MODES)[number]["id"];
 
 const MODE_BLURB: Record<Mode, string> = {
   drill: "Solve timed reps of a single algorithm set until it's automatic.",
-  gym: "OLL/PLL set up on your real cube and timed off its turns — any grip.",
+  gym: "OLL/PLL set up on your real cube and timed off its turns — yellow top, green facing you.",
   cross: "Plan an optimal cross before you touch the cube.",
   recognize: "Flashcard drill — name the case fast, no algorithm required.",
   daily: "One curated scramble a day, same for everyone.",

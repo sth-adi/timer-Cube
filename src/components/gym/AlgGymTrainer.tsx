@@ -6,7 +6,6 @@ import { ConnectGate } from "@/components/smartcube/ConnectGate";
 import { RouteChips } from "@/components/smartcube/RouteChips";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
 import { GyroTwin } from "@/components/lab/GyroTwin";
-import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { useSmartCubeStore, SOLVED_FACELETS } from "@/lib/store/smartCubeStore";
 import { subscribeRawMoves } from "@/lib/store/smartCubeBus";
 import { useGymStore } from "@/lib/store/gymStore";
@@ -14,6 +13,7 @@ import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
 import { RouteTracker } from "@/lib/smartcube/route";
 import { invertAlg } from "@/lib/algorithms/algUtils";
+import { HOME_ORIENTATION, viewerMove } from "@/lib/gyro/orientation";
 import { GYM_CASES, caseAverageMs, caseKey, explainMiss, pickNextCase, setupSequence, stepDoneFacelets, type GymCase, type GymGroup } from "@/lib/gym/algGym";
 import { cn } from "@/lib/utils/cn";
 
@@ -34,15 +34,13 @@ interface Result {
 const secs = (ms: number) => (ms / 1000).toFixed(2);
 
 /**
- * OLL/PLL drilling on a real cube, in *your* grip. Setup is genuinely
- * grip-agnostic (the color chips track which physical center turns, not
- * notation that only means something in one orientation), and — unlike an
- * earlier version of this drill — solving is too: nothing here checks or
- * asks for any particular way of holding the cube, because recognizing the
- * case is a fact about the cube's physical state, not which way you're
- * looking at it. The live cube (the real gyro twin on a gyro cube, a plain
- * mimic otherwise) stays on screen through setup and solving so you can
- * always see exactly what's really there, however you're holding it.
+ * OLL/PLL drilling on a real cube, held yellow-up, green facing you — the
+ * one grip every book algorithm and every case diagram in this app already
+ * assumes, so what you see matches what you've memorized. Setup itself
+ * still only checks *which physical center turns* (so a stray regrip while
+ * you're getting into position doesn't fail it), but recognizing and
+ * solving the case is timed and graded in that one grip, same as the
+ * routine every real solve already uses.
  */
 function AlgGymInner() {
   const [groups, setGroups] = useState<GymGroup[]>(["PLL"]);
@@ -67,14 +65,16 @@ function AlgGymInner() {
     setPhase(p);
   };
 
-  // Every move since this rep's setup began (setup + exec), just for the
-  // live mimic to replay — reset the instant a new case is picked. Not used
-  // at all for a gyro cube, which reads the real cube state directly.
-  const [repMoves, setRepMoves] = useState<{ token: string; timeStampMs: number }[]>([]);
-
   const pool = useMemo(() => GYM_CASES.filter((c) => groups.includes(c.group)), [groups]);
 
+  // Bumped on every planSetup() call, so a corrective-route request that's
+  // since been superseded (a fresh off-route turn kicked off a newer one
+  // before the old one came back) can never win the race and overwrite the
+  // route with a stale one — that's what "the setup randomly resets" was.
+  const planIdRef = useRef(0);
+
   const planSetup = useCallback(() => {
+    const id = ++planIdRef.current;
     const target = targetRef.current;
     const live = useSmartCubeStore.getState().liveFacelets;
     if (live === scrambleToFacelets(target)) {
@@ -96,11 +96,11 @@ function AlgGymInner() {
     getCubeEngineClient()
       .computeCorrectiveMoves(target, live)
       .then((turns) => {
-        if (targetRef.current !== target || phaseRef.current !== "setup") return;
+        if (planIdRef.current !== id || targetRef.current !== target || phaseRef.current !== "setup") return;
         trackerRef.current = new RouteTracker(turns);
         setRoute({ turns, position: 0, partial: false });
       })
-      .catch(() => setRoute(null));
+      .catch(() => planIdRef.current === id && setRoute(null));
   }, []);
 
   const next = useCallback(() => {
@@ -110,7 +110,6 @@ function AlgGymInner() {
     setCurrent(c);
     setResult(null);
     setRoute(null);
-    setRepMoves([]);
     targetRef.current = setupSequence(c);
     setP("setup");
     planSetup();
@@ -145,8 +144,6 @@ function AlgGymInner() {
   useEffect(() => {
     return subscribeRawMoves((m) => {
       const p = phaseRef.current;
-      if (p === "idle" || p === "result") return;
-      setRepMoves((ms) => [...ms, { token: m.token, timeStampMs: m.timeStampMs }]);
       if (p === "setup") {
         const tracker = trackerRef.current;
         const event = tracker?.push(m.token);
@@ -188,7 +185,10 @@ function AlgGymInner() {
   );
 
   const algCase = result?.c ?? current;
-  const live = phase === "setup" || phase === "go" || phase === "exec";
+  // Setup only checks which physical center turns, so the letters shown
+  // still assume you're in the target grip — same convention every book
+  // algorithm and CaseIcon diagram in this app already uses.
+  const display = useMemo(() => route?.turns.map((t) => viewerMove(t, HOME_ORIENTATION)) ?? [], [route]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -218,8 +218,7 @@ function AlgGymInner() {
             <Dumbbell size={28} className="text-accent" />
             <p className="max-w-xs text-xs text-muted">
               The gym sets each case up on your cube, then times you recognizing and solving it — and tells you if you did the wrong
-              algorithm. Any grip, the whole way through: it reads the case from the cube&apos;s own state, not which way you&apos;re
-              holding it. Weak and slow cases come up more.
+              algorithm. Hold it yellow on top, green facing you, the whole way through. Weak and slow cases come up more.
             </p>
             <button type="button" onClick={next} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
               Start drilling
@@ -227,18 +226,18 @@ function AlgGymInner() {
           </>
         )}
 
-        {live && (
-          <div className="h-36 w-full max-w-[11rem]">
-            {gyroActive ? <GyroTwin size={110} showControls={false} className="mx-auto" /> : <LiveCubeMimic scramble="" moves={repMoves} className="h-full w-full" />}
+        {gyroActive && (phase === "setup" || phase === "go" || phase === "exec") && (
+          <div className="h-32 w-full max-w-[10rem]">
+            <GyroTwin size={100} showControls={false} className="mx-auto" />
           </div>
         )}
 
         {phase === "setup" && (
           <>
             <p className="text-sm font-semibold text-foreground">Set up the next case</p>
-            <p className="text-[11px] text-muted">Any grip — just follow the centers. Don&apos;t peek at the result until it&apos;s done.</p>
+            <p className="text-[11px] text-muted">Yellow on top, green facing you. Don&apos;t peek at the result until it&apos;s done.</p>
             {route ? (
-              <RouteChips display={route.turns} turns={route.turns} position={route.position} partial={route.partial} variant="color" />
+              <RouteChips display={display} turns={route.turns} position={route.position} partial={route.partial} />
             ) : (
               <Loader2 size={16} className="animate-spin text-accent" />
             )}
@@ -247,10 +246,9 @@ function AlgGymInner() {
 
         {(phase === "go" || phase === "exec") && (
           <>
-            <p className="flex items-center gap-1.5 text-lg font-black text-foreground">
-              <Eye size={18} className="text-accent" /> {phase === "go" ? "Recognize it" : "Solve it"}
-            </p>
-            <p className="text-[11px] text-muted">Whatever grip you landed in is fine — the clock is already running.</p>
+            <Eye size={26} className="text-accent" />
+            <p className="text-2xl font-black text-foreground">{phase === "go" ? "Go!" : "…"}</p>
+            <p className="text-[11px] text-muted">Yellow on top, green facing you — recognize the {current?.group} and solve it. The clock is already running.</p>
           </>
         )}
 
