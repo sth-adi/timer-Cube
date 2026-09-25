@@ -392,7 +392,7 @@ export function SmartCubeTimer() {
       heartRate,
       crossMs,
       moveTimestampsRel,
-      gyro ? { rotations: gyro.rotations, orientedReconstruction: gyro.orientedReconstruction } : undefined,
+      gyro ? { rotations: gyro.rotations, orientedReconstruction: gyro.orientedReconstruction, stream: gyro.stream } : undefined,
       // Inspection ran from the moment the scramble matched to the first
       // turn: +2 past 15s, DNF past 17s — same rule as the keyboard timer.
       flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs! - flow.inspectionStartedAtMs) : undefined,

@@ -1,11 +1,21 @@
 import {
   detectRotations,
+  matToQuat,
+  orientationFromQuat,
   orientationLabel,
   orientedReconstruction,
   type GyroCalibration,
   type GyroSample,
   type Quat,
 } from "./orientation";
+
+export interface GyroStreamData {
+  atMs: number[];
+  qx: number[];
+  qy: number[];
+  qz: number[];
+  qw: number[];
+}
 
 export interface SolveGyroSummary {
   /** Mid-solve regrips, ms from solve start. */
@@ -14,6 +24,46 @@ export interface SolveGyroSummary {
   orientedReconstruction: string;
   /** e.g. "yellow top · green front" — how the cube was held when the first move landed. */
   startLabel: string;
+  /** The continuous gyro stream for the solve, baked into body-frame quaternions — see buildGyroStream. Null when there weren't enough in-window samples to be worth keeping. */
+  stream: GyroStreamData | null;
+}
+
+/** No denser than this — a camera pan reads smoothly well under 20Hz, and it keeps years of solves from bloating local storage (and, once synced, the cloud database too). */
+const STREAM_MIN_GAP_MS = 50;
+
+/**
+ * The raw gyro samples for just the solve itself (not the inspection
+ * stretch before it), thinned to STREAM_MIN_GAP_MS and each one baked from
+ * the raw sensor quaternion into a body-frame quaternion right now — using
+ * whatever `ref`/`calibration` are in effect for *this* connection — so a
+ * later recalibration can never reinterpret this solve's data differently
+ * than it actually happened.
+ */
+function buildGyroStream(
+  samples: readonly GyroSample[],
+  ref: Quat,
+  calibration: GyroCalibration,
+  startedAtMs: number,
+  endedAtMs: number,
+): GyroStreamData | null {
+  const atMs: number[] = [];
+  const qx: number[] = [];
+  const qy: number[] = [];
+  const qz: number[] = [];
+  const qw: number[] = [];
+  let lastKeptAt = -Infinity;
+  for (const s of samples) {
+    if (s.atMs <= startedAtMs || s.atMs > endedAtMs) continue;
+    if (s.atMs - lastKeptAt < STREAM_MIN_GAP_MS) continue;
+    lastKeptAt = s.atMs;
+    const q = matToQuat(orientationFromQuat(s.q, ref, calibration));
+    atMs.push(s.atMs - startedAtMs);
+    qx.push(q.x);
+    qy.push(q.y);
+    qz.push(q.z);
+    qw.push(q.w);
+  }
+  return atMs.length > 0 ? { atMs, qx, qy, qz, qw } : null;
 }
 
 /**
@@ -41,6 +91,7 @@ export function summarizeSolveGyro(
     rotations: rotations.filter((r) => r.atMs > startedAtMs).map((r) => ({ atMs: r.atMs - startedAtMs, token: r.token })),
     orientedReconstruction: tokens.join(" "),
     startLabel: orientationLabel(startOrientation),
+    stream: buildGyroStream(samples, ref, calibration, startedAtMs, moves[moves.length - 1].timeStampMs),
   };
 }
 

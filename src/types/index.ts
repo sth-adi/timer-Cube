@@ -78,6 +78,16 @@ export interface Solve {
    */
   orientedReconstruction?: string;
   /**
+   * The continuous gyro stream during this solve — not just the named
+   * regrips in `rotations`, every orientation sample the cube reported
+   * (thinned to ~20Hz), baked into body-frame quaternions at save time so
+   * it replays correctly even if the cube's calibration changes later.
+   * Parallel arrays, one entry per sample, ms from solve start. Only on a
+   * gyro-equipped connection; absent for solves recorded before this
+   * existed, or any solve without a gyro fix at save time.
+   */
+  gyroStream?: { atMs: number[]; qx: number[]; qy: number[]; qz: number[]; qw: number[] };
+  /**
    * When this row last changed (ms, epoch) — set on create and on every edit
    * (penalty, comment, reconstruction). Sync resolves conflicts with it:
    * the most recent change to an id wins, deletions included (see

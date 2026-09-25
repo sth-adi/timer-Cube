@@ -14,6 +14,7 @@ export async function addSolve(input: {
   moveTimestamps?: number[];
   rotations?: { atMs: number; token: string }[];
   orientedReconstruction?: string;
+  gyroStream?: { atMs: number[]; qx: number[]; qy: number[]; qz: number[]; qw: number[] };
 }): Promise<Solve> {
   const solve: Solve = {
     id: newId(),
@@ -33,6 +34,7 @@ export async function addSolve(input: {
     ...(input.moveTimestamps && input.moveTimestamps.length > 0 ? { moveTimestamps: input.moveTimestamps } : {}),
     ...(input.rotations ? { rotations: input.rotations } : {}),
     ...(input.orientedReconstruction ? { orientedReconstruction: input.orientedReconstruction } : {}),
+    ...(input.gyroStream ? { gyroStream: input.gyroStream } : {}),
   };
   await db.solves.add(solve);
   return solve;

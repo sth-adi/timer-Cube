@@ -1,7 +1,8 @@
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { bottomLayerSolved, f2lPairSolved, orientationSolved } from "@/lib/solvers/oll";
 import { recognizeOll, recognizePll, toLibraryFrame } from "@/lib/analysis/recognize";
-import { HOME_ORIENTATION, mul, tokenMatrix, viewerMove, type Mat3 } from "@/lib/gyro/orientation";
+import { HOME_ORIENTATION, mul, quatToMat, slerpQuat, tokenMatrix, viewerMove, type Mat3, type Quat } from "@/lib/gyro/orientation";
+import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { crossSolved } from "@/lib/xray/common";
 
 /**
@@ -47,9 +48,11 @@ export interface ReelTimeline {
   turnMs: number[];
   totalMs: number;
   phases: ReelPhase[];
-  /** Mid-solve regrips, in order — empty for a non-gyro solve. */
+  /** Mid-solve regrips, in order — empty for a non-gyro solve. Still used to narrate the ticker even when gyroStream drives the camera. */
   rotations: ReelRotation[];
-  /** The grip orientation in effect *during* each move (index-aligned with `moves`) — every regrip before it, composed. */
+  /** The continuous gyro stream, when this solve has one — takes over the camera from `rotations` (strictly richer: it captures the same regrips as smooth motion, plus the natural wobble in between). Null for a solve recorded before this existed, or one with no gyro fix. */
+  gyroStream: GyroStreamData | null;
+  /** The grip orientation in effect *during* each move (index-aligned with `moves`) — sampled from gyroStream when there is one, else every regrip before it composed. */
   gripAt: Mat3[];
   /** Turns and regrips merged into one time-ordered stream, for a ticker that narrates both. */
   ticker: TickerEvent[];
@@ -70,13 +73,36 @@ function gripAfter(rotations: readonly ReelRotation[], upToMs: number): Mat3 {
   return acc;
 }
 
+const quatAt = (s: GyroStreamData, i: number): Quat => ({ x: s.qx[i], y: s.qy[i], z: s.qz[i], w: s.qw[i] });
+
 /**
- * The camera orientation to draw with at `t`, and the regrip currently
- * mid-swing if there is one — same idea as `frameAt`'s mid-turn state, but
- * for the whole cube instead of one layer. Call per frame; cheap (at most a
- * handful of rotations per solve).
+ * The recorded orientation at `t`, slerped between the two samples either
+ * side of it (clamped to the stream's own ends outside its range) — the
+ * real, continuous tilt the cube actually had, not a synthetic swing
+ * between named regrips. A solve's stream is at most a few hundred
+ * samples, so a linear scan is cheap even called once a frame.
+ */
+function streamViewAt(stream: GyroStreamData, t: number): Mat3 {
+  const n = stream.atMs.length;
+  if (t <= stream.atMs[0]) return quatToMat(quatAt(stream, 0));
+  if (t >= stream.atMs[n - 1]) return quatToMat(quatAt(stream, n - 1));
+  let i = 0;
+  while (i < n - 2 && stream.atMs[i + 1] < t) i++;
+  const t0 = stream.atMs[i];
+  const t1 = stream.atMs[i + 1];
+  const frac = t1 > t0 ? (t - t0) / (t1 - t0) : 0;
+  return quatToMat(slerpQuat(quatAt(stream, i), quatAt(stream, i + 1), frac));
+}
+
+/**
+ * The camera orientation to draw with at `t`. With a gyroStream, this is
+ * the cube's real recorded tilt, continuously interpolated. Without one
+ * (an older solve, or no gyro fix), it falls back to animating each named
+ * regrip as a synthetic swing — same idea as `frameAt`'s mid-turn state,
+ * but for the whole cube instead of one layer.
  */
 export function viewAt(tl: ReelTimeline, t: number): { view: Mat3; rotating: { token: string; progress: number } | null } {
+  if (tl.gyroStream) return { view: streamViewAt(tl.gyroStream, t), rotating: null };
   let acc = HOME_ORIENTATION;
   let rotating: { token: string; progress: number } | null = null;
   for (const r of tl.rotations) {
@@ -98,6 +124,7 @@ export function buildReelTimeline(
   timesMs: readonly number[],
   totalMs?: number,
   rotations: readonly ReelRotation[] = [],
+  gyroStream: GyroStreamData | null = null,
 ): ReelTimeline {
   const cube = newCube();
   if (scramble.trim()) cube.move(scramble);
@@ -112,7 +139,7 @@ export function buildReelTimeline(
   const turnMs = times.map((t, i) => Math.max(40, Math.min(MAX_TURN_MS, i === 0 ? MAX_TURN_MS : t - times[i - 1])));
   const end = totalMs ?? times[times.length - 1] ?? 0;
   const sortedRotations = [...rotations].sort((a, b) => a.atMs - b.atMs);
-  const gripAt = times.map((t) => gripAfter(sortedRotations, t));
+  const gripAt = times.map((t) => (gyroStream ? streamViewAt(gyroStream, t) : gripAfter(sortedRotations, t)));
   const ticker: TickerEvent[] = [
     ...moves.map((m, i) => ({ token: viewerMove(m, gripAt[i]), atMs: times[i], rotation: false })),
     ...sortedRotations.map((r) => ({ token: r.token, atMs: r.atMs, rotation: true })),
@@ -166,6 +193,7 @@ export function buildReelTimeline(
     totalMs: end,
     phases,
     rotations: sortedRotations,
+    gyroStream,
     gripAt,
     ticker,
   };

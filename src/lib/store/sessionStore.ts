@@ -52,7 +52,11 @@ interface SessionState {
     heartRate?: { avg: number; max: number },
     crossMs?: number,
     moveTimestamps?: number[],
-    gyro?: { rotations: { atMs: number; token: string }[]; orientedReconstruction: string },
+    gyro?: {
+      rotations: { atMs: number; token: string }[];
+      orientedReconstruction: string;
+      stream?: { atMs: number[]; qx: number[]; qy: number[]; qz: number[]; qw: number[] } | null;
+    },
     /** A penalty earned before the solve started (inspection overrun: +2 or DNF). */
     penalty?: Penalty,
   ) => Promise<void>;
@@ -164,6 +168,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       moveTimestamps,
       rotations: gyro?.rotations,
       orientedReconstruction: gyro?.orientedReconstruction,
+      gyroStream: gyro?.stream ?? undefined,
     });
     const solves = await getSessionSolves(activeSessionId);
     const allSolves = await getAllSolves();

@@ -39,6 +39,7 @@ interface SolveRow {
   move_timestamps: number[] | null;
   rotations: { atMs: number; token: string }[] | null;
   oriented_reconstruction: string | null;
+  gyro_stream: { atMs: number[]; qx: number[]; qy: number[]; qz: number[]; qw: number[] } | null;
   updated_at: number | null;
 }
 
@@ -58,6 +59,17 @@ interface DeletionRow {
 export const MIGRATION_NEEDED =
   "Cloud sync needs a one-time database update: run supabase/migrations/20260923000000_sync_revisions.sql in your Supabase project's SQL editor, then sync again.";
 
+/**
+ * Shown when specifically the gyro-stream column is missing — a separate,
+ * later, optional migration from the one above. Checked by message content
+ * rather than error code: the codes below are generic ("a column is
+ * missing"), so a code-only check can't tell *which* migration to point at,
+ * and pointing someone back at a migration they already ran would be worse
+ * than useless.
+ */
+export const GYRO_STREAM_MIGRATION_NEEDED =
+  "Cloud sync needs one more database update, for the gyro stream: run supabase/migrations/20260925000000_gyro_stream.sql in your Supabase project's SQL editor, then sync again.";
+
 function isMissingSchema(err: { code?: string; message?: string } | null): boolean {
   if (!err) return false;
   return (
@@ -69,8 +81,15 @@ function isMissingSchema(err: { code?: string; message?: string } | null): boole
   );
 }
 
+function isMissingGyroStream(err: { code?: string; message?: string } | null): boolean {
+  return !!err && /gyro_stream/.test(err.message ?? "");
+}
+
 function check(err: { code?: string; message?: string } | null): void {
   if (!err) return;
+  // More specific first: a gyro_stream-shaped error can also match the
+  // generic codes isMissingSchema looks at.
+  if (isMissingGyroStream(err)) throw new Error(GYRO_STREAM_MIGRATION_NEEDED);
   if (isMissingSchema(err)) throw new Error(MIGRATION_NEEDED);
   throw err;
 }
@@ -116,6 +135,7 @@ function solveToRow(s: Solve, userId: string): SolveRow {
     move_timestamps: s.moveTimestamps ?? null,
     rotations: s.rotations ?? null,
     oriented_reconstruction: s.orientedReconstruction ?? null,
+    gyro_stream: s.gyroStream ?? null,
     updated_at: s.updatedAt ?? null,
   };
 }
@@ -137,6 +157,7 @@ function rowToSolve(r: SolveRow): Solve {
     ...(r.move_timestamps ? { moveTimestamps: r.move_timestamps } : {}),
     ...(r.rotations ? { rotations: r.rotations } : {}),
     ...(r.oriented_reconstruction ? { orientedReconstruction: r.oriented_reconstruction } : {}),
+    ...(r.gyro_stream ? { gyroStream: r.gyro_stream } : {}),
     ...(r.updated_at !== null && r.updated_at !== undefined ? { updatedAt: r.updated_at } : {}),
   };
 }

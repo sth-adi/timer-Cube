@@ -41,6 +41,7 @@ export default function ReelPage() {
             selected.moveTimestamps!,
             selected.timeMs,
             selected.rotations ?? [],
+            selected.gyroStream ?? null,
           )
         : null,
     [selected],

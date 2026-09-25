@@ -16,6 +16,7 @@ import {
   orientedReconstruction,
   quatToMat,
   sequenceMatrix,
+  slerpQuat,
   snapOrientation,
   solveCalibration,
   tokenMatrix,
@@ -130,6 +131,37 @@ describe("quaternion round-trip", () => {
       const m = randomRotation(rand);
       expect(angleBetween(quatToMat(matToQuat(m)), m)).toBeLessThan(1e-4);
     }
+  });
+});
+
+describe("slerpQuat", () => {
+  it("lands exactly on the endpoints and sweeps the angle between them linearly", () => {
+    const rand = rng(5);
+    for (let i = 0; i < 10; i++) {
+      const a = matToQuat(randomRotation(rand));
+      const b = matToQuat(randomRotation(rand));
+      expect(angleBetween(quatToMat(slerpQuat(a, b, 0)), quatToMat(a))).toBeLessThan(1e-4);
+      expect(angleBetween(quatToMat(slerpQuat(a, b, 1)), quatToMat(b))).toBeLessThan(1e-4);
+      const total = angleBetween(quatToMat(a), quatToMat(b));
+      const half = angleBetween(quatToMat(a), quatToMat(slerpQuat(a, b, 0.5)));
+      expect(half).toBeCloseTo(total / 2, 1);
+    }
+  });
+
+  it("takes the short way round even when the two quaternions are opposite-signed (the same rotation twice)", () => {
+    const rand = rng(9);
+    const a = matToQuat(randomRotation(rand));
+    const negA = { x: -a.x, y: -a.y, z: -a.z, w: -a.w };
+    // a and -a are the same rotation; interpolating toward the negated copy should barely move.
+    expect(angleBetween(quatToMat(slerpQuat(a, negA, 0.1)), quatToMat(a))).toBeLessThan(5);
+  });
+
+  it("always returns a unit quaternion", () => {
+    const rand = rng(13);
+    const a = matToQuat(randomRotation(rand));
+    const b = matToQuat(randomRotation(rand));
+    const q = slerpQuat(a, b, 0.37);
+    expect(Math.hypot(q.x, q.y, q.z, q.w)).toBeCloseTo(1, 6);
   });
 });
 

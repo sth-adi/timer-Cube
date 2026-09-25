@@ -79,6 +79,42 @@ export function quatToMat(q: Quat): Mat3 {
   ];
 }
 
+/**
+ * Shortest-path spherical interpolation between two unit quaternions,
+ * `t` 0..1 — for replaying a recorded gyro stream smoothly between
+ * samples rather than snapping from one to the next. `a`/`b` and `-a`/`-b`
+ * represent the same rotations, so the shorter arc is always taken.
+ */
+export function slerpQuat(a: Quat, b: Quat, t: number): Quat {
+  let { x: bx, y: by, z: bz, w: bw } = b;
+  let cos = a.x * bx + a.y * by + a.z * bz + a.w * bw;
+  if (cos < 0) {
+    cos = -cos;
+    bx = -bx;
+    by = -by;
+    bz = -bz;
+    bw = -bw;
+  }
+  let s0: number;
+  let s1: number;
+  if (cos > 0.9995) {
+    // Nearly identical: sin(angle) below is ~0, so fall back to a plain lerp.
+    s0 = 1 - t;
+    s1 = t;
+  } else {
+    const angle = Math.acos(cos);
+    const sinAngle = Math.sin(angle);
+    s0 = Math.sin((1 - t) * angle) / sinAngle;
+    s1 = Math.sin(t * angle) / sinAngle;
+  }
+  const x = s0 * a.x + s1 * bx;
+  const y = s0 * a.y + s1 * by;
+  const z = s0 * a.z + s1 * bz;
+  const w = s0 * a.w + s1 * bw;
+  const n = Math.hypot(x, y, z, w) || 1;
+  return { x: x / n, y: y / n, z: z / n, w: w / n };
+}
+
 export function matToQuat(m: Mat3): Quat {
   const trace = m[0] + m[4] + m[8];
   if (trace > 0) {

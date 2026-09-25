@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newCube } from "@/lib/cube-engine/engine";
-import { apply, mul, tokenMatrix, viewerMove } from "@/lib/gyro/orientation";
+import { angleBetween, apply, matToQuat, mul, quatToMat, slerpQuat, tokenMatrix, viewerMove } from "@/lib/gyro/orientation";
 import { layerRotation, stickers3d } from "./cube3d";
 import { ROTATE_MS, buildReelTimeline, frameAt, rollingTps, viewAt } from "./timeline";
 import { toPhysicalTurns } from "@/lib/smartcube/route";
@@ -89,5 +89,43 @@ describe("reel timeline with a mid-solve regrip", () => {
     expect(mid.view).not.toEqual(rotatedGrip);
     const after = viewAt(tl, 150 + ROTATE_MS + 1);
     expect(after).toEqual({ view: rotatedGrip, rotating: null });
+  });
+});
+
+describe("reel timeline with a continuous gyro stream", () => {
+  const home = HOME_ORIENTATION;
+  const rotated = mul(tokenMatrix("y"), home);
+  const homeQ = matToQuat(home);
+  const rotatedQ = matToQuat(rotated);
+  const gyroStream = {
+    atMs: [0, 1000],
+    qx: [homeQ.x, rotatedQ.x],
+    qy: [homeQ.y, rotatedQ.y],
+    qz: [homeQ.z, rotatedQ.z],
+    qw: [homeQ.w, rotatedQ.w],
+  };
+  const moves = ["R", "U"];
+  const times = [500, 1000];
+  const tl = buildReelTimeline("", moves, times, 1000, [], gyroStream);
+
+  it("labels each move by the real recorded tilt at its own timestamp, not a quantized regrip guess", () => {
+    const halfway = quatToMat(slerpQuat(homeQ, rotatedQ, 0.5));
+    expect(angleBetween(tl.gripAt[0], halfway)).toBeLessThan(1e-4);
+    expect(tl.display[0]).toBe(viewerMove("R", halfway));
+    expect(angleBetween(tl.gripAt[1], rotated)).toBeLessThan(1e-4);
+  });
+
+  it("interpolates the camera continuously between samples, and holds the ends outside the stream's range", () => {
+    expect(angleBetween(viewAt(tl, -50).view, home)).toBeLessThan(1e-4);
+    expect(angleBetween(viewAt(tl, 2000).view, rotated)).toBeLessThan(1e-4);
+    // Continuous mode has no single discrete "currently swinging" event.
+    expect(viewAt(tl, 500).rotating).toBeNull();
+    // Further through the stream reads closer to the rotated end.
+    expect(angleBetween(viewAt(tl, 250).view, rotated)).toBeGreaterThan(angleBetween(viewAt(tl, 750).view, rotated));
+  });
+
+  it("drives the camera from the stream even when discrete rotations are also present", () => {
+    const withBoth = buildReelTimeline("", moves, times, 1000, [{ atMs: 10, token: "x2" }], gyroStream);
+    expect(angleBetween(viewAt(withBoth, 1000).view, rotated)).toBeLessThan(1e-4);
   });
 });
