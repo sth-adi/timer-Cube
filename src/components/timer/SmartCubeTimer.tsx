@@ -55,6 +55,8 @@ import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
 import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
 import { computeSessionStats, normalSolves } from "@/lib/stats/stats";
+import { metricsFor } from "@/lib/analytics/solveMetrics";
+import { buildPostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
@@ -227,6 +229,7 @@ export function SmartCubeTimer() {
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
   const sessionSolves = useSessionStore((s) => s.solves);
+  const allSolves = useSessionStore((s) => s.allSolves);
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
@@ -313,6 +316,12 @@ export function SmartCubeTimer() {
   // only needs an approximate "compared to your usual pace" framing, not a
   // stat that must exclude this solve to the millisecond).
   const coachSessionStats = useMemo(() => computeSessionStats(normalSolves(sessionSolves)), [sessionSolves]);
+
+  // "5.20s" means nothing on its own — this reads it against your own history
+  // for the post-solve table (see postSolveBaseline.ts). All-time, not just
+  // this session: a fairer, less noisy reference than a handful of solves
+  // since you last opened the app.
+  const postSolveBaseline = useMemo(() => buildPostSolveBaseline(metricsFor(allSolves)), [allSolves]);
 
   // Shared by "Full 3D analysis", "View reconstruction", and the auto-save
   // effect below — computed once here rather than re-derived at each call site.
@@ -639,7 +648,15 @@ export function SmartCubeTimer() {
               ))}
           </div>
 
-          <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} />
+          <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} baseline={postSolveBaseline} />
+
+          <PostSolveCoachCard
+            rows={postSolveRows}
+            totalMs={elapsedMs}
+            tps={avgTps}
+            sessionMeanMs={coachSessionStats.mean}
+            isNewPB={coachSessionStats.best !== null && elapsedMs <= coachSessionStats.best}
+          />
 
           <div className="flex w-full gap-2">
             <button
@@ -682,14 +699,6 @@ export function SmartCubeTimer() {
 
           {showDetails && (
             <div className="flex w-full flex-col gap-3">
-              <PostSolveCoachCard
-                rows={postSolveRows}
-                totalMs={elapsedMs}
-                tps={avgTps}
-                sessionMeanMs={coachSessionStats.mean}
-                isNewPB={coachSessionStats.best !== null && elapsedMs <= coachSessionStats.best}
-              />
-
               {buckets.length > 1 && (
                 <div className="flex flex-col gap-1">
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Turn speed through the solve</p>

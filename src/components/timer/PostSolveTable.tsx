@@ -11,6 +11,7 @@ import { Cube } from "@/lib/cube-engine/engine";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
 import { F2lCaseIcon } from "@/components/algorithms/F2lCaseIcon";
 import { formatTime } from "@/lib/utils/time";
+import { paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { cn } from "@/lib/utils/cn";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
@@ -76,21 +77,40 @@ function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[
   };
 }
 
+const PACE_CLASS = { fast: "text-success", normal: "text-foreground", slow: "text-warning" } as const;
+
 /**
  * The post-solve breakdown: one row per step (each F2L pair in the order you
  * solved it), with the case you had, the time, and a bar split into
- * recognising the case (light) and turning through it (solid).
+ * recognising the case (light) and turning through it (solid). With enough
+ * history, each row's array position doubles as its index into `baseline`
+ * (same solve-order convention SolveMetrics.segments uses — Cross, then
+ * each pair as you reach it, then OLL, PLL), and its time reads green when
+ * it's within your own better quarter for that step, amber when it ran
+ * noticeably past your median — "5.20s" turned into a number you don't have
+ * to hold your own history in your head to read.
  */
-export function PostSolveTable({ rows, scramble, moves }: { rows: PostSolvePhaseRow[]; scramble: string; moves: SmartCubeMove[] }) {
+export function PostSolveTable({
+  rows,
+  scramble,
+  moves,
+  baseline,
+}: {
+  rows: PostSolvePhaseRow[];
+  scramble: string;
+  moves: SmartCubeMove[];
+  baseline?: PostSolveBaseline | null;
+}) {
   const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves)), [rows, scramble, moves]);
   const max = Math.max(1, ...rows.map((r) => r.totalMs ?? 0));
 
   return (
     <div className="w-full rounded-xl bg-bg-panel-2 p-3">
       <div className="flex flex-col gap-2.5">
-        {views.map(({ row, icon, caseName }) => {
+        {views.map(({ row, icon, caseName }, i) => {
           const look = row.recognitionMs ?? 0;
           const turn = row.executionMs ?? row.totalMs ?? 0;
+          const pace = paceFor(row.totalMs, baseline?.segments[i] ?? null);
           return (
             <div key={row.label} className="flex items-center gap-2.5">
               {icon}
@@ -105,7 +125,12 @@ export function PostSolveTable({ rows, scramble, moves }: { rows: PostSolvePhase
                 </div>
               </div>
               <div className="w-14 shrink-0 text-right">
-                <p className="text-sm font-semibold tabular-nums text-foreground">{row.totalMs === null ? "—" : formatTime(row.totalMs)}</p>
+                <p
+                  className={cn("text-sm font-semibold tabular-nums", row.totalMs === null ? "text-muted-2" : pace ? PACE_CLASS[pace] : "text-foreground")}
+                  title={pace === "fast" ? "One of your better ones for this step" : pace === "slow" ? "Slower than usual for this step" : undefined}
+                >
+                  {row.totalMs === null ? "—" : formatTime(row.totalMs)}
+                </p>
                 {row.recognitionMs !== null && row.executionMs !== null && (
                   <p className="text-[10px] tabular-nums text-muted-2">
                     {secs(row.recognitionMs)} + {secs(row.executionMs)}
@@ -123,6 +148,11 @@ export function PostSolveTable({ rows, scramble, moves }: { rows: PostSolvePhase
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-3 rounded-full bg-accent" /> turning
         </span>
+        {baseline && (
+          <span className="flex items-center gap-1">
+            <span className={cn("h-1.5 w-3 rounded-full bg-current", PACE_CLASS.fast)} /> vs. your own history
+          </span>
+        )}
       </p>
     </div>
   );
