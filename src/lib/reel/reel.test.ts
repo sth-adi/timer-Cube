@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { newCube } from "@/lib/cube-engine/engine";
-import { apply } from "@/lib/gyro/orientation";
+import { apply, mul, tokenMatrix, viewerMove } from "@/lib/gyro/orientation";
 import { layerRotation, stickers3d } from "./cube3d";
-import { buildReelTimeline, frameAt, rollingTps } from "./timeline";
+import { ROTATE_MS, buildReelTimeline, frameAt, rollingTps, viewAt } from "./timeline";
 import { toPhysicalTurns } from "@/lib/smartcube/route";
 import { HOME_ORIENTATION } from "@/lib/gyro/orientation";
 import { invertMoves, slotGrip } from "@/lib/xray/common";
@@ -58,5 +58,36 @@ describe("reel timeline", () => {
     expect(mid.turning!.progress).toBeGreaterThan(0.4);
     expect(frameAt(tl, tl.totalMs + 1).done).toBe(moves.length);
     expect(rollingTps(tl, 1000)).toBe(6);
+  });
+});
+
+describe("reel timeline with a mid-solve regrip", () => {
+  const moves = ["R", "U", "R2"];
+  const times = [100, 200, 300];
+  const rotations = [{ atMs: 150, token: "y" }];
+  const tl = buildReelTimeline("", moves, times, 300, rotations);
+  const rotatedGrip = mul(tokenMatrix("y"), HOME_ORIENTATION);
+
+  it("labels a move by the grip actually in use at the time — HOME_ORIENTATION before the regrip, rotated after", () => {
+    expect(tl.display[0]).toBe(viewerMove("R", HOME_ORIENTATION));
+    expect(tl.display[1]).toBe(viewerMove("U", rotatedGrip));
+    expect(tl.display[2]).toBe(viewerMove("R2", rotatedGrip));
+  });
+
+  it("merges the regrip into the move ticker at its own timestamp, between the moves either side of it", () => {
+    expect(tl.ticker.map((e) => e.token)).toEqual([tl.display[0], "y", tl.display[1], tl.display[2]]);
+    expect(tl.ticker[1]).toMatchObject({ rotation: true, atMs: 150 });
+  });
+
+  it("holds the old camera until the regrip starts, swings through it, then holds the new one", () => {
+    expect(viewAt(tl, 0)).toEqual({ view: HOME_ORIENTATION, rotating: null });
+    const mid = viewAt(tl, 150 + ROTATE_MS / 2);
+    expect(mid.rotating).toMatchObject({ token: "y" });
+    expect(mid.rotating!.progress).toBeCloseTo(0.5, 1);
+    // Half-way through the swing, the camera is neither the old grip nor the new one yet.
+    expect(mid.view).not.toEqual(HOME_ORIENTATION);
+    expect(mid.view).not.toEqual(rotatedGrip);
+    const after = viewAt(tl, 150 + ROTATE_MS + 1);
+    expect(after).toEqual({ view: rotatedGrip, rotating: null });
   });
 });

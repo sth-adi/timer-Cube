@@ -1,6 +1,6 @@
-import { HOME_ORIENTATION, mul } from "@/lib/gyro/orientation";
+import { mul } from "@/lib/gyro/orientation";
 import { CAMERA, drawCube } from "./cube3d";
-import { frameAt, rollingTps, type ReelTimeline } from "./timeline";
+import { frameAt, rollingTps, viewAt, type ReelTimeline } from "./timeline";
 
 /** Reel canvas size: 4:5 portrait, the shape social feeds display largest. */
 export const REEL_W = 1080;
@@ -15,7 +15,6 @@ export interface ReelStyle {
   subtitle: string;
 }
 
-const VIEW = mul(CAMERA, HOME_ORIENTATION);
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 const SANS = "system-ui, -apple-system, Segoe UI, sans-serif";
 
@@ -57,8 +56,15 @@ export function renderReelFrame(ctx: CanvasRenderingContext2D, tl: ReelTimeline,
   ctx.fillRect(0, 0, W, H);
 
   const clampT = Math.min(Math.max(t, 0), tl.totalMs);
-  const frame = frameAt(tl, t < 0 ? -Infinity : clampT);
+  const atT = t < 0 ? -Infinity : clampT;
+  const frame = frameAt(tl, atT);
   const finished = t >= tl.totalMs;
+  // The camera itself: HOME_ORIENTATION composed with every regrip the cuber
+  // actually did, mid-swing when we're within one — the reel doesn't just
+  // watch the layers turn, it watches the cube get physically turned around
+  // in your hands too. See lib/gyro/orientation for why this composes the
+  // way it does.
+  const { view } = viewAt(tl, atT);
 
   // Header
   ctx.fillStyle = "#ffffffaa";
@@ -79,7 +85,7 @@ export function renderReelFrame(ctx: CanvasRenderingContext2D, tl: ReelTimeline,
   const faceletState = tl.facelets[frame.done];
   const turning =
     frame.turning && t >= 0 && !finished ? { token: tl.moves[frame.turning.index], progress: Math.min(1, frame.turning.progress) } : undefined;
-  drawCube(ctx, faceletState, { cx: W / 2, cy: 610, size: 205, view: VIEW, turning });
+  drawCube(ctx, faceletState, { cx: W / 2, cy: 610, size: 205, view: mul(CAMERA, view), turning });
 
   // Phase banner
   const phaseLabel =
@@ -125,16 +131,19 @@ export function renderReelFrame(ctx: CanvasRenderingContext2D, tl: ReelTimeline,
     ctx.font = `500 26px ${MONO}`;
     wrapText(ctx, tl.scramble, W / 2, 1230, W - 160, 36);
   } else {
-    const shown = 9;
-    const from = Math.max(0, frame.done - shown + 1);
-    const tokens = tl.display.slice(from, frame.done + 1);
+    // Everything that's happened by now — a turn or a regrip — narrated in
+    // one stream; a regrip still mid-swing counts too (its atMs is when it
+    // *started*), same as a move still mid-turn does below.
+    let shown = tl.ticker.filter((e) => e.atMs <= clampT);
+    if (frame.turning) shown = [...shown, { token: tl.display[frame.turning.index], atMs: tl.timesMs[frame.turning.index], rotation: false }];
+    shown = shown.slice(-9);
     ctx.font = `700 46px ${MONO}`;
     const gap = 104;
-    const startX = W / 2 - ((tokens.length - 1) * gap) / 2;
-    tokens.forEach((tok, i) => {
-      const current = from + i === frame.done - 1 || (frame.turning && from + i === frame.turning.index);
-      ctx.fillStyle = current ? style.accent : i < tokens.length - 3 ? "#ffffff44" : "#ffffffaa";
-      ctx.fillText(tok, startX + i * gap, 1250);
+    const startX = W / 2 - ((shown.length - 1) * gap) / 2;
+    shown.forEach((e, i) => {
+      const current = i === shown.length - 1;
+      ctx.fillStyle = current ? style.accent : i < shown.length - 3 ? "#ffffff44" : "#ffffffaa";
+      ctx.fillText(e.rotation ? `[${e.token}]` : e.token, startX + i * gap, 1250);
     });
     // Rolling TPS bar
     const tps = rollingTps(tl, clampT);

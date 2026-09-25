@@ -1,14 +1,17 @@
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { bottomLayerSolved, f2lPairSolved, orientationSolved } from "@/lib/solvers/oll";
 import { recognizeOll, recognizePll, toLibraryFrame } from "@/lib/analysis/recognize";
-import { HOME_ORIENTATION, viewerMove } from "@/lib/gyro/orientation";
+import { HOME_ORIENTATION, mul, tokenMatrix, viewerMove, type Mat3 } from "@/lib/gyro/orientation";
 import { crossSolved } from "@/lib/xray/common";
 
 /**
  * Everything a Solve Reel frame needs, precomputed once per solve: the
  * cube's state after every move, when each move landed (and how long its
- * turn animation gets), the phase milestones with their case names, and the
- * moves in readable notation.
+ * turn animation gets), the phase milestones with their case names, the
+ * moves in readable notation, and — for a gyro solve — every mid-solve
+ * regrip (y, x', z2…) with the camera orientation actually in use at each
+ * moment, so the reel shows the cube getting physically turned around in
+ * your hands, not just its layers turning from one fixed angle.
  */
 
 export interface ReelPhase {
@@ -19,24 +22,83 @@ export interface ReelPhase {
   splitMs: number;
 }
 
+/** A whole-cube regrip (y, x', z2…) the cuber physically did mid-solve — see Solve.rotations. */
+export interface ReelRotation {
+  atMs: number;
+  token: string;
+}
+
+/** One entry per thing that happened, in time order, for the move ticker — a turn or a regrip, either can be "current". */
+export interface TickerEvent {
+  token: string;
+  atMs: number;
+  rotation: boolean;
+}
+
 export interface ReelTimeline {
   scramble: string;
   /** facelets[k] = state after the first k moves (facelets[0] = scrambled). */
   facelets: string[];
   moves: string[];
-  /** Moves in the yellow-top, green-front grip — how the cube is drawn. */
+  /** Moves in the grip they were actually turned in — HOME_ORIENTATION until the first regrip, then whatever the cuber rotated to (see gripAt). */
   display: string[];
   timesMs: number[];
   /** Turn-animation length for each move (bounded by the gap before it). */
   turnMs: number[];
   totalMs: number;
   phases: ReelPhase[];
+  /** Mid-solve regrips, in order — empty for a non-gyro solve. */
+  rotations: ReelRotation[];
+  /** The grip orientation in effect *during* each move (index-aligned with `moves`) — every regrip before it, composed. */
+  gripAt: Mat3[];
+  /** Turns and regrips merged into one time-ordered stream, for a ticker that narrates both. */
+  ticker: TickerEvent[];
 }
 
 /** No turn animates longer than this — fast solvers' turns are ~80-120ms. */
 const MAX_TURN_MS = 110;
+/** How long a regrip takes to swing into view — a bigger motion than a quarter turn, so it reads as deliberate rather than a snap. */
+export const ROTATE_MS = 200;
 
-export function buildReelTimeline(scramble: string, moves: readonly string[], timesMs: readonly number[], totalMs?: number): ReelTimeline {
+/** The grip orientation after folding in every rotation up to and including `upToMs` — HOME_ORIENTATION composed with each regrip in order, same convention as lib/gyro/orientation's sequenceMatrix. */
+function gripAfter(rotations: readonly ReelRotation[], upToMs: number): Mat3 {
+  let acc = HOME_ORIENTATION;
+  for (const r of rotations) {
+    if (r.atMs > upToMs) break;
+    acc = mul(tokenMatrix(r.token), acc);
+  }
+  return acc;
+}
+
+/**
+ * The camera orientation to draw with at `t`, and the regrip currently
+ * mid-swing if there is one — same idea as `frameAt`'s mid-turn state, but
+ * for the whole cube instead of one layer. Call per frame; cheap (at most a
+ * handful of rotations per solve).
+ */
+export function viewAt(tl: ReelTimeline, t: number): { view: Mat3; rotating: { token: string; progress: number } | null } {
+  let acc = HOME_ORIENTATION;
+  let rotating: { token: string; progress: number } | null = null;
+  for (const r of tl.rotations) {
+    if (r.atMs > t) break;
+    const elapsed = t - r.atMs;
+    if (elapsed < ROTATE_MS) {
+      acc = mul(tokenMatrix(r.token, elapsed / ROTATE_MS), acc);
+      rotating = { token: r.token, progress: elapsed / ROTATE_MS };
+    } else {
+      acc = mul(tokenMatrix(r.token), acc);
+    }
+  }
+  return { view: acc, rotating };
+}
+
+export function buildReelTimeline(
+  scramble: string,
+  moves: readonly string[],
+  timesMs: readonly number[],
+  totalMs?: number,
+  rotations: readonly ReelRotation[] = [],
+): ReelTimeline {
   const cube = newCube();
   if (scramble.trim()) cube.move(scramble);
   const facelets = [cube.asString()];
@@ -49,6 +111,12 @@ export function buildReelTimeline(scramble: string, moves: readonly string[], ti
   const times = moves.map((_, i) => timesMs[i] ?? 0);
   const turnMs = times.map((t, i) => Math.max(40, Math.min(MAX_TURN_MS, i === 0 ? MAX_TURN_MS : t - times[i - 1])));
   const end = totalMs ?? times[times.length - 1] ?? 0;
+  const sortedRotations = [...rotations].sort((a, b) => a.atMs - b.atMs);
+  const gripAt = times.map((t) => gripAfter(sortedRotations, t));
+  const ticker: TickerEvent[] = [
+    ...moves.map((m, i) => ({ token: viewerMove(m, gripAt[i]), atMs: times[i], rotation: false })),
+    ...sortedRotations.map((r) => ({ token: r.token, atMs: r.atMs, rotation: true })),
+  ].sort((a, b) => a.atMs - b.atMs);
 
   // Phase milestones: cross, each new pair (with the cross intact), OLL, PLL.
   const phases: ReelPhase[] = [];
@@ -92,11 +160,14 @@ export function buildReelTimeline(scramble: string, moves: readonly string[], ti
     scramble,
     facelets,
     moves: [...moves],
-    display: moves.map((m) => viewerMove(m, HOME_ORIENTATION)),
+    display: moves.map((m, i) => viewerMove(m, gripAt[i])),
     timesMs: times,
     turnMs,
     totalMs: end,
     phases,
+    rotations: sortedRotations,
+    gripAt,
+    ticker,
   };
 }
 

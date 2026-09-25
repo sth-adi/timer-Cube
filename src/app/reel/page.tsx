@@ -15,9 +15,11 @@ import { cn } from "@/lib/utils/cn";
 /**
  * Solve Reel: turns any smart-cube solve into a shareable video — the real
  * cube state animated turn by turn at your actual pace (layers really
- * turning), with a running clock, phase banners naming your OLL and PLL,
- * split chips, a live move ticker and a TPS meter, ending on a solved card.
- * Rendered on a canvas and recorded straight to a video file in the browser.
+ * turning, the camera really swinging around for every mid-solve regrip a
+ * gyro cube saw), with a running clock, phase banners naming your OLL and
+ * PLL, split chips, a live move ticker and a TPS meter, ending on a solved
+ * card. Rendered on a canvas and recorded straight to a video file in the
+ * browser.
  */
 export default function ReelPage() {
   const allSolves = useSessionStore((s) => s.allSolves);
@@ -33,7 +35,13 @@ export default function ReelPage() {
   const timeline = useMemo(
     () =>
       selected
-        ? buildReelTimeline(selected.scramble, selected.reconstruction!.split(/\s+/).filter(Boolean), selected.moveTimestamps!, selected.timeMs)
+        ? buildReelTimeline(
+            selected.scramble,
+            selected.reconstruction!.split(/\s+/).filter(Boolean),
+            selected.moveTimestamps!,
+            selected.timeMs,
+            selected.rotations ?? [],
+          )
         : null,
     [selected],
   );
@@ -52,7 +60,7 @@ export default function ReelPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Clapperboard size={17} className="text-accent" /> Solve Reel
             </h1>
-            <p className="text-[11px] text-muted-2">Turn any smart-cube solve into a video — real turns, real pace, splits and cases on screen.</p>
+            <p className="text-[11px] text-muted-2">Turn any smart-cube solve into a video — real turns, real regrips, real pace, splits and cases on screen.</p>
           </div>
 
           {!selected || !timeline ? (

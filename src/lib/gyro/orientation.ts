@@ -115,10 +115,11 @@ export function axisRotation(axis: "x" | "y" | "z", deg: number): Mat3 {
 export const ROTATION_TOKENS = ["y", "y'", "y2", "x", "x'", "x2", "z", "z'", "z2"] as const;
 export type RotationToken = (typeof ROTATION_TOKENS)[number];
 
-export function tokenMatrix(token: string): Mat3 {
+/** `progress` < 1 gives the rotation part-way through — a cube reel animating a regrip, not just snapping to it. */
+export function tokenMatrix(token: string, progress = 1): Mat3 {
   const axis = token[0] as "x" | "y" | "z";
   const deg = token.endsWith("2") ? 180 : token.endsWith("'") ? 90 : -90;
-  return axisRotation(axis, deg);
+  return axisRotation(axis, deg * progress);
 }
 
 /** Composes a space-separated rotation sequence ("x2 y'") into one matrix. Viewer-frame tokens stack left: "a b" = M_b · M_a. */
