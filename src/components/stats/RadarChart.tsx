@@ -21,10 +21,13 @@ function polygonPoints(radii: number[]): string {
  * on a shared 0-100 scale (see computeDnaAxes), so this component only
  * handles the geometry and never touches what the numbers mean.
  */
-export function RadarChart({ axes, className }: { axes: DnaAxis[]; className?: string }) {
+export function RadarChart({ axes, ghost, className }: { axes: DnaAxis[]; ghost?: DnaAxis[] | null; className?: string }) {
   if (axes.length < 3) return null;
   const n = axes.length;
   const dataPoints = polygonPoints(axes.map((a) => (a.score / 100) * MAX_RADIUS));
+  // An earlier shape, drawn behind on the same axes — only when it has every one of them.
+  const ghostScores = ghost ? axes.map((a) => ghost.find((g) => g.label === a.label)?.score) : null;
+  const ghostPoints = ghostScores?.every((x) => x !== undefined) ? polygonPoints(ghostScores.map((x) => (x! / 100) * MAX_RADIUS)) : null;
 
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={className} role="img" aria-label="Solving-style radar chart">
@@ -42,6 +45,9 @@ export function RadarChart({ axes, className }: { axes: DnaAxis[]; className?: s
         return <line key={i} x1={CENTER} y1={CENTER} x2={p.x} y2={p.y} stroke="var(--border)" strokeWidth={1} />;
       })}
 
+      {ghostPoints && (
+        <polygon points={ghostPoints} fill="none" stroke="var(--muted-2)" strokeWidth={1.25} strokeDasharray="3 3" strokeLinejoin="round" />
+      )}
       <polygon points={dataPoints} fill="var(--accent)" fillOpacity={0.22} stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
       {axes.map((a, i) => {
         const p = polar((a.score / 100) * MAX_RADIUS, (i / n) * Math.PI * 2);
