@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CheckCircle2, History, Loader2, Rewind, Sparkles, Timer as TimerIcon, Undo2, X } from "lucide-react";
+import { CheckCircle2, GitBranch, History, Loader2, Rewind, Sparkles, Timer as TimerIcon, Undo2, X } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { ConnectGate } from "@/components/smartcube/ConnectGate";
+import { WhatIf } from "@/components/timemachine/WhatIf";
+import { cn } from "@/lib/utils/cn";
 import { RouteChips } from "@/components/smartcube/RouteChips";
 import { FaceletNet } from "@/components/scramble/ScrambleNet";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
@@ -257,6 +259,7 @@ function ScrubPreview({ count, fallback }: { count: number; fallback: string | n
  * two states).
  */
 export default function TimeMachinePage() {
+  const [tab, setTab] = useState<"rewind" | "whatif">("rewind");
   return (
     <>
       <AppBootstrap />
@@ -271,11 +274,39 @@ export default function TimeMachinePage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <History size={17} className="text-accent" /> Cube Time Machine
             </h1>
-            <p className="text-[11px] text-muted-2">An undo button for your physical cube — jump back to any moment since you connected.</p>
+            <p className="text-[11px] text-muted-2">
+              An undo button for your physical cube — and a what-if lab for any solve you&apos;ve saved: fork it, play it differently, see how it
+              ends.
+            </p>
           </div>
-          <ConnectGate blurb="The Time Machine records every turn your smart cube makes, so it needs one connected.">
-            <TimeMachine />
-          </ConnectGate>
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1">
+            {(
+              [
+                ["rewind", "Rewind my cube", Rewind],
+                ["whatif", "What if?", GitBranch],
+              ] as const
+            ).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                aria-pressed={tab === id}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  tab === id ? "bg-accent text-accent-fg" : "text-muted",
+                )}
+              >
+                <Icon size={12} /> {label}
+              </button>
+            ))}
+          </div>
+          {tab === "rewind" ? (
+            <ConnectGate blurb="The Time Machine records every turn your smart cube makes, so it needs one connected.">
+              <TimeMachine />
+            </ConnectGate>
+          ) : (
+            <WhatIf />
+          )}
         </div>
       </div>
     </>
