@@ -94,3 +94,28 @@ describe("RouteTracker", () => {
     expect(t.push("U2")).toBe("done");
   });
 });
+
+describe("planner with your own algorithms", () => {
+  it("uses your algorithm for a case when you've chosen one, and the book's otherwise", () => {
+    const tPerm = PLL_CASES.find((c) => c.name === "T Perm")!;
+    const cube = engineCase(tPerm.alg);
+    const book = planNextStep(cube);
+    expect(book.stage).toBe("pll");
+    // The same T-perm written from the back: different notation, same case.
+    const mine = "y2 L U L' U' L' B L2 U' L' U' L U L' B'";
+    const withMine = planNextStep(cube, { "PLL:T Perm": mine });
+    expect(withMine.display.join(" ")).toContain("L U L' U' L' B L2");
+    const after = cube.clone();
+    after.move(withMine.turns.join(" "));
+    expect(after.isSolved()).toBe(true);
+  });
+
+  it("falls back to the book algorithm when yours doesn't fit the case", () => {
+    const tPerm = PLL_CASES.find((c) => c.name === "T Perm")!;
+    const cube = engineCase(tPerm.alg);
+    const step = planNextStep(cube, { "PLL:T Perm": "R U R' U R U2 R'" });
+    const after = cube.clone();
+    after.move(step.turns.join(" "));
+    expect(after.isSolved()).toBe(true);
+  });
+});

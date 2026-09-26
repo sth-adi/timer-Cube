@@ -1,7 +1,7 @@
 "use client";
 
 import type { SatNavRequest, SatNavResponse } from "./worker";
-import type { NavStep } from "./planner";
+import type { AlgOverrides, NavStep } from "./planner";
 
 let worker: Worker | null = null;
 let nextId = 1;
@@ -28,10 +28,10 @@ function getWorker(): Worker {
 }
 
 /** Plans the next leg from a live facelet string, off the main thread. */
-export function planNext(facelets: string): Promise<NavStep> {
+export function planNext(facelets: string, overrides?: AlgOverrides): Promise<NavStep> {
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    getWorker().postMessage({ id, facelets } satisfies SatNavRequest);
+    getWorker().postMessage({ id, facelets, overrides } satisfies SatNavRequest);
   });
 }

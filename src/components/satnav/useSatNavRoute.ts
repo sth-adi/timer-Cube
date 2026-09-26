@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { subscribeRawMoves } from "@/lib/store/smartCubeBus";
 import { planNext } from "@/lib/satnav/client";
+import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import type { NavStep } from "@/lib/satnav/planner";
 import { RouteTracker } from "@/lib/smartcube/route";
 
@@ -39,7 +40,7 @@ export function useSatNavRoute(opts: { onMove?: (token: string) => void; onStep?
   const replan = useCallback(() => {
     const id = ++requestRef.current;
     trackerRef.current = null;
-    planNext(useSmartCubeStore.getState().liveFacelets)
+    planNext(useSmartCubeStore.getState().liveFacelets, useMyAlgsStore.getState().chosen)
       .then((step) => {
         if (id !== requestRef.current) return;
         trackerRef.current = new RouteTracker(step.turns);

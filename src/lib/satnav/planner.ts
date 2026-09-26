@@ -8,6 +8,7 @@ import { findCase } from "@/lib/algorithms/caseLookup";
 import { HOME_ORIENTATION } from "@/lib/gyro/orientation";
 import { PAIR_LABELS, crossSolved, inGrip, slotGrip } from "@/lib/xray/common";
 import { toPhysicalTurns } from "@/lib/smartcube/route";
+import { myAlgKey } from "@/lib/algorithms/myAlgs";
 
 /**
  * Solve Sat-Nav: from whatever state the cube in your hands is in right
@@ -75,7 +76,10 @@ function lastLayerPlan(
   return null;
 }
 
-export function planNextStep(cube: CubeJSInstance): NavStep {
+/** Your own algorithms by case ("OLL:Sune" → alg) — tried first, the book's if yours doesn't fit this state. */
+export type AlgOverrides = Readonly<Record<string, string>>;
+
+export function planNextStep(cube: CubeJSInstance, overrides: AlgOverrides = {}): NavStep {
   const done = pairsSolved(cube);
 
   if (cube.isSolved()) {
@@ -122,8 +126,10 @@ export function planNextStep(cube: CubeJSInstance): NavStep {
   const library = toLibraryFrame(cube);
   if (!orientationSolved(cube)) {
     const match = recognizeOll(library);
-    const alg = match ? findCase("OLL", match.case.name)?.alg : undefined;
-    const plan = alg ? lastLayerPlan(cube, alg, (c) => bottomLayerSolved(c) && orientationSolved(c)) : null;
+    const book = match ? findCase("OLL", match.case.name)?.alg : undefined;
+    const mine = match ? overrides[myAlgKey("OLL", match.case.name)] : undefined;
+    const goal = (c: CubeJSInstance) => bottomLayerSolved(c) && orientationSolved(c);
+    const plan = (mine ? lastLayerPlan(cube, mine, goal) : null) ?? (book ? lastLayerPlan(cube, book, goal) : null);
     if (match && plan) {
       return {
         stage: "oll",
@@ -144,9 +150,11 @@ export function planNextStep(cube: CubeJSInstance): NavStep {
     }
   }
   const match = recognizePll(library);
-  const alg = match ? findCase("PLL", match.case.name)?.alg : undefined;
-  if (match && alg) {
-    const plan = lastLayerPlan(cube, alg, (c) => AUFS.some((a) => applied(c, [...a]).isSolved()));
+  const book = match ? findCase("PLL", match.case.name)?.alg : undefined;
+  const mine = match ? overrides[myAlgKey("PLL", match.case.name)] : undefined;
+  if (match && (book || mine)) {
+    const goal = (c: CubeJSInstance) => AUFS.some((a) => applied(c, [...a]).isSolved());
+    const plan = (mine ? lastLayerPlan(cube, mine, goal) : null) ?? (book ? lastLayerPlan(cube, book, goal) : null);
     if (plan) {
       const after = applied(cube, plan.turns);
       const post = AUFS.find((a) => applied(after, [...a]).isSolved()) ?? [];
@@ -167,6 +175,6 @@ export function planNextStep(cube: CubeJSInstance): NavStep {
   return { stage: "lost", title: "Off the map — solve on and the Sat-Nav picks you back up", grip: "", turns: [], display: [], pairsDone: done.length };
 }
 
-export function planFromFacelets(facelets: string): NavStep {
-  return planNextStep(Cube.fromString(facelets));
+export function planFromFacelets(facelets: string, overrides: AlgOverrides = {}): NavStep {
+  return planNextStep(Cube.fromString(facelets), overrides);
 }

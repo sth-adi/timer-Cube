@@ -9,6 +9,8 @@ import { GyroTwin } from "@/components/lab/GyroTwin";
 import { useSmartCubeStore, SOLVED_FACELETS } from "@/lib/store/smartCubeStore";
 import { subscribeRawMoves } from "@/lib/store/smartCubeBus";
 import { useGymStore } from "@/lib/store/gymStore";
+import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
+import { effectiveAlg } from "@/lib/algorithms/myAlgs";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
 import { RouteTracker } from "@/lib/smartcube/route";
@@ -73,11 +75,13 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
   };
 
   const focusKey = focus?.map(caseKey).join("|") ?? "";
+  const chosen = useMyAlgsStore((s) => s.chosen);
   const pool = useMemo(() => {
     const keys = new Set(focusKey ? focusKey.split("|") : []);
     const focused = GYM_CASES.filter((c) => keys.has(caseKey(c)));
-    return focused.length ? focused : GYM_CASES.filter((c) => groups.includes(c.group));
-  }, [groups, focusKey]);
+    // Drill (and set up) the algorithm you actually use for each case, where you've picked one.
+    return (focused.length ? focused : GYM_CASES.filter((c) => groups.includes(c.group))).map((c) => ({ ...c, alg: effectiveAlg(chosen, c.group, c.name, c.alg) }));
+  }, [groups, focusKey, chosen]);
   const onAttemptRef = useRef(onAttempt);
   useEffect(() => {
     onAttemptRef.current = onAttempt;
