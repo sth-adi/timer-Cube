@@ -68,6 +68,11 @@ import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import { LearnedAlgNotice } from "@/components/algorithms/LearnedAlgNotice";
 import { CROSS_FACE_COLOR, toCrossFrame } from "@/lib/smartcube/crossFrame";
 import { extractAlgExecutions } from "@/lib/xray/algMicroscope";
+import { solveBreakdown } from "@/lib/analysis/solveBreakdown";
+import { reconstruction as writeReconstruction } from "@/lib/analysis/reconText";
+import { pbSolveRows, timeWonLost } from "@/lib/analysis/timeWonLost";
+import { ReconstructionCard } from "@/components/recap/ReconstructionCard";
+import { TimeWonLostCard } from "@/components/recap/TimeWonLostCard";
 import { cn } from "@/lib/utils/cn";
 
 const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
@@ -485,6 +490,18 @@ export function SmartCubeTimer() {
     [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
   );
 
+  // The just-saved solve, rebuilt the way any past solve is: where its time went, and the written reconstruction.
+  const savedSolve = useSessionStore((s) => (finishedScramble ? s.solves.find((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : undefined));
+  const savedBreakdown = useMemo(() => (savedSolve ? solveBreakdown(savedSolve) : null), [savedSolve]);
+  const timeReport = useMemo(() => {
+    if (!savedBreakdown || !savedSolve) return null;
+    return timeWonLost(savedBreakdown.rows, postSolveBaseline, pbSolveRows(allSolves, savedSolve.id)?.rows ?? null);
+  }, [savedBreakdown, savedSolve, postSolveBaseline, allSolves]);
+  const recon = useMemo(
+    () => (savedBreakdown && savedSolve ? writeReconstruction(savedBreakdown, savedSolve.scramble, { totalMs: savedBreakdown.totalMs, title: `${formatTime(savedSolve.timeMs)} solve` }) : null),
+    [savedBreakdown, savedSolve],
+  );
+
   // The OLL and PLL algorithms you executed (and whether in one look), for the recap table.
   const executions = useMemo(
     () => (finished && finishedScramble ? extractAlgExecutions({ scramble: analysisScramble, moves: analysisTokens, timesMs: moveTimestampsRel }) : []),
@@ -742,6 +759,8 @@ export function SmartCubeTimer() {
 
           <PostSolveTable rows={postSolveRows} scramble={analysisScramble} moves={analysisMoves} baseline={postSolveBaseline} crossFace={frameFace} executions={executions} />
 
+          {timeReport && <TimeWonLostCard report={timeReport} />}
+
           <PostSolveCoachCard
             rows={postSolveRows}
             totalMs={elapsedMs}
@@ -806,6 +825,8 @@ export function SmartCubeTimer() {
                   </div>
                 </div>
               )}
+
+              {recon && <ReconstructionCard recon={recon} />}
 
               {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
 

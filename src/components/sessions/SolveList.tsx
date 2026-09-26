@@ -13,7 +13,9 @@ import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Check, Heart, Link2, Loader2, MessageSquare, Plus, Trash2, Wand2 } from "lucide-react";
+import { Check, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Trash2, Wand2 } from "lucide-react";
+import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
+import { SolveRecapSheet } from "@/components/recap/SolveRecapSheet";
 
 function SolveRow({
   solve,
@@ -35,6 +37,7 @@ function SolveRow({
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [recapOpen, setRecapOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState(solve.comment ?? "");
   const [shareState, setShareState] = useState<"idle" | "busy" | "copied" | "error">("idle");
 
@@ -99,6 +102,18 @@ function SolveRow({
       </button>
       {open && (
         <div className="absolute right-0 top-full z-20 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-bg-elevated p-2.5 shadow-lg animate-fade-in-up">
+          {hasBreakdown(solve) && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setRecapOpen(true);
+              }}
+              className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2 py-1.5 text-xs font-semibold text-accent-fg"
+            >
+              <ListChecks size={12} /> Full recap
+            </button>
+          )}
           <p className="text-muted-2 text-[11px] font-mono leading-snug mb-2 break-words">{solve.scramble}</p>
           {solve.heartRate && (
             <p className="mb-2 flex items-center gap-1 text-[11px] text-danger">
@@ -212,6 +227,7 @@ function SolveRow({
           </div>
         </div>
       )}
+      {recapOpen && <SolveRecapSheet solve={solve} onClose={() => setRecapOpen(false)} />}
     </div>
   );
 }
