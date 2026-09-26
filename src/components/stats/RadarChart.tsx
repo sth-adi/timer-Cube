@@ -21,13 +21,16 @@ function polygonPoints(radii: number[]): string {
  * on a shared 0-100 scale (see computeDnaAxes), so this component only
  * handles the geometry and never touches what the numbers mean.
  */
-export function RadarChart({ axes, ghost, className }: { axes: DnaAxis[]; ghost?: DnaAxis[] | null; className?: string }) {
+export function RadarChart({ axes, ghost, rival, className }: { axes: DnaAxis[]; ghost?: DnaAxis[] | null; rival?: DnaAxis[] | null; className?: string }) {
   if (axes.length < 3) return null;
   const n = axes.length;
   const dataPoints = polygonPoints(axes.map((a) => (a.score / 100) * MAX_RADIUS));
   // An earlier shape, drawn behind on the same axes — only when it has every one of them.
   const ghostScores = ghost ? axes.map((a) => ghost.find((g) => g.label === a.label)?.score) : null;
   const ghostPoints = ghostScores?.every((x) => x !== undefined) ? polygonPoints(ghostScores.map((x) => (x! / 100) * MAX_RADIUS)) : null;
+  // Someone else's shape on the same axes (DNA Duel) — filled, in a second colour.
+  const rivalScores = rival ? axes.map((a) => rival.find((g) => g.label === a.label)?.score) : null;
+  const rivalPoints = rivalScores?.every((x) => x !== undefined) ? polygonPoints(rivalScores.map((x) => (x! / 100) * MAX_RADIUS)) : null;
 
   return (
     <svg viewBox={`-40 -4 ${SIZE + 80} ${SIZE + 8}`} className={className} role="img" aria-label="Solving-style radar chart">
@@ -48,6 +51,7 @@ export function RadarChart({ axes, ghost, className }: { axes: DnaAxis[]; ghost?
       {ghostPoints && (
         <polygon points={ghostPoints} fill="none" stroke="var(--muted-2)" strokeWidth={1.25} strokeDasharray="3 3" strokeLinejoin="round" />
       )}
+      {rivalPoints && <polygon points={rivalPoints} fill="var(--warning)" fillOpacity={0.18} stroke="var(--warning)" strokeWidth={2} strokeLinejoin="round" />}
       <polygon points={dataPoints} fill="var(--accent)" fillOpacity={0.22} stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
       {axes.map((a, i) => {
         const p = polar((a.score / 100) * MAX_RADIUS, (i / n) * Math.PI * 2);

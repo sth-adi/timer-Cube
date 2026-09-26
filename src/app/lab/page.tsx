@@ -166,6 +166,7 @@ const TOOLS = [
   { href: "/ar", icon: Glasses, title: "Cube AR", blurb: "Your cube's live twin pinned onto it through the camera.", category: "live" },
 
   { href: "/myalgs", icon: BookMarked, title: "My Algs", blurb: "Your real algorithms per case, detected from your solves and used everywhere.", category: "picture" },
+  { href: "/duel", icon: Swords, title: "DNA Duel", blurb: "Your Cube DNA against a friend's — send a link, compare everything.", category: "picture" },
   { href: "/wrapped", icon: Gift, title: "Cube Wrapped", blurb: "Your month or year of cubing as a shareable story.", category: "picture" },
   { href: "/quests", icon: Sparkles, title: "Quests & Levels", blurb: "XP for everything you practise, and three quests a week aimed at you.", category: "picture" },
   { href: "/experiments", icon: FlaskConical, title: "Experiments", blurb: "Log a change — new cube, new alg — and test whether it really helped.", category: "picture" },
