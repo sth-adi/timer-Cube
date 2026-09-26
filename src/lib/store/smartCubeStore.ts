@@ -2,9 +2,10 @@
 
 import { create } from "zustand";
 import type { Subscription } from "rxjs";
-import type { SmartCubeConnection, SmartCubeEvent } from "smartcube-web-bluetooth";
-import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
-import { CROSS_FACES, relabelMove, type CrossFace } from "@/lib/smartcube/crossFrame";
+import type { SmartCubeCapabilities, SmartCubeConnection, SmartCubeEvent } from "smartcube-web-bluetooth";
+import { Cube, newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
+import { CROSS_FACES, relabelFacelets, relabelMove, type CrossFace } from "@/lib/smartcube/crossFrame";
+import { distrust, newStateSync, onReport, onTurn, settle } from "@/lib/smartcube/stateSync";
 import { advanceMilestones } from "@/lib/smartcube/milestones";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 import type { GyroSample } from "@/lib/gyro/orientation";
@@ -95,6 +96,20 @@ interface SmartCubeState {
    * it continuously, not just during a solve.
    */
   liveFacelets: string;
+  /**
+   * Where the app's picture of the cube came from: "cube" once the cube has
+   * reported its own state (most can — see stateSync.ts), "assumed" when
+   * it can't and the app started from solved at connect.
+   */
+  stateSource: "cube" | "assumed";
+  /** The cube can report its state at all (every supported brand but the MoYu MHC). */
+  reportsState: boolean;
+  /**
+   * The app's state was corrected from the cube's own report during this
+   * solve (a turn was lost over Bluetooth): the time and splits stand, but
+   * the recorded turns no longer add up to the solve.
+   */
+  correctedDuringSolve: boolean;
   /** Whether this cube's protocol can report a battery level at all — not every brand/model does. */
   batterySupported: boolean;
   /** 0-100, or null before the first reading has come back. */
@@ -130,6 +145,26 @@ let liveCube: CubeJSInstance = newCube();
  * with the white-cross logic. Kept in step with liveCube move for move.
  */
 let frames: Record<CrossFace, CubeJSInstance> = freshFrames();
+let caps: SmartCubeCapabilities | null = null;
+let sync = newStateSync();
+let settleTimer: ReturnType<typeof setTimeout> | null = null;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+/** How long the cube must be still before a disagreeing report is believed. */
+const SETTLE_MS = 400;
+/** After this long without a turn (and not mid-solve), ask the cube where it's at. */
+const IDLE_CHECK_MS = 1500;
+
+/** Takes a full state (from the cube's own report) as the truth. */
+function adoptFacelets(facelets: string): void {
+  liveCube = Cube.fromString(facelets);
+  frames = Object.fromEntries(CROSS_FACES.map((f) => [f, Cube.fromString(relabelFacelets(facelets, f))])) as Record<CrossFace, CubeJSInstance>;
+}
+
+function clearSyncTimers(): void {
+  if (settleTimer) clearTimeout(settleTimer);
+  if (idleTimer) clearTimeout(idleTimer);
+  settleTimer = idleTimer = null;
+}
 
 function freshFrames(): Record<CrossFace, CubeJSInstance> {
   return Object.fromEntries(CROSS_FACES.map((f) => [f, newCube()])) as Record<CrossFace, CubeJSInstance>;
@@ -153,6 +188,8 @@ function teardown(): void {
   sub?.unsubscribe();
   sub = null;
   conn = null;
+  caps = null;
+  clearSyncTimers();
 }
 
 export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
@@ -175,6 +212,9 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   crossFace: null,
   moves: [],
   liveFacelets: SOLVED_FACELETS,
+  stateSource: "assumed",
+  reportsState: false,
+  correctedDuringSolve: false,
   batterySupported: false,
   batteryLevel: null,
   gyroActive: false,
@@ -200,6 +240,8 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       conn = connection;
       liveCube = newCube();
       frames = freshFrames();
+      caps = connection.capabilities;
+      sync = newStateSync();
       gyroLog = [];
       resetLatestGyro();
       resetTimeMachine();
@@ -236,7 +278,34 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
           set({ batteryLevel: event.batteryLevel });
           return;
         }
+        if (event.type === "FACELETS") {
+          const verdict = onReport(sync, event.facelets);
+          if (verdict === "adopt") {
+            // The first report since connecting: start from wherever the cube really is.
+            adoptFacelets(event.facelets);
+            set({ liveFacelets: event.facelets, stateSource: "cube" });
+          } else if (verdict === "wait") {
+            if (settleTimer) clearTimeout(settleTimer);
+            settleTimer = setTimeout(() => {
+              const fix = settle(sync, liveCube.asString());
+              if (!fix) return;
+              adoptFacelets(fix);
+              const st = get();
+              set({ liveFacelets: fix, stateSource: "cube", ...(st.armed || st.recording ? { correctedDuringSolve: true } : {}) });
+              // A correction can complete the solve the lost turn was hiding.
+              if (fix === SOLVED_FACELETS && st.recording) set({ armed: false, recording: false, solvedAtMs: st.moves[st.moves.length - 1]?.timeStampMs ?? event.timestamp });
+            }, SETTLE_MS);
+          }
+          return;
+        }
         if (event.type !== "MOVE") return;
+
+        onTurn(sync);
+        if (idleTimer) clearTimeout(idleTimer);
+        // Once the turning stops (between solves), check the app's picture against the cube's own.
+        idleTimer = setTimeout(() => {
+          if (caps?.facelets && !get().recording) void conn?.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
+        }, IDLE_CHECK_MS);
 
         emitRawMove({ token: event.move, timeStampMs: event.timestamp });
         recordTimeMachineMove(event.move, event.timestamp);
@@ -283,8 +352,13 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         batterySupported: connection.capabilities.battery,
         batteryLevel: null,
         gyroActive: false,
+        stateSource: "assumed",
+        reportsState: connection.capabilities.facelets,
+        correctedDuringSolve: false,
       });
       if (connection.capabilities.battery) get().refreshBattery();
+      // Ask where every piece is right now — the connect-time report can go out before this subscription existed.
+      if (connection.capabilities.facelets) void connection.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
     } catch (err) {
       // The user cancelling the browser's device picker throws too — that's
       // not a real error, just "never mind".
@@ -327,6 +401,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       pllCaseName: null,
       crossFace: null,
       moves: [],
+      correctedDuringSolve: false,
       error: null,
     });
   },
@@ -350,6 +425,9 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   resyncSolved: () => {
     liveCube = newCube();
     frames = freshFrames();
+    // Tell the cube too, where it can be told; otherwise stop believing its old count until it agrees.
+    if (caps?.reset) void conn?.sendCommand({ type: "REQUEST_RESET" }).catch(() => {});
+    else distrust(sync);
     set({ liveFacelets: SOLVED_FACELETS });
   },
 

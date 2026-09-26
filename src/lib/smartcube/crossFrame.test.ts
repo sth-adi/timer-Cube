@@ -3,7 +3,7 @@ import { newCube } from "@/lib/cube-engine/engine";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
 import { crossSolved } from "@/lib/xray/common";
 import type { Solve } from "@/types";
-import { CROSS_FACES, analysisFrame, crossFaceOf, crossSolvedOn, pairColors, physicalFace, relabelMove, toCrossFrame, type CrossFace } from "./crossFrame";
+import { CROSS_FACES, analysisFrame, crossFaceOf, crossSolvedOn, pairColors, physicalFace, relabelFacelets, relabelMove, toCrossFrame, type CrossFace } from "./crossFrame";
 import { PAIR_NAMES } from "@/lib/analysis/mistakeRadar";
 
 const SCRAMBLE = "D2 F' U2 L2 F U2 R2 B' L2 F' R' D B U R2 B L' U' F2 R";
@@ -52,6 +52,19 @@ describe("colour-neutral frames", () => {
         const colours = pairColors(p, face).split("-");
         expect(colours).not.toContain(word[cross]);
         expect(colours).not.toContain(word[opposite as CrossFace]);
+      }
+    }
+  });
+
+  it("relabels a whole sticker state exactly as it relabels the moves that made it", () => {
+    const seqs = [SCRAMBLE, "R2 U' B2 D' L2 D2 R2 U' F2 U L' B' R D F' U2 B R U2 F'", "U"];
+    for (const face of CROSS_FACES) {
+      for (const seq of seqs) {
+        const a = newCube();
+        a.move(seq);
+        const b = newCube();
+        b.move(toCrossFrame(seq.split(" "), face).join(" "));
+        expect(relabelFacelets(a.asString(), face)).toBe(b.asString());
       }
     }
   });

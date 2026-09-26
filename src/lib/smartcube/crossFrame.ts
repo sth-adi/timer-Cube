@@ -46,6 +46,56 @@ export function relabelMove(token: string, face: CrossFace): string {
   return face === "U" ? token : viewerMove(token, GRIPS[face]);
 }
 
+const FACE_LETTERS = ["U", "R", "F", "D", "L", "B"] as const;
+
+/** Fixed, varied states used to read off how relabelling moves the stickers (see relabelFacelets) — enough that every sticker's path is unambiguous. */
+const PROBES = Array.from({ length: 16 }, (_, k) => {
+  let x = 2463534242 + k * 7919;
+  const turns: string[] = [];
+  for (let i = 0; i < 30; i++) {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    const r = Math.abs(x);
+    turns.push("URFDLB"[r % 6] + ["", "'", "2"][(r >> 3) % 3]);
+  }
+  return turns.join(" ");
+});
+const relabelMaps = new Map<CrossFace, { perm: number[]; color: Record<string, string> }>();
+
+/**
+ * Where each sticker goes, and what it's called, when a whole state is
+ * relabelled for `face` — worked out once from how the relabelled moves
+ * play out, so it's exactly consistent with toCrossFrame.
+ */
+function relabelMap(face: CrossFace) {
+  const hit = relabelMaps.get(face);
+  if (hit) return hit;
+  const color = Object.fromEntries(FACE_LETTERS.map((x) => [x, relabelMove(x, face)[0]])) as Record<string, string>;
+  const pairs = PROBES.map((seq) => {
+    const a = newCube();
+    a.move(seq);
+    const b = newCube();
+    b.move(toCrossFrame(seq.split(" "), face).join(" "));
+    return [a.asString(), b.asString()] as const;
+  });
+  const perm = Array.from({ length: 54 }, (_, i) => {
+    const js = Array.from({ length: 54 }, (_, k) => k).filter((k) => pairs.every(([src, dst]) => color[src[k]] === dst[i]));
+    if (js.length !== 1) throw new Error("relabelling isn't a clean sticker permutation");
+    return js[0];
+  });
+  const out = { perm, color };
+  relabelMaps.set(face, out);
+  return out;
+}
+
+/** A whole sticker state (Kociemba facelets) as seen with `face`'s colour in white's place. */
+export function relabelFacelets(facelets: string, face: CrossFace): string {
+  if (face === "U") return facelets;
+  const { perm, color } = relabelMap(face);
+  return perm.map((j) => color[facelets[j]]).join("");
+}
+
 /** The physical face a face letter in `face`'s frame really is (the inverse of relabelMove). */
 export function physicalFace(frameFace: string, face: CrossFace): string {
   if (face === "U") return frameFace;

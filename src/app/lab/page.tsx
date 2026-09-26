@@ -458,7 +458,7 @@ export default function LabPage() {
                       {supported ? (connecting ? "Connecting…" : "Connect smart cube") : "Web Bluetooth unavailable"}
                     </button>
                     <p className="max-w-xs text-center text-[11px] text-muted-2">
-                      Connect it solved, held yellow top and green front — that grip is the gyro&apos;s home.
+                      Hold it yellow top, green front while it connects — that grip is the gyro&apos;s home. Any state is fine for most cubes.
                     </p>
                   </div>
                 ) : calibrating ? (

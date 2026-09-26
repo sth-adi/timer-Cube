@@ -27,7 +27,7 @@ export function ConnectGate({ children, blurb }: { children: React.ReactNode; bl
         {supported ? (connecting ? "Connecting…" : "Connect smart cube") : "Web Bluetooth unavailable in this browser"}
       </button>
       {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
-      <p className="max-w-xs text-[11px] text-muted-2">Connect it solved — that&apos;s the state the app tracks every turn from.</p>
+      <p className="max-w-xs text-[11px] text-muted-2">Any state is fine — most cubes report where every piece is. (A MoYu MHC can&apos;t: connect that one solved.)</p>
     </div>
   );
 }

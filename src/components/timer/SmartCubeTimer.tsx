@@ -246,6 +246,9 @@ export function SmartCubeTimer() {
     cancel,
     refreshBattery,
     resyncSolved,
+    stateSource,
+    reportsState,
+    correctedDuringSolve,
   } = useSmartCubeStore();
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
@@ -372,7 +375,8 @@ export function SmartCubeTimer() {
   const finishedGaze = recap?.gaze ?? null;
   // Honest about what's on disk: a recap whose solve you deleted says so.
   const savedSolveExists = useSessionStore((s) =>
-    finishedScramble ? s.solves.some((x) => x.scramble === finishedScramble && x.reconstruction === moves.map((m) => m.token).join(" ")) : false,
+    // Matched on scramble and time — a solve whose turns were corrected mid-way is saved without a reconstruction.
+    finishedScramble ? s.solves.some((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : false,
   );
   // The gyro's read on the solve that just finished (regrips, oriented
   // reconstruction) — computed once at save time from the module-level gyro
@@ -410,15 +414,17 @@ export function SmartCubeTimer() {
     const splits = boundaries && boundaries.f2l !== null && boundaries.oll !== null
       ? [boundaries.cross!, boundaries.f2l, boundaries.oll]
       : undefined;
+    // A turn lost over Bluetooth and corrected from the cube's own report: the time and splits stand, but the recorded turns don't add up to the solve.
+    const turnsAddUp = !correctedDuringSolve;
     void recordSolve(
       elapsedMs,
       scramble,
       splits,
       pendingEvent ?? undefined,
-      reconstruction,
+      turnsAddUp ? reconstruction : undefined,
       heartRate,
       crossMs,
-      moveTimestampsRel,
+      turnsAddUp ? moveTimestampsRel : undefined,
       gyro ? { rotations: gyro.rotations, orientedReconstruction: gyro.orientedReconstruction, stream: gyro.stream } : undefined,
       // Inspection ran from the moment the scramble matched to the first
       // turn: +2 past 15s, DNF past 17s — same rule as the keyboard timer.
@@ -452,6 +458,7 @@ export function SmartCubeTimer() {
     reconstruction,
     moveTimestampsRel,
     protocolName,
+    correctedDuringSolve,
   ]);
 
   const moveTokens = useMemo(() => moves.map((m) => m.token), [moves]);
@@ -617,8 +624,9 @@ export function SmartCubeTimer() {
         </button>
         {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
         <p className="max-w-xs text-[11px] text-muted-2">
-          Your cube should be solved before you connect — that&apos;s what the app calibrates orientation from. Once
-          connected, just scramble it: matching the target scramble starts inspection automatically.
+          Connect it in any state: GAN, Giiker, GoCube, QiYi and MoYu&apos;s AI cubes report where every piece is. (A
+          MoYu MHC can&apos;t — connect that one solved.) Then just scramble: matching the target scramble starts
+          inspection automatically.
         </p>
       </div>
     );
@@ -635,6 +643,9 @@ export function SmartCubeTimer() {
             <BatteryBadge level={batteryLevel} onRefresh={refreshBattery} />
           </>
         )}
+        <span className="ml-1 text-[10px] text-muted-2" title={reportsState ? "The cube reports its own state; the app checks against it whenever you pause" : "This cube can't report its state, so the app assumed it was solved when you connected"}>
+          {reportsState ? (stateSource === "cube" ? "· state read from cube" : "· reading state…") : "· assumed solved at connect"}
+        </span>
         <Link href="/lab" className="ml-2 flex items-center gap-1 text-accent hover:underline">
           <FlaskConical size={12} /> Lab
         </Link>
