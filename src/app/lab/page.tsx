@@ -158,6 +158,7 @@ const TOOLS = [
   { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve — or your week's best — into a video.", category: "live" },
   { href: "/ar", icon: Glasses, title: "Cube AR", blurb: "Your cube's live twin pinned onto it through the camera.", category: "live" },
 
+  { href: "/experiments", icon: FlaskConical, title: "Experiments", blurb: "Log a change — new cube, new alg — and test whether it really helped.", category: "picture" },
   { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up — and your golds.", category: "picture" },
   { href: "/luck", icon: Clover, title: "Luck Meter", blurb: "How much each solve was the scramble, and your luck-free leaderboard.", category: "picture" },
   { href: "/archetypes", icon: Shapes, title: "Solve Archetypes", blurb: "The shapes your solves come in, clustered, and what each costs.", category: "picture" },

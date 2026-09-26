@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ArrowLeftRight, X } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { getSessionSolves } from "@/lib/db/solves";
@@ -155,6 +156,9 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
             })}
           </div>
         )}
+        <Link href="/experiments" className="mt-3 block text-center text-[11px] font-medium text-accent">
+          Testing a specific change? Run it as an Experiment — with a real significance test →
+        </Link>
       </div>
     </div>
   );
