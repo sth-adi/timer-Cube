@@ -58,6 +58,7 @@ import {
   X,
   Zap,
   Glasses,
+  Gavel,
 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
@@ -144,7 +145,8 @@ const TOOLS = [
   { href: "/multislot", icon: Layers, title: "Multi-Slot Report", blurb: "Pairs solved together vs one at a time — and which is actually faster.", category: "technique" },
 
   { href: "/xcross", icon: Target, title: "X-Cross Hunter", blurb: "Scrambles with a hidden x-cross — can you find it?", category: "drills" },
-  { href: "/rematch", icon: Swords, title: "Solve Rematch", blurb: "Re-solve any past scramble and diff it with the original.", category: "drills" },
+  { href: "/rematch", icon: Swords, title: "Rematch & Ghost Race", blurb: "Race any real solve on its scramble — yours, a friend's, or a pasted recon.", category: "drills" },
+  { href: "/comp", icon: Gavel, title: "Comp Sim", blurb: "A full competition round: judge calls, cutoff, official average, comp tax.", category: "drills" },
   { href: "/blindcross", icon: EyeClosed, title: "Blind Cross", blurb: "Inspect, close your eyes, solve the cross — graded turn by turn.", category: "drills" },
   { href: "/pacer", icon: Gauge, title: "Split Pacer", blurb: "Hear ahead / behind at every milestone of a solve.", category: "drills" },
   { href: "/tempo", icon: Metronome, title: "Tempo Trainer", blurb: "Solve to a metronome — every turn scored on the beat.", category: "drills" },
