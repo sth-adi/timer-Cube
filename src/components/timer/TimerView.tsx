@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils/cn";
 import { playInspectionBeep } from "@/lib/utils/sound";
 import { InspectionRing } from "./InspectionRing";
 import { PredictionBadge } from "./PredictionBadge";
+import { LiveSessionCoach } from "./LiveSessionCoach";
 import { GhostPaceBar } from "./GhostPaceBar";
 import { predictSolveTime } from "@/lib/analysis/prediction";
 import { paceFromRatio, resetPerformanceAura, setPerformanceAura } from "@/lib/store/performanceAuraBus";
@@ -280,6 +281,7 @@ export function TimerView() {
         </p>
       )}
       {phase === "stopped" && <p className="text-muted-2 text-sm">space for next scramble</p>}
+      {(phase === "idle" || phase === "stopped") && <LiveSessionCoach />}
     </div>
   );
 }

@@ -48,6 +48,7 @@ import { ScrambleGuidePanel } from "@/components/smartcube/ScrambleGuidePanel";
 import { useNowTick } from "@/hooks/useNowTick";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveProjection } from "./LiveProjection";
+import { LiveSessionCoach } from "./LiveSessionCoach";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
 import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
@@ -781,6 +782,7 @@ export function SmartCubeTimer() {
           <ScrambleGuidePanel />
           <p className="text-[11px] text-muted-2">Inspection starts automatically once it matches.</p>
           {cubeGesturesOn && <GestureHint />}
+          <LiveSessionCoach />
         </div>
       )}
     </div>

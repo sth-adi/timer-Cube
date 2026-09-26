@@ -45,6 +45,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setInspectionEnabled = useSettingsStore((s) => s.setInspectionEnabled);
   const hintSolverEnabled = useSettingsStore((s) => s.hintSolverEnabled);
   const setHintSolverEnabled = useSettingsStore((s) => s.setHintSolverEnabled);
+  const liveCoachEnabled = useSettingsStore((s) => s.liveCoachEnabled);
+  const setLiveCoachEnabled = useSettingsStore((s) => s.setLiveCoachEnabled);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const setSoundEnabled = useSettingsStore((s) => s.setSoundEnabled);
   const theme = useSettingsStore((s) => s.theme);
@@ -191,6 +193,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="mt-4 divide-y divide-border border-t border-border pt-1">
           <Toggle checked={inspectionEnabled} onChange={setInspectionEnabled} label="WCA 15s inspection" />
           <Toggle checked={hintSolverEnabled} onChange={setHintSolverEnabled} label="Solve hints (cross / CFOP)" />
+          <Toggle checked={liveCoachEnabled} onChange={setLiveCoachEnabled} label="Live coach between solves" />
           <Toggle checked={soundEnabled} onChange={setSoundEnabled} label="Sound on solve" />
           <Toggle
             checked={hideTimeWhileSolving}

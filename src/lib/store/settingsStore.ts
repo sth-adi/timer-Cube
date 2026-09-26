@@ -65,6 +65,8 @@ export interface SettingsState {
   backgroundStyle: BackgroundStyleId;
   timerStyle: TimerStyleId;
   hintSolverEnabled: boolean;
+  /** The Live Session Coach strip between solves. */
+  liveCoachEnabled: boolean;
   soundEnabled: boolean;
   /** Target solve count per day, for the practice-goal ring. */
   dailyGoal: number;
@@ -88,6 +90,7 @@ export interface SettingsState {
   setBackgroundStyle: (v: BackgroundStyleId) => void;
   setTimerStyle: (v: TimerStyleId) => void;
   setHintSolverEnabled: (v: boolean) => void;
+  setLiveCoachEnabled: (v: boolean) => void;
   setSoundEnabled: (v: boolean) => void;
   setDailyGoal: (v: number) => void;
   setHideTimeWhileSolving: (v: boolean) => void;
@@ -106,6 +109,7 @@ export const useSettingsStore = create<SettingsState>()(
       backgroundStyle: "aurora",
       timerStyle: "glow",
       hintSolverEnabled: true,
+      liveCoachEnabled: true,
       soundEnabled: false,
       dailyGoal: 20,
       hideTimeWhileSolving: false,
@@ -119,6 +123,7 @@ export const useSettingsStore = create<SettingsState>()(
       setBackgroundStyle: (v) => set({ backgroundStyle: v }),
       setTimerStyle: (v) => set({ timerStyle: v }),
       setHintSolverEnabled: (v) => set({ hintSolverEnabled: v }),
+      setLiveCoachEnabled: (v) => set({ liveCoachEnabled: v }),
       setSoundEnabled: (v) => set({ soundEnabled: v }),
       setDailyGoal: (v) => set({ dailyGoal: v }),
       setHideTimeWhileSolving: (v) => set({ hideTimeWhileSolving: v }),
