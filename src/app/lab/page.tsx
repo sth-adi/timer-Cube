@@ -59,6 +59,7 @@ import {
   Zap,
   Glasses,
   Gavel,
+  Sparkles,
 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
@@ -158,6 +159,7 @@ const TOOLS = [
   { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve — or your week's best — into a video.", category: "live" },
   { href: "/ar", icon: Glasses, title: "Cube AR", blurb: "Your cube's live twin pinned onto it through the camera.", category: "live" },
 
+  { href: "/quests", icon: Sparkles, title: "Quests & Levels", blurb: "XP for everything you practise, and three quests a week aimed at you.", category: "picture" },
   { href: "/experiments", icon: FlaskConical, title: "Experiments", blurb: "Log a change — new cube, new alg — and test whether it really helped.", category: "picture" },
   { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up — and your golds.", category: "picture" },
   { href: "/luck", icon: Clover, title: "Luck Meter", blurb: "How much each solve was the scramble, and your luck-free leaderboard.", category: "picture" },

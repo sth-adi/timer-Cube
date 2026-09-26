@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { useProgression } from "@/components/quests/useProgression";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { computeAchievements } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
@@ -9,9 +12,25 @@ export function AchievementsPanel() {
   const allSolves = useSessionStore((s) => s.allSolves);
   const achievements = useMemo(() => computeAchievements(allSolves), [allSolves]);
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
+  const { level, xp } = useProgression(false);
 
   return (
     <div>
+      <Link href="/quests" className="mb-3 flex items-center gap-3 rounded-xl bg-bg-panel-2 px-3 py-2 hover:bg-bg-panel-2/70">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-black text-accent-fg">{level.level}</span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="flex justify-between text-xs">
+            <span className="font-semibold text-foreground">{level.title}</span>
+            <span className="tabular-nums text-muted-2">{xp.total.toLocaleString()} XP</span>
+          </span>
+          <span className="h-1.5 overflow-hidden rounded-full bg-bg-panel">
+            <span className="block h-full rounded-full bg-accent" style={{ width: `${(level.into / Math.max(1, level.span)) * 100}%` }} />
+          </span>
+        </span>
+        <span className="flex items-center text-[11px] font-medium text-accent">
+          Quests <ChevronRight size={12} />
+        </span>
+      </Link>
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium">Milestones</p>
         <span className="text-muted-2 text-xs tabular-timer">
