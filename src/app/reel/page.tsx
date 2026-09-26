@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { Clapperboard, Timer as TimerIcon } from "lucide-react";
+import { Clapperboard, Sparkles, Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { ReelPlayer } from "@/components/reel/ReelPlayer";
+import { CanvasRecorder, themeAccent } from "@/components/reel/CanvasRecorder";
+import { PERIOD_LABEL, buildMontage, montageSoundtrack, pickHighlights, type HighlightPeriod } from "@/lib/reel/highlights";
+import { renderHighlightFrame } from "@/lib/reel/renderHighlights";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { buildReelTimeline } from "@/lib/reel/timeline";
 import { solveFinalMs } from "@/types";
@@ -21,7 +24,69 @@ import { cn } from "@/lib/utils/cn";
  * card. Rendered on a canvas and recorded straight to a video file in the
  * browser.
  */
-export default function ReelPage() {
+function HighlightReel() {
+  const allSolves = useSessionStore((s) => s.allSolves);
+  const [period, setPeriod] = useState<HighlightPeriod>("week");
+  const [now] = useState(() => Date.now());
+  const highlights = useMemo(() => pickHighlights(allSolves, { now, period, max: 5 }), [allSolves, now, period]);
+  const montage = useMemo(() => (highlights.length ? buildMontage(highlights) : null), [highlights]);
+  const soundtrack = useMemo(() => (montage ? montageSoundtrack(montage) : []), [montage]);
+  const subtitle = PERIOD_LABEL[period];
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D, t: number) => montage && renderHighlightFrame(ctx, montage, t, { accent: themeAccent(), title: "Highlights", subtitle }),
+    [montage, subtitle],
+  );
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-center gap-1.5">
+        {(["week", "month", "all"] as HighlightPeriod[]).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPeriod(p)}
+            className={cn("rounded-full px-3 py-1.5 text-xs font-semibold", period === p ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
+          >
+            {p === "all" ? "All time" : p === "week" ? "This week" : "This month"}
+          </button>
+        ))}
+      </div>
+      {!montage ? (
+        <div className="card rounded-xl p-6 text-center text-sm text-muted">
+          No smart-cube solves {subtitle === "all time" ? "yet" : subtitle} to film. Try a longer stretch, or solve on a connected cube.
+        </div>
+      ) : (
+        <>
+          <div className="card flex flex-col gap-1 rounded-xl p-3">
+            <p className="px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+              The cut · {highlights.length} solve{highlights.length === 1 ? "" : "s"}, building to the fastest
+            </p>
+            {highlights.map((h, i) => (
+              <div key={h.solve.id} className="flex items-center gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-1.5 text-xs">
+                <span className="w-4 text-muted-2">{i + 1}</span>
+                <span className="flex-1 font-semibold text-foreground">{h.caption}</span>
+                <span className="text-[10px] text-muted">{h.detail}</span>
+                <span className="tabular-timer font-semibold text-foreground">{formatTime(h.finalMs)}</span>
+              </div>
+            ))}
+          </div>
+          <CanvasRecorder
+            draw={draw}
+            fromT={0}
+            toT={montage.totalMs}
+            posterT={900}
+            soundtrack={soundtrack}
+            title="Highlights"
+            fileName={`highlights-${period}`}
+            ariaLabel="Highlight reel preview"
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function SingleReel() {
   const allSolves = useSessionStore((s) => s.allSolves);
   const candidates = useMemo(
     () =>
@@ -49,21 +114,6 @@ export default function ReelPage() {
 
   return (
     <>
-      <AppBootstrap />
-      <AppBackground />
-      <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <TimerIcon size={16} className="text-accent" />
-          Cube
-        </Link>
-        <div className="flex w-full max-w-md flex-col gap-3 pb-10">
-          <div className="flex flex-col gap-0.5 px-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Clapperboard size={17} className="text-accent" /> Solve Reel
-            </h1>
-            <p className="text-[11px] text-muted-2">Turn any smart-cube solve into a video — real turns, real regrips, real pace, splits and cases on screen.</p>
-          </div>
-
           {!selected || !timeline ? (
             <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on a connected smart cube and your solves show up here to film.</div>
           ) : (
@@ -97,6 +147,53 @@ export default function ReelPage() {
               />
             </>
           )}
+    </>
+  );
+}
+
+export default function ReelPage() {
+  const [tab, setTab] = useState<"single" | "highlights">("single");
+  return (
+    <>
+      <AppBootstrap />
+      <AppBackground />
+      <div className="flex flex-col items-center gap-4 px-4 py-6">
+        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <TimerIcon size={16} className="text-accent" />
+          Cube
+        </Link>
+        <div className="flex w-full max-w-md flex-col gap-3 pb-10">
+          <div className="flex flex-col gap-0.5 px-1">
+            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <Clapperboard size={17} className="text-accent" /> Solve Reel
+            </h1>
+            <p className="text-[11px] text-muted-2">
+              Turn smart-cube solves into video — one solve, or an auto-cut highlight reel of your best, with a soundtrack played off your
+              actual turns.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1">
+            {(
+              [
+                ["single", "One solve", Clapperboard],
+                ["highlights", "Highlights", Sparkles],
+              ] as const
+            ).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                aria-pressed={tab === id}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  tab === id ? "bg-accent text-accent-fg" : "text-muted",
+                )}
+              >
+                <Icon size={12} /> {label}
+              </button>
+            ))}
+          </div>
+          {tab === "single" ? <SingleReel /> : <HighlightReel />}
         </div>
       </div>
     </>
