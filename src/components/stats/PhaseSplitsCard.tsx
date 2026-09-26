@@ -6,9 +6,8 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { PHASE_LABELS, type PhaseCount } from "@/lib/store/settingsStore";
 import { computePhaseSplits, normalSolves } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
+import { PHASE_TINTS } from "./phaseTints";
 
-/** Distinct hues per phase, so the bar and the rows below read as one thing. */
-const PHASE_TINTS = ["bg-accent", "bg-cyan", "bg-warning", "bg-success"];
 
 const labelsFor = (count: number) => PHASE_LABELS[(count as PhaseCount)] ?? [];
 

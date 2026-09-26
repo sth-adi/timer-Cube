@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -15,6 +15,9 @@ import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
 import { Check, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Trash2, Wand2 } from "lucide-react";
 import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
+import { solveSummary, type SolveSummary } from "@/lib/analysis/solveFilter";
+import { CROSS_FACE_COLOR, CROSS_FACE_HEX } from "@/lib/smartcube/crossFrame";
+import { PHASE_TINTS } from "@/components/stats/phaseTints";
 import { SolveRecapSheet } from "@/components/recap/SolveRecapSheet";
 
 function SolveRow({
@@ -22,11 +25,14 @@ function SolveRow({
   index,
   isBest,
   isWorst,
+  detailed,
 }: {
   solve: Solve;
   index: number;
   isBest: boolean;
   isWorst: boolean;
+  /** Show the smart-cube step bar and cases under the time. */
+  detailed: boolean;
 }) {
   const setPenalty = useSessionStore((s) => s.setPenalty);
   const setComment = useSessionStore((s) => s.setComment);
@@ -40,6 +46,7 @@ function SolveRow({
   const [recapOpen, setRecapOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState(solve.comment ?? "");
   const [shareState, setShareState] = useState<"idle" | "busy" | "copied" | "error">("idle");
+  const summary = useMemo(() => (detailed ? solveSummary(solve) : null), [detailed, solve]);
 
   const cyclePenalty = (p: Penalty) => setPenalty(solve.id, p === solve.penalty ? "none" : p);
   const saveComment = () => {
@@ -96,7 +103,8 @@ function SolveRow({
         )}
       >
         <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
-        <span className="tabular-timer flex-1 text-left ml-2">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
+        <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
+        {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
         {solve.reconstruction && <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />}
         {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
       </button>
@@ -232,6 +240,33 @@ function SolveRow({
   );
 }
 
+/**
+ * A smart-cube solve at a glance: its four steps as one bar (cross, F2L,
+ * OLL, PLL, each as wide as the time it took) and the last-layer cases.
+ */
+function StepStrip({ summary }: { summary: SolveSummary }) {
+  const total = summary.steps.reduce((a, b) => a + b, 0) || 1;
+  const names = ["Cross", "F2L", "OLL", "PLL"];
+  const cases = [summary.oll, summary.pll].filter(Boolean).join(" · ");
+  return (
+    <span className="ml-1 flex min-w-0 flex-1 items-center gap-2" title={summary.steps.map((ms, i) => `${names[i]} ${formatTime(ms)}`).join(" · ")}>
+      <span className="flex h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-bg-panel-2 sm:w-24" aria-hidden>
+        {summary.steps.map((ms, i) => (
+          <span key={i} className={PHASE_TINTS[i]} style={{ width: `${(ms / total) * 100}%` }} />
+        ))}
+      </span>
+      {summary.crossFace !== "U" && (
+        <span
+          className="h-2 w-2 shrink-0 rounded-full ring-1 ring-border"
+          style={{ background: CROSS_FACE_HEX[summary.crossFace] }}
+          title={`${CROSS_FACE_COLOR[summary.crossFace]} cross`}
+        />
+      )}
+      <span className="truncate text-left text-[11px] text-muted-2">{cases}</span>
+    </span>
+  );
+}
+
 function ManualEntry({ onDone }: { onDone: () => void }) {
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const scramble = useScrambleStore((s) => s.scramble);
@@ -292,9 +327,15 @@ interface SolveListProps {
   limit?: number;
   /** Hides the "Solves" header row + add-time button — the preview widget supplies its own heading instead. */
   hideHeader?: boolean;
+  /**
+   * The rows to show and in what order (a filtered or re-sorted subset of
+   * `solves`) — each keeps its number from `solves`, so solve #12 is still
+   * #12 when it's sorted to the top. Defaults to every solve, newest first.
+   */
+  view?: Solve[];
 }
 
-export function SolveList({ solves: solvesProp, limit, hideHeader }: SolveListProps = {}) {
+export function SolveList({ solves: solvesProp, limit, hideHeader, view }: SolveListProps = {}) {
   const sessionSolves = useSessionStore((s) => s.solves);
   const solves = solvesProp ?? sessionSolves;
   const [manualOpen, setManualOpen] = useState(false);
@@ -304,7 +345,8 @@ export function SolveList({ solves: solvesProp, limit, hideHeader }: SolveListPr
   const best = finite.length ? Math.min(...finite) : null;
   const worst = finite.length ? Math.max(...finite) : null;
 
-  const ordered = [...solves].reverse();
+  const numberOf = useMemo(() => new Map(solves.map((s, i) => [s.id, i + 1])), [solves]);
+  const ordered = view ?? [...solves].reverse();
   const shown = limit !== undefined ? ordered.slice(0, limit) : ordered;
 
   return (
@@ -329,16 +371,17 @@ export function SolveList({ solves: solvesProp, limit, hideHeader }: SolveListPr
       {!hideHeader && manualOpen && <ManualEntry onDone={() => setManualOpen(false)} />}
 
       {shown.length === 0 ? (
-        <p className="text-muted-2 text-sm text-center py-8">No solves yet — hit space to start.</p>
+        <p className="text-muted-2 text-sm text-center py-8">{view && solves.length ? "No solves match." : "No solves yet — hit space to start."}</p>
       ) : (
         <div className={cn("flex flex-col gap-0.5", limit === undefined && "max-h-[55vh] overflow-y-auto pr-1")}>
-          {shown.map((solve, i) => {
+          {shown.map((solve) => {
             const t = comparableTime(solve);
             return (
               <SolveRow
                 key={solve.id}
                 solve={solve}
-                index={solves.length - i}
+                index={numberOf.get(solve.id) ?? 0}
+                detailed={limit === undefined}
                 isBest={best !== null && t === best}
                 isWorst={worst !== null && t === worst && finite.length > 2}
               />

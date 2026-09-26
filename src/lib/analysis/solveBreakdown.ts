@@ -33,7 +33,17 @@ export function hasBreakdown(solve: Solve): boolean {
   return solve.reconstruction.split(/\s+/).filter(Boolean).length === solve.moveTimestamps.length && solve.moveTimestamps.length > 0;
 }
 
+const cache = new WeakMap<Solve, SolveBreakdown | null>();
+
+/** The breakdown of a saved solve (cached per solve object — a list of hundreds is only replayed once). */
 export function solveBreakdown(solve: Solve): SolveBreakdown | null {
+  if (cache.has(solve)) return cache.get(solve)!;
+  const out = computeBreakdown(solve);
+  cache.set(solve, out);
+  return out;
+}
+
+function computeBreakdown(solve: Solve): SolveBreakdown | null {
   if (!hasBreakdown(solve)) return null;
   const tokens = solve.reconstruction!.split(/\s+/).filter(Boolean);
   const times = solve.moveTimestamps!;
