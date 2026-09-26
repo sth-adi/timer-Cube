@@ -41,6 +41,7 @@ import {
   RefreshCcw,
   Rotate3d,
   RotateCw,
+  Route,
   Scale,
   Search,
   Shapes,
@@ -121,6 +122,7 @@ const CATEGORIES: { key: Exclude<LabCategory, "start">; icon: React.ComponentTyp
 const TOOLS = [
   { href: "/coach", icon: GraduationCap, title: "Coach", blurb: "Where your time goes, ranked by what fixing it is worth.", category: "start" },
   { href: "/goal", icon: Flag, title: "Goal Planner", blurb: "Pick a target time — get a phase budget from your own good days.", category: "start" },
+  { href: "/journey", icon: Route, title: "Training Journey", blurb: "A target and a deadline as a week-by-week road — are you on pace?", category: "start" },
   { href: "/progress", icon: TrendingUp, title: "Progress Forecast", blurb: "Learning curves per phase, plateaus, and your next goal's ETA.", category: "start" },
 
   { href: "/lookahead", icon: Binoculars, title: "Lookahead Tradeoff", blurb: "Does turning F2L calmer shorten your next pause — and is it worth it?", category: "time" },

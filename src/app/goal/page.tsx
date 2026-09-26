@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Flag, Minus, Plus } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Flag, Minus, Plus } from "lucide-react";
 import { AnalyticsShell, NotEnough, useSolveMetrics } from "@/components/analytics/AnalyticsShell";
 import { PHASE_COLOR, SectionTitle } from "@/components/analytics/ChartKit";
 import { MIN_SOLVES, defaultTargetMs, planGoal, typicalSolveMs, type Reach } from "@/lib/analysis/goalPlanner";
@@ -48,6 +49,9 @@ export default function GoalPage() {
             <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-semibold", REACH[plan.reach].tone)}>{REACH[plan.reach].label}</span>
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{plan.headline}</p>
+          <Link href="/journey" className="card flex items-center justify-between rounded-xl px-4 py-3 text-[12px] font-semibold text-foreground hover:text-accent">
+            Turn a goal into a week-by-week Training Journey <ChevronRight size={14} className="text-muted-2" />
+          </Link>
 
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <SectionTitle>Phase budget</SectionTitle>
