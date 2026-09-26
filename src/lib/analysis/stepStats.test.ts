@@ -3,7 +3,7 @@ import type { Solve } from "@/types";
 import { fullSolveOn } from "@/lib/smartcube/testSolves";
 import { newCube } from "@/lib/cube-engine/engine";
 import { crossSolvedOn } from "@/lib/smartcube/crossFrame";
-import { stepRecord, stepStats } from "./stepStats";
+import { stepRecord, stepStats, TREND_WINDOW } from "./stepStats";
 
 const HOUR = 3_600_000;
 const { scramble, moves } = fullSolveOn("U");
@@ -60,5 +60,18 @@ describe("step stats", () => {
     expect(rep.sittings).toBeNull();
     expect(rep.steps.every((s) => s.ao12Ms !== null && s.deltaMs === null)).toBe(true);
     expect(rep.steps[1].bestMs).toBeLessThanOrEqual(rep.steps[1].ao12Ms!);
+    for (const st of rep.steps) expect(st.trend.length).toBe(12);
+  }, 60_000);
+
+  it("caps the trend at TREND_WINDOW solves, oldest first", () => {
+    const solves = Array.from({ length: 25 }, (_, k) => saved(`s${k}`, scramble, moves, 100 + k, k * 60_000));
+    const rep = stepStats(solves)!;
+    const lastSolveRecord = stepRecord(solves[solves.length - 1])!;
+    for (let i = 0; i < rep.steps.length; i++) {
+      const st = rep.steps[i];
+      expect(st.trend.length).toBe(TREND_WINDOW);
+      // The most recent solve (the slowest gap, 24) is last in the trend, not first.
+      expect(st.trend[st.trend.length - 1]).toBe(lastSolveRecord.totalMs[i]);
+    }
   }, 60_000);
 });

@@ -50,7 +50,12 @@ export interface StepStat {
   turnMs: number;
   /** This sitting's mean minus the last earlier sitting's with enough solves (negative is faster). */
   deltaMs: number | null;
+  /** This step's time across your last few solves, oldest first — the material for a trend line, not just a single before/after delta. */
+  trend: number[];
 }
+
+/** How many recent solves' worth of a step's time the trend line covers. */
+export const TREND_WINDOW = 20;
 
 export interface StepStatsReport {
   steps: StepStat[];
@@ -105,6 +110,7 @@ export function stepStats(solves: readonly Solve[]): StepStatsReport | null {
       lookMs,
       turnMs: meanMs - lookMs,
       deltaMs: compare ? mean(current.map((x) => x.r.totalMs[i])) - mean(previous.map((x) => x.r.totalMs[i])) : null,
+      trend: times.slice(-TREND_WINDOW),
     };
   });
   return {

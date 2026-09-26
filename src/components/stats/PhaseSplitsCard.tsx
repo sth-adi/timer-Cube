@@ -69,6 +69,23 @@ export function PhaseSplitsCard() {
 
 const signed = (ms: number) => `${ms < 0 ? "−" : "+"}${formatTime(Math.abs(ms))}`;
 
+/** A step's time across its recent solves — so "vs last" (one number) sits next to the shape it's a summary of. */
+function Sparkline({ values }: { values: readonly number[] }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const w = 56;
+  const h = 14;
+  const points = values.map((v, i) => `${((i / (values.length - 1)) * w).toFixed(1)},${(h - ((v - min) / range) * h).toFixed(1)}`).join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0 overflow-visible text-muted-2" role="img" aria-label={`This step's time over your last ${values.length} solves`}>
+      <title>{`Last ${values.length} solves: ${formatTime(values[0])} → ${formatTime(values[values.length - 1])}`}</title>
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /**
  * The four CFOP steps from your smart-cube solves: mean, current ao12 and
  * best for each, how much of each is looking against turning, and how
@@ -127,6 +144,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
                     {st.deltaMs !== null ? signed(st.deltaMs) : "—"}
                   </span>
                 )}
+                <Sparkline values={st.trend} />
               </div>
               {i > 0 && st.meanMs > 0 && (
                 <div className="ml-4 mt-1 flex items-center gap-2 text-[10px] text-muted-2">
@@ -152,7 +170,8 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
         )}
         {sittings
           ? `“vs last” is this sitting's ${sittings.current} solves against the ${sittings.previous} of your previous one.`
-          : "Mean, ao12 (your latest 12) and best at each step."}
+          : "Mean, ao12 (your latest 12) and best at each step."}{" "}
+        The little line is that step&apos;s time across your recent solves.
       </p>
     </div>
   );

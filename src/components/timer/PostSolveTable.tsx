@@ -16,7 +16,11 @@ import { cn } from "@/lib/utils/cn";
 import { CROSS_FACE_HEX, type CrossFace } from "@/lib/smartcube/crossFrame";
 import type { AlgExecution } from "@/lib/xray/algMicroscope";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
-import { myAlgKey, normalizedAlg, type SeenAlg } from "@/lib/algorithms/myAlgs";
+import { myAlgKey, normalizedAlg, sameAlg, type SeenAlg } from "@/lib/algorithms/myAlgs";
+import { useSessionStore } from "@/lib/store/sessionStore";
+import { caseRecords, type CaseRecord } from "@/lib/analysis/caseRecord";
+import { f2lCaseStats, type F2lCaseStat } from "@/lib/analysis/f2lCaseStats";
+import { solveCrossOptimal } from "@/lib/solvers/cross";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
 
@@ -53,20 +57,32 @@ interface RowView {
   row: PostSolvePhaseRow;
   icon: React.ReactNode;
   caseName: string | null;
+  /** This F2L pair's own stable case identity (for f2lCaseStats), and how many turns it actually took. */
+  f2lKey: string | null;
+  f2lTurns: number | null;
 }
 
 function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[], crossFace: CrossFace): RowView {
   if (row.label === "Cross") {
     const solvedEdges = crossLookaheadFacelets(scramble).size / 2;
-    return { row, caseName: solvedEdges > 0 ? `${solvedEdges} edge${solvedEdges === 1 ? "" : "s"} already solved` : null, icon: <CrossGlyph color={CROSS_FACE_HEX[crossFace]} /> };
+    return {
+      row,
+      caseName: solvedEdges > 0 ? `${solvedEdges} edge${solvedEdges === 1 ? "" : "s"} already solved` : null,
+      icon: <CrossGlyph color={CROSS_FACE_HEX[crossFace]} />,
+      f2lKey: null,
+      f2lTurns: null,
+    };
   }
   if (row.f2lPairIndex !== null) {
     // The case is what was in front of you when you *started* the pair.
     const f2l: F2lCase | null = row.startMs !== null ? recognizeF2lCase(cubeAt(scramble, moves, row.startMs), row.f2lPairIndex) : null;
+    const f2lTurns = row.startMs !== null && row.atMs !== null ? moves.filter((m) => m.timeStampMs > row.startMs! && m.timeStampMs <= row.atMs!).length : null;
     return {
       row,
       caseName: f2l?.name ?? null,
       icon: f2l ? <F2lCaseIcon facelets={f2l.facelets} pairFacelets={f2l.pairFacelets} className={ICON} /> : <span className={ICON} />,
+      f2lKey: f2l?.key ?? null,
+      f2lTurns,
     };
   }
   const algCase = row.group && row.caseName ? findCase(row.group, row.caseName) : undefined;
@@ -78,6 +94,8 @@ function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[
     ) : (
       <span className={ICON} />
     ),
+    f2lKey: null,
+    f2lTurns: null,
   };
 }
 
@@ -88,10 +106,17 @@ const PACE_CLASS = { fast: "text-success", normal: "text-foreground", slow: "tex
  * looks, and how this execution compares with every other time you've done
  * that same algorithm — "1.21s · your best".
  */
-function AlgLine({ exec, seen }: { exec: AlgExecution; seen: readonly SeenAlg[] | undefined }) {
+function AlgLine({ exec, seen, caseRecord }: { exec: AlgExecution; seen: readonly SeenAlg[] | undefined; caseRecord?: CaseRecord }) {
   const norm = normalizedAlg(exec.mergedAlg);
   const mine = norm ? seen?.find((x) => normalizedAlg(x.alg) === norm) : undefined;
   const pb = mine && mine.count >= 2 && exec.executionMs <= mine.bestExecMs;
+  const key = myAlgKey(exec.step, exec.caseName);
+  const mainAlg = useMyAlgsStore((s) => s.chosen[key]);
+  const choose = useMyAlgsStore((s) => s.choose);
+  // A clean, one-look execution that isn't already what you'd pull up for
+  // this case in the algorithm library — worth a one-tap promotion right
+  // from the recap, instead of a separate trip to set it there.
+  const offerMain = exec.oneLook && norm !== null && (!mainAlg || !sameAlg(mainAlg, exec.mergedAlg));
   return (
     <span className="mt-0.5 flex min-w-0 flex-col text-[10px] leading-tight">
       <span className="truncate font-mono text-muted" title={exec.mergedAlg}>
@@ -108,7 +133,48 @@ function AlgLine({ exec, seen }: { exec: AlgExecution; seen: readonly SeenAlg[] 
         ) : mine && mine.count >= 2 ? (
           <span className="text-muted-2">usually {secs(mine.meanExecMs)}s to execute</span>
         ) : null}
+        {offerMain && (
+          <button
+            type="button"
+            onClick={() => choose(key, exec.mergedAlg)}
+            className="rounded-full bg-accent-soft px-1.5 py-[1px] font-medium text-accent hover:brightness-110"
+          >
+            Use as main alg
+          </button>
+        )}
       </span>
+      {/* The case itself, not the algorithm — two solves of the same case can use two different algs. */}
+      {caseRecord && caseRecord.count >= 2 && (
+        <span className="text-muted-2">
+          {caseRecord.count} times so far · case best {secs(caseRecord.bestMs)}s
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** Under the Cross row: how many turns it took against the fewest a computer could ever need from this exact scramble. */
+function CrossEfficiencyLine({ turns, optimal }: { turns: number; optimal: number }) {
+  if (turns <= 0) return null;
+  return (
+    <span className="mt-0.5 block text-[10px] leading-tight text-muted-2">
+      {turns} turn{turns === 1 ? "" : "s"} · optimal {optimal === turns ? "— nice" : `was ${optimal}`}
+    </span>
+  );
+}
+
+/**
+ * Under an F2L row: this pair's own turn count against how many you usually
+ * need for this exact case — not a computer's minimum (a one-look human
+ * rarely matches that anyway), but proof, from your own history, that a
+ * shorter insert was findable from there.
+ */
+function F2lEfficiencyLine({ turns, stat }: { turns: number; stat?: F2lCaseStat }) {
+  if (turns <= 0 || !stat || stat.count < 3) return null;
+  const extra = turns - stat.meanTurns;
+  return (
+    <span className={cn("mt-0.5 block text-[10px] leading-tight", extra >= 2 ? "text-warning" : "text-muted-2")}>
+      {turns} turn{turns === 1 ? "" : "s"} · you usually take {stat.meanTurns.toFixed(1)} for this
     </span>
   );
 }
@@ -142,13 +208,28 @@ export function PostSolveTable({
   executions?: readonly AlgExecution[];
 }) {
   const seen = useMyAlgsStore((s) => s.seen);
+  const allSolves = useSessionStore((s) => s.allSolves);
+  const caseHistory = useMemo(() => caseRecords(allSolves), [allSolves]);
+  const f2lHistory = useMemo(() => f2lCaseStats(allSolves), [allSolves]);
   const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves, crossFace)), [rows, scramble, moves, crossFace]);
   const max = Math.max(1, ...rows.map((r) => r.totalMs ?? 0));
+  // The fewest turns a computer could ever need for this exact cross — the
+  // analysis frame always has the cross on white, exactly what the optimal
+  // cross solver expects, so no relabelling is needed here.
+  const crossOptimal = useMemo(() => {
+    try {
+      return solveCrossOptimal(scramble).length;
+    } catch {
+      return null;
+    }
+  }, [scramble]);
+  const crossRow = rows.find((r) => r.label === "Cross");
+  const crossTurns = crossRow?.atMs != null ? moves.filter((m) => m.timeStampMs <= crossRow.atMs!).length : null;
 
   return (
     <div className="w-full rounded-xl bg-bg-panel-2 p-3">
       <div className="flex flex-col gap-2.5">
-        {views.map(({ row, icon, caseName }, i) => {
+        {views.map(({ row, icon, caseName, f2lKey, f2lTurns }, i) => {
           const look = row.recognitionMs ?? 0;
           const turn = row.executionMs ?? row.totalMs ?? 0;
           const pace = paceFor(row.totalMs, baseline?.segments[i] ?? null);
@@ -162,8 +243,10 @@ export function PostSolveTable({
                   {row.group &&
                     (() => {
                       const exec = executions.find((e) => e.step === row.group);
-                      return exec ? <AlgLine exec={exec} seen={seen[myAlgKey(exec.step, exec.caseName)]} /> : null;
+                      return exec ? <AlgLine exec={exec} seen={seen[myAlgKey(exec.step, exec.caseName)]} caseRecord={caseName ? caseHistory.get(caseName) : undefined} /> : null;
                     })()}
+                  {row.label === "Cross" && crossTurns !== null && crossOptimal !== null && <CrossEfficiencyLine turns={crossTurns} optimal={crossOptimal} />}
+                  {f2lKey && f2lTurns !== null && <F2lEfficiencyLine turns={f2lTurns} stat={f2lHistory.get(f2lKey)} />}
                 </p>
                 <div className="flex h-1.5 overflow-hidden rounded-full bg-bg-elevated">
                   <div className="h-full bg-warning/50" style={{ width: `${(look / max) * 100}%` }} />
