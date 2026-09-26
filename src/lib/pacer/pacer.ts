@@ -1,5 +1,6 @@
 import { bottomLayerSolved, f2lPairSolved, orientationSolved } from "@/lib/solvers/oll";
 import { crossSolved, median, replayStates, type XraySolveInput } from "@/lib/xray/common";
+import { crossFaceOf, toCrossFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Split Pacer: a running coach's pace calls, for a solve. Pick a target
@@ -22,11 +23,12 @@ export const ON_PACE_MS = 150;
 
 const countPairs = (c: Parameters<typeof f2lPairSolved>[0]) => [0, 1, 2, 3].filter((i) => f2lPairSolved(c, i as 0 | 1 | 2 | 3)).length;
 
-/** Ms from solve start at which each milestone was first reached, or null if it never was. */
+/** Ms from solve start at which each milestone was first reached, or null if it never was. Any cross colour (see crossFrame.ts). */
 export function milestoneTimes({ scramble, moves, timesMs }: XraySolveInput): (number | null)[] {
   const out: (number | null)[] = MILESTONES.map(() => null);
   if (moves.length === 0 || timesMs.length !== moves.length) return out;
-  const { after } = replayStates(scramble, moves);
+  const face = crossFaceOf(scramble, moves) ?? "U";
+  const { after } = replayStates(toCrossFrame(scramble.split(/\s+/).filter(Boolean), face).join(" "), toCrossFrame(moves, face));
   let pairs = 0;
   for (let i = 0; i < after.length; i++) {
     const c = after[i];

@@ -3,7 +3,8 @@ import { newCube } from "@/lib/cube-engine/engine";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
 import { crossSolved } from "@/lib/xray/common";
 import type { Solve } from "@/types";
-import { CROSS_FACES, analysisFrame, crossFaceOf, crossSolvedOn, toCrossFrame, type CrossFace } from "./crossFrame";
+import { CROSS_FACES, analysisFrame, crossFaceOf, crossSolvedOn, pairColors, physicalFace, relabelMove, toCrossFrame, type CrossFace } from "./crossFrame";
+import { PAIR_NAMES } from "@/lib/analysis/mistakeRadar";
 
 const SCRAMBLE = "D2 F' U2 L2 F U2 R2 B' L2 F' R' D B U R2 B L' U' F2 R";
 /** A real cross on `face` for SCRAMBLE: the optimal white cross in that face's relabelled world, named back by physical face. */
@@ -37,5 +38,21 @@ describe("colour-neutral frames", () => {
     expect(analysisFrame(solve)).toBe(framed); // memoised
     const white: Solve = { ...solve, id: "b", reconstruction: crossOn("U").join(" ") };
     expect(analysisFrame(white)).toBe(white);
+  });
+
+  it("names turns and pairs by their real colours", () => {
+    expect([0, 1, 2, 3].map((p) => pairColors(p, "U"))).toEqual([...PAIR_NAMES]);
+    for (const face of CROSS_FACES) {
+      for (const f of ["U", "D", "F", "B", "R", "L"]) expect(physicalFace(relabelMove(f, face), face)).toBe(f);
+      // A pair's two colours are side colours: never the cross colour or the one opposite it.
+      const cross = face;
+      const opposite = { U: "D", D: "U", F: "B", B: "F", R: "L", L: "R" }[face];
+      const word = { U: "white", D: "yellow", F: "green", B: "blue", R: "red", L: "orange" };
+      for (let p = 0; p < 4; p++) {
+        const colours = pairColors(p, face).split("-");
+        expect(colours).not.toContain(word[cross]);
+        expect(colours).not.toContain(word[opposite as CrossFace]);
+      }
+    }
   });
 });

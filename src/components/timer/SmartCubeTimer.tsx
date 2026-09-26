@@ -67,6 +67,7 @@ import { effectiveAlg } from "@/lib/algorithms/myAlgs";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import { LearnedAlgNotice } from "@/components/algorithms/LearnedAlgNotice";
 import { CROSS_FACE_COLOR, toCrossFrame } from "@/lib/smartcube/crossFrame";
+import { extractAlgExecutions } from "@/lib/xray/algMicroscope";
 import { cn } from "@/lib/utils/cn";
 
 const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
@@ -232,6 +233,7 @@ export function SmartCubeTimer() {
     disconnect,
     cancel,
     refreshBattery,
+    resyncSolved,
   } = useSmartCubeStore();
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
@@ -464,6 +466,12 @@ export function SmartCubeTimer() {
     [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
   );
 
+  // The OLL and PLL algorithms you executed (and whether in one look), for the recap table.
+  const executions = useMemo(
+    () => (finished && finishedScramble ? extractAlgExecutions({ scramble: analysisScramble, moves: analysisTokens, timesMs: moveTimestampsRel }) : []),
+    [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel],
+  );
+
   // Inspection Report Card: graded from how the cross came out.
   const inspection = useMemo(
     () => (finished && finishedScramble ? inspectionReport(analysisScramble, analysisTokens, moveTimestampsRel) : null),
@@ -493,6 +501,22 @@ export function SmartCubeTimer() {
   };
 
   const mimicScramble = finished ? finishedScramble : scramble;
+
+  // Ways out of a solve that won't finish by itself — the cube missed a turn
+  // (so its tracked state will never read solved), or you've given up.
+  const [stopOpen, setStopOpen] = useState(false);
+  const stopSolve = (how: "dnf" | "solved" | "discard") => {
+    setStopOpen(false);
+    if (how !== "discard" && startedAtMs !== null) {
+      // The turns recorded don't solve the scramble, so the solve keeps its time but not a reconstruction the analyses would trip over.
+      const timeMs = how === "solved" ? lastMoveMs - startedAtMs : elapsedMs;
+      void recordSolve(timeMs, scramble, undefined, pendingEvent ?? undefined, undefined, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, undefined, undefined, how === "dnf" ? "dnf" : undefined);
+    }
+    // "It's solved" means the real cube is solved whatever the app thought — put the two back in step.
+    if (how === "solved") resyncSolved();
+    cancel();
+    void nextScramble();
+  };
 
   // Cube Gestures — hands-free control between solves, straight from the
   // cube (see lib/smartcube/gestures.ts). Each handler says what it did, or
@@ -647,6 +671,26 @@ export function SmartCubeTimer() {
       {recording && (
         <div className="flex flex-col items-center gap-1.5">
           <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>
+          {stopOpen ? (
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              <button type="button" onClick={() => stopSolve("solved")} className="rounded-full bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-fg" title="The cube is solved but the app missed a turn">
+                It&apos;s solved — save {formatTime(lastMoveMs - (startedAtMs ?? lastMoveMs))}
+              </button>
+              <button type="button" onClick={() => stopSolve("dnf")} className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-semibold text-foreground">
+                Save as DNF
+              </button>
+              <button type="button" onClick={() => stopSolve("discard")} className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-semibold text-muted">
+                Discard
+              </button>
+              <button type="button" onClick={() => setStopOpen(false)} className="px-1 text-[11px] text-muted-2">
+                Keep going
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setStopOpen(true)} className="text-[11px] text-muted-2 underline-offset-2 hover:text-muted hover:underline">
+              Stop this solve…
+            </button>
+          )}
           <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
           <LiveProjection finished={false} finalMs={elapsedMs} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
@@ -673,7 +717,7 @@ export function SmartCubeTimer() {
 
           {savedSolveExists && <LearnedAlgNotice solveDate={lastSolve?.date ?? null} />}
 
-          <PostSolveTable rows={postSolveRows} scramble={analysisScramble} moves={analysisMoves} baseline={postSolveBaseline} crossFace={frameFace} />
+          <PostSolveTable rows={postSolveRows} scramble={analysisScramble} moves={analysisMoves} baseline={postSolveBaseline} crossFace={frameFace} executions={executions} />
 
           <PostSolveCoachCard
             rows={postSolveRows}
@@ -802,6 +846,14 @@ export function SmartCubeTimer() {
           )}
           <ScrambleGuidePanel />
           <p className="text-[11px] text-muted-2">Inspection starts automatically once it matches.</p>
+          <button
+            type="button"
+            onClick={resyncSolved}
+            className="text-[11px] text-muted-2 underline-offset-2 hover:text-muted hover:underline"
+            title="If the app's cube doesn't match yours, solve yours and tap this"
+          >
+            Cube out of sync? Solve it, then tap here
+          </button>
           {cubeGesturesOn && <GestureHint />}
           <LiveSessionCoach />
         </div>

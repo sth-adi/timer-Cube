@@ -1,6 +1,7 @@
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { bottomLayerSolved, f2lPairSolved, orientationSolved } from "@/lib/solvers/oll";
 import { isPllSkip, recognizeOll, recognizePll, toLibraryFrame } from "@/lib/analysis/recognize";
+import { crossFaceOf, pairColors, toCrossFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Mistake Radar: replays a smart-cube solve move by move against its
@@ -136,7 +137,14 @@ function brokenEpisodes(
   return out;
 }
 
-export function analyzeMistakes({ scramble, moves, timesMs, totalMs }: MistakeRadarInput): MistakeReport {
+export function analyzeMistakes(input: MistakeRadarInput): MistakeReport {
+  // Any cross colour: read in the frame where the solve's cross sits on white (results are indices and times, so nothing else changes).
+  const face = crossFaceOf(input.scramble, input.moves) ?? "U";
+  const scramble = toCrossFrame(input.scramble.split(/\s+/).filter(Boolean), face).join(" ");
+  const moves = toCrossFrame(input.moves, face);
+  // What you're told uses your real turns and colours, not the analysis frame's.
+  const real = input.moves;
+  const { timesMs, totalMs } = input;
   const cube = newCube();
   if (scramble.trim()) cube.move(scramble);
   const snaps: Snapshot[] = [];
@@ -174,11 +182,11 @@ export function analyzeMistakes({ scramble, moves, timesMs, totalMs }: MistakeRa
         atMs: t(ep.breakAt),
         costMs: Math.max(0, t(end) - t(ep.breakAt)),
         moveIndex: ep.breakAt,
-        title: `Knocked out the ${PAIR_NAMES[p]} pair`,
+        title: `Knocked out the ${pairColors(p, face)} pair`,
         detail:
           ep.restoredAt === null
-            ? `${moves[ep.breakAt]} took an already-solved pair apart and it was never rebuilt.`
-            : `${moves[ep.breakAt]} took an already-solved pair apart; rebuilding it took ${ep.restoredAt - ep.breakAt} moves.`,
+            ? `${real[ep.breakAt]} took an already-solved pair apart and it was never rebuilt.`
+            : `${real[ep.breakAt]} took an already-solved pair apart; rebuilding it took ${ep.restoredAt - ep.breakAt} moves.`,
       });
     }
   }
@@ -198,7 +206,7 @@ export function analyzeMistakes({ scramble, moves, timesMs, totalMs }: MistakeRa
         costMs: Math.max(0, t(end) - t(ep.breakAt)),
         moveIndex: ep.breakAt,
         title: "Broke the cross",
-        detail: `${moves[ep.breakAt]} displaced a cross edge that stayed out for ${end - ep.breakAt} moves.`,
+        detail: `${real[ep.breakAt]} displaced a cross edge that stayed out for ${end - ep.breakAt} moves.`,
       });
     }
   }
@@ -272,8 +280,9 @@ export function analyzeMistakes({ scramble, moves, timesMs, totalMs }: MistakeRa
     const minimal = cancelled ? 0 : net === 2 && run.every((m) => !m.includes("2")) ? 2 : 1;
     const extra = run.length - minimal;
     if (extra <= 0) continue;
-    const face = run[0][0];
-    const target = net === 1 ? face : net === 2 ? `${face}2` : `${face}'`;
+    const shown = real.slice(first, end + 1);
+    const turned = shown[0][0];
+    const target = net === 1 ? turned : net === 2 ? `${turned}2` : `${turned}'`;
     mistakes.push({
       kind: "wasted-turns",
       phase: phaseAt(end),
@@ -281,7 +290,7 @@ export function analyzeMistakes({ scramble, moves, timesMs, totalMs }: MistakeRa
       costMs: cancelled ? t(end) - t(first) + typicalGap : extra * typicalGap,
       moveIndex: first,
       title: cancelled ? "Turn undone" : "Turn could have been one",
-      detail: cancelled ? `${run.join(" ")} cancel out — ${run.length} moves that did nothing.` : `${run.join(" ")} is just ${target} done in ${run.length}.`,
+      detail: cancelled ? `${shown.join(" ")} cancel out — ${run.length} moves that did nothing.` : `${shown.join(" ")} is just ${target} done in ${run.length}.`,
     });
   }
 

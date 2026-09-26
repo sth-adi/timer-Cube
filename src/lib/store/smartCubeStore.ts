@@ -110,6 +110,13 @@ interface SmartCubeState {
   disconnect: () => void;
   arm: () => void;
   cancel: () => void;
+  /**
+   * Tells the app the cube in your hands is solved right now. Smart cubes
+   * occasionally miss a turn, after which the tracked state no longer
+   * matches the real cube (the scramble never "matches", a solve never
+   * "finishes"); solving it and calling this puts them back in step.
+   */
+  resyncSolved: () => void;
   /** Asks the cube to report its battery level again — cubes don't push this on their own on any regular schedule, so this is also fired once right after connecting. */
   refreshBattery: () => void;
 }
@@ -335,6 +342,12 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       crossFace: null,
       moves: [],
     }),
+
+  resyncSolved: () => {
+    liveCube = newCube();
+    frames = freshFrames();
+    set({ liveFacelets: SOLVED_FACELETS });
+  },
 
   refreshBattery: () => {
     if (!conn || !get().batterySupported) return;

@@ -46,6 +46,26 @@ export function relabelMove(token: string, face: CrossFace): string {
   return face === "U" ? token : viewerMove(token, GRIPS[face]);
 }
 
+/** The physical face a face letter in `face`'s frame really is (the inverse of relabelMove). */
+export function physicalFace(frameFace: string, face: CrossFace): string {
+  if (face === "U") return frameFace;
+  return CROSS_FACES.find((f) => relabelMove(f, face) === frameFace) ?? frameFace;
+}
+
+const COLOR_WORD: Record<string, string> = { U: "white", D: "yellow", F: "green", B: "blue", R: "red", L: "orange" };
+/** The four F2L pairs in the analysis frame, by the two side faces around each (same order as f2lPairSolved). */
+const PAIR_FACES = [
+  ["F", "R"],
+  ["F", "L"],
+  ["B", "L"],
+  ["B", "R"],
+] as const;
+
+/** An F2L pair's real colours ("green-red") for a solve read in `face`'s frame. */
+export function pairColors(pairIndex: number, face: CrossFace): string {
+  return PAIR_FACES[pairIndex].map((f) => COLOR_WORD[physicalFace(f, face)]).join("-");
+}
+
 /**
  * The colour a solve's cross was built on: the first face whose cross is
  * complete after one of the solve's turns (white first on a tie). Null if

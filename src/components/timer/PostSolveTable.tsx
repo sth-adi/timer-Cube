@@ -14,6 +14,9 @@ import { formatTime } from "@/lib/utils/time";
 import { paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { cn } from "@/lib/utils/cn";
 import { CROSS_FACE_HEX, type CrossFace } from "@/lib/smartcube/crossFrame";
+import type { AlgExecution } from "@/lib/xray/algMicroscope";
+import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
+import { myAlgKey, normalizedAlg, type SeenAlg } from "@/lib/algorithms/myAlgs";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
 
@@ -81,6 +84,36 @@ function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[
 const PACE_CLASS = { fast: "text-success", normal: "text-foreground", slow: "text-warning" } as const;
 
 /**
+ * Under an OLL/PLL row: the algorithm you actually did, whether it took two
+ * looks, and how this execution compares with every other time you've done
+ * that same algorithm — "1.21s · your best".
+ */
+function AlgLine({ exec, seen }: { exec: AlgExecution; seen: readonly SeenAlg[] | undefined }) {
+  const norm = normalizedAlg(exec.mergedAlg);
+  const mine = norm ? seen?.find((x) => normalizedAlg(x.alg) === norm) : undefined;
+  const pb = mine && mine.count >= 2 && exec.executionMs <= mine.bestExecMs;
+  return (
+    <span className="mt-0.5 flex min-w-0 flex-col text-[10px] leading-tight">
+      <span className="truncate font-mono text-muted" title={exec.mergedAlg}>
+        {exec.mergedAlg}
+      </span>
+      <span className="flex flex-wrap items-center gap-x-1.5">
+        {!exec.oneLook ? (
+          <span className="font-semibold text-warning">two looks</span>
+        ) : mine ? (
+          <span className="text-muted-2">{mine.book ? "book alg" : "your alg"}</span>
+        ) : null}
+        {pb ? (
+          <span className="font-semibold text-success">best execution yet</span>
+        ) : mine && mine.count >= 2 ? (
+          <span className="text-muted-2">usually {secs(mine.meanExecMs)}s to execute</span>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
+/**
  * The post-solve breakdown: one row per step (each F2L pair in the order you
  * solved it), with the case you had, the time, and a bar split into
  * recognising the case (light) and turning through it (solid). With enough
@@ -97,6 +130,7 @@ export function PostSolveTable({
   moves,
   baseline,
   crossFace = "U",
+  executions = [],
 }: {
   rows: PostSolvePhaseRow[];
   /** Scramble and moves in the analysis frame (cross on white) — see crossFrame.ts. */
@@ -104,7 +138,10 @@ export function PostSolveTable({
   moves: SmartCubeMove[];
   baseline?: PostSolveBaseline | null;
   crossFace?: CrossFace;
+  /** This solve's OLL/PLL executions (see algMicroscope), to name the algorithm under each. */
+  executions?: readonly AlgExecution[];
 }) {
+  const seen = useMyAlgsStore((s) => s.seen);
   const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves, crossFace)), [rows, scramble, moves, crossFace]);
   const max = Math.max(1, ...rows.map((r) => r.totalMs ?? 0));
 
@@ -122,6 +159,11 @@ export function PostSolveTable({
                 <p className="min-w-0 text-xs leading-tight" title={caseName ?? undefined}>
                   <span className={cn("font-semibold", row.totalMs !== null ? "text-foreground" : "text-muted-2")}>{row.label}</span>
                   {caseName && <span className="block truncate text-[11px] text-muted-2">{caseName}</span>}
+                  {row.group &&
+                    (() => {
+                      const exec = executions.find((e) => e.step === row.group);
+                      return exec ? <AlgLine exec={exec} seen={seen[myAlgKey(exec.step, exec.caseName)]} /> : null;
+                    })()}
                 </p>
                 <div className="flex h-1.5 overflow-hidden rounded-full bg-bg-elevated">
                   <div className="h-full bg-warning/50" style={{ width: `${(look / max) * 100}%` }} />
