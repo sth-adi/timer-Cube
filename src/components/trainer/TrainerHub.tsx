@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bluetooth, Brain, CalendarCheck, Crosshair, Dumbbell, GitCompare, Library as LibraryIcon, ScanEye, Swords } from "lucide-react";
+import { Bluetooth, Brain, CalendarCheck, Crosshair, Dumbbell, GitCompare, Library as LibraryIcon, ListChecks, ScanEye, Swords } from "lucide-react";
 import { TrainerView } from "./TrainerView";
 import { AlgorithmsView } from "@/components/algorithms/AlgorithmsView";
 import { RecognitionTrainer } from "@/components/algorithms/RecognitionTrainer";
 import { AlgGymTrainer } from "@/components/gym/AlgGymTrainer";
+import { CurriculumSession } from "@/components/gym/CurriculumSession";
 import { CrossDrill } from "./CrossDrill";
 import { BldMemoTrainer } from "./BldMemoTrainer";
 import { RaceHub } from "./RaceHub";
@@ -16,6 +17,7 @@ import { useTrainerStore } from "@/lib/store/trainerStore";
 import { cn } from "@/lib/utils/cn";
 
 const MODES = [
+  { id: "plan", label: "Plan", icon: ListChecks },
   { id: "drill", label: "Drill", icon: Dumbbell },
   { id: "gym", label: "Gym", icon: Bluetooth },
   { id: "cross", label: "Cross", icon: Crosshair },
@@ -30,6 +32,7 @@ const MODES = [
 type Mode = (typeof MODES)[number]["id"];
 
 const MODE_BLURB: Record<Mode, string> = {
+  plan: "A whole practice session planned from where your solves lose time — gym, recognition, F2L, cross.",
   drill: "Solve timed reps of a single algorithm set until it's automatic.",
   gym: "OLL/PLL set up on your real cube and timed off its turns — yellow top, green facing you.",
   cross: "Plan an optimal cross before you touch the cube.",
@@ -117,7 +120,9 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
         })}
       </div>
 
-      {mode === "drill" ? (
+      {mode === "plan" ? (
+        <CurriculumSession />
+      ) : mode === "drill" ? (
         <TrainerView />
       ) : mode === "gym" ? (
         <AlgGymTrainer />

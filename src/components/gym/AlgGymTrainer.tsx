@@ -42,7 +42,14 @@ const secs = (ms: number) => (ms / 1000).toFixed(2);
  * solving the case is timed and graded in that one grip, same as the
  * routine every real solve already uses.
  */
-function AlgGymInner() {
+interface GymProps {
+  /** Drill only these cases (a curriculum block) — hides the OLL/PLL switch. */
+  focus?: { group: GymGroup; name: string }[];
+  /** Called after every graded attempt. */
+  onAttempt?: (ok: boolean) => void;
+}
+
+function AlgGymInner({ focus, onAttempt }: GymProps) {
   const [groups, setGroups] = useState<GymGroup[]>(["PLL"]);
   const [phase, setPhase] = useState<Phase>("idle");
   const [current, setCurrent] = useState<GymCase | null>(null);
@@ -65,7 +72,16 @@ function AlgGymInner() {
     setPhase(p);
   };
 
-  const pool = useMemo(() => GYM_CASES.filter((c) => groups.includes(c.group)), [groups]);
+  const focusKey = focus?.map(caseKey).join("|") ?? "";
+  const pool = useMemo(() => {
+    const keys = new Set(focusKey ? focusKey.split("|") : []);
+    const focused = GYM_CASES.filter((c) => keys.has(caseKey(c)));
+    return focused.length ? focused : GYM_CASES.filter((c) => groups.includes(c.group));
+  }, [groups, focusKey]);
+  const onAttemptRef = useRef(onAttempt);
+  useEffect(() => {
+    onAttemptRef.current = onAttempt;
+  });
 
   // Bumped on every planSetup() call, so a corrective-route request that's
   // since been superseded (a fresh off-route turn kicked off a newer one
@@ -127,6 +143,7 @@ function AlgGymInner() {
       const execMs = last - first;
       const prevBest = useGymStore.getState().stats[caseKey(c)]?.bestMs ?? null;
       record(caseKey(c), ok, execMs, recogMs);
+      onAttemptRef.current?.(ok);
       setStreak((s) => (ok ? s + 1 : 0));
       setResult({
         c,
@@ -193,7 +210,7 @@ function AlgGymInner() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between px-1">
-        <div className="flex gap-1.5">
+        <div className={cn("flex gap-1.5", focusKey && "hidden")}>
           {(["PLL", "OLL"] as GymGroup[]).map((g) => (
             <button
               key={g}
@@ -320,10 +337,10 @@ function AlgGymInner() {
  * recognition and execution timed off the cube itself, wrong algorithms
  * caught and named. Needs a connected smart cube.
  */
-export function AlgGymTrainer() {
+export function AlgGymTrainer(props: GymProps = {}) {
   return (
     <ConnectGate blurb="The Alg Gym sets up cases on your cube and times you off its turns, so it needs a connected smart cube.">
-      <AlgGymInner />
+      <AlgGymInner {...props} />
     </ConnectGate>
   );
 }

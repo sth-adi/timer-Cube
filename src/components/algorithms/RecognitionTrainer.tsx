@@ -42,20 +42,27 @@ const GROUPS: { id: AlgGroup | "all"; label: string }[] = [
  * solve-along drill: see the case, pick the name, get graded on both
  * accuracy and reaction time.
  */
-export function RecognitionTrainer() {
+export function RecognitionTrainer({ focus }: { focus?: { group: AlgGroup; name: string }[] } = {}) {
   const [group, setGroup] = useState<AlgGroup | "all">("all");
   const [focusWeak, setFocusWeak] = useState(false);
   const progress = useAlgorithmStore((s) => s.progress);
+  // A curriculum block: quiz only these cases (distractors still come from every case).
+  const focusPool = useMemo(
+    () => (focus?.length ? ALL_CASES.filter((c) => focus.some((f) => f.group === c.group && f.name === c.name)) : []),
+    [focus],
+  );
 
   const newQuestion = useCallback(
     (g: AlgGroup | "all"): RecognitionQuestion => {
       const filterGroup = g === "all" ? undefined : g;
-      const correct = focusWeak
-        ? pickWeightedCase(ALL_CASES, (id) => weakFocusWeight(progress[id]), filterGroup)
-        : pickRandomCase(ALL_CASES, filterGroup);
+      const correct = focusPool.length
+        ? pickRandomCase(focusPool)
+        : focusWeak
+          ? pickWeightedCase(ALL_CASES, (id) => weakFocusWeight(progress[id]), filterGroup)
+          : pickRandomCase(ALL_CASES, filterGroup);
       return buildRecognitionQuestion(ALL_CASES, correct);
     },
-    [focusWeak, progress],
+    [focusWeak, progress, focusPool],
   );
 
   const [question, setQuestion] = useState<RecognitionQuestion>(() => newQuestion("all"));
@@ -103,7 +110,7 @@ export function RecognitionTrainer() {
 
   return (
     <div className="flex w-full max-w-md flex-1 flex-col items-center gap-4 py-2">
-      <div className="flex gap-1.5">
+      <div className={cn("flex gap-1.5", focusPool.length > 0 && "hidden")}>
         {GROUPS.map((g) => (
           <button
             key={g.id}
@@ -128,6 +135,7 @@ export function RecognitionTrainer() {
         className={cn(
           "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
           focusWeak ? "bg-warning/15 text-warning" : "text-muted-2 hover:text-muted",
+          focusPool.length > 0 && "hidden",
         )}
       >
         <Flame size={12} />
