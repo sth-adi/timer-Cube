@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
+  Bandage,
   Bluetooth,
   BookOpen,
   Clock,
@@ -150,6 +151,7 @@ const TOOLS = [
   { href: "/xcross", icon: Target, title: "X-Cross Hunter", blurb: "Scrambles with a hidden x-cross — can you find it?", category: "drills" },
   { href: "/rematch", icon: Swords, title: "Rematch & Ghost Race", blurb: "Race any real solve on its scramble — yours, a friend's, or a pasted recon.", category: "drills" },
   { href: "/comp", icon: Gavel, title: "Comp Sim", blurb: "A full competition round: judge calls, cutoff, official average, comp tax.", category: "drills" },
+  { href: "/mistakes", icon: Bandage, title: "Mistake Drills", blurb: "Your costliest mistakes, set back up on your cube to redo properly.", category: "drills" },
   { href: "/blindcross", icon: EyeClosed, title: "Blind Cross", blurb: "Inspect, close your eyes, solve the cross — graded turn by turn.", category: "drills" },
   { href: "/pacer", icon: Gauge, title: "Split Pacer", blurb: "Hear ahead / behind at every milestone of a solve.", category: "drills" },
   { href: "/tempo", icon: Metronome, title: "Tempo Trainer", blurb: "Solve to a metronome — every turn scored on the beat.", category: "drills" },
