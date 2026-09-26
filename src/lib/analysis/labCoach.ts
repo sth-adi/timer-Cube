@@ -5,6 +5,7 @@ import { analyzeF2lConsistency, type F2lConsistencyReport } from "@/lib/analysis
 import { analyzeAlgSpeed, type AlgSpeedReport } from "@/lib/analysis/algSpeed";
 import { analyzeLookahead, type LookaheadReport } from "@/lib/analysis/lookahead";
 import { defaultTargetMs, planGoal, typicalSolveMs, type GoalPlan } from "@/lib/analysis/goalPlanner";
+import { analysisFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Coach: the Lab has dozens of reports; this reads the ones that can put a
@@ -151,6 +152,7 @@ export function analyzeCoach(solves: readonly Solve[]): CoachReport | null {
   if (metrics.length < MIN_SOLVES) return null;
   const reports = solves
     .filter((x) => x.scramble && x.reconstruction && x.moveTimestamps && x.penalty !== "dnf")
+    .map(analysisFrame)
     .map((x) => analyzeMistakes({ scramble: x.scramble, moves: x.reconstruction!.split(/\s+/).filter(Boolean), timesMs: x.moveTimestamps!, totalMs: x.timeMs }));
   return buildCoach({ metrics, habits: aggregateMistakes(reports), f2l: analyzeF2lConsistency(solves), alg: analyzeAlgSpeed(solves), look: analyzeLookahead(solves) });
 }

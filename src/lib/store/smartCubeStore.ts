@@ -4,9 +4,8 @@ import { create } from "zustand";
 import type { Subscription } from "rxjs";
 import type { SmartCubeConnection, SmartCubeEvent } from "smartcube-web-bluetooth";
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
-import { crossHeuristic } from "@/lib/solvers/cross";
-import { bottomLayerSolved, orientationSolved, f2lPairSolved } from "@/lib/solvers/oll";
-import { recognizeOll, recognizePll, isOllSkip, isPllSkip, toLibraryFrame } from "@/lib/analysis/recognize";
+import { CROSS_FACES, relabelMove, type CrossFace } from "@/lib/smartcube/crossFrame";
+import { advanceMilestones } from "@/lib/smartcube/milestones";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 import type { GyroSample } from "@/lib/gyro/orientation";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
@@ -80,6 +79,12 @@ interface SmartCubeState {
    */
   ollCaseName: string | null;
   pllCaseName: string | null;
+  /**
+   * The colour this solve's cross was built on — whichever face's cross
+   * completed first. Every later milestone and case is read in that
+   * colour's frame, so colour-neutral solving gets the same splits.
+   */
+  crossFace: CrossFace | null;
   moves: SmartCubeMove[];
   /**
    * The cube's live state as a 54-char Kociemba facelet string, replayed
@@ -112,6 +117,16 @@ interface SmartCubeState {
 let conn: SmartCubeConnection | null = null;
 let sub: Subscription | null = null;
 let liveCube: CubeJSInstance = newCube();
+/**
+ * The live cube relabelled for each cross colour — the same state seen as if
+ * that colour were white — so any colour's F2L, OLL and PLL can be checked
+ * with the white-cross logic. Kept in step with liveCube move for move.
+ */
+let frames: Record<CrossFace, CubeJSInstance> = freshFrames();
+
+function freshFrames(): Record<CrossFace, CubeJSInstance> {
+  return Object.fromEntries(CROSS_FACES.map((f) => [f, newCube()])) as Record<CrossFace, CubeJSInstance>;
+}
 /**
  * Every gyro sample since the current solve was armed — the raw material
  * for rotation detection once it finishes (see lib/gyro/orientation.ts's
@@ -150,6 +165,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   ollAtMs: null,
   ollCaseName: null,
   pllCaseName: null,
+  crossFace: null,
   moves: [],
   liveFacelets: SOLVED_FACELETS,
   batterySupported: false,
@@ -172,6 +188,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       const connection = await connectSmartCube({ enableAddressSearch: true });
       conn = connection;
       liveCube = newCube();
+      frames = freshFrames();
       gyroLog = [];
       resetLatestGyro();
       resetTimeMachine();
@@ -213,6 +230,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         emitRawMove({ token: event.move, timeStampMs: event.timestamp });
         recordTimeMachineMove(event.move, event.timestamp);
         liveCube.move(event.move);
+        for (const f of CROSS_FACES) frames[f].move(relabelMove(event.move, f));
         const facelets = liveCube.asString();
 
         const state = get();
@@ -230,45 +248,12 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         const move: SmartCubeMove = isDoubleTurn
           ? { token: `${rawToken[0]}2`, timeStampMs: event.timestamp }
           : { token: rawToken, timeStampMs: event.timestamp };
-        // Every milestone below is checked directly off the live cube object
-        // (no re-parsing facelets) and only the first time it's reached, so a
-        // coincidental alignment mid-scramble or mid-insertion can never
-        // register, and breaking it apart again later doesn't erase an
-        // already-earned split. This assumes the same cross-on-U convention
-        // the app's solver frame uses (see engine.ts) — the cuber's cross
-        // ends up on whichever face was "up" when the cube was connected.
-        const crossJustSolved = state.crossAtMs === null && crossHeuristic(liveCube) === 0;
-        const f2lJustSolved = state.f2lAtMs === null && bottomLayerSolved(liveCube);
-        const ollJustSolved = state.ollAtMs === null && orientationSolved(liveCube) && bottomLayerSolved(liveCube);
-        const f2lPairAtMs = state.f2lPairAtMs.map((at, i) =>
-          at === null && f2lPairSolved(liveCube, i as 0 | 1 | 2 | 3) ? event.timestamp : at,
-        );
-
-        // Case recognition wants the algorithm library's last-layer-on-U
-        // convention, the mirror of this store's cross-on-U cube — an x2
-        // whole-cube rotation swaps them (see frames.ts's mapToLibraryFrame,
-        // same rotation). Recognized right as each phase starts, on exactly
-        // the state the cuber was looking at when they read the case.
-        let ollCaseName = state.ollCaseName;
-        if (f2lJustSolved) {
-          const libraryFrame = toLibraryFrame(liveCube);
-          ollCaseName = isOllSkip(libraryFrame) ? "OLL skip" : (recognizeOll(libraryFrame)?.case.name ?? null);
-        }
-        let pllCaseName = state.pllCaseName;
-        if (ollJustSolved) {
-          const libraryFrame = toLibraryFrame(liveCube);
-          pllCaseName = isPllSkip(libraryFrame) ? "PLL skip" : (recognizePll(libraryFrame)?.case.name ?? null);
-        }
+        const milestones = advanceMilestones(state, liveCube, (f) => frames[f], event.timestamp);
 
         set((s) => ({
           recording: true,
           startedAtMs: s.startedAtMs ?? event.timestamp,
-          crossAtMs: crossJustSolved ? event.timestamp : s.crossAtMs,
-          f2lAtMs: f2lJustSolved ? event.timestamp : s.f2lAtMs,
-          f2lPairAtMs,
-          ollAtMs: ollJustSolved ? event.timestamp : s.ollAtMs,
-          ollCaseName,
-          pllCaseName,
+          ...milestones,
           moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
           liveFacelets: facelets,
         }));
@@ -329,6 +314,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       ollAtMs: null,
       ollCaseName: null,
       pllCaseName: null,
+      crossFace: null,
       moves: [],
       error: null,
     });
@@ -346,6 +332,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       ollAtMs: null,
       ollCaseName: null,
       pllCaseName: null,
+      crossFace: null,
       moves: [],
     }),
 

@@ -13,6 +13,7 @@ import { F2lCaseIcon } from "@/components/algorithms/F2lCaseIcon";
 import { formatTime } from "@/lib/utils/time";
 import { paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { cn } from "@/lib/utils/cn";
+import { CROSS_FACE_HEX, type CrossFace } from "@/lib/smartcube/crossFrame";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
 
@@ -27,8 +28,8 @@ function cubeAt(scramble: string, moves: SmartCubeMove[], atMs: number | null): 
 
 const ICON = "h-10 w-10 shrink-0";
 
-/** A white cross on the yellow-up cube's bottom face, drawn flat. */
-function CrossGlyph() {
+/** The cross, drawn flat in the colour you built it on. */
+function CrossGlyph({ color = CROSS_FACE_HEX.U }: { color?: string }) {
   return (
     <svg viewBox="0 0 3 3" className={cn(ICON, "p-1.5")} aria-hidden>
       {[
@@ -39,7 +40,7 @@ function CrossGlyph() {
       {[
         [1, 0], [0, 1], [1, 1], [2, 1], [1, 2],
       ].map(([x, y]) => (
-        <rect key={`c${x}${y}`} x={x + 0.08} y={y + 0.08} width={0.84} height={0.84} rx={0.12} fill="#f5f5f0" />
+        <rect key={`c${x}${y}`} x={x + 0.08} y={y + 0.08} width={0.84} height={0.84} rx={0.12} fill={color} />
       ))}
     </svg>
   );
@@ -51,10 +52,10 @@ interface RowView {
   caseName: string | null;
 }
 
-function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[]): RowView {
+function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[], crossFace: CrossFace): RowView {
   if (row.label === "Cross") {
     const solvedEdges = crossLookaheadFacelets(scramble).size / 2;
-    return { row, caseName: solvedEdges > 0 ? `${solvedEdges} edge${solvedEdges === 1 ? "" : "s"} already solved` : null, icon: <CrossGlyph /> };
+    return { row, caseName: solvedEdges > 0 ? `${solvedEdges} edge${solvedEdges === 1 ? "" : "s"} already solved` : null, icon: <CrossGlyph color={CROSS_FACE_HEX[crossFace]} /> };
   }
   if (row.f2lPairIndex !== null) {
     // The case is what was in front of you when you *started* the pair.
@@ -95,13 +96,16 @@ export function PostSolveTable({
   scramble,
   moves,
   baseline,
+  crossFace = "U",
 }: {
   rows: PostSolvePhaseRow[];
+  /** Scramble and moves in the analysis frame (cross on white) — see crossFrame.ts. */
   scramble: string;
   moves: SmartCubeMove[];
   baseline?: PostSolveBaseline | null;
+  crossFace?: CrossFace;
 }) {
-  const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves)), [rows, scramble, moves]);
+  const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves, crossFace)), [rows, scramble, moves, crossFace]);
   const max = Math.max(1, ...rows.map((r) => r.totalMs ?? 0));
 
   return (

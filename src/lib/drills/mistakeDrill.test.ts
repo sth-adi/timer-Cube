@@ -13,6 +13,7 @@ const f2lDrill = (kind: Mistake["kind"]): Drill => ({
   date: 0,
   mistake: mistake(kind, "F2L"),
   setup: "R D R'", // breaks one pair; R D' R' puts it back
+  frame: "U",
   goal: "F2L",
   original: { turns: 9, ms: 3000 },
 });

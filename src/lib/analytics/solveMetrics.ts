@@ -19,6 +19,7 @@ import type { Solve } from "@/types";
  */
 
 import { PAUSE_MS } from "./pause";
+import { analysisFrame } from "@/lib/smartcube/crossFrame";
 
 export { PAUSE_MS };
 
@@ -62,6 +63,7 @@ export interface SolveMetrics {
 export function analyzableSolves(solves: readonly Solve[]): Solve[] {
   return solves
     .filter((s) => s.penalty !== "dnf" && s.scramble && s.reconstruction && s.moveTimestamps && s.moveTimestamps.length > 0)
+    .map(analysisFrame)
     .sort((a, b) => a.date - b.date);
 }
 

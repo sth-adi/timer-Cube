@@ -4,6 +4,7 @@ import { BREAK_MIN_MOVES, LOOK_PAUSE_MS, analyzeMistakes, type Mistake, type Mis
 import { crossSolved } from "@/lib/xray/common";
 import type { Solve } from "@/types";
 import type { NavStep } from "@/lib/satnav/planner";
+import { crossFaceOf, toCrossFrame, type CrossFace } from "@/lib/smartcube/crossFrame";
 
 /**
  * Mistake Drills: every costly moment the Mistake Radar found, rebuilt on
@@ -19,8 +20,10 @@ export interface Drill {
   solveId: string;
   date: number;
   mistake: Mistake;
-  /** Moves from solved to the drill's start position (the solve's scramble plus its moves up to there). */
+  /** Moves from solved to the drill's start position (the solve's scramble plus its moves up to there), in the cube's real colours — what gets set up on your cube. */
   setup: string;
+  /** The colour the solve's cross was on; checks run with it relabelled to white (see crossFrame.ts). */
+  frame: CrossFace;
   /** What finishing the drill means. */
   goal: MistakePhase;
   /** How the original solve got from the start position to the goal. */
@@ -39,14 +42,17 @@ export function collectDrills(solves: readonly Solve[], limit = 12): Drill[] {
   const drills: Drill[] = [];
   for (const s of solves) {
     if (!s.scramble || !s.reconstruction || !s.moveTimestamps?.length || s.penalty === "dnf") continue;
-    const moves = s.reconstruction.split(/\s+/).filter(Boolean);
+    const physical = s.reconstruction.split(/\s+/).filter(Boolean);
+    const frame = crossFaceOf(s.scramble, physical) ?? "U";
+    const scramble = toCrossFrame(s.scramble.split(/\s+/).filter(Boolean), frame).join(" ");
+    const moves = toCrossFrame(physical, frame);
     const times = s.moveTimestamps;
-    const report = analyzeMistakes({ scramble: s.scramble, moves, timesMs: times, totalMs: s.timeMs });
+    const report = analyzeMistakes({ scramble, moves, timesMs: times, totalMs: s.timeMs });
     if (!report.mistakes.length) continue;
 
     // States after each move, to find step boundaries and where the goal was reached.
     const cube = newCube();
-    cube.move(s.scramble);
+    cube.move(scramble);
     const after: CubeJSInstance[] = [];
     for (const m of moves) {
       cube.move(m);
@@ -66,7 +72,8 @@ export function collectDrills(solves: readonly Solve[], limit = 12): Drill[] {
         solveId: s.id,
         date: s.date,
         mistake: m,
-        setup: [s.scramble, ...moves.slice(0, start)].join(" "),
+        setup: [s.scramble, ...physical.slice(0, start)].join(" "),
+        frame,
         goal,
         // Timed from the first turn after the start, the way retries are.
         original: { turns: end + 1 - start, ms: (times[end] ?? 0) - (times[start] ?? 0) },
@@ -93,6 +100,19 @@ export interface DrillGrade {
   verdict: string;
 }
 
+/** The drill's start position plus `moves`, in the analysis frame (cross on white). */
+export function drillCube(drill: Pick<Drill, "setup" | "frame">, moves: readonly string[] = []): CubeJSInstance {
+  const cube = newCube();
+  const tokens = toCrossFrame([...drill.setup.split(/\s+/).filter(Boolean), ...moves], drill.frame ?? "U");
+  if (tokens.length) cube.move(tokens.join(" "));
+  return cube;
+}
+
+/** Whether the attempt so far has reached the drill's goal. */
+export function drillDone(drill: Drill, moves: readonly string[]): boolean {
+  return goalReached(drillCube(drill, moves), drill.goal);
+}
+
 /** Did the attempt make the same kind of mistake again? Judged the way the Radar judges a real solve. */
 export function repeatedMistake(drill: Drill, attempt: DrillAttempt): boolean {
   const kind = drill.mistake.kind;
@@ -101,12 +121,12 @@ export function repeatedMistake(drill: Drill, attempt: DrillAttempt): boolean {
   }
   if (kind === "wasted-turns") return attempt.moves.length >= drill.original.turns;
   // Knocked pair / broken cross: something solved at the start stayed broken for a while.
-  const cube = newCube();
-  cube.move(drill.setup);
+  const cube = drillCube(drill);
+  const frame = drill.frame ?? "U";
   const solvedAtStart = (c: CubeJSInstance) => [crossSolved(c), ...[0, 1, 2, 3].map((p) => f2lPairSolved(c, p as 0 | 1 | 2 | 3))];
   const initially = solvedAtStart(cube);
   const brokenFor = initially.map(() => 0);
-  for (const m of attempt.moves) {
+  for (const m of toCrossFrame(attempt.moves, frame)) {
     cube.move(m);
     if (goalReached(cube, drill.goal)) return false;
     const now = solvedAtStart(cube);

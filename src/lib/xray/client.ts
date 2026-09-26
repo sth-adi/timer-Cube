@@ -3,6 +3,7 @@
 import type { XrayWorkerRequest, XrayWorkerResponse } from "./worker";
 import type { SolveXray, XrayRequest } from "./solveXray";
 import type { Solve } from "@/types";
+import { analysisFrame } from "@/lib/smartcube/crossFrame";
 
 let worker: Worker | null = null;
 let nextId = 1;
@@ -43,7 +44,8 @@ export function isXrayable(s: Solve): boolean {
   return !!s.scramble && !!s.reconstruction && !!s.moveTimestamps && s.moveTimestamps.length > 0;
 }
 
-export function xrayRequestFor(s: Solve, extra: Partial<XrayRequest> = {}): XrayRequest {
+export function xrayRequestFor(solve: Solve, extra: Partial<XrayRequest> = {}): XrayRequest {
+  const s = analysisFrame(solve);
   return {
     scramble: s.scramble,
     moves: s.reconstruction!.split(/\s+/).filter(Boolean),

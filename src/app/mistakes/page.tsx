@@ -8,15 +8,12 @@ import { RouteChips } from "@/components/smartcube/RouteChips";
 import { TurnChips } from "@/components/smartcube/TurnChip";
 import { useCubeSetup } from "@/hooks/useCubeSetup";
 import { useSessionStore } from "@/lib/store/sessionStore";
-import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { subscribeRawMoves } from "@/lib/store/smartCubeBus";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import { useMistakeDrillStore, type DrillRecord } from "@/lib/store/mistakeDrillStore";
 import { planNext } from "@/lib/satnav/client";
-import { Cube } from "@/lib/cube-engine/engine";
-import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
 import { KIND_LABEL } from "@/lib/analysis/mistakeRadar";
-import { collectDrills, goalReached, gradeAttempt, routeToGoal, type Drill, type DrillGrade, type RouteLeg } from "@/lib/drills/mistakeDrill";
+import { collectDrills, drillCube, drillDone, gradeAttempt, routeToGoal, type Drill, type DrillGrade, type RouteLeg } from "@/lib/drills/mistakeDrill";
 import { cn } from "@/lib/utils/cn";
 
 const s2 = (ms: number) => (ms / 1000).toFixed(2);
@@ -67,7 +64,8 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
     // The Sat-Nav's route from the same position, for comparison afterwards.
     let live = true;
     const chosen = useMyAlgsStore.getState().chosen;
-    routeToGoal(scrambleToFacelets(drill.setup), drill.goal, (f) => planNext(f, chosen))
+    // Planned in the analysis frame (cross on white); only its length is compared, and its grip notation reads the same for any cross colour.
+    routeToGoal(drillCube(drill).asString(), drill.goal, (f) => planNext(f, chosen))
       .then((legs) => {
         if (!live) return;
         routeRef.current = legs;
@@ -100,12 +98,9 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
       movesRef.current.push(m.token);
       timesRef.current.push(m.timeStampMs - firstRef.current);
       setMoves([...movesRef.current]);
-      // The store applies the turn right after the bus emits it.
-      window.setTimeout(() => {
-        if (goalReached(Cube.fromString(useSmartCubeStore.getState().liveFacelets), drill.goal)) finish();
-      }, 0);
+      if (drillDone(drill, movesRef.current)) finish();
     });
-  }, [drill.goal, finish]);
+  }, [drill, finish]);
 
   const legs = route === "loading" ? null : route;
 

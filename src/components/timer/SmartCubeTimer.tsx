@@ -66,6 +66,7 @@ import { findCase } from "@/lib/algorithms/caseLookup";
 import { effectiveAlg } from "@/lib/algorithms/myAlgs";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import { LearnedAlgNotice } from "@/components/algorithms/LearnedAlgNotice";
+import { CROSS_FACE_COLOR, toCrossFrame } from "@/lib/smartcube/crossFrame";
 import { cn } from "@/lib/utils/cn";
 
 const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
@@ -221,6 +222,7 @@ export function SmartCubeTimer() {
     ollAtMs,
     ollCaseName,
     pllCaseName,
+    crossFace,
     moves,
     batterySupported,
     batteryLevel,
@@ -439,6 +441,13 @@ export function SmartCubeTimer() {
   ]);
 
   const moveTokens = useMemo(() => moves.map((m) => m.token), [moves]);
+  // The solve as the analyses read it: relabelled so its cross is on white,
+  // whatever colour you actually built it on (see crossFrame.ts). Replays
+  // and the scramble shown keep the real colours.
+  const frameFace = crossFace ?? "U";
+  const analysisScramble = useMemo(() => toCrossFrame(finishedScramble.split(/\s+/).filter(Boolean), frameFace).join(" "), [finishedScramble, frameFace]);
+  const analysisTokens = useMemo(() => toCrossFrame(moveTokens, frameFace), [moveTokens, frameFace]);
+  const analysisMoves = useMemo(() => moves.map((m, i) => ({ ...m, token: analysisTokens[i] })), [moves, analysisTokens]);
 
   // Mistake Radar: a full move-by-move replay of the finished solve against
   // its scramble — only once it's finished and its scramble is pinned.
@@ -446,19 +455,19 @@ export function SmartCubeTimer() {
     () =>
       finished && finishedScramble
         ? analyzeMistakes({
-            scramble: finishedScramble,
-            moves: moves.map((m) => m.token),
+            scramble: analysisScramble,
+            moves: analysisTokens,
             timesMs: moveTimestampsRel,
             totalMs: elapsedMs,
           })
         : null,
-    [finished, finishedScramble, moves, moveTimestampsRel, elapsedMs],
+    [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
   );
 
   // Inspection Report Card: graded from how the cross came out.
   const inspection = useMemo(
-    () => (finished && finishedScramble ? inspectionReport(finishedScramble, moveTokens, moveTimestampsRel) : null),
-    [finished, finishedScramble, moveTokens, moveTimestampsRel],
+    () => (finished && finishedScramble ? inspectionReport(analysisScramble, analysisTokens, moveTimestampsRel) : null),
+    [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel],
   );
 
   const onAnalyze = () => {
@@ -649,6 +658,7 @@ export function SmartCubeTimer() {
         <>
           <LiveProjection finished finalMs={elapsedMs} />
           <div className="flex items-center gap-3 text-xs text-muted">
+            {crossFace && crossFace !== "U" && <span>{CROSS_FACE_COLOR[crossFace]} cross</span>}
             <span>{moves.length} moves</span>
             {avgTps !== null && <span>{avgTps.toFixed(2)} TPS</span>}
             {finishedScramble &&
@@ -663,7 +673,7 @@ export function SmartCubeTimer() {
 
           {savedSolveExists && <LearnedAlgNotice solveDate={lastSolve?.date ?? null} />}
 
-          <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} baseline={postSolveBaseline} />
+          <PostSolveTable rows={postSolveRows} scramble={analysisScramble} moves={analysisMoves} baseline={postSolveBaseline} crossFace={frameFace} />
 
           <PostSolveCoachCard
             rows={postSolveRows}
@@ -751,7 +761,7 @@ export function SmartCubeTimer() {
 
               {finishedGaze && <GazeCard report={finishedGaze.report} facelets={finishedGaze.facelets} />}
 
-              {finishedScramble && <XrayTeaser scramble={finishedScramble} moves={moveTokens} timesMs={moveTimestampsRel} />}
+              {finishedScramble && <XrayTeaser scramble={analysisScramble} moves={analysisTokens} timesMs={moveTimestampsRel} />}
             </div>
           )}
         </>

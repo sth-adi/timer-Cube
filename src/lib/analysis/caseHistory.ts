@@ -6,6 +6,7 @@ import { recognizeF2lCase } from "@/lib/analysis/f2lCase";
 import { simplify } from "@/lib/smartcube/route";
 import { PAUSE_MS } from "@/lib/analytics/pause";
 import type { Solve } from "@/types";
+import { analysisFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Every OLL, PLL and F2L case you've met, from every smart-cube solve with
@@ -54,8 +55,9 @@ export interface CaseStat {
 }
 
 /** One solve's cases, or [] when it lacks a usable reconstruction. */
-export function solveCases(solve: Solve): CaseOccurrence[] {
-  if (!solve.scramble || !solve.reconstruction || !solve.moveTimestamps || solve.penalty === "dnf") return [];
+export function solveCases(raw: Solve): CaseOccurrence[] {
+  if (!raw.scramble || !raw.reconstruction || !raw.moveTimestamps || raw.penalty === "dnf") return [];
+  const solve = analysisFrame(raw) as Solve & { reconstruction: string; moveTimestamps: number[] };
   const moves = solve.reconstruction.split(/\s+/).filter(Boolean);
   const t = solve.moveTimestamps;
   if (moves.length !== t.length || moves.length < 10) return [];

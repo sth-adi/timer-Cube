@@ -2,6 +2,7 @@ import type { Solve } from "@/types";
 import { replayStates, crossSolved } from "@/lib/xray/common";
 import { f2lPairSolved } from "@/lib/solvers/oll";
 import { avg } from "@/lib/analytics/solveMetrics";
+import { analysisFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Multi-Slot Report: F2L Blind Spots (now the Pause Map) explicitly skips
@@ -112,6 +113,7 @@ export function summarizeInsertions(events: readonly InsertionEvent[]): MultiSlo
 export function analyzeMultiSlot(solves: readonly Solve[]): MultiSlotReport | null {
   const events = solves
     .filter((s) => s.scramble && s.reconstruction && s.moveTimestamps && s.moveTimestamps.length > 0 && s.penalty !== "dnf")
+    .map(analysisFrame)
     .flatMap((s) => f2lInsertionEvents(s.scramble, s.reconstruction!.split(/\s+/).filter(Boolean), s.moveTimestamps!));
   return summarizeInsertions(events);
 }

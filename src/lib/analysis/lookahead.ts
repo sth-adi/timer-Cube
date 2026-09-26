@@ -2,6 +2,7 @@ import type { Solve } from "@/types";
 import { avg, quantile } from "@/lib/analytics/solveMetrics";
 import { PAUSE_MS } from "@/lib/analytics/pause";
 import { pairSegments } from "@/lib/blindspots/blindSpots";
+import { analysisFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Lookahead Tradeoff: the classic F2L advice is "turn slower so you can
@@ -41,8 +42,9 @@ export const MIN_HANDOFFS = 30;
 const NOISE_MS = 40;
 
 /** Every back-to-back pair hand-off in one solve: the pair just finished, and the pause before the next. */
-export function solveHandoffs(solve: Solve): Handoff[] {
-  if (!solve.scramble || !solve.reconstruction || !solve.moveTimestamps || solve.penalty === "dnf") return [];
+export function solveHandoffs(raw: Solve): Handoff[] {
+  if (!raw.scramble || !raw.reconstruction || !raw.moveTimestamps || raw.penalty === "dnf") return [];
+  const solve = analysisFrame(raw) as Solve & { reconstruction: string; moveTimestamps: number[] };
   const moves = solve.reconstruction.split(/\s+/).filter(Boolean);
   const segs = pairSegments({ scramble: solve.scramble, moves, timesMs: solve.moveTimestamps });
   const t = solve.moveTimestamps;
