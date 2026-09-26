@@ -8,7 +8,7 @@ import { RecognitionTrainer } from "@/components/algorithms/RecognitionTrainer";
 import { AlgGymTrainer } from "@/components/gym/AlgGymTrainer";
 import { CrossDrill } from "./CrossDrill";
 import { BldMemoTrainer } from "./BldMemoTrainer";
-import { RaceMode } from "./RaceMode";
+import { RaceHub } from "./RaceHub";
 import { DualReplay } from "./DualReplay";
 import { DailyChallengeView } from "./DailyChallengeView";
 import type { PendingTrainerNav } from "@/lib/store/navigationStore";
@@ -36,7 +36,7 @@ const MODE_BLURB: Record<Mode, string> = {
   recognize: "Flashcard drill — name the case fast, no algorithm required.",
   daily: "One curated scramble a day, same for everyone.",
   bld: "Voice-guided memo practice for blindfolded attempts.",
-  race: "Live head-to-head against another connected solver.",
+  race: "Live head-to-head, or a room of racers and spectators — free-for-all or bracket.",
   replay: "Watch two solves side by side, synced move for move.",
   library: "Every OLL/PLL/ZBLL case, spaced-repetition review included.",
 };
@@ -130,7 +130,7 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
       ) : mode === "bld" ? (
         <BldMemoTrainer />
       ) : mode === "race" ? (
-        <RaceMode />
+        <RaceHub />
       ) : mode === "replay" ? (
         <DualReplay />
       ) : (
