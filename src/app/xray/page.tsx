@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { History, Loader2, Microscope, Palette, ScanLine, Timer as TimerIcon, Waves, Wand } from "lucide-react";
+import { History, Loader2, Microscope, Palette, ScanLine, Target, Timer as TimerIcon, Waves, Wand } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
-import { isXrayable, runXray, xrayRequestFor } from "@/lib/xray/client";
+import { runXray, xrayRequestFor } from "@/lib/xray/client";
+import { useXrayHistory } from "@/components/xray/useXrayHistory";
+import { buildXrayFindings } from "@/lib/xray/xrayCoach";
 import type { SolveXray } from "@/lib/xray/solveXray";
 import { summarizeFlowHistory } from "@/lib/xray/f2lFlow";
 import { summarizeOracleHistory } from "@/lib/xray/lastSlotOracle";
@@ -19,11 +21,6 @@ import { NeutralityHistory, SolveNeutrality } from "@/components/xray/Neutrality
 import { solveFinalMs, type Solve } from "@/types";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
-
-/** Solves the history scan reads (cheap analyses). */
-const HISTORY_LIMIT = 80;
-/** Of those, how many recent ones also get a (lighter) Last Slot Oracle search. */
-const ORACLE_HISTORY_LIMIT = 15;
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return <section className={cn("card flex flex-col gap-3 rounded-xl p-4", className)}>{children}</section>;
@@ -83,7 +80,7 @@ function SolvePicker({ solves, selectedId, onPick }: { solves: Solve[]; selected
  */
 export default function XrayPage() {
   const allSolves = useSessionStore((s) => s.allSolves);
-  const candidates = useMemo(() => allSolves.filter(isXrayable).sort((a, b) => b.date - a.date), [allSolves]);
+  const { candidates, results: historyResults, done: historyDone, total: historyTotal, scanning } = useXrayHistory(allSolves);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const selected = candidates.find((s) => s.id === pickedId) ?? candidates[0] ?? null;
 
@@ -100,43 +97,11 @@ export default function XrayPage() {
   }, [selected]);
   const current = xray && selected && xray.id === selected.id ? xray : null;
 
-  // History scan: one solve at a time through the worker, so results stream in.
-  const historyKey = candidates
-    .slice(0, HISTORY_LIMIT)
-    .map((s) => s.id)
-    .join(",");
-  const [history, setHistory] = useState<{ key: string; results: SolveXray[]; done: number }>({ key: "", results: [], done: 0 });
-  useEffect(() => {
-    const batch = candidates.slice(0, HISTORY_LIMIT);
-    if (batch.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      const results: SolveXray[] = [];
-      for (let i = 0; i < batch.length; i++) {
-        if (cancelled) return;
-        const req = xrayRequestFor(batch[i], i < ORACLE_HISTORY_LIMIT ? { oracle: { extraDepth: 1 } } : { skipOracle: true });
-        try {
-          results.push(await runXray(req));
-        } catch {
-          // A solve the X-Ray can't read just doesn't count toward history.
-        }
-        if (!cancelled && (i % 5 === 4 || i === batch.length - 1)) setHistory({ key: historyKey, results: [...results], done: i + 1 });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // historyKey captures exactly which solves are in the batch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyKey]);
-  const historyResults = useMemo(() => (history.key === historyKey ? history.results : []), [history, historyKey]);
-  const historyDone = history.key === historyKey ? history.done : 0;
-  const scanning = candidates.length > 0 && historyDone < Math.min(HISTORY_LIMIT, candidates.length);
-
   const flowHistory = useMemo(() => summarizeFlowHistory(historyResults.flatMap((r) => (r.flow ? [r.flow] : []))), [historyResults]);
   const oracleHistory = useMemo(() => summarizeOracleHistory(historyResults.flatMap((r) => (r.oracle ? [r.oracle] : []))), [historyResults]);
   const microscope = useMemo(() => buildMicroscope(historyResults.flatMap((r) => r.executions)), [historyResults]);
   const neutrality = useMemo(() => buildNeutralityReport(historyResults.flatMap((r) => (r.neutrality ? [r.neutrality] : []))), [historyResults]);
+  const plan = useMemo(() => buildXrayFindings(historyResults), [historyResults]);
 
   return (
     <>
@@ -207,11 +172,37 @@ export default function XrayPage() {
                 <h2 className="text-sm font-semibold text-foreground">Across your solves</h2>
                 {scanning && (
                   <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-2">
-                    <Loader2 size={11} className="animate-spin" /> scanning {historyDone}/
-                    {Math.min(HISTORY_LIMIT, candidates.length)}
+                    <Loader2 size={11} className="animate-spin" /> scanning {historyDone}/{historyTotal}
                   </span>
                 )}
               </div>
+
+              {plan.length > 0 && (
+                <Card>
+                  <SectionTitle
+                    icon={<Target size={15} className="text-accent" />}
+                    title="What to fix first"
+                    subtitle="All four analyses, priced in seconds per solve against your own better solves."
+                  />
+                  <div className="flex flex-col gap-2">
+                    {plan.map((f, i) => (
+                      <div key={f.id} className="flex flex-col gap-1 rounded-lg bg-bg-panel-2 p-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-semibold text-foreground">
+                            {i + 1}. {f.title}
+                          </p>
+                          <span className="shrink-0 text-xs font-bold tabular-nums text-accent">{(f.msPerSolve / 1000).toFixed(2)}s</span>
+                        </div>
+                        <p className="text-[11px] text-muted">{f.detail}</p>
+                        <p className="text-[11px] font-medium text-foreground">{f.action}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <Link href="/coach" className="text-[11px] font-medium text-accent">
+                    See it ranked with everything else in the Coach →
+                  </Link>
+                </Card>
+              )}
 
               <Card>
                 <SectionTitle
