@@ -51,6 +51,8 @@ interface GyroTwinProps {
   className?: string;
   /** Show the orientation readout, last rotation, and Re-center button under the cube. */
   showControls?: boolean;
+  /** Where the viewer is, as a CSS rotation — defaults to looking down at the cube in your own hands. */
+  camera?: string;
 }
 
 /**
@@ -65,7 +67,7 @@ interface GyroTwinProps {
  * instant they settle ("y", "x'"…) — the same detector that writes them into
  * rotation-aware reconstructions after a solve.
  */
-export function GyroTwin({ size = 120, className, showControls = true }: GyroTwinProps) {
+export function GyroTwin({ size = 120, className, showControls = true, camera = CAMERA }: GyroTwinProps) {
   const cubeRef = useRef<HTMLDivElement | null>(null);
   const facelets = useSmartCubeStore((s) => s.liveFacelets);
   const gyroActive = useSmartCubeStore((s) => s.gyroActive);
@@ -80,7 +82,7 @@ export function GyroTwin({ size = 120, className, showControls = true }: GyroTwi
   useEffect(() => {
     const el = cubeRef.current;
     if (!el) return;
-    el.style.transform = `${CAMERA} ${cssMatrix3d(HOME_ORIENTATION)}`;
+    el.style.transform = `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`;
     if (!ref) return;
     const { calibration } = calibrationFor(protocolName);
     const tracker = new RotationTracker(ref, calibration);
@@ -89,7 +91,7 @@ export function GyroTwin({ size = 120, className, showControls = true }: GyroTwi
     let rotationId = 0;
     const flush = () => {
       raf = 0;
-      if (pending) el.style.transform = `${CAMERA} ${cssMatrix3d(pending)}`;
+      if (pending) el.style.transform = `${camera} ${cssMatrix3d(pending)}`;
     };
     const unsubscribe = subscribeGyro((sample) => {
       const out = tracker.push(sample);
@@ -102,7 +104,7 @@ export function GyroTwin({ size = 120, className, showControls = true }: GyroTwi
       unsubscribe();
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [ref, protocolName, calibrations]);
+  }, [ref, protocolName, calibrations, camera]);
 
   const { calibrated } = calibrationFor(protocolName);
 
@@ -116,7 +118,7 @@ export function GyroTwin({ size = 120, className, showControls = true }: GyroTwi
             width: size,
             height: size,
             transformStyle: "preserve-3d",
-            transform: `${CAMERA} ${cssMatrix3d(HOME_ORIENTATION)}`,
+            transform: `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`,
           }}
         >
           <CubeFaces facelets={facelets} size={size} />

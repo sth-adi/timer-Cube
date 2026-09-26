@@ -57,6 +57,7 @@ import {
   Wrench,
   X,
   Zap,
+  Glasses,
 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
@@ -152,7 +153,8 @@ const TOOLS = [
 
   { href: "/satnav", icon: Navigation, title: "Solve Sat-Nav", blurb: "Turn-by-turn directions that recalculate when you go off-route.", category: "live" },
   { href: "/timemachine", icon: History, title: "Time Machine", blurb: "Rewind your physical cube to any moment since you connected.", category: "live" },
-  { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve into a shareable video.", category: "live" },
+  { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve — or your week's best — into a video.", category: "live" },
+  { href: "/ar", icon: Glasses, title: "Cube AR", blurb: "Your cube's live twin pinned onto it through the camera.", category: "live" },
 
   { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up — and your golds.", category: "picture" },
   { href: "/luck", icon: Clover, title: "Luck Meter", blurb: "How much each solve was the scramble, and your luck-free leaderboard.", category: "picture" },
