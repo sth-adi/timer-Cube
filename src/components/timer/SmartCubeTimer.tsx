@@ -63,6 +63,9 @@ import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
+import { effectiveAlg } from "@/lib/algorithms/myAlgs";
+import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
+import { LearnedAlgNotice } from "@/components/algorithms/LearnedAlgNotice";
 import { cn } from "@/lib/utils/cn";
 
 const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
@@ -123,9 +126,15 @@ function PhaseSplitsRow({
 }
 
 function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; pllCaseName: string | null }) {
+  // Your main algorithm for the case (learned or picked), else the book's.
+  const chosen = useMyAlgsStore((s) => s.chosen);
   if (!ollCaseName && !pllCaseName) return null;
-  const ollAlg = ollCaseName ? findCase("OLL", ollCaseName)?.alg : undefined;
-  const pllAlg = pllCaseName ? findCase("PLL", pllCaseName)?.alg : undefined;
+  const algFor = (group: "OLL" | "PLL", name: string | null) => {
+    const book = name ? findCase(group, name)?.alg : undefined;
+    return name && book ? effectiveAlg(chosen, group, name, book) : undefined;
+  };
+  const ollAlg = algFor("OLL", ollCaseName);
+  const pllAlg = algFor("PLL", pllCaseName);
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {ollCaseName && (
@@ -651,6 +660,8 @@ export function SmartCubeTimer() {
                 <span className="text-muted-2">Deleted</span>
               ))}
           </div>
+
+          {savedSolveExists && <LearnedAlgNotice solveDate={lastSolve?.date ?? null} />}
 
           <PostSolveTable rows={postSolveRows} scramble={finishedScramble} moves={moves} baseline={postSolveBaseline} />
 

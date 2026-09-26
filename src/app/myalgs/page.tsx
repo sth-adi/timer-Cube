@@ -1,30 +1,25 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookMarked, Check, Loader2, Printer, RotateCcw } from "lucide-react";
+import { BookMarked, Loader2, Printer } from "lucide-react";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
-import { useXrayHistory } from "@/components/xray/useXrayHistory";
+import { YourAlgs } from "@/components/algorithms/YourAlgs";
+import { analyzableSolves } from "@/lib/analytics/solveMetrics";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
-import { buildMicroscope } from "@/lib/xray/algMicroscope";
-import { detectMyAlgs, effectiveAlg, myAlgKey, solvesCase } from "@/lib/algorithms/myAlgs";
+import { effectiveAlg, myAlgKey, solvesCase } from "@/lib/algorithms/myAlgs";
 import { PLL_CASES } from "@/lib/algorithms/pllData";
 import { OLL_CASES } from "@/lib/algorithms/ollData";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import type { AlgCase, AlgGroup } from "@/lib/algorithms/types";
 import { cn } from "@/lib/utils/cn";
 
-const s2 = (ms: number) => (ms / 1000).toFixed(2);
-
-function CaseRow({ c, detected }: { c: AlgCase; detected: ReturnType<typeof detectMyAlgs>[string] | undefined }) {
+function CaseRow({ c }: { c: AlgCase }) {
   const key = myAlgKey(c.group, c.name);
-  const chosen = useMyAlgsStore((s) => s.chosen[key]);
   const choose = useMyAlgsStore((s) => s.choose);
-  const clear = useMyAlgsStore((s) => s.clear);
   const [typed, setTyped] = useState("");
   const [bad, setBad] = useState(false);
-  const current = chosen ?? c.alg;
 
   const applyAlg = (alg: string) => {
     if (!solvesCase(c.group, c.alg, alg)) {
@@ -32,8 +27,7 @@ function CaseRow({ c, detected }: { c: AlgCase; detected: ReturnType<typeof dete
       return;
     }
     setBad(false);
-    if (alg.trim() === c.alg.trim()) clear(key);
-    else choose(key, alg.trim());
+    choose(key, alg.trim());
     setTyped("");
   };
 
@@ -41,42 +35,9 @@ function CaseRow({ c, detected }: { c: AlgCase; detected: ReturnType<typeof dete
     <div className="card flex flex-col gap-2 rounded-xl p-3">
       <div className="flex items-center gap-3">
         <CaseIcon setupAlg={invertAlg(c.alg)} kind={c.group} className="h-12 w-12 shrink-0 overflow-hidden rounded" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            {c.name}
-            <span className={cn("rounded-full px-1.5 py-px text-[9px] font-semibold", chosen ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted-2")}>{chosen ? "yours" : "book"}</span>
-          </p>
-          <p className="break-words font-mono text-[11px] text-foreground/90">{current}</p>
-        </div>
-        {chosen && (
-          <button type="button" onClick={() => clear(key)} className="shrink-0 text-muted-2 hover:text-foreground" title="Back to the book algorithm" aria-label="Reset to book">
-            <RotateCcw size={13} />
-          </button>
-        )}
+        <p className="text-sm font-bold text-foreground">{c.name}</p>
       </div>
-      {detected && detected.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What you actually do</p>
-          {detected.slice(0, 3).map((v) => {
-            const isCurrent = v.alg.trim() === current.trim();
-            return (
-              <div key={v.alg} className="flex items-center gap-2 rounded-lg bg-bg-panel-2 px-2 py-1.5">
-                <span className="min-w-0 flex-1 break-words font-mono text-[11px] text-foreground">{v.alg}</span>
-                <span className="shrink-0 text-[10px] tabular-nums text-muted">
-                  ×{v.count} · {s2(v.meanExecMs)}s
-                </span>
-                {isCurrent ? (
-                  <Check size={13} className="shrink-0 text-success" />
-                ) : (
-                  <button type="button" onClick={() => applyAlg(v.alg)} className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-fg">
-                    Use
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <YourAlgs algCase={c} />
       <div className="flex gap-2">
         <input
           value={typed}
@@ -104,21 +65,24 @@ function CaseRow({ c, detected }: { c: AlgCase; detected: ReturnType<typeof dete
  * mode use it. Printable, too.
  */
 export default function MyAlgsPage() {
-  const allSolves = useSessionStore((s) => s.allSolves);
   const chosen = useMyAlgsStore((s) => s.chosen);
-  const { results, scanning, done, total } = useXrayHistory(allSolves);
-  const detected = useMemo(() => detectMyAlgs(buildMicroscope(results.flatMap((r) => r.executions))), [results]);
+  const seenAll = useMyAlgsStore((s) => s.seen);
+  const learnedThrough = useMyAlgsStore((s) => s.learnedThrough);
+  const allSolves = useSessionStore((s) => s.allSolves);
+  const reading = useMemo(() => analyzableSolves(allSolves).filter((x) => x.date > learnedThrough).length, [allSolves, learnedThrough]);
+  const hasYours = (c: AlgCase) => (seenAll[myAlgKey(c.group, c.name)] ?? []).some((x) => !x.book);
+  const detected = Object.fromEntries(Object.entries(seenAll).filter(([, v]) => v.length));
   const [group, setGroup] = useState<AlgGroup>("PLL");
   const [onlyMine, setOnlyMine] = useState(false);
   const cases = group === "PLL" ? PLL_CASES : OLL_CASES;
-  const seen = cases.filter((c) => detected[myAlgKey(c.group, c.name)]?.length);
-  const shown = (onlyMine ? cases.filter((c) => chosen[myAlgKey(c.group, c.name)] || detected[myAlgKey(c.group, c.name)]?.length) : [...seen, ...cases.filter((c) => !seen.includes(c))]).filter(
-    (c, i, arr) => arr.indexOf(c) === i,
-  );
+  // Cases with an algorithm of yours first, then everything you've been seen doing, then the rest.
+  const seen = [...cases.filter(hasYours), ...cases.filter((c) => !hasYours(c) && detected[myAlgKey(c.group, c.name)])];
+  const shown = onlyMine ? cases.filter((c) => chosen[myAlgKey(c.group, c.name)] || hasYours(c)) : [...seen, ...cases.filter((c) => !seen.includes(c))];
+  const yoursCount = cases.filter(hasYours).length;
   const mineCount = Object.keys(chosen).length;
 
   return (
-    <AnalyticsShell icon={<BookMarked size={17} className="text-accent" />} title="My Algs" subtitle="Your algorithms, not the book's — detected from your solves, used everywhere.">
+    <AnalyticsShell icon={<BookMarked size={17} className="text-accent" />} title="My Algs" subtitle="Your algorithms, not the book's — learned from your one-look solves, used everywhere.">
       <div className="print:hidden flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
@@ -139,15 +103,17 @@ export default function MyAlgsPage() {
         </div>
         <p className="px-1 text-[11px] text-muted">
           {mineCount ? `${mineCount} case${mineCount === 1 ? " uses" : "s use"} your own algorithm. ` : ""}
-          {seen.length ? `${seen.length} ${group} cases seen in your smart-cube solves, most-used variant first.` : `No ${group} executions read from your smart-cube solves yet.`}
-          {scanning && (
+          {seen.length
+            ? `${seen.length} ${group} cases seen done in one look on your smart cube${yoursCount ? ` — ${yoursCount} with an algorithm of your own` : ""}.`
+            : `No one-look ${group} algorithms read from your smart-cube solves yet.`}
+          {reading > 0 && (
             <span className="ml-1 inline-flex items-center gap-1 text-muted-2">
-              <Loader2 size={10} className="animate-spin" /> reading {done}/{total}
+              <Loader2 size={10} className="animate-spin" /> reading {reading} solves
             </span>
           )}
         </p>
         {shown.map((c) => (
-          <CaseRow key={c.id} c={c} detected={detected[myAlgKey(c.group, c.name)]} />
+          <CaseRow key={c.id} c={c} />
         ))}
       </div>
 

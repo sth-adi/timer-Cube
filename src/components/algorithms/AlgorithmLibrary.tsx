@@ -6,6 +6,8 @@ import { PLL_CASES } from "@/lib/algorithms/pllData";
 import { OLL_CASES } from "@/lib/algorithms/ollData";
 import type { AlgCase } from "@/lib/algorithms/types";
 import { useAlgorithmStore } from "@/lib/store/algorithmStore";
+import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
+import { myAlgKey } from "@/lib/algorithms/myAlgs";
 import { deriveStatus } from "@/lib/algorithms/srs";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import { cn } from "@/lib/utils/cn";
@@ -17,6 +19,7 @@ const STATUS_DOT = { new: "bg-muted-2", learning: "bg-warning", known: "bg-succe
 function CaseCard({ algCase, onOpen }: { algCase: AlgCase; onOpen: () => void }) {
   const progress = useAlgorithmStore((s) => s.progress[algCase.id]);
   const status = deriveStatus(progress);
+  const yours = useMyAlgsStore((s) => s.chosen[myAlgKey(algCase.group, algCase.name)] !== undefined);
   return (
     <button
       type="button"
@@ -25,7 +28,10 @@ function CaseCard({ algCase, onOpen }: { algCase: AlgCase; onOpen: () => void })
     >
       <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={algCase.group} className="w-full" />
       <div className="flex w-full items-center justify-between">
-        <span className="text-sm font-medium">{algCase.name}</span>
+        <span className="flex items-center gap-1 text-sm font-medium">
+          {algCase.name}
+          {yours && <span className="rounded-full bg-accent-soft px-1.5 py-px text-[9px] font-semibold text-accent">yours</span>}
+        </span>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[status])} />
       </div>
       {algCase.shape && <span className="text-muted-2 text-xs">{algCase.shape}</span>}

@@ -6,6 +6,9 @@ import { Pause, Play, RotateCcw, X } from "lucide-react";
 import type { AlgCase } from "@/lib/algorithms/types";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import { useAlgorithmStore } from "@/lib/store/algorithmStore";
+import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
+import { myAlgKey } from "@/lib/algorithms/myAlgs";
+import { YourAlgs } from "./YourAlgs";
 import { deriveStatus } from "@/lib/algorithms/srs";
 import { mapToLibraryFrame, relabelAlg } from "@/lib/analysis/frames";
 import { formatTime } from "@/lib/utils/time";
@@ -35,8 +38,12 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
   // carries the alg from library frame back into the D-practice frame every
   // other view already uses, purely by renaming face letters — no risk of
   // the sequential-interpretation corruption a real rotation move would add.
-  const relabeledAlg = useMemo(() => relabelAlg(algCase.alg, mapToLibraryFrame()), [algCase]);
-  const setupAlg = useMemo(() => invertAlg(relabeledAlg), [relabeledAlg]);
+  // The viewer plays your main algorithm (or whichever one you tap below); the setup is always the book's, so the case is the same.
+  const main = useMyAlgsStore((s) => s.chosen[myAlgKey(algCase.group, algCase.name)]) ?? algCase.alg;
+  const [picked, setPicked] = useState<string | null>(null);
+  const shown = picked ?? main;
+  const relabeledAlg = useMemo(() => relabelAlg(shown, mapToLibraryFrame()), [shown]);
+  const setupAlg = useMemo(() => invertAlg(relabelAlg(algCase.alg, mapToLibraryFrame())), [algCase]);
   // Shown to the user in the alg's own (published, last-layer-on-U) notation
   // — not the D-practice relabeling above, which only exists to feed the 3D
   // viewer and would look like a different, unrecognizable algorithm here.
@@ -82,7 +89,7 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
         </div>
 
         <div className="card h-56 w-full overflow-hidden rounded-xl">
-          <CubeViewer alg={relabeledAlg} setupAlg={setupAlg} onReady={onReady} className="h-full w-full" />
+          <CubeViewer key={shown} alg={relabeledAlg} setupAlg={setupAlg} onReady={onReady} className="h-full w-full" />
         </div>
 
         <div className="mt-2 flex items-center justify-center gap-2">
@@ -107,7 +114,11 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
         <p className="tabular-timer mt-3 break-words text-center text-[11px] leading-relaxed text-muted-2">
           Setup: {displaySetupAlg}
         </p>
-        <p className="tabular-timer mt-1 text-sm leading-relaxed">{algCase.alg}</p>
+        <p className="tabular-timer mt-1 text-sm leading-relaxed">{shown}</p>
+
+        <div className="mt-3">
+          <YourAlgs algCase={algCase} showing={shown} onShow={setPicked} />
+        </div>
 
         <div className="mt-3 flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2 text-xs">
           <span className={STATUS_COLOR[status]}>{STATUS_LABEL[status]}</span>

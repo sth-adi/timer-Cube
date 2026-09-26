@@ -8,7 +8,7 @@ import { physicalFaceAt, viewerMove } from "@/lib/gyro/orientation";
 import { YELLOW_TOP_GRIPS, colorOnTopGrip, inGrip, invertMoves, slotGrip } from "./common";
 import { analyzeF2lFlow, summarizeFlowHistory } from "./f2lFlow";
 import { runLastSlotOracle, lastLayerOutcome, summarizeOracleHistory } from "./lastSlotOracle";
-import { buildMicroscope, canonicalAlg, extractAlgExecutions } from "./algMicroscope";
+import { buildMicroscope, canonicalAlg, extractAlgExecutions, mergeTurns } from "./algMicroscope";
 import { analyzeNeutralitySolve, buildNeutralityReport, crossLengthsByColor } from "./neutrality";
 
 const SCRAMBLES = [
@@ -184,6 +184,51 @@ describe("Alg Microscope", () => {
       expect(execs.map((e) => e.alg)).toEqual([SUNE, T_PERM]);
     }
     expect(canonicalAlg(toEngine(SUNE, YELLOW_TOP_GRIPS[3])).join(" ")).toBe(SUNE);
+  });
+
+  /** A solve whose last layer is exactly `ll` (grip notation, yellow top), after one F2L insert. */
+  function llSolve(ll: string, pauses: Record<number, number> = {}) {
+    const moves = [...toEngine(INSERT, slotGrip(0)), ...toEngine(ll)];
+    return { scramble: invertMoves(moves).join(" "), moves, timesMs: timed(moves, 100, { 4: 600, ...pauses }) };
+  }
+  const EDGES = "F R U R' U' F'";
+  const UA = "R U' R U R U R U' R' U' R2";
+  const AA = "R' F R' B2 R F' R' B2 R2";
+
+  it("knows one look from two", () => {
+    const one = extractAlgExecutions(lastLayerSolve(YELLOW_TOP_GRIPS[0]));
+    expect(one.map((e) => [e.oneLook, e.clean])).toEqual([
+      [true, true],
+      [true, true],
+    ]);
+    // Two-look OLL: edges, an AUF, then Sune.
+    const twoOll = extractAlgExecutions(llSolve(`${EDGES} U ${SUNE} ${T_PERM} U2`));
+    expect(twoOll[0]).toMatchObject({ step: "OLL", oneLook: false });
+    // Same two algorithms with no AUF between them: a stop gives the second look away...
+    const paused = extractAlgExecutions(llSolve(`${EDGES} ${SUNE} ${T_PERM} U2`, { 10: 700 }));
+    expect(paused[0].oneLook).toBe(false);
+    // ...but flowing straight through reads as one algorithm.
+    const flowing = extractAlgExecutions(llSolve(`${EDGES} ${SUNE} ${T_PERM} U2`));
+    expect(flowing[0].oneLook).toBe(true);
+    // Two-look PLL: corners (an A-perm), a stop, then edges (a U-perm).
+    const twoPll = extractAlgExecutions(llSolve(`${SUNE} ${AA} ${UA}`, { 20: 700 }));
+    expect(twoPll.find((e) => e.step === "PLL")).toMatchObject({ oneLook: false });
+    // With an AUF between them it runs past the length any one algorithm has, and isn't read as one at all.
+    expect(extractAlgExecutions(llSolve(`${SUNE} U ${T_PERM} U ${UA}`)).find((e) => e.step === "PLL")).toBeUndefined();
+  });
+
+  it("writes quarter turns the way you'd write the algorithm, and spots a fumble", () => {
+    expect(mergeTurns(["R", "R", "U", "U'", "F", "F", "F"])).toEqual({ tokens: ["R2", "F'"], cancelled: true });
+    const quarter = T_PERM.replace("R2", "R R");
+    const [, pll] = extractAlgExecutions(llSolve(`U ${SUNE} ${quarter} U2`));
+    expect(pll.alg).not.toBe(T_PERM);
+    expect(pll.mergedAlg).toBe(T_PERM);
+    expect(pll.clean).toBe(true);
+    // Written the way a person would: "F R U' R' …", not "R B U' B' …".
+    const back = "F R U' R' U R U R2 F' R U R U' R'";
+    const [, alt] = extractAlgExecutions(llSolve(`U ${SUNE} ${back} U2`));
+    expect(alt.mergedAlg).toBe(back);
+    expect(alt.alg).not.toBe(back);
   });
 
   it("pinpoints the turn your hands stall on", () => {

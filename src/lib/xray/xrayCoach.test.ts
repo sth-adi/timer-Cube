@@ -40,6 +40,9 @@ const exec = (caseName: string, gaps: number[], recognitionMs = 800): AlgExecuti
   executionMs: gaps.reduce((a, b) => a + b, 0),
   gaps,
   date: 0,
+  oneLook: true,
+  clean: true,
+  mergedAlg: "R U R' U'",
 });
 
 const xr = (partial: Partial<SolveXray>): SolveXray => ({ flow: null, oracle: null, executions: [], neutrality: null, ...partial });
