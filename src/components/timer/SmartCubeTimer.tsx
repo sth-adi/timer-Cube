@@ -47,6 +47,7 @@ import { useScrambleGuide } from "@/hooks/useScrambleGuide";
 import { ScrambleGuidePanel } from "@/components/smartcube/ScrambleGuidePanel";
 import { useNowTick } from "@/hooks/useNowTick";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
+import { LiveProjection } from "./LiveProjection";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
 import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
@@ -628,6 +629,7 @@ export function SmartCubeTimer() {
         <div className="flex flex-col items-center gap-1.5">
           <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>
           <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
+          <LiveProjection finished={false} finalMs={elapsedMs} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
           <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
         </div>
@@ -635,6 +637,7 @@ export function SmartCubeTimer() {
 
       {finished && (
         <>
+          <LiveProjection finished finalMs={elapsedMs} />
           <div className="flex items-center gap-3 text-xs text-muted">
             <span>{moves.length} moves</span>
             {avgTps !== null && <span>{avgTps.toFixed(2)} TPS</span>}
