@@ -2,65 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2, Navigation, PartyPopper, RefreshCw, Timer as TimerIcon } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Loader2, Navigation, PartyPopper, RefreshCw, Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { ConnectGate } from "@/components/smartcube/ConnectGate";
 import { RouteChips } from "@/components/smartcube/RouteChips";
 import { GyroTwin } from "@/components/lab/GyroTwin";
-import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
-import { subscribeRawMoves } from "@/lib/store/smartCubeBus";
-import { planNext } from "@/lib/satnav/client";
-import type { NavStage, NavStep } from "@/lib/satnav/planner";
-import { RouteTracker } from "@/lib/smartcube/route";
+import { SatNavLesson } from "@/components/satnav/SatNavLesson";
+import { useSatNavRoute } from "@/components/satnav/useSatNavRoute";
+import { StageBar } from "@/components/satnav/StageBar";
 import { cn } from "@/lib/utils/cn";
 
-/** Wait this long after an off-route turn before recalculating — people often fix a slip themselves in the next turn or two. */
-const REROUTE_DEBOUNCE_MS = 450;
 /** In coach mode, the next step only appears after you've been stuck this long. */
 const COACH_DELAY_MS = 2500;
-
-type Status = "planning" | "following" | "recalculating" | "error";
-
-interface NavState {
-  step: NavStep | null;
-  position: number;
-  partial: boolean;
-  status: Status;
-}
-
-const STAGES: { id: NavStage[]; label: string }[] = [
-  { id: ["cross"], label: "Cross" },
-  { id: ["f2l"], label: "F2L" },
-  { id: ["oll"], label: "OLL" },
-  { id: ["pll", "auf"], label: "PLL" },
-];
-
-function StageBar({ step }: { step: NavStep | null }) {
-  const current = step ? STAGES.findIndex((s) => s.id.includes(step.stage)) : -1;
-  const solved = step?.stage === "solved";
-  return (
-    <div className="grid w-full grid-cols-4 gap-1.5">
-      {STAGES.map((s, i) => {
-        const done = solved || (current >= 0 && i < current);
-        const active = i === current;
-        return (
-          <div key={s.label} className="flex flex-col items-center gap-1">
-            <div className={cn("h-1.5 w-full rounded-full", done ? "bg-success" : active ? "bg-accent" : "bg-bg-panel-2")}>
-              {active && s.label === "F2L" && step && (
-                <div className="h-full rounded-full bg-success" style={{ width: `${(step.pairsDone / 4) * 100}%` }} />
-              )}
-            </div>
-            <span className={cn("text-[10px] font-medium", active ? "text-accent" : done ? "text-success" : "text-muted-2")}>
-              {s.label}
-              {s.label === "F2L" && step && active ? ` ${step.pairsDone}/4` : ""}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 /**
  * Solve Sat-Nav: turn-by-turn directions for a real cube. It reads the cube's
@@ -71,13 +25,8 @@ function StageBar({ step }: { step: NavStep | null }) {
  * it works from any state, mid-solve, mid-scramble, anywhere.
  */
 function SatNav() {
-  const [nav, setNav] = useState<NavState>({ step: null, position: 0, partial: false, status: "planning" });
   const [coach, setCoach] = useState(false);
   const [revealed, setRevealed] = useState(true);
-  const [reroutes, setReroutes] = useState(0);
-  const trackerRef = useRef<RouteTracker | null>(null);
-  const requestRef = useRef(0);
-  const rerouteTimer = useRef<number | null>(null);
   const coachTimer = useRef<number | null>(null);
   const coachRef = useRef(coach);
   useEffect(() => {
@@ -91,55 +40,9 @@ function SatNav() {
     coachTimer.current = window.setTimeout(() => setRevealed(true), COACH_DELAY_MS);
   }, []);
 
-  const replan = useCallback(() => {
-    const id = ++requestRef.current;
-    trackerRef.current = null;
-    planNext(useSmartCubeStore.getState().liveFacelets)
-      .then((step) => {
-        if (id !== requestRef.current) return;
-        trackerRef.current = new RouteTracker(step.turns);
-        setNav({ step, position: 0, partial: false, status: "following" });
-        armCoach();
-      })
-      .catch(() => id === requestRef.current && setNav((n) => ({ ...n, status: "error" })));
-  }, [armCoach]);
+  const { nav, reroutes, replan } = useSatNavRoute({ onMove: armCoach, onStep: armCoach });
 
-  useEffect(() => {
-    replan();
-  }, [replan]);
-
-  useEffect(() => {
-    return subscribeRawMoves((move) => {
-      armCoach();
-      const tracker = trackerRef.current;
-      if (!tracker) {
-        // Mid-recalculation: the plan in flight is already stale — ask again once they pause.
-        if (rerouteTimer.current) window.clearTimeout(rerouteTimer.current);
-        rerouteTimer.current = window.setTimeout(replan, REROUTE_DEBOUNCE_MS);
-        return;
-      }
-      const event = tracker.push(move.token);
-      if (event === "off-route") {
-        trackerRef.current = null;
-        setReroutes((r) => r + 1);
-        setNav((n) => ({ ...n, status: "recalculating" }));
-        if (rerouteTimer.current) window.clearTimeout(rerouteTimer.current);
-        rerouteTimer.current = window.setTimeout(replan, REROUTE_DEBOUNCE_MS);
-        return;
-      }
-      setNav((n) => ({ ...n, position: tracker.position, partial: tracker.partial }));
-      // Let the store apply this turn to the live state before planning from it.
-      if (event === "done") window.setTimeout(replan, 30);
-    });
-  }, [replan, armCoach]);
-
-  useEffect(
-    () => () => {
-      if (rerouteTimer.current) window.clearTimeout(rerouteTimer.current);
-      if (coachTimer.current) window.clearTimeout(coachTimer.current);
-    },
-    [],
-  );
+  useEffect(() => () => void (coachTimer.current && window.clearTimeout(coachTimer.current)), []);
 
   const { step, status } = nav;
   const hidden = coach && !revealed && step?.stage !== "solved";
@@ -214,6 +117,7 @@ function SatNav() {
 }
 
 export default function SatNavPage() {
+  const [mode, setMode] = useState<"navigate" | "learn">("navigate");
   return (
     <>
       <AppBootstrap />
@@ -230,8 +134,29 @@ export default function SatNavPage() {
             </h1>
             <p className="text-[11px] text-muted-2">Turn-by-turn directions for the cube in your hands. Go off-route and it recalculates.</p>
           </div>
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1">
+            {(
+              [
+                ["navigate", "Navigate", Navigation],
+                ["learn", "Learn CFOP", GraduationCap],
+              ] as const
+            ).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMode(id)}
+                aria-pressed={mode === id}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  mode === id ? "bg-accent text-accent-fg" : "text-muted",
+                )}
+              >
+                <Icon size={12} /> {label}
+              </button>
+            ))}
+          </div>
           <ConnectGate blurb="The Sat-Nav reads your cube's live state after every turn, so it needs a connected smart cube.">
-            <SatNav />
+            {mode === "navigate" ? <SatNav key="nav" /> : <SatNavLesson key="learn" />}
           </ConnectGate>
         </div>
       </div>
