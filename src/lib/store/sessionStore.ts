@@ -3,6 +3,7 @@ import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
 import { addSolve, deleteSolve, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
+import { repairLateStart } from "@/lib/db/repairLateStart";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { computeAchievements, computeSessionStats, normalSolves, type AchievementState } from "@/lib/stats/stats";
@@ -100,6 +101,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   pendingEvent: null,
 
   init: async () => {
+    // Solves saved while the smart-cube timer wrongly started at the cross: put their times right.
+    const broken = (await getAllSolves()).map((x) => [x.id, repairLateStart(x)] as const).filter(([, fix]) => fix);
+    for (const [id, fix] of broken) await updateSolve(id, fix!);
     const first = await ensureDefaultSession();
     const sessions = await listSessions();
     const solves = await getSessionSolves(first.id);

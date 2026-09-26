@@ -24,6 +24,11 @@ export const NO_MILESTONES: Milestones = {
   pllCaseName: null,
 };
 
+export function pickMilestones(m: Milestones): Milestones {
+  const { crossFace, crossAtMs, f2lAtMs, f2lPairAtMs, ollAtMs, ollCaseName, pllCaseName } = m;
+  return { crossFace, crossAtMs, f2lAtMs, f2lPairAtMs, ollAtMs, ollCaseName, pllCaseName };
+}
+
 /**
  * Advances the milestones after one turn. Each is recorded only the first
  * time it's reached, so a coincidental alignment can't register twice and
@@ -36,7 +41,8 @@ export const NO_MILESTONES: Milestones = {
 export function advanceMilestones(m: Milestones, live: CubeJSInstance, frame: (face: CrossFace) => CubeJSInstance, atMs: number): Milestones {
   const newCrossFace = m.crossFace === null ? (CROSS_FACES.find((f) => crossSolvedOn(live, f)) ?? null) : null;
   const crossFace = m.crossFace ?? newCrossFace;
-  if (!crossFace) return m;
+  // Always a fresh object of just the milestone fields: callers pass richer state (the store passes itself) and spread the result back.
+  if (!crossFace) return pickMilestones(m);
   const cube = frame(crossFace);
   const f2lJustSolved = m.f2lAtMs === null && bottomLayerSolved(cube);
   const ollJustSolved = m.ollAtMs === null && bottomLayerSolved(cube) && orientationSolved(cube);

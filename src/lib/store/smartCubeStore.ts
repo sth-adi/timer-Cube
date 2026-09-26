@@ -6,7 +6,7 @@ import type { SmartCubeCapabilities, SmartCubeConnection, SmartCubeEvent } from 
 import { Cube, newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { CROSS_FACES, relabelFacelets, relabelMove, type CrossFace } from "@/lib/smartcube/crossFrame";
 import { distrust, newStateSync, onReport, onTurn, settle } from "@/lib/smartcube/stateSync";
-import { advanceMilestones } from "@/lib/smartcube/milestones";
+import { advanceMilestones, pickMilestones } from "@/lib/smartcube/milestones";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 import type { GyroSample } from "@/lib/gyro/orientation";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
@@ -328,12 +328,12 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         const move: SmartCubeMove = isDoubleTurn
           ? { token: `${rawToken[0]}2`, timeStampMs: event.timestamp }
           : { token: rawToken, timeStampMs: event.timestamp };
-        const milestones = advanceMilestones(state, liveCube, (f) => frames[f], event.timestamp);
+        const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], event.timestamp);
 
         set((s) => ({
+          ...milestones,
           recording: true,
           startedAtMs: s.startedAtMs ?? event.timestamp,
-          ...milestones,
           moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
           liveFacelets: facelets,
         }));
