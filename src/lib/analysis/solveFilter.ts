@@ -1,6 +1,7 @@
 import { solveFinalMs, type Solve } from "@/types";
 import type { CrossFace } from "@/lib/smartcube/crossFrame";
 import { solveBreakdown } from "./solveBreakdown";
+import { analyzeMistakes } from "./mistakeRadar";
 
 /**
  * What the solve list shows about a smart-cube solve at a glance, and what
@@ -14,6 +15,8 @@ export interface SolveSummary {
   oll: string | null;
   pll: string | null;
   twoLook: boolean;
+  /** Whether the Mistake Radar's cheap replay flags anything in this solve — a knocked pair, a broken cross, an extra look, wasted turns. */
+  hasMistake: boolean;
 }
 
 export function solveSummary(solve: Solve): SolveSummary | null {
@@ -21,12 +24,16 @@ export function solveSummary(solve: Solve): SolveSummary | null {
   if (!b) return null;
   const at = (label: string) => b.rows.find((r) => r.label === label)?.totalMs ?? 0;
   const f2l = b.rows.filter((r) => r.f2lPairIndex !== null).reduce((a, r) => a + (r.totalMs ?? 0), 0);
+  const frameTokens = b.frameMoves.map((m) => m.token);
+  const times = b.frameMoves.map((m) => m.timeStampMs);
+  const mistakes = analyzeMistakes({ scramble: b.frameScramble, moves: frameTokens, timesMs: times, totalMs: b.totalMs }).mistakes;
   return {
     crossFace: b.crossFace,
     steps: [at("Cross"), f2l, at("OLL"), at("PLL")],
     oll: b.rows.find((r) => r.label === "OLL")?.caseName ?? null,
     pll: b.rows.find((r) => r.label === "PLL")?.caseName ?? null,
     twoLook: b.executions.some((e) => !e.oneLook),
+    hasMistake: mistakes.length > 0,
   };
 }
 
@@ -35,12 +42,13 @@ export interface SolveFilter {
   pll?: string | null;
   cross?: CrossFace | null;
   twoLook?: boolean;
+  mistake?: boolean;
 }
 
 export type SolveSort = "recent" | "fastest" | "slowest" | "cross" | "f2l" | "oll" | "pll";
 const STEP_INDEX: Partial<Record<SolveSort, number>> = { cross: 0, f2l: 1, oll: 2, pll: 3 };
 
-export const hasFilter = (f: SolveFilter) => !!(f.oll || f.pll || f.cross || f.twoLook);
+export const hasFilter = (f: SolveFilter) => !!(f.oll || f.pll || f.cross || f.twoLook || f.mistake);
 
 /** The solves matching the filter, in the chosen order (most recent first by default). Filters need a smart-cube breakdown. */
 export function filterAndSort(solves: readonly Solve[], filter: SolveFilter, sort: SolveSort): Solve[] {
@@ -49,7 +57,13 @@ export function filterAndSort(solves: readonly Solve[], filter: SolveFilter, sor
     out = out.filter((s) => {
       const m = solveSummary(s);
       if (!m) return false;
-      return (!filter.oll || m.oll === filter.oll) && (!filter.pll || m.pll === filter.pll) && (!filter.cross || m.crossFace === filter.cross) && (!filter.twoLook || m.twoLook);
+      return (
+        (!filter.oll || m.oll === filter.oll) &&
+        (!filter.pll || m.pll === filter.pll) &&
+        (!filter.cross || m.crossFace === filter.cross) &&
+        (!filter.twoLook || m.twoLook) &&
+        (!filter.mistake || m.hasMistake)
+      );
     });
   }
   const step = STEP_INDEX[sort];

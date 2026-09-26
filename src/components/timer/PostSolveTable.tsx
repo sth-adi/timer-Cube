@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { PostSolvePhaseRow } from "@/lib/analysis/postSolveTable";
 import type { SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
@@ -20,6 +21,7 @@ import { myAlgKey, normalizedAlg, sameAlg, type SeenAlg } from "@/lib/algorithms
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { caseRecords, type CaseRecord } from "@/lib/analysis/caseRecord";
 import { f2lCaseStats, type F2lCaseStat } from "@/lib/analysis/f2lCaseStats";
+import { recognitionStats, type RecognitionStat } from "@/lib/analysis/caseHistory";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
@@ -60,6 +62,8 @@ interface RowView {
   /** This F2L pair's own stable case identity (for f2lCaseStats), and how many turns it actually took. */
   f2lKey: string | null;
   f2lTurns: number | null;
+  /** Where `caseName` deep-links on /cases — absent for the Cross row, which isn't a case. */
+  caseLink: { group: "OLL" | "PLL" | "F2L"; key: string } | null;
 }
 
 function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[], crossFace: CrossFace): RowView {
@@ -71,6 +75,7 @@ function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[
       icon: <CrossGlyph color={CROSS_FACE_HEX[crossFace]} />,
       f2lKey: null,
       f2lTurns: null,
+      caseLink: null,
     };
   }
   if (row.f2lPairIndex !== null) {
@@ -83,6 +88,7 @@ function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[
       icon: f2l ? <F2lCaseIcon facelets={f2l.facelets} pairFacelets={f2l.pairFacelets} className={ICON} /> : <span className={ICON} />,
       f2lKey: f2l?.key ?? null,
       f2lTurns,
+      caseLink: f2l ? { group: "F2L", key: f2l.key } : null,
     };
   }
   const algCase = row.group && row.caseName ? findCase(row.group, row.caseName) : undefined;
@@ -96,6 +102,7 @@ function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[
     ),
     f2lKey: null,
     f2lTurns: null,
+    caseLink: row.group && row.caseName ? { group: row.group, key: row.caseName } : null,
   };
 }
 
@@ -180,6 +187,23 @@ function F2lEfficiencyLine({ turns, stat }: { turns: number; stat?: F2lCaseStat 
 }
 
 /**
+ * Under an OLL/PLL/F2L row: how long you paused to recognise this exact case
+ * here, against how long you usually take for it — the phase-level "vs pace"
+ * column already says this step ran fast or slow overall; this says whether
+ * that was the read or the turning, and whether it's this case in particular
+ * that always costs you a beat.
+ */
+function RecognitionLine({ pausedMs, stat }: { pausedMs: number; stat?: RecognitionStat }) {
+  if (pausedMs <= 0 || !stat || stat.count < 3) return null;
+  const extraMs = pausedMs - stat.meanMs;
+  return (
+    <span className={cn("mt-0.5 block text-[10px] leading-tight", extraMs >= 500 ? "text-warning" : "text-muted-2")}>
+      recognised in {secs(pausedMs)}s · usually {secs(stat.meanMs)}s for this
+    </span>
+  );
+}
+
+/**
  * The post-solve breakdown: one row per step (each F2L pair in the order you
  * solved it), with the case you had, the time, and a bar split into
  * recognising the case (light) and turning through it (solid). With enough
@@ -211,6 +235,7 @@ export function PostSolveTable({
   const allSolves = useSessionStore((s) => s.allSolves);
   const caseHistory = useMemo(() => caseRecords(allSolves), [allSolves]);
   const f2lHistory = useMemo(() => f2lCaseStats(allSolves), [allSolves]);
+  const recogHistory = useMemo(() => recognitionStats(allSolves), [allSolves]);
   const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves, crossFace)), [rows, scramble, moves, crossFace]);
   const max = Math.max(1, ...rows.map((r) => r.totalMs ?? 0));
   // The fewest turns a computer could ever need for this exact cross — the
@@ -225,11 +250,12 @@ export function PostSolveTable({
   }, [scramble]);
   const crossRow = rows.find((r) => r.label === "Cross");
   const crossTurns = crossRow?.atMs != null ? moves.filter((m) => m.timeStampMs <= crossRow.atMs!).length : null;
+  const router = useRouter();
 
   return (
     <div className="w-full rounded-xl bg-bg-panel-2 p-3">
       <div className="flex flex-col gap-2.5">
-        {views.map(({ row, icon, caseName, f2lKey, f2lTurns }, i) => {
+        {views.map(({ row, icon, caseName, f2lKey, f2lTurns, caseLink }, i) => {
           const look = row.recognitionMs ?? 0;
           const turn = row.executionMs ?? row.totalMs ?? 0;
           const pace = paceFor(row.totalMs, baseline?.segments[i] ?? null);
@@ -239,7 +265,19 @@ export function PostSolveTable({
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <p className="min-w-0 text-xs leading-tight" title={caseName ?? undefined}>
                   <span className={cn("font-semibold", row.totalMs !== null ? "text-foreground" : "text-muted-2")}>{row.label}</span>
-                  {caseName && <span className="block truncate text-[11px] text-muted-2">{caseName}</span>}
+                  {caseName &&
+                    (caseLink ? (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/cases?case=${encodeURIComponent(caseLink.key)}&group=${caseLink.group}`)}
+                        className="block max-w-full truncate text-left text-[11px] text-muted-2 underline decoration-dotted underline-offset-2 hover:text-accent"
+                        title={`See every time you've had ${caseName}`}
+                      >
+                        {caseName}
+                      </button>
+                    ) : (
+                      <span className="block truncate text-[11px] text-muted-2">{caseName}</span>
+                    ))}
                   {row.group &&
                     (() => {
                       const exec = executions.find((e) => e.step === row.group);
@@ -247,6 +285,9 @@ export function PostSolveTable({
                     })()}
                   {row.label === "Cross" && crossTurns !== null && crossOptimal !== null && <CrossEfficiencyLine turns={crossTurns} optimal={crossOptimal} />}
                   {f2lKey && f2lTurns !== null && <F2lEfficiencyLine turns={f2lTurns} stat={f2lHistory.get(f2lKey)} />}
+                  {caseLink && row.recognitionMs !== null && (
+                    <RecognitionLine pausedMs={row.recognitionMs} stat={recogHistory.get(`${caseLink.group}:${caseLink.key}`)} />
+                  )}
                 </p>
                 <div className="flex h-1.5 overflow-hidden rounded-full bg-bg-elevated">
                   <div className="h-full bg-warning/50" style={{ width: `${(look / max) * 100}%` }} />

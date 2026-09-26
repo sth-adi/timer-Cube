@@ -1,7 +1,8 @@
+import type { Solve } from "@/types";
 import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { bottomLayerSolved, f2lPairSolved, orientationSolved } from "@/lib/solvers/oll";
 import { isPllSkip, recognizeOll, recognizePll, toLibraryFrame } from "@/lib/analysis/recognize";
-import { crossFaceOf, pairColors, toCrossFrame } from "@/lib/smartcube/crossFrame";
+import { analysisFrame, crossFaceOf, pairColors, toCrossFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Mistake Radar: replays a smart-cube solve move by move against its
@@ -345,4 +346,13 @@ export function aggregateMistakes(reports: readonly MistakeReport[]): MistakeHab
   return [...by.values()]
     .map((h) => ({ ...h, costPerSolveMs: h.totalCostMs / n }))
     .sort((a, b) => b.totalCostMs - a.totalCostMs);
+}
+
+/** `aggregateMistakes`, straight from a solve list — the replay-and-roll-up every other caller of `aggregateMistakes` repeats. */
+export function mistakeHabits(solves: readonly Solve[]): MistakeHabit[] {
+  const reports = solves
+    .filter((x) => x.scramble && x.reconstruction && x.moveTimestamps && x.penalty !== "dnf")
+    .map(analysisFrame)
+    .map((x) => analyzeMistakes({ scramble: x.scramble, moves: x.reconstruction!.split(/\s+/).filter(Boolean), timesMs: x.moveTimestamps!, totalMs: x.timeMs }));
+  return aggregateMistakes(reports);
 }

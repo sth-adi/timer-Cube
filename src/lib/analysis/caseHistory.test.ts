@@ -6,7 +6,7 @@ import { OLL_CASES } from "@/lib/algorithms/ollData";
 import { PLL_CASES } from "@/lib/algorithms/pllData";
 import { invertAlg } from "@/lib/algorithms/algUtils";
 import type { Solve } from "@/types";
-import { caseStats, solveCases } from "./caseHistory";
+import { caseStats, recognitionStats, solveCases } from "./caseHistory";
 
 const SCRAMBLE = "R2 U' B2 D' L2 D2 R2 U' F2 U L' B' R D F' U2 B R U2 F'";
 /** The algorithm library keeps the last layer on U; the solver's frame has it on D (an x2 away). */
@@ -94,5 +94,18 @@ describe("caseStats", () => {
     expect(stats.map((s) => s.key)).toEqual(["Sune", "H"]);
     expect(stats[0]).toMatchObject({ count: 2, share: 0.5, recognitionMs: 500, executionMs: 900, totalMs: 1400, bestTotalMs: 1200, lastSeen: 3 });
     expect(stats[0].occurrences.map((o) => o.date)).toEqual([3, 1]);
+  });
+});
+
+describe("recognitionStats", () => {
+  it("averages recognition time per case across raw solves, keyed by group:case", () => {
+    const solves = [
+      timedSolve("s10", 0, 0, 400, 300).solve,
+      timedSolve("s20", 0, 0, 800, 300).solve,
+      timedSolve("s30", 0, 0, 1200, 300).solve,
+    ];
+    const oll = OLL_CASES.filter((c) => plain(c.alg))[0];
+    const stats = recognitionStats(solves);
+    expect(stats.get(`OLL:${oll.name}`)).toMatchObject({ count: 3, meanMs: 800 });
   });
 });

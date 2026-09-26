@@ -1,7 +1,7 @@
 "use client";
 
 import { Radar, ShieldCheck } from "lucide-react";
-import type { MistakeKind, MistakeReport } from "@/lib/analysis/mistakeRadar";
+import type { MistakeHabit, MistakeKind, MistakeReport } from "@/lib/analysis/mistakeRadar";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
@@ -44,8 +44,20 @@ function ScoreRing({ score }: { score: number }) {
  * solve you'd have had without them — the most motivating framing of
  * "what went wrong" there is.
  */
-export function MistakeRadarCard({ report, totalMs, className }: { report: MistakeReport; totalMs: number; className?: string }) {
+export function MistakeRadarCard({
+  report,
+  totalMs,
+  habits,
+  className,
+}: {
+  report: MistakeReport;
+  totalMs: number;
+  /** This mistake kind's track record across your other solves — so a flagged mistake reads as "you do this" or "one-off", not just this once. */
+  habits?: readonly MistakeHabit[];
+  className?: string;
+}) {
   const { mistakes } = report;
+  const habitFor = (kind: MistakeKind) => habits?.find((h) => h.kind === kind && h.solvesAffected >= 3);
   return (
     <div className={cn("card flex w-full flex-col gap-3 rounded-xl p-3", className)}>
       <div className="flex items-center gap-3">
@@ -83,18 +95,26 @@ export function MistakeRadarCard({ report, totalMs, className }: { report: Mista
           </div>
 
           <ul className="flex flex-col gap-1.5">
-            {mistakes.map((m, i) => (
-              <li key={i} className="flex items-start gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-2">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: KIND_COLOR[m.kind] }} />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <p className="text-[11px] font-semibold text-foreground">
-                    {m.title} <span className="font-normal text-muted-2">· {m.phase} · {formatTime(m.atMs)}</span>
-                  </p>
-                  <p className="text-[11px] text-muted">{m.detail}</p>
-                </div>
-                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-danger">−{(m.costMs / 1000).toFixed(2)}</span>
-              </li>
-            ))}
+            {mistakes.map((m, i) => {
+              const habit = habitFor(m.kind);
+              return (
+                <li key={i} className="flex items-start gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-2">
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: KIND_COLOR[m.kind] }} />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <p className="text-[11px] font-semibold text-foreground">
+                      {m.title} <span className="font-normal text-muted-2">· {m.phase} · {formatTime(m.atMs)}</span>
+                    </p>
+                    <p className="text-[11px] text-muted">{m.detail}</p>
+                    {habit && (
+                      <p className="mt-0.5 text-[10px] text-warning">
+                        A habit — {habit.solvesAffected} of your recent solves had this, ~{formatTime(habit.costPerSolveMs)} a solve on average.
+                      </p>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-danger">−{(m.costMs / 1000).toFixed(2)}</span>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

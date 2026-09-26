@@ -25,7 +25,7 @@ import { GyroTwin } from "@/components/lab/GyroTwin";
 import { GyroReconstructionCard } from "@/components/lab/GyroReconstructionCard";
 import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
 import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
-import { analyzeMistakes } from "@/lib/analysis/mistakeRadar";
+import { analyzeMistakes, mistakeHabits } from "@/lib/analysis/mistakeRadar";
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
 import { inspectionReport } from "@/lib/inspection/report";
@@ -489,6 +489,7 @@ export function SmartCubeTimer() {
         : null,
     [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
   );
+  const mistakeHabitHistory = useMemo(() => mistakeHabits(allSolves), [allSolves]);
 
   // The just-saved solve, rebuilt the way any past solve is: where its time went, and the written reconstruction.
   const savedSolve = useSessionStore((s) => (finishedScramble ? s.solves.find((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : undefined));
@@ -828,7 +829,7 @@ export function SmartCubeTimer() {
 
               {recon && <ReconstructionCard recon={recon} />}
 
-              {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} />}
+              {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} habits={mistakeHabitHistory} />}
 
               {inspection && <InspectionGradeCard report={inspection} />}
 

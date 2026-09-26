@@ -41,4 +41,11 @@ describe("filtering and sorting solves", () => {
     expect(byF2l[2]).toBe("k");
     expect(presentCases(all).crosses.sort()).toEqual(["D", "U"]);
   }, 60_000);
+
+  it("filters by whether the Mistake Radar flagged anything, skipping keyboard solves", () => {
+    expect(typeof solveSummary(a)!.hasMistake).toBe("boolean");
+    const flagged = filterAndSort(all, { mistake: true }, "recent");
+    expect(flagged.every((s) => solveSummary(s)!.hasMistake)).toBe(true);
+    expect(flagged.map((s) => s.id)).not.toContain("k");
+  }, 60_000);
 });

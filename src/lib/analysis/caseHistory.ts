@@ -108,6 +108,33 @@ export function solveCases(raw: Solve): CaseOccurrence[] {
 
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
+export interface RecognitionStat {
+  count: number;
+  meanMs: number;
+}
+
+/**
+ * How long you usually pause to recognise each case, across every group at
+ * once — keyed the same way `myAlgKey` keys a case ("OLL:Sune", or an F2L
+ * case's own stable key), so a single pause in the post-solve table can be
+ * judged against your own norm for that exact case, not a flat threshold.
+ */
+export function recognitionStats(solves: readonly Solve[]): Map<string, RecognitionStat> {
+  const totals = new Map<string, { sum: number; count: number }>();
+  for (const solve of solves) {
+    for (const o of solveCases(solve)) {
+      const key = `${o.group}:${o.key}`;
+      const cur = totals.get(key) ?? { sum: 0, count: 0 };
+      cur.sum += o.recognitionMs;
+      cur.count += 1;
+      totals.set(key, cur);
+    }
+  }
+  const out = new Map<string, RecognitionStat>();
+  for (const [key, v] of totals) out.set(key, { count: v.count, meanMs: v.sum / v.count });
+  return out;
+}
+
 /** Per-case stats for one group, most frequent first. `total` is how many solves (OLL/PLL) or pairs (F2L) the shares are out of. */
 export function caseStats(occurrences: readonly CaseOccurrence[], group: CaseGroup, total: number): CaseStat[] {
   const byKey = new Map<string, CaseOccurrence[]>();

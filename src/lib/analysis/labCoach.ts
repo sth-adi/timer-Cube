@@ -1,11 +1,10 @@
 import type { Solve } from "@/types";
 import { metricsFor, quantile, type SolveMetrics } from "@/lib/analytics/solveMetrics";
-import { aggregateMistakes, analyzeMistakes, type MistakeHabit } from "@/lib/analysis/mistakeRadar";
+import { mistakeHabits, type MistakeHabit } from "@/lib/analysis/mistakeRadar";
 import { analyzeF2lConsistency, type F2lConsistencyReport } from "@/lib/analysis/f2lConsistency";
 import { analyzeAlgSpeed, type AlgSpeedReport } from "@/lib/analysis/algSpeed";
 import { analyzeLookahead, type LookaheadReport } from "@/lib/analysis/lookahead";
 import { defaultTargetMs, planGoal, typicalSolveMs, type GoalPlan } from "@/lib/analysis/goalPlanner";
-import { analysisFrame } from "@/lib/smartcube/crossFrame";
 
 /**
  * Coach: the Lab has dozens of reports; this reads the ones that can put a
@@ -150,9 +149,5 @@ export function buildCoach({ metrics, habits, f2l, alg, look }: CoachInputs): Co
 export function analyzeCoach(solves: readonly Solve[]): CoachReport | null {
   const metrics = metricsFor(solves);
   if (metrics.length < MIN_SOLVES) return null;
-  const reports = solves
-    .filter((x) => x.scramble && x.reconstruction && x.moveTimestamps && x.penalty !== "dnf")
-    .map(analysisFrame)
-    .map((x) => analyzeMistakes({ scramble: x.scramble, moves: x.reconstruction!.split(/\s+/).filter(Boolean), timesMs: x.moveTimestamps!, totalMs: x.timeMs }));
-  return buildCoach({ metrics, habits: aggregateMistakes(reports), f2l: analyzeF2lConsistency(solves), alg: analyzeAlgSpeed(solves), look: analyzeLookahead(solves) });
+  return buildCoach({ metrics, habits: mistakeHabits(solves), f2l: analyzeF2lConsistency(solves), alg: analyzeAlgSpeed(solves), look: analyzeLookahead(solves) });
 }

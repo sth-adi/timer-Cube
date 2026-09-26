@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, Shapes } from "lucide-react";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
@@ -28,10 +29,16 @@ function Icon({ stat, className }: { stat: Pick<CaseStat, "group" | "name" | "f2
   return c ? <CaseIcon setupAlg={invertAlg(c.alg)} kind={stat.group} className={cn(className, "overflow-hidden rounded-[4px]")} /> : null;
 }
 
-function CaseRow({ stat, maxTotal }: { stat: CaseStat; maxTotal: number }) {
-  const [open, setOpen] = useState(false);
+function CaseRow({ stat, maxTotal, deepLinked }: { stat: CaseStat; maxTotal: number; deepLinked?: boolean }) {
+  const [open, setOpen] = useState(!!deepLinked);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (deepLinked) ref.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Only on the deep link's own arrival — not every time this row happens to re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
-    <div className="card rounded-xl">
+    <div ref={ref} className={cn("card rounded-xl", deepLinked && "ring-2 ring-accent")}>
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 p-3 text-left">
         <Icon stat={stat} className="h-11 w-11 shrink-0" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -82,8 +89,23 @@ function CaseRow({ stat, maxTotal }: { stat: CaseStat; maxTotal: number }) {
  * comes up, and how long you take to recognise it versus turn it.
  */
 export default function CasesPage() {
+  return (
+    <Suspense fallback={null}>
+      <CasesPageInner />
+    </Suspense>
+  );
+}
+
+function CasesPageInner() {
   const allSolves = useSessionStore((s) => s.allSolves);
-  const [group, setGroup] = useState<CaseGroup>("OLL");
+  const searchParams = useSearchParams();
+  // A deep link from a recap or the solve list — e.g. /cases?case=Sune&group=OLL —
+  // opens straight to that case's own history instead of the group's overview.
+  const linkedCase = searchParams.get("case");
+  const [group, setGroup] = useState<CaseGroup>(() => {
+    const g = searchParams.get("group");
+    return g === "OLL" || g === "PLL" || g === "F2L" ? g : "OLL";
+  });
   const [sort, setSort] = useState<SortKey>("count");
   const [showUnseen, setShowUnseen] = useState(false);
 
@@ -151,7 +173,7 @@ export default function CasesPage() {
 
           <div className="flex flex-col gap-2">
             {sorted.map((s) => (
-              <CaseRow key={s.key} stat={s} maxTotal={maxTotal} />
+              <CaseRow key={s.key} stat={s} maxTotal={maxTotal} deepLinked={linkedCase === s.key} />
             ))}
           </div>
 

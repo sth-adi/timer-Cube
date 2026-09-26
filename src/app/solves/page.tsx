@@ -185,6 +185,18 @@ export default function SolvesPage() {
               >
                 Two-look
               </button>
+              <button
+                type="button"
+                onClick={() => setFilter((f) => ({ ...f, mistake: !f.mistake }))}
+                aria-pressed={!!filter.mistake}
+                title="Solves the Mistake Radar flagged — a knocked pair, a broken cross, an extra look, wasted turns"
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  filter.mistake ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+                )}
+              >
+                Has a mistake
+              </button>
               {filtered && (
                 <button
                   type="button"

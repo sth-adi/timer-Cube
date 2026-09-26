@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { aggregateMistakes, analyzeMistakes } from "./mistakeRadar";
+import type { Solve } from "@/types";
+import { aggregateMistakes, analyzeMistakes, mistakeHabits } from "./mistakeRadar";
 
 /** Inverse of a move sequence — scrambling with inv(W) makes W an exact solution. */
 function inv(seq: string): string {
@@ -102,5 +103,29 @@ describe("aggregateMistakes", () => {
     expect(wasted.occurrences).toBe(2);
     expect(wasted.solvesAffected).toBe(1);
     expect(wasted.costPerSolveMs).toBeCloseTo(wasted.totalCostMs / 2);
+  });
+});
+
+function saved(id: string, phrases: string[], date: number): Solve {
+  const { scramble, moves, timesMs, totalMs } = solve(phrases);
+  return { id, sessionId: "x", penalty: "none", scramble, reconstruction: moves.join(" "), moveTimestamps: timesMs, timeMs: totalMs, date };
+}
+
+describe("mistakeHabits", () => {
+  it("replays saved solves and rolls their mistakes into habits, oldest data first", () => {
+    const twoLookOll = ["R D R' D'", SUNE, `D ${SUNE}`];
+    const solves = [0, 1, 2].map((k) => saved(`s${k}`, twoLookOll, k * 60_000));
+    const habits = mistakeHabits(solves);
+    const extra = habits.find((h) => h.kind === "extra-oll-look")!;
+    expect(extra.solvesAffected).toBe(3);
+    expect(extra.occurrences).toBe(3);
+  });
+
+  it("skips dnf and keyboard (no-reconstruction) solves, without throwing", () => {
+    const dnf: Solve = { ...saved("d", ["R D R' D'"], 0), penalty: "dnf" };
+    const keyboard: Solve = { id: "k", sessionId: "x", penalty: "none", scramble: "R", timeMs: 9000, date: 0 };
+    expect(() => mistakeHabits([dnf, keyboard])).not.toThrow();
+    expect(mistakeHabits([dnf, keyboard])).toEqual([]);
+    expect(mistakeHabits([])).toEqual([]);
   });
 });
