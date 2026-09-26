@@ -42,6 +42,11 @@ describe("Post-solve baseline", () => {
     expect(baseline.segments[0]!.medianMs).toBeGreaterThan(1900);
     expect(baseline.segments[0]!.medianMs).toBeLessThan(2100);
     expect(baseline.segments[0]!.goodMs).toBeLessThanOrEqual(baseline.segments[0]!.medianMs);
+    // Whole phases too, for the live splits: F2L is the four pairs together.
+    expect(baseline.phases).toHaveLength(4);
+    const f2lMedian = baseline.phases[1]!.medianMs;
+    expect(f2lMedian).toBeGreaterThan(BASE[1] + BASE[2] + BASE[3] + BASE[4]);
+    expect(paceFor(f2lMedian * 1.5, baseline.phases[1])).toBe("slow");
   });
 
   it("leaves a segment null if too many solves skipped it (e.g. OLL skips), even with plenty of solves overall", () => {

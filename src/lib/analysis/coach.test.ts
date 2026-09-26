@@ -73,11 +73,24 @@ describe("generateCoachReport", () => {
       baseInput({
         phases: [
           { label: "Cross", totalMs: 8000, recognitionMs: null, executionMs: null },
-          { label: "F2L 1", totalMs: 3000, recognitionMs: 400, executionMs: 2600 },
+          { label: "F2L 1", totalMs: 3000, recognitionMs: 900, executionMs: 2100 },
         ],
       }),
     );
     expect(report.focusPhase).toBe("F2L 1");
+  });
+
+  it("doesn't call a pause shorter than a real look a recognition problem", () => {
+    const report = generateCoachReport(
+      baseInput({
+        phases: [
+          { label: "Cross", totalMs: 1500, recognitionMs: 0, executionMs: 1500 },
+          { label: "PLL", totalMs: 2000, recognitionMs: 230, executionMs: 1770 },
+        ],
+      }),
+    );
+    expect(report.focusPhase).toBeNull();
+    expect(report.paragraphs.join(" ")).not.toMatch(/recogni/i);
   });
 
   it("picks a PB headline whenever isNewPB is true, regardless of pace vs. average", () => {

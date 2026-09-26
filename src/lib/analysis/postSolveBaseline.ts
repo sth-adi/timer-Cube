@@ -20,6 +20,8 @@ export interface PhaseBaseline {
 export interface PostSolveBaseline {
   /** [cross, pair1, pair2, pair3, pair4, oll, pll] — index i matches a post-solve row at position i. */
   segments: (PhaseBaseline | null)[];
+  /** [cross, F2L, OLL, PLL] as whole phases — for the live splits during a solve. */
+  phases: (PhaseBaseline | null)[];
 }
 
 export const MIN_SOLVES = 15;
@@ -33,7 +35,11 @@ export function buildPostSolveBaseline(metrics: readonly SolveMetrics[]): PostSo
     const xs = metrics.map((m) => m.segments[i]).filter((v): v is number => Number.isFinite(v) && v > 0);
     segments.push(xs.length < MIN_SOLVES ? null : { medianMs: quantile(xs, 0.5), goodMs: quantile(xs, 0.25) });
   }
-  return { segments };
+  const phases: (PhaseBaseline | null)[] = [0, 1, 2, 3].map((i) => {
+    const xs = metrics.map((m) => m.phases[i]).filter((v) => Number.isFinite(v) && v > 0);
+    return xs.length < MIN_SOLVES ? null : { medianMs: quantile(xs, 0.5), goodMs: quantile(xs, 0.25) };
+  });
+  return { segments, phases };
 }
 
 export type Pace = "fast" | "normal" | "slow";

@@ -58,7 +58,7 @@ import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
 import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
 import { computeSessionStats, normalSolves } from "@/lib/stats/stats";
 import { metricsFor } from "@/lib/analytics/solveMetrics";
-import { buildPostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
+import { buildPostSolveBaseline, paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
@@ -101,22 +101,34 @@ function PhaseSplitsRow({
   durations,
   currentPhaseIndex,
   liveCurrentMs,
+  baseline,
 }: {
   durations: (number | null)[];
   currentPhaseIndex: number;
   liveCurrentMs: number | null;
+  /** Your usual time per phase: a finished phase reads green when it was one of your good ones, amber when slow. */
+  baseline?: PostSolveBaseline | null;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {PHASE_LABELS_4.map((label, i) => {
         const done = durations[i];
         const isCurrent = i === currentPhaseIndex;
+        const pace = paceFor(done, baseline?.phases[i] ?? null);
+        // Already past your usual for this phase while it's still running: worth knowing now.
+        const overdue = isCurrent && liveCurrentMs !== null && (baseline?.phases[i]?.medianMs ?? Infinity) * 1.3 < liveCurrentMs;
         return (
           <span
             key={label}
             className={cn(
               "rounded-full px-2.5 py-1 text-[11px] font-medium tabular-nums",
-              isCurrent ? "bg-accent-soft text-accent" : done !== null ? "bg-bg-panel-2 text-muted" : "bg-bg-panel-2 text-muted-2",
+              isCurrent
+                ? overdue
+                  ? "bg-warning/15 text-warning"
+                  : "bg-accent-soft text-accent"
+                : done !== null
+                  ? cn("bg-bg-panel-2", pace === "fast" ? "text-success" : pace === "slow" ? "text-warning" : "text-muted")
+                  : "bg-bg-panel-2 text-muted-2",
             )}
           >
             {label} {done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
@@ -691,7 +703,7 @@ export function SmartCubeTimer() {
               Stop this solve…
             </button>
           )}
-          <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} />
+          <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} baseline={postSolveBaseline} />
           <LiveProjection finished={false} finalMs={elapsedMs} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
           <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />

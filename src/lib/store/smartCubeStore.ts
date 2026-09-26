@@ -186,7 +186,11 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
     }
     set({ connecting: true, error: null });
     try {
-      const { connectSmartCube } = await import("smartcube-web-bluetooth");
+      // A test seam: browser tests define window.__smartCubeTestDriver (same
+      // connectSmartCube shape) to drive the whole solving flow with scripted
+      // turns. Never set by the app itself.
+      const testDriver = (globalThis as { __smartCubeTestDriver?: { connectSmartCube: typeof import("smartcube-web-bluetooth").connectSmartCube } }).__smartCubeTestDriver;
+      const { connectSmartCube } = testDriver ?? (await import("smartcube-web-bluetooth"));
       // enableAddressSearch lets MoYu32/QiYi cubes resolve their AES MAC
       // address from a bounded set of candidates when the advertisement
       // itself doesn't hand it over — slower, but this app has no manual

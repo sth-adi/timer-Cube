@@ -59,6 +59,9 @@ const SLOW_HEADLINES = ["Slower than your usual pace.", "A rough one, off your n
 const STEADY_HEADLINES = ["A solid, on-pace solve.", "Right around your usual pace.", "A typical solve for you — steady."] as const;
 const NO_HISTORY_HEADLINES = ["First real look at this solve.", "Here's how that one broke down."] as const;
 
+/** A pause before a step's first turn shorter than this isn't worth calling a recognition problem. */
+export const RECOGNITION_FLAG_MS = 500;
+
 const BOTTLENECK_OPENERS = [
   (label: string, ms: number) => `${label} is where the time went — a ${fmtSec(ms)} pause before you started turning.`,
   (label: string, ms: number) => `The biggest gap was recognizing ${label}: ${fmtSec(ms)} of just looking before the first move.`,
@@ -113,7 +116,8 @@ export function generateCoachReport(input: CoachInput): CoachReport {
   }
 
   const knownPhases = phases.filter((p): p is CoachPhaseStat & { totalMs: number } => p.totalMs !== null && p.totalMs > 0);
-  const withReco = knownPhases.filter((p) => p.recognitionMs !== null && p.recognitionMs > 150);
+  // Only a real look counts as a recognition problem: under half a second is just the gap between turns.
+  const withReco = knownPhases.filter((p) => p.recognitionMs !== null && p.recognitionMs >= RECOGNITION_FLAG_MS);
   const bottleneck = withReco.length > 0 ? withReco.reduce((a, b) => (b.recognitionMs! > a.recognitionMs! ? b : a)) : null;
 
   let focusPhase: string | null = null;
