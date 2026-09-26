@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Clock, Gauge, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Clapperboard, Clock, Gauge, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { CAMERA_LATITUDE, CAMERA_LONGITUDE } from "@/components/scramble/CubeViewer";
 import { cn } from "@/lib/utils/cn";
+import { readingMs, type Cue } from "@/lib/replay/directorsCut";
 
 interface TimedCubePlayerProps {
   /** The alg that plays on the player's own timeline. */
@@ -22,6 +23,32 @@ interface TimedCubePlayerProps {
   hasRealTiming: boolean;
   /** Applied to the cube viewport itself, not the controls beneath it. */
   className?: string;
+  /**
+   * Director's Cut: commentary cues keyed to move indices in `alg`. Playback
+   * holds on each one while it's read out (spoken when `voice` is on), then
+   * carries on by itself.
+   */
+  cues?: Cue[];
+  voice?: boolean;
+}
+
+const CUE_TONE: Record<Cue["tone"], string> = { good: "text-success", bad: "text-danger", neutral: "text-accent" };
+
+function speak(line: string): Promise<void> {
+  return new Promise((resolve) => {
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    // Never hang on a voice that doesn't report back: the reading time (doubled) is the ceiling.
+    const safety = window.setTimeout(resolve, synth ? readingMs(line) * 2 : readingMs(line));
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(line);
+    u.rate = 1.05;
+    u.onend = u.onerror = () => {
+      window.clearTimeout(safety);
+      resolve();
+    };
+    synth.speak(u);
+  });
 }
 
 const SPEEDS = [0.5, 1, 2, 4] as const;
@@ -38,7 +65,7 @@ const POLL_MS = 80;
  * (`play()`, `pause()`, the `timestamp` setter), not simulated by swapping
  * `alg` in and out — that doesn't animate anything on its own.
  */
-export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className }: TimedCubePlayerProps) {
+export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true }: TimedCubePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
@@ -52,6 +79,15 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   const audioCtxRef = useRef<any>(null);
   const leafStartsRef = useRef<number[]>([]);
   const lastPolledPosRef = useRef(0);
+  const [caption, setCaption] = useState<Cue | null>(null);
+  const firedRef = useRef(new Set<number>());
+  const holdRef = useRef<number | null>(null);
+  // The poll loop reads the cue helpers through this ref so it always sees the current cues.
+  const directorRef = useRef<{ dueCue: (prev: number, t: number) => Cue | null; hold: (cue: Cue) => void }>({ dueCue: () => null, hold: () => {} });
+  const voiceRef = useRef(voice);
+  useEffect(() => {
+    voiceRef.current = voice;
+  }, [voice]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,7 +206,19 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     const tick = async () => {
       const t: unknown = await playerRef.current?.experimentalGet.timestamp();
       if (cancelled) return;
+      if (holdRef.current !== null) {
+        timer = window.setTimeout(tick, POLL_MS);
+        return;
+      }
       if (typeof t === "number") {
+        const cue = directorRef.current.dueCue(lastPolledPosRef.current, t);
+        if (cue) {
+          lastPolledPosRef.current = t;
+          setPositionMs(t);
+          directorRef.current.hold(cue);
+          timer = window.setTimeout(tick, POLL_MS);
+          return;
+        }
         if (soundOn) {
           const prev = lastPolledPosRef.current;
           for (const start of leafStartsRef.current) {
@@ -195,10 +243,57 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
 
   const atEnd = durationMs > 0 && positionMs >= durationMs - 1;
 
+  /** The first not-yet-read cue whose move starts in (prev, t] — or at the very start. */
+  function dueCue(prev: number, t: number): Cue | null {
+    if (!cues?.length) return null;
+    const starts = leafStartsRef.current;
+    for (const c of cues) {
+      if (firedRef.current.has(c.moveIndex)) continue;
+      const at = starts[c.moveIndex];
+      if (at === undefined) continue;
+      if ((at > prev || (prev === 0 && at === 0)) && at <= t) return c;
+    }
+    return null;
+  }
+
+  /** Pause on a cue, read it, then carry on — unless they pressed pause meanwhile. */
+  function hold(cue: Cue) {
+    const player = playerRef.current;
+    firedRef.current.add(cue.moveIndex);
+    setCaption(cue);
+    player?.pause();
+    const token = cue.moveIndex;
+    holdRef.current = token;
+    const done = voiceRef.current ? speak(cue.line) : new Promise<void>((r) => window.setTimeout(r, readingMs(cue.line)));
+    void done.then(() => {
+      if (holdRef.current !== token) return;
+      holdRef.current = null;
+      playerRef.current?.play();
+    });
+  }
+
+  useEffect(() => {
+    directorRef.current = { dueCue, hold };
+  });
+
+  const stopHold = () => {
+    holdRef.current = null;
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+  };
+
+  /** Cues before `pos` count as already read (after a scrub or restart). */
+  const resetCues = (pos: number) => {
+    const starts = leafStartsRef.current;
+    firedRef.current = new Set((cues ?? []).filter((c) => (starts[c.moveIndex] ?? 0) < pos).map((c) => c.moveIndex));
+  };
+
+  useEffect(() => () => void (typeof window !== "undefined" && window.speechSynthesis?.cancel()), []);
+
   const onPlayPause = () => {
     const player = playerRef.current;
     if (!player) return;
     if (playing) {
+      stopHold();
       player.pause();
       setPlaying(false);
       return;
@@ -207,16 +302,23 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       player.timestamp = 0;
       setPositionMs(0);
       lastPolledPosRef.current = 0;
+      resetCues(0);
+      setCaption(null);
     }
-    player.play();
+    // A cue on the very first move is read before anything turns.
+    const first = lastPolledPosRef.current === 0 ? dueCue(0, 0) : null;
     setPlaying(true);
+    if (first) hold(first);
+    else player.play();
   };
 
   const onScrub = (value: number) => {
     const player = playerRef.current;
     if (!player) return;
+    stopHold();
     player.pause();
     player.timestamp = value;
+    resetCues(value);
     setPlaying(false);
     setPositionMs(value);
     lastPolledPosRef.current = value;
@@ -236,6 +338,21 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   return (
     <div className="flex flex-col items-center gap-1.5">
       <div ref={containerRef} className={className} />
+
+      {cues && cues.length > 0 && (
+        <div className="flex min-h-[3.25rem] w-full flex-col items-center justify-center rounded-lg bg-bg-panel-2 px-3 py-1.5 text-center" aria-live="polite">
+          {caption ? (
+            <>
+              <p className={cn("text-[11px] font-bold uppercase tracking-wide", CUE_TONE[caption.tone])}>{caption.title}</p>
+              <p className="text-xs leading-snug text-foreground">{caption.line}</p>
+            </>
+          ) : (
+            <p className="flex items-center gap-1.5 text-[11px] text-muted">
+              <Clapperboard size={12} className="text-accent" /> Director&apos;s Cut — press play for the narrated replay
+            </p>
+          )}
+        </div>
+      )}
 
       {ready && durationMs > 0 && (
         <div className="flex w-full flex-col items-center gap-1.5">

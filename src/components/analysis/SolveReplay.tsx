@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { AlertTriangle, CheckCircle2, Info, Lightbulb, Play } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clapperboard, Film, Info, Lightbulb, Mic, MicOff, Play } from "lucide-react";
 import { findingsForPhase, type Finding, type PhaseAnalysis, type Severity } from "@/lib/analysis/analyze";
 import { FALLBACK_GAP_MS, gapsFromTimestamps } from "@/lib/analysis/replayGaps";
 import { cn } from "@/lib/utils/cn";
+import { buildDirectorsCut } from "@/lib/replay/directorsCut";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
@@ -34,6 +35,8 @@ interface SolveReplayProps {
    * replay plays back at the cuber's actual pace instead of a level tempo.
    */
   moveTimestamps?: number[];
+  /** The solve's time, for the Director's Cut sign-off. */
+  totalMs?: number;
 }
 
 /** A neutral, non-alarming line for a phase that has no specific finding attached. */
@@ -60,8 +63,16 @@ function fallbackCaption(phase: PhaseAnalysis): string {
  * play/pause/scrub controls pace themselves against how long the cuber
  * really took between moves instead of a uniform per-move tempo.
  */
-export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps }: SolveReplayProps) {
+export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs }: SolveReplayProps) {
   const [selected, setSelected] = useState<number>(-1);
+  const [director, setDirector] = useState(false);
+  const [voice, setVoice] = useState(true);
+  // Per phase: play the analysis's shortest solution instead of what you did.
+  const [altTake, setAltTake] = useState(false);
+  const pick = (i: number) => {
+    setSelected(i);
+    setAltTake(false);
+  };
 
   // -1 is the whole solve; otherwise the index into `phases`.
   const isWhole = selected < 0 || selected >= phases.length;
@@ -72,13 +83,22 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
     : moves.slice(0, phases.slice(0, selected).reduce((n, p) => n + p.moves.length, 0));
 
   const setupAlg = [scramble, ...movesBefore].join(" ").trim();
-  const viewMoves = phase ? phase.moves : moves;
+  const alt = !!phase && altTake && !!phase.model && phase.model.moves.length > 0;
+  const viewMoves = alt ? phase!.model!.moves : phase ? phase.moves : moves;
   const fullAlg = viewMoves.join(" ");
 
   // Real per-move gaps, sliced to whichever phase is on screen — only used
   // when they line up with `moves` one-for-one, so a stale or hand-edited
   // reconstruction can never pace playback against the wrong moves.
   const { gaps, hasRealTiming } = useMemo(() => {
+    if (alt && phase) {
+      // The alternate take plays at your own average pace through that phase.
+      const n = phase.moves.length;
+      const start = movesBefore.length;
+      const real = moveTimestamps && moveTimestamps.length === moves.length ? gapsFromTimestamps(moveTimestamps).slice(start, start + n) : null;
+      const avg = real && real.length ? real.reduce((a, b) => a + b, 0) / real.length : FALLBACK_GAP_MS;
+      return { gaps: viewMoves.map(() => avg), hasRealTiming: false };
+    }
     if (moveTimestamps && moveTimestamps.length === moves.length) {
       const fullGaps = gapsFromTimestamps(moveTimestamps);
       const startIdx = movesBefore.length;
@@ -87,7 +107,9 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
     }
     return { gaps: viewMoves.map(() => FALLBACK_GAP_MS), hasRealTiming: false };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moveTimestamps, moves.length, movesBefore.length, viewMoves.length]);
+  }, [moveTimestamps, moves.length, movesBefore.length, viewMoves.length, alt]);
+
+  const cues = useMemo(() => (director ? buildDirectorsCut(phases, findings, moveTimestamps, totalMs) : undefined), [director, phases, findings, moveTimestamps, totalMs]);
 
   // Whole solve: lead with the top (already severity-sorted) findings that
   // aren't about one specific phase, falling back to the summary sentence.
@@ -99,15 +121,44 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
 
   return (
     <div className="card animate-fade-in-up rounded-xl p-3">
-      <h3 className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-2">
-        <Play size={12} className="text-accent" />
-        Watch it back
-      </h3>
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-2">
+          <Play size={12} className="text-accent" />
+          Watch it back
+        </h3>
+        <div className="flex items-center gap-1">
+          {director && (
+            <button
+              type="button"
+              onClick={() => setVoice((v) => !v)}
+              aria-pressed={voice}
+              aria-label={voice ? "Captions only" : "Read the commentary aloud"}
+              className="flex items-center justify-center rounded-full bg-bg-panel-2 p-1.5 text-muted hover:text-foreground"
+            >
+              {voice ? <Mic size={11} /> : <MicOff size={11} />}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setDirector((d) => !d);
+              pick(-1);
+            }}
+            aria-pressed={director}
+            className={cn(
+              "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors",
+              director ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted hover:text-foreground",
+            )}
+          >
+            <Clapperboard size={11} /> Director&apos;s Cut
+          </button>
+        </div>
+      </div>
 
       <div className="mb-2.5 flex flex-wrap gap-1.5">
         <button
           type="button"
-          onClick={() => setSelected(-1)}
+          onClick={() => pick(-1)}
           aria-pressed={isWhole}
           className={cn(
             "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
@@ -120,7 +171,10 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
           <button
             key={`${p.label}-${p.slot ?? ""}`}
             type="button"
-            onClick={() => setSelected(i)}
+            onClick={() => {
+              pick(i);
+              setDirector(false);
+            }}
             aria-pressed={selected === i}
             disabled={p.moves.length === 0}
             className={cn(
@@ -138,13 +192,32 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
           timeline) rather than leaving it mid-way through the previous
           phase's. Play/pause/scrub/speed controls live in TimedCubePlayer. */}
       <TimedCubePlayer
-        key={selected}
+        key={`${selected}-${director ? "dc" : ""}-${alt ? "alt" : ""}`}
         alg={fullAlg}
         setupAlg={setupAlg}
         gapsMs={gaps}
         hasRealTiming={hasRealTiming}
         className="mx-auto h-64 w-full max-w-xs"
+        cues={isWhole ? cues : undefined}
+        voice={voice}
       />
+
+      {phase?.model && phase.model.moves.length > 0 && (phase.lost ?? 0) > 0 && (
+        <div className="mt-2 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setAltTake((v) => !v)}
+            aria-pressed={altTake}
+            className={cn(
+              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
+              altTake ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+            )}
+          >
+            <Film size={11} />
+            {altTake ? `Back to your take · ${phase.moves.length} turns` : `Alternate take · ${phase.model.moves.length} turns instead of ${phase.moves.length}`}
+          </button>
+        </div>
+      )}
 
       <p className="mt-1.5 break-words text-center font-mono text-[11px] leading-relaxed text-muted">
         {fullAlg || "nothing to play"}

@@ -12,7 +12,7 @@ import { FindingsList } from "./FindingsList";
 import { cn } from "@/lib/utils/cn";
 
 export function AnalyzerView() {
-  const { scramble, reconstruction, result, errors, loading, solveId, moveTimestamps, setScramble, setReconstruction, setTimeMs, run } =
+  const { scramble, reconstruction, result, errors, loading, solveId, moveTimestamps, timeMs, setScramble, setReconstruction, setTimeMs, run } =
     useAnalysisStore();
   const saveReconstruction = useSessionStore((s) => s.saveReconstruction);
   const solves = useSessionStore((s) => s.solves);
@@ -190,6 +190,7 @@ export function AnalyzerView() {
               findings={result.findings}
               summary={result.summary}
               moveTimestamps={moveTimestamps ?? undefined}
+              totalMs={timeMs ?? undefined}
             />
           )}
 

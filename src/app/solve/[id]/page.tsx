@@ -189,6 +189,7 @@ export default function SharedSolvePage() {
                     findings={result.findings}
                     summary={result.summary}
                     moveTimestamps={solve.moveTimestamps ?? undefined}
+                    totalMs={solve.timeMs}
                   />
                 )}
 
