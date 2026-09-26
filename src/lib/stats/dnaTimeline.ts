@@ -46,7 +46,7 @@ function periodKey(t: number, period: DnaPeriod): { key: string; start: number; 
   const d = new Date(t);
   if (period === "month") {
     const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-    return { key: `${d.getFullYear()}-${d.getMonth()}`, start, label: d.toLocaleDateString(undefined, { month: "short", year: "2-digit" }) };
+    return { key: `${d.getFullYear()}-${d.getMonth()}`, start, label: d.toLocaleDateString(undefined, { month: "short", year: "numeric" }) };
   }
   const day = (d.getDay() + 6) % 7; // Monday-start weeks
   const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);

@@ -30,6 +30,20 @@ const GRID_Y = 12;
 const CELL_THRESHOLD = 0.3;
 /** Fewer cells than this in the region = not a cube, just something colorful. */
 const MIN_CELLS = 3;
+/** A region covering nearly the whole frame is a colored wall or backdrop, not a cube. */
+const MAX_REGION_SHARE = 0.8;
+/** A cube shows several sticker colors at once (three faces, or a scrambled face); one flat hue is something else. */
+const MIN_HUES = 2;
+
+/** Which sticker color a saturated pixel is: 0 red, 1 orange, 2 yellow, 3 green, 4 blue, 5 anything else. */
+function hueBucket(r: number, g: number, b: number): number {
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 5;
+  let h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  return h < 15 || h >= 345 ? 0 : h < 40 ? 1 : h < 70 ? 2 : h < 170 ? 3 : h < 260 ? 4 : 5;
+}
 
 /** Saturated, reasonably bright, and not skin-toned-dull — the five colored sticker hues all pass; white doesn't need to. */
 export function isStickerColor(r: number, g: number, b: number): boolean {
@@ -43,6 +57,7 @@ export function isStickerColor(r: number, g: number, b: number): boolean {
 export function trackCube(rgba: Uint8ClampedArray, width: number, height: number): TrackResult {
   const cells = new Float32Array(GRID_X * GRID_Y);
   const counts = new Uint32Array(GRID_X * GRID_Y);
+  const hues = new Uint32Array(GRID_X * GRID_Y * 6);
   for (let y = 0; y < height; y++) {
     const gy = Math.min(GRID_Y - 1, Math.floor((y / height) * GRID_Y));
     for (let x = 0; x < width; x++) {
@@ -50,7 +65,10 @@ export function trackCube(rgba: Uint8ClampedArray, width: number, height: number
       const i = (y * width + x) * 4;
       const c = gy * GRID_X + gx;
       counts[c]++;
-      if (isStickerColor(rgba[i], rgba[i + 1], rgba[i + 2])) cells[c]++;
+      if (isStickerColor(rgba[i], rgba[i + 1], rgba[i + 2])) {
+        cells[c]++;
+        hues[c * 6 + hueBucket(rgba[i], rgba[i + 1], rgba[i + 2])]++;
+      }
     }
   }
   for (let c = 0; c < cells.length; c++) cells[c] = counts[c] ? cells[c] / counts[c] : 0;
@@ -69,8 +87,12 @@ export function trackCube(rgba: Uint8ClampedArray, width: number, height: number
   let minY = GRID_Y;
   let maxY = -1;
   let n = 0;
+  const seen = new Set<number>();
   while (queue.length) {
     const c = queue.pop()!;
+    let dominant = 0;
+    for (let k = 1; k < 6; k++) if (hues[c * 6 + k] > hues[c * 6 + dominant]) dominant = k;
+    if (dominant < 5) seen.add(dominant);
     const x = c % GRID_X;
     const y = Math.floor(c / GRID_X);
     n++;
@@ -90,7 +112,7 @@ export function trackCube(rgba: Uint8ClampedArray, width: number, height: number
       }
     }
   }
-  if (n < MIN_CELLS) return none;
+  if (n < MIN_CELLS || n > MAX_REGION_SHARE * GRID_X * GRID_Y || seen.size < MIN_HUES) return none;
   const w = (maxX - minX + 1) / GRID_X;
   const h = (maxY - minY + 1) / GRID_Y;
   return {

@@ -5,7 +5,7 @@ import { TrendingDown } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { liveMilestones, milestoneTimes } from "@/lib/pacer/pacer";
-import { buildProjectionModel, projectLive, type Projection } from "@/lib/analysis/liveProjection";
+import { buildProjectionModel, projectAtTime, projectLive, type Projection } from "@/lib/analysis/liveProjection";
 import { solveFinalMs } from "@/types";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
@@ -52,8 +52,10 @@ export function LiveProjection({ finished, finalMs }: { finished: boolean; final
     return out;
   }, [model, startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs]);
 
-  const current = trail[trail.length - 1];
-  if (!current) return null;
+  const last = trail[trail.length - 1];
+  if (!last) return null;
+  // Mid-solve, the latest call ages with the clock; after, the calls stand as made.
+  const current = finished ? last : projectAtTime(model, last, finalMs);
 
   if (finished) {
     const first = trail[0];

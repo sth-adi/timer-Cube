@@ -79,3 +79,12 @@ describe("montage", () => {
     expect(cues.filter((c) => c.kind === "card")).toHaveLength(3);
   });
 });
+
+describe("pickHighlights variety", () => {
+  it("leaves room for other kinds of highlight when every solve was a PB", () => {
+    const solves = Array.from({ length: 8 }, (_, i) => solve(`p${i}`, 12000 - i * 300, 6 - i * 0.5));
+    const kinds = pickHighlights(solves, { now: NOW, period: "week" }).map((h) => h.kind);
+    expect(kinds.filter((k) => k === "pb").length).toBeLessThanOrEqual(3);
+    expect(kinds).toHaveLength(5);
+  });
+});

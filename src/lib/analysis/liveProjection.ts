@@ -111,3 +111,28 @@ export function projectLive(model: ProjectionModel, live: readonly (number | nul
     pbPace,
   };
 }
+
+/**
+ * A projection only updates at milestones, but the clock doesn't stop in
+ * between: once you've spent longer since the last milestone than you
+ * usually take to reach the next one, every extra millisecond goes
+ * straight onto the finish (and the projection can never sit below the
+ * clock itself).
+ */
+export function projectAtTime(model: ProjectionModel, p: Projection, elapsedMs: number): Projection {
+  const here = model.milestones[p.k]!;
+  const next = p.k < 5 ? model.milestones[p.k + 1] : null;
+  const usualGap = next ? Math.max(0, next.typicalMs - here.typicalMs) : here.medianRemainingMs;
+  const overdue = Math.max(0, elapsedMs - p.atMs - usualGap);
+  const projectedMs = Math.max(p.projectedMs + overdue, elapsedMs);
+  if (projectedMs === p.projectedMs) return p;
+  const pbPace = model.pbMs !== null && projectedMs < model.pbMs;
+  const inReach = model.pbMs !== null && !pbPace && projectedMs - p.errMs < model.pbMs;
+  return {
+    ...p,
+    projectedMs,
+    pbPace,
+    headline: pbPace ? "PB pace" : inReach ? "PB in reach" : model.meanMs !== null && projectedMs < model.meanMs ? "Better than average" : "On pace",
+    detail: overdue > 0 ? `${s2(overdue)}s longer than usual since ${p.milestone}` : p.detail,
+  };
+}

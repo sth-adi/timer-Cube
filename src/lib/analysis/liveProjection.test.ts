@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildProjectionModel, projectLive } from "./liveProjection";
+import { buildProjectionModel, projectAtTime, projectLive } from "./liveProjection";
 
 /** A solve whose milestones are fixed shares of `total`, with cross at `crossShare`. */
 const solve = (total: number, crossShare = 0.13) => [crossShare * total, 0.26 * total, 0.38 * total, 0.5 * total, 0.62 * total, 0.8 * total, total];
@@ -40,5 +40,20 @@ describe("live projection", () => {
     const p = projectLive(model, [1300, 2600, 3800, 5000, 6200, 8000, null])!;
     expect(p.milestone).toBe("OLL");
     expect(p.projectedMs).toBeCloseTo(10000);
+  });
+});
+
+describe("projection between milestones", () => {
+  it("pushes the finish out once you're overdue for the next milestone", () => {
+    const model = buildProjectionModel(Array.from({ length: 6 }, () => solve(10000)), 9000);
+    const p = projectLive(model, [1300, null, null, null, null, null, null])!;
+    // Usual gap cross → pair 1 is 1300ms; at 2000 you're not overdue yet.
+    expect(projectAtTime(model, p, 2000).projectedMs).toBeCloseTo(p.projectedMs);
+    const late = projectAtTime(model, p, 4600);
+    expect(late.projectedMs).toBeCloseTo(p.projectedMs + 2000);
+    expect(late.detail).toMatch(/2\.00s longer than usual since Cross/);
+    expect(late.pbPace).toBe(false);
+    // Still the whole rest of the solve to go, however long you've stalled.
+    expect(projectAtTime(model, p, 50000).projectedMs).toBe(57400);
   });
 });

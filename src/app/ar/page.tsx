@@ -132,7 +132,8 @@ function CubeAR() {
       stage.style.setProperty("--ar-x", `${(mirrored ? 1 - r.cx : r.cx) * w}px`);
       stage.style.setProperty("--ar-y", `${r.cy * h}px`);
       stage.style.setProperty("--ar-s", String(px / (TWIN_SIZE * TWIN_SPAN)));
-      stage.style.setProperty("--ar-top", `${r.cy * h - px / 2}px`);
+      // Keep the directions bubble inside the frame even when the cube fills it.
+      stage.style.setProperty("--ar-top", `${Math.max(72, r.cy * h - px / 2)}px`);
     }, TRACK_EVERY_MS);
     return () => window.clearInterval(t);
   }, [cam, mirrored]);

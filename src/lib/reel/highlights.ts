@@ -73,8 +73,9 @@ export function pickHighlights(solves: readonly Solve[], opts: { now: number; pe
   const detailOf = (e: (typeof pool)[number]) => `${e.moves} moves · ${e.tps.toFixed(1)} TPS`;
 
   const byTime = [...pool].sort((a, b) => a.finalMs - b.finalMs);
-  // PBs first (most recent PB is the most meaningful), then the fastest solves.
-  for (const e of pool.filter((e) => pbIds.has(e.s.id)).sort((a, b) => b.s.date - a.s.date)) add(e, "pb", "New PB", detailOf(e));
+  // PBs first (the most recent are the most meaningful) — at most 3, so a streak of PBs
+  // doesn't crowd out the fastest hands and the most efficient solve.
+  for (const e of pool.filter((e) => pbIds.has(e.s.id)).sort((a, b) => b.s.date - a.s.date).slice(0, Math.min(3, max - 2))) add(e, "pb", "New PB", detailOf(e));
   if (byTime[0]) add(byTime[0], "fastest", `Fastest ${where}`, detailOf(byTime[0]));
   const byTps = [...pool].sort((a, b) => b.tps - a.tps);
   if (byTps[0]) add(byTps[0], "tps", "Fastest hands", `${byTps[0].tps.toFixed(1)} TPS · ${byTps[0].moves} moves`);

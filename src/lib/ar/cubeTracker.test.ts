@@ -50,6 +50,15 @@ describe("cube tracker", () => {
     expect(r.size).toBeLessThan(0.55);
   });
 
+  it("ignores a flat colored backdrop — one hue filling the frame isn't a cube", () => {
+    const px = new Uint8ClampedArray(W * H * 4);
+    for (let i = 0; i < px.length; i += 4) {
+      px[i + 1] = 150;
+      px[i + 3] = 255;
+    }
+    expect(trackCube(px, W, H).found).toBe(false);
+  });
+
   it("reports nothing on an empty frame", () => {
     expect(trackCube(frame(0, 0, 0), W, H).found).toBe(false);
   });

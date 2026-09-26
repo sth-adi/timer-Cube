@@ -30,7 +30,7 @@ export function RadarChart({ axes, ghost, className }: { axes: DnaAxis[]; ghost?
   const ghostPoints = ghostScores?.every((x) => x !== undefined) ? polygonPoints(ghostScores.map((x) => (x! / 100) * MAX_RADIUS)) : null;
 
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={className} role="img" aria-label="Solving-style radar chart">
+    <svg viewBox={`-40 -4 ${SIZE + 80} ${SIZE + 8}`} className={className} role="img" aria-label="Solving-style radar chart">
       {RINGS.map((r) => (
         <polygon
           key={r}
