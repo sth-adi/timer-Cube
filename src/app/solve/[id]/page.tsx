@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AlertTriangle, Loader2, Timer as TimerIcon } from "lucide-react";
+import { AlertTriangle, Ghost, Loader2, Timer as TimerIcon } from "lucide-react";
 import { fetchSharedSolve, type SharedSolve } from "@/lib/social/shareSolve";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import type { AnalyzeResult } from "@/lib/analysis/analyze";
@@ -132,6 +132,14 @@ export default function SharedSolvePage() {
               </div>
               <p className="tabular-timer text-3xl font-bold text-foreground">{formatTime(solve.timeMs)}</p>
               <p className="mt-2 break-words font-mono text-xs leading-relaxed text-muted">{solve.scramble}</p>
+              {solve.puzzle === "333" && (
+                <Link
+                  href={`/rematch?ghost=${encodeURIComponent(params.id)}`}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg"
+                >
+                  <Ghost size={13} /> Race this solve as a ghost
+                </Link>
+              )}
             </div>
 
             {result === null && (
