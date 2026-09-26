@@ -1,6 +1,7 @@
 import { CUBE_ORIENTATIONS, FACE_COLOR_NAMES, nameRotation, physicalFaceAt, viewerMove, type Mat3 } from "@/lib/gyro/orientation";
 import { mergeTurns } from "@/lib/xray/algMicroscope";
 import type { CrossFace } from "@/lib/smartcube/crossFrame";
+import { mergeSlicePairs, sliceViewerMove } from "@/lib/smartcube/slicePair";
 import type { SolveBreakdown } from "./solveBreakdown";
 
 /**
@@ -52,11 +53,20 @@ export function reconstruction(b: SolveBreakdown, scramble: string, opts: { tota
     if (row.atMs === null) continue;
     const start = i;
     while (i < b.moves.length && b.moves[i].timeStampMs <= row.atMs) i++;
-    const physical = b.moves.slice(start, i).map((m) => m.token);
+    // A middle-slice turn (M/E/S) has no wire format on any smart cube this
+    // app decodes — it always arrives as two ordinary turns on the two
+    // faces either side of the slice, landing together (see slicePair.ts).
+    // Merged here, before relabelling for the grip, so the written
+    // reconstruction reads "M2" the way a cuber would, not "R2 L2".
+    const physical = mergeSlicePairs(b.moves.slice(start, i)).map((m) => m.token);
     steps.push({
       label: row.label,
       caseName: row.caseName,
-      moves: mergeTurns(physical.map((t) => viewerMove(t, grip))).tokens,
+      // viewerMove relabels an outer face by position; a merged slice token
+      // needs sliceViewerMove instead, since a slice isn't tied to *looking
+      // at* a face the way U/R/F/etc. are — each passes the other's tokens
+      // through unchanged, so composing them covers every token in `physical`.
+      moves: mergeTurns(physical.map((t) => viewerMove(sliceViewerMove(t, grip), grip))).tokens,
       ms: row.totalMs ?? 0,
     });
   }

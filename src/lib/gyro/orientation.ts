@@ -250,7 +250,7 @@ export const FACE_COLOR_NAMES: Record<string, string> = {
   B: "blue",
 };
 
-function faceForVector(v: readonly number[]): string {
+export function faceForVector(v: readonly number[]): string {
   let bestFace = "U";
   let bestDot = -Infinity;
   for (const [face, n] of Object.entries(FACE_NORMALS)) {
