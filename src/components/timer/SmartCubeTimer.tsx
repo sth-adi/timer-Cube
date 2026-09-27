@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   BatteryFull,
@@ -46,12 +46,17 @@ import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useRecapStore } from "@/lib/store/recapStore";
 import { useScrambleGuide } from "@/hooks/useScrambleGuide";
 import { ScrambleGuidePanel } from "@/components/smartcube/ScrambleGuidePanel";
+import { PredictionBadge } from "@/components/timer/PredictionBadge";
+import { PHASE_TINTS } from "@/components/stats/phaseTints";
+import { predictSolveTime } from "@/lib/analysis/prediction";
+import { paceFromRatio, resetPerformanceAura, setPerformanceAura } from "@/lib/store/performanceAuraBus";
 import { useNowTick } from "@/hooks/useNowTick";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveProjection } from "./LiveProjection";
 import { LiveSessionCoach } from "./LiveSessionCoach";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { InspectionRing } from "@/components/timer/InspectionRing";
+import { GhostPaceBar } from "@/components/timer/GhostPaceBar";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
 import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
@@ -65,6 +70,8 @@ import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
+import { invertAlg } from "@/lib/algorithms/algUtils";
+import { CaseIcon } from "@/components/algorithms/CaseIcon";
 import { effectiveAlg } from "@/lib/algorithms/myAlgs";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import { LearnedAlgNotice } from "@/components/algorithms/LearnedAlgNotice";
@@ -101,6 +108,15 @@ function phaseDurations(b: PhaseBoundaries): (number | null)[] {
     prev = mark;
   }
   return out;
+}
+
+/** Which phase (0=cross..3=pll) a zero-based solve-elapsed timestamp falls in, for tinting the TPS bar graph the same hue as the rest of the app's phase splits. Falls back to cross's tint once boundaries aren't known yet. */
+function phaseForMs(ms: number, boundaries: PhaseBoundaries | null): number {
+  if (!boundaries) return 0;
+  if (boundaries.cross !== null && ms < boundaries.cross) return 0;
+  if (boundaries.f2l !== null && ms < boundaries.f2l) return 1;
+  if (boundaries.oll !== null && ms < boundaries.oll) return 2;
+  return 3;
 }
 
 /** Cubeast-style running phase breakdown: finished phases show their time, the current one counts up live. */
@@ -150,28 +166,36 @@ function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; 
   // Your main algorithm for the case (learned or picked), else the book's.
   const chosen = useMyAlgsStore((s) => s.chosen);
   if (!ollCaseName && !pllCaseName) return null;
-  const algFor = (group: "OLL" | "PLL", name: string | null) => {
-    const book = name ? findCase(group, name)?.alg : undefined;
-    return name && book ? effectiveAlg(chosen, group, name, book) : undefined;
+  const badge = (group: "OLL" | "PLL", name: string | null) => {
+    if (!name) return null;
+    const found = findCase(group, name);
+    const alg = found ? effectiveAlg(chosen, group, name, found.alg) : undefined;
+    return { icon: found ? <CaseIcon setupAlg={invertAlg(found.alg)} kind={group} className="h-9 w-9 shrink-0 overflow-hidden rounded-[4px]" /> : null, alg };
   };
-  const ollAlg = algFor("OLL", ollCaseName);
-  const pllAlg = algFor("PLL", pllCaseName);
+  const oll = badge("OLL", ollCaseName);
+  const pll = badge("PLL", pllCaseName);
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {ollCaseName && (
-        <span className="flex flex-col items-center gap-0.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-          <span className="flex items-center gap-1">
-            <Sparkles size={11} /> OLL: {ollCaseName}
+        <span className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+          {oll?.icon}
+          <span className="flex flex-col items-start gap-0.5">
+            <span className="flex items-center gap-1">
+              <Sparkles size={11} /> OLL: {ollCaseName}
+            </span>
+            {oll?.alg && <span className="font-mono text-[10px] font-normal text-accent/70">{oll.alg}</span>}
           </span>
-          {ollAlg && <span className="font-mono text-[10px] font-normal text-accent/70">{ollAlg}</span>}
         </span>
       )}
       {pllCaseName && (
-        <span className="flex flex-col items-center gap-0.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-          <span className="flex items-center gap-1">
-            <Sparkles size={11} /> PLL: {pllCaseName}
+        <span className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+          {pll?.icon}
+          <span className="flex flex-col items-start gap-0.5">
+            <span className="flex items-center gap-1">
+              <Sparkles size={11} /> PLL: {pllCaseName}
+            </span>
+            {pll?.alg && <span className="font-mono text-[10px] font-normal text-accent/70">{pll.alg}</span>}
           </span>
-          {pllAlg && <span className="font-mono text-[10px] font-normal text-accent/70">{pllAlg}</span>}
         </span>
       )}
     </div>
@@ -361,6 +385,35 @@ export function SmartCubeTimer() {
   // only needs an approximate "compared to your usual pace" framing, not a
   // stat that must exclude this solve to the millisecond).
   const coachSessionStats = useMemo(() => computeSessionStats(normalSolves(sessionSolves)), [sessionSolves]);
+  // The ghost target for GhostPaceBar — same "ordinary solves only" convention as PB detection, so an OH attempt never races a 2-handed best.
+  const normalPbMs = useMemo(() => (pendingEvent === null ? coachSessionStats.best : null), [pendingEvent, coachSessionStats.best]);
+
+  // Feeds the ambient background's live pace cue (see AuroraBackground.tsx) —
+  // the same signal TimerView's keyboard solves already drive, so a live
+  // smart-cube attempt gets the same running-ahead/behind atmosphere instead
+  // of a flat, unreactive background. Prefer the predictive model for this
+  // exact scramble, falling back to the plain PB; frozen the instant
+  // recording starts, same reasoning as GhostPaceBar's own target.
+  const auraTargetRef = useRef<number | null>(null);
+  const prevRecordingForAuraRef = useRef(recording);
+  useEffect(() => {
+    if (recording && !prevRecordingForAuraRef.current) {
+      const prediction = scramble ? predictSolveTime(normalSolves(sessionSolves), scramble) : null;
+      auraTargetRef.current = (prediction?.skill?.useful ? prediction.predictedMs : null) ?? normalPbMs ?? null;
+    }
+    if (!recording) {
+      auraTargetRef.current = null;
+      resetPerformanceAura();
+    }
+    prevRecordingForAuraRef.current = recording;
+  }, [recording, scramble, sessionSolves, normalPbMs]);
+
+  useEffect(() => {
+    if (!recording || auraTargetRef.current === null) return;
+    setPerformanceAura(paceFromRatio(elapsedMs, auraTargetRef.current));
+  }, [elapsedMs, recording]);
+
+  useEffect(() => () => resetPerformanceAura(), []);
 
   // "5.20s" means nothing on its own — this reads it against your own history
   // for the post-solve table (see postSolveBaseline.ts). All-time, not just
@@ -713,6 +766,9 @@ export function SmartCubeTimer() {
         )
       )}
 
+      {/* Always mounted (not just while recording/finished) so its own idle→running transition detection — the same instant-of-liftoff logic the keyboard timer uses — actually fires; mounting it fresh already inside "running" would miss it. */}
+      <GhostPaceBar phase={recording ? "running" : finished ? "stopped" : "idle"} elapsedMs={elapsedMs} pbMs={normalPbMs} hideTimes={false} />
+
       {(armed || recording) && gyroActive ? (
         // A gyro cube gets the live twin instead: same stickers, but it also
         // tilts and turns with the cube in your hands, and names regrips live.
@@ -856,9 +912,9 @@ export function SmartCubeTimer() {
                     {buckets.map((b, i) => (
                       <div
                         key={i}
-                        className="flex-1 rounded-sm bg-accent/70"
+                        className={cn("flex-1 rounded-sm opacity-70", PHASE_TINTS[phaseForMs(b.startMs, boundaries)])}
                         style={{ height: `${Math.max(6, (b.tps / maxBucket) * 100)}%` }}
-                        title={`${b.tps.toFixed(1)} TPS`}
+                        title={`${b.tps.toFixed(1)} TPS — ${PHASE_LABELS_4[phaseForMs(b.startMs, boundaries)]}`}
                       />
                     ))}
                   </div>
@@ -927,6 +983,7 @@ export function SmartCubeTimer() {
               <ScrambleNet scramble={scramble} className="w-full" />
             </div>
           )}
+          {scramble && !finished && <PredictionBadge />}
           <ScrambleGuidePanel />
           <p className="text-[11px] text-muted-2">Inspection starts automatically once it matches.</p>
           <button
