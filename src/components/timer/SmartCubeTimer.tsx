@@ -9,6 +9,7 @@ import {
   BatteryWarning,
   Bluetooth,
   BluetoothConnected,
+  BluetoothOff,
   Check,
   ChevronDown,
   FlaskConical,
@@ -54,7 +55,7 @@ import { PostSolveTable } from "@/components/timer/PostSolveTable";
 import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
 import { formatTime } from "@/lib/utils/time";
-import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
+import { averageTps, computeTpsBuckets, peakTps, rollingTps } from "@/lib/analysis/tps";
 import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
 import { computeSessionStats, normalSolves } from "@/lib/stats/stats";
 import { metricsFor } from "@/lib/analytics/solveMetrics";
@@ -230,6 +231,8 @@ export function SmartCubeTimer() {
     connected,
     deviceName,
     error,
+    droppedMidSolve,
+    droppedMidSolveMoves,
     armed,
     recording,
     startedAtMs,
@@ -302,6 +305,11 @@ export function SmartCubeTimer() {
   const buckets = useMemo(() => computeTpsBuckets(timestamps), [timestamps]);
   const avgTps = useMemo(() => averageTps(timestamps), [timestamps]);
   const maxBucket = Math.max(1, peakTps(buckets));
+  // A live speedometer: how fast your hands are moving *right now*, not the
+  // whole-solve average — slides with the clock (nowMs) rather than sitting
+  // at fixed one-second buckets from the start, so it reads correctly
+  // whether you've been turning for 200ms or 20 seconds.
+  const liveTps = recording && nowMs > 0 ? rollingTps(timestamps, nowMs) : null;
 
   // Cross/F2L/OLL/PLL boundaries, detected live off the cube's own state as
   // it happens (see smartCubeStore) — always available the instant each
@@ -628,14 +636,14 @@ export function SmartCubeTimer() {
   if (!connected) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft">
-          <Bluetooth size={26} className="text-accent" />
+        <div className={cn("flex h-14 w-14 items-center justify-center rounded-full", droppedMidSolve ? "bg-danger/15" : "bg-accent-soft")}>
+          {droppedMidSolve ? <BluetoothOff size={26} className="text-danger" /> : <Bluetooth size={26} className="text-accent" />}
         </div>
-        <h1 className="text-lg font-semibold text-foreground">Connect your smart cube</h1>
+        <h1 className="text-lg font-semibold text-foreground">{droppedMidSolve ? "Your smart cube disconnected" : "Connect your smart cube"}</h1>
         <p className="max-w-xs text-sm text-muted">
-          A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves
-          straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case
-          names and all.
+          {droppedMidSolve
+            ? `The Bluetooth link dropped${droppedMidSolveMoves ? ` ${droppedMidSolveMoves} move${droppedMidSolveMoves === 1 ? "" : "s"} into your solve` : ""} — not a step you missed, the connection itself. Reconnect and start the scramble again.`
+            : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case names and all."}
         </p>
         <button
           type="button"
@@ -644,14 +652,16 @@ export function SmartCubeTimer() {
           className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50"
         >
           {connecting && <Loader2 size={14} className="animate-spin" />}
-          {connecting ? "Connecting…" : "Connect smart cube"}
+          {connecting ? "Connecting…" : droppedMidSolve ? "Reconnect smart cube" : "Connect smart cube"}
         </button>
         {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
-        <p className="max-w-xs text-[11px] text-muted-2">
-          Connect it in any state: GAN, Giiker, GoCube, QiYi and MoYu&apos;s AI cubes report where every piece is. (A
-          MoYu MHC can&apos;t — connect that one solved.) Then just scramble: matching the target scramble starts
-          inspection automatically.
-        </p>
+        {!droppedMidSolve && (
+          <p className="max-w-xs text-[11px] text-muted-2">
+            Connect it in any state: GAN, Giiker, GoCube, QiYi and MoYu&apos;s AI cubes report where every piece is. (A
+            MoYu MHC can&apos;t — connect that one solved.) Then just scramble: matching the target scramble starts
+            inspection automatically.
+          </p>
+        )}
       </div>
     );
   }
@@ -717,7 +727,16 @@ export function SmartCubeTimer() {
       )}
       {recording && (
         <div className="flex flex-col items-center gap-1.5">
-          <p className="text-sm text-muted">{moves.length} moves so far — solve the cube to stop</p>
+          <p className="text-sm text-muted">
+            {moves.length} moves so far
+            {liveTps !== null && liveTps > 0 && <span className="tabular-nums text-accent"> · {liveTps.toFixed(1)} TPS</span>}
+            {" — solve the cube to stop"}
+          </p>
+          {correctedDuringSolve && (
+            <p className="text-[11px] text-warning" title="A turn went unreported over Bluetooth and was corrected from the cube's own state report — the time still stands, but the move-by-move recap won't be available for this one">
+              A turn was corrected mid-solve — this one saves as time only
+            </p>
+          )}
           {stopOpen ? (
             <div className="flex flex-wrap items-center justify-center gap-1.5">
               <button type="button" onClick={() => stopSolve("solved")} className="rounded-full bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-fg" title="The cube is solved but the app missed a turn">
@@ -739,7 +758,7 @@ export function SmartCubeTimer() {
             </button>
           )}
           <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} baseline={postSolveBaseline} />
-          <LiveProjection finished={false} finalMs={elapsedMs} />
+          <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
           <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
         </div>
@@ -747,7 +766,7 @@ export function SmartCubeTimer() {
 
       {finished && (
         <>
-          <LiveProjection finished finalMs={elapsedMs} />
+          <LiveProjection finished finalMs={elapsedMs} scramble={finishedScramble} />
           <div className="flex items-center gap-3 text-xs text-muted">
             {crossFace && crossFace !== "U" && <span>{CROSS_FACE_COLOR[crossFace]} cross</span>}
             <span>{moves.length} moves</span>

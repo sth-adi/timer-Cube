@@ -44,3 +44,19 @@ export function averageTps(timestampsMs: readonly number[]): number | null {
 export function peakTps(buckets: readonly TpsBucket[]): number {
   return buckets.reduce((max, b) => Math.max(max, b.tps), 0);
 }
+
+/**
+ * Turns per second in the `windowMs` immediately before `atMs` — a live
+ * "how fast right now" speedometer, distinct from `computeTpsBuckets`'
+ * fixed windows aligned to the very first move (right for a post-solve
+ * graph of the whole solve, wrong for "what's my hand speed at this
+ * instant" — that has to slide with the clock, not sit still at bucket
+ * boundaries from a while ago). Naturally decays to 0 the moment turning
+ * stops, since a window with nothing recent in it has nothing to count.
+ */
+export function rollingTps(timestampsMs: readonly number[], atMs: number, windowMs = 1000): number {
+  const from = atMs - windowMs;
+  let count = 0;
+  for (const t of timestampsMs) if (t > from && t <= atMs) count++;
+  return count / (windowMs / 1000);
+}

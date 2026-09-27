@@ -110,6 +110,16 @@ interface SmartCubeState {
    * the recorded turns no longer add up to the solve.
    */
   correctedDuringSolve: boolean;
+  /**
+   * A DISCONNECT arrived while a solve was armed or in progress — the
+   * Bluetooth link itself dropped (out of range, the cube slept, an OS-level
+   * hiccup), not a deliberate "Disconnect" click, so the connect screen
+   * says so instead of silently reverting to its ordinary first-time
+   * wording as if nothing had been mid-flight. Cleared the moment
+   * reconnecting succeeds; `droppedMidSolveMoves` keeps how far in it got.
+   */
+  droppedMidSolve: boolean;
+  droppedMidSolveMoves: number | null;
   /** Whether this cube's protocol can report a battery level at all — not every brand/model does. */
   batterySupported: boolean;
   /** 0-100, or null before the first reading has come back. */
@@ -215,6 +225,8 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   stateSource: "assumed",
   reportsState: false,
   correctedDuringSolve: false,
+  droppedMidSolve: false,
+  droppedMidSolveMoves: null,
   batterySupported: false,
   batteryLevel: null,
   gyroActive: false,
@@ -249,6 +261,8 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
 
       sub = connection.events$.subscribe((event: SmartCubeEvent) => {
         if (event.type === "DISCONNECT") {
+          const dropped = get();
+          const wasActive = dropped.armed || dropped.recording;
           set({
             connected: false,
             deviceName: null,
@@ -258,6 +272,11 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
             batterySupported: false,
             batteryLevel: null,
             gyroActive: false,
+            // Only ever set here, never on a deliberate disconnect() call —
+            // that's the one signal that distinguishes "the Bluetooth link
+            // itself dropped mid-attempt" from "you meant to disconnect".
+            droppedMidSolve: wasActive,
+            droppedMidSolveMoves: wasActive ? dropped.moves.length : null,
           });
           teardown();
           return;
@@ -355,6 +374,8 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         stateSource: "assumed",
         reportsState: connection.capabilities.facelets,
         correctedDuringSolve: false,
+        droppedMidSolve: false,
+        droppedMidSolveMoves: null,
       });
       if (connection.capabilities.battery) get().refreshBattery();
       // Ask where every piece is right now — the connect-time report can go out before this subscription existed.
@@ -383,6 +404,10 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       batterySupported: false,
       batteryLevel: null,
       gyroActive: false,
+      // A deliberate disconnect, not the link dropping out from under you —
+      // any earlier unexpected-drop banner no longer applies.
+      droppedMidSolve: false,
+      droppedMidSolveMoves: null,
     });
   },
 

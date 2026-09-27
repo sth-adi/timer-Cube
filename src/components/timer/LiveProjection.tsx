@@ -5,17 +5,22 @@ import { TrendingDown } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { liveMilestones, milestoneTimes } from "@/lib/pacer/pacer";
-import { buildProjectionModel, projectAtTime, projectLive, type Projection } from "@/lib/analysis/liveProjection";
+import { buildProjectionModel, projectAtTime, projectLive, projectPreSolve, type Projection } from "@/lib/analysis/liveProjection";
+import { predictSolveTime } from "@/lib/analysis/prediction";
+import { normalSolves } from "@/lib/stats/stats";
 import { solveFinalMs } from "@/types";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Live projection during a smart-cube solve: from the cross on, where this
- * solve is heading at your own pace, updated at every milestone — and,
- * once it's done, the trail of calls it made next to the real result.
+ * Live projection during a smart-cube solve: from the moment the scramble
+ * appears, where this solve is heading at your own pace — first from the
+ * scramble's own difficulty (the same pre-solve regression the scramble bar
+ * shows, see prediction.ts), then handed off to a milestone-based call the
+ * instant the cross is done, updated at every milestone after. Once it's
+ * done, the trail of calls it made sits next to the real result.
  */
-export function LiveProjection({ finished, finalMs }: { finished: boolean; finalMs: number }) {
+export function LiveProjection({ finished, finalMs, scramble }: { finished: boolean; finalMs: number; scramble?: string }) {
   const solves = useSessionStore((s) => s.solves);
   const startedAtMs = useSmartCubeStore((s) => s.startedAtMs);
   const crossAtMs = useSmartCubeStore((s) => s.crossAtMs);
@@ -37,10 +42,18 @@ export function LiveProjection({ finished, finalMs }: { finished: boolean; final
     return buildProjectionModel(history, finals.length ? Math.min(...finals) : null);
   }, [solves, excludeMs]);
 
+  // Before the cross is even done, the scramble's own difficulty is already
+  // a signal — the same pre-solve regression the scramble bar shows (see
+  // prediction.ts) — so the projection has something to say from the very
+  // start of the solve instead of sitting silent until the first milestone.
+  const preSolvePrediction = useMemo(() => (scramble ? predictSolveTime(normalSolves(solves), scramble) : null), [solves, scramble]);
+  const preSolveCall = useMemo(() => projectPreSolve(model, preSolvePrediction), [model, preSolvePrediction]);
+
   // Every call the projection has made so far this solve, one per milestone reached.
   const trail = useMemo(() => {
     const live = liveMilestones({ startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs, solvedAtMs: null });
     const out: Projection[] = [];
+    if (preSolveCall) out.push(preSolveCall);
     for (let i = 0; i < 6; i++) {
       if (live[i] === null) continue;
       const p = projectLive(
@@ -50,7 +63,7 @@ export function LiveProjection({ finished, finalMs }: { finished: boolean; final
       if (p && p.k === i) out.push(p);
     }
     return out;
-  }, [model, startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs]);
+  }, [model, startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs, preSolveCall]);
 
   const last = trail[trail.length - 1];
   if (!last) return null;

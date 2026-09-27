@@ -376,6 +376,18 @@ body {
   }
 }
 
+/* Live Cube Mimic: a quick ring pulse confirms each turn actually landed. */
+@keyframes turn-flash {
+  0% {
+    box-shadow: inset 0 0 0 3px var(--accent);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: inset 0 0 0 0px var(--accent);
+    opacity: 0;
+  }
+}
+
 /* Gyro Twin: a detected whole-cube rotation chip pops in. */
 @keyframes gyro-pop {
   0% {

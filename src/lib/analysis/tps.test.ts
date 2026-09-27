@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { averageTps, computeTpsBuckets, peakTps } from "./tps";
+import { averageTps, computeTpsBuckets, peakTps, rollingTps } from "./tps";
 
 describe("computeTpsBuckets", () => {
   it("returns nothing for an empty stream", () => {
@@ -51,5 +51,22 @@ describe("peakTps", () => {
   it("finds the fastest bucket", () => {
     const buckets = computeTpsBuckets([0, 100, 200, 300, 5000], 1000);
     expect(peakTps(buckets)).toBe(4);
+  });
+});
+
+describe("rollingTps", () => {
+  it("counts only moves inside the trailing window, not the whole stream", () => {
+    // 4 moves inside the last 1000ms of "now" (2000..3000), one move at 500 is outside it.
+    expect(rollingTps([500, 2200, 2500, 2800, 3000], 3000, 1000)).toBe(4);
+  });
+
+  it("decays to zero the instant turning stops", () => {
+    expect(rollingTps([0, 100, 200], 5000, 1000)).toBe(0);
+  });
+
+  it("slides with the clock instead of sitting at fixed bucket boundaries", () => {
+    // computeTpsBuckets would put 900 and 1500 in different fixed buckets;
+    // a rolling window straddling both sees them as one continuous burst.
+    expect(rollingTps([900, 1500], 1500, 1000)).toBe(2);
   });
 });

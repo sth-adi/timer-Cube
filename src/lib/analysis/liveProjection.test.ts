@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildProjectionModel, projectAtTime, projectLive } from "./liveProjection";
+import type { SolvePrediction } from "./prediction";
+import { buildProjectionModel, projectAtTime, projectLive, projectPreSolve } from "./liveProjection";
+
+const prediction = (predictedMs: number, modelMaeMs = 500, useful = true): SolvePrediction =>
+  ({ predictedMs, pbProbability: null, skill: { testSize: 20, modelMaeMs, baselineMaeMs: modelMaeMs * 1.2, useful } }) as unknown as SolvePrediction;
 
 /** A solve whose milestones are fixed shares of `total`, with cross at `crossShare`. */
 const solve = (total: number, crossShare = 0.13) => [crossShare * total, 0.26 * total, 0.38 * total, 0.5 * total, 0.62 * total, 0.8 * total, total];
@@ -55,5 +59,34 @@ describe("projection between milestones", () => {
     expect(late.pbPace).toBe(false);
     // Still the whole rest of the solve to go, however long you've stalled.
     expect(projectAtTime(model, p, 50000).projectedMs).toBe(57400);
+  });
+});
+
+describe("pre-solve projection (from the scramble alone)", () => {
+  it("hands the scramble's own difficulty estimate the same Projection shape, k=-1", () => {
+    const model = buildProjectionModel(Array.from({ length: 6 }, () => solve(10000)), 9500);
+    const p = projectPreSolve(model, prediction(11000, 400))!;
+    expect(p.k).toBe(-1);
+    expect(p.milestone).toBe("scramble");
+    expect(p.projectedMs).toBe(11000);
+    expect(p.errMs).toBe(400);
+    expect(p.pbPace).toBe(false); // 11000 isn't below the 9500 PB
+  });
+
+  it("stays silent until the model has actually proven itself useful", () => {
+    const model = buildProjectionModel(Array.from({ length: 6 }, () => solve(10000)), null);
+    expect(projectPreSolve(model, prediction(11000, 400, false))).toBeNull();
+    expect(projectPreSolve(model, null)).toBeNull();
+  });
+
+  it("inflates the pre-solve call the longer the cross itself is overdue", () => {
+    const model = buildProjectionModel(Array.from({ length: 6 }, () => solve(10000)), null);
+    const p = projectPreSolve(model, prediction(10000, 400))!;
+    // Usual time to reach Cross is 1300ms; at 800ms elapsed, nothing's overdue yet.
+    expect(projectAtTime(model, p, 800).projectedMs).toBe(10000);
+    // At 3000ms with no cross yet, 1700ms overdue on top of the call.
+    const late = projectAtTime(model, p, 3000);
+    expect(late.projectedMs).toBeCloseTo(11700);
+    expect(late.detail).toMatch(/1\.70s longer than usual since scramble/);
   });
 });

@@ -1,4 +1,5 @@
 import { MILESTONES } from "@/lib/pacer/pacer";
+import type { SolvePrediction } from "./prediction";
 
 /**
  * Live in-solve projection: at every milestone of a smart-cube solve
@@ -86,6 +87,34 @@ export interface Projection {
 
 const s2 = (ms: number) => (ms / 1000).toFixed(2);
 
+/**
+ * Before the cross is even done there's no milestone to project from, but
+ * there's already a signal: the scramble's own difficulty, which the
+ * pre-solve regression model (prediction.ts) has already turned into an
+ * estimate the moment the scramble appeared — same regression, same honest
+ * skill-gated display, just reused here instead of the live view sitting
+ * silent for the entire cross. Folded into the same Projection shape (k=-1)
+ * so the rest of this module and its caller don't need a special case.
+ */
+export function projectPreSolve(model: ProjectionModel, prediction: SolvePrediction | null): Projection | null {
+  if (!prediction?.skill?.useful) return null;
+  const projectedMs = prediction.predictedMs;
+  const errMs = prediction.skill.modelMaeMs;
+  const pbPace = model.pbMs !== null && projectedMs < model.pbMs;
+  const inReach = model.pbMs !== null && !pbPace && projectedMs - errMs < model.pbMs;
+  return {
+    milestone: "scramble",
+    k: -1,
+    atMs: 0,
+    projectedMs,
+    errMs,
+    vsTypicalMs: 0,
+    headline: pbPace ? "PB pace" : inReach ? "PB in reach" : model.meanMs !== null && projectedMs < model.meanMs ? "Better than average" : "On pace",
+    detail: "from the scramble alone, before your first turn",
+    pbPace,
+  };
+}
+
 /** The projection from the latest milestone reached so far, or null before the first one (or with too little history). */
 export function projectLive(model: ProjectionModel, live: readonly (number | null)[]): Projection | null {
   let k = -1;
@@ -120,9 +149,11 @@ export function projectLive(model: ProjectionModel, live: readonly (number | nul
  * clock itself).
  */
 export function projectAtTime(model: ProjectionModel, p: Projection, elapsedMs: number): Projection {
-  const here = model.milestones[p.k]!;
+  // k=-1 (the pre-solve, scramble-only call) has no milestone of its own —
+  // "here" is just the start of the solve, at time 0.
+  const here = p.k >= 0 ? model.milestones[p.k]! : null;
   const next = p.k < 5 ? model.milestones[p.k + 1] : null;
-  const usualGap = next ? Math.max(0, next.typicalMs - here.typicalMs) : here.medianRemainingMs;
+  const usualGap = next ? Math.max(0, next.typicalMs - (here?.typicalMs ?? 0)) : (here?.medianRemainingMs ?? 0);
   const overdue = Math.max(0, elapsedMs - p.atMs - usualGap);
   const projectedMs = Math.max(p.projectedMs + overdue, elapsedMs);
   if (projectedMs === p.projectedMs) return p;
