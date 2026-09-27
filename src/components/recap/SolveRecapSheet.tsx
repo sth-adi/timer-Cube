@@ -11,7 +11,7 @@ import { reconstruction } from "@/lib/analysis/reconText";
 import { pbSolveRows, timeWonLost } from "@/lib/analysis/timeWonLost";
 import { buildPostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { metricsFor } from "@/lib/analytics/solveMetrics";
-import { analyzeMistakes, mistakeHabits } from "@/lib/analysis/mistakeRadar";
+import { analyzeMistakes, mistakeHabits, mistakesByRow } from "@/lib/analysis/mistakeRadar";
 import { inspectionReport } from "@/lib/inspection/report";
 import { CROSS_FACE_COLOR } from "@/lib/smartcube/crossFrame";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
@@ -49,6 +49,7 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
   const times = useMemo(() => b?.frameMoves.map((m) => m.timeStampMs) ?? [], [b]);
   const mistakes = useMemo(() => (b ? analyzeMistakes({ scramble: b.frameScramble, moves: frameTokens, timesMs: times, totalMs: b.totalMs }) : null), [b, frameTokens, times]);
   const habits = useMemo(() => mistakeHabits(others), [others]);
+  const stepMistakes = useMemo(() => (b && mistakes ? mistakesByRow(b.rows, mistakes.mistakes) : null), [b, mistakes]);
   const inspection = useMemo(() => (b ? inspectionReport(b.frameScramble, frameTokens, times) : null), [b, frameTokens, times]);
 
   const final = solveFinalMs(solve);
@@ -103,7 +104,7 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
             </div>
             <PostSolveTable rows={b.rows} scramble={b.frameScramble} moves={b.frameMoves} baseline={baseline} crossFace={b.crossFace} executions={b.executions} />
             {report && <TimeWonLostCard report={report} />}
-            {recon && <ReconstructionCard recon={recon} />}
+            {recon && <ReconstructionCard recon={recon} stepMistakes={stepMistakes} />}
             {mistakes && <MistakeRadarCard report={mistakes} totalMs={b.totalMs} habits={habits} />}
             {inspection && <InspectionGradeCard report={inspection} />}
             <XrayTeaser scramble={b.frameScramble} moves={frameTokens} timesMs={times} />

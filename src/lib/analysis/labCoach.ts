@@ -5,6 +5,7 @@ import { analyzeF2lConsistency, type F2lConsistencyReport } from "@/lib/analysis
 import { analyzeAlgSpeed, type AlgSpeedReport } from "@/lib/analysis/algSpeed";
 import { analyzeLookahead, type LookaheadReport } from "@/lib/analysis/lookahead";
 import { defaultTargetMs, planGoal, typicalSolveMs, type GoalPlan } from "@/lib/analysis/goalPlanner";
+import { caseStats, solveCases, type CaseGroup } from "@/lib/analysis/caseHistory";
 
 /**
  * Coach: the Lab has dozens of reports; this reads the ones that can put a
@@ -34,12 +35,43 @@ export interface CoachReport {
   headline: string;
 }
 
+export interface WorstCaseFinding {
+  group: CaseGroup;
+  key: string;
+  name: string;
+  count: number;
+  /** Amortized across every solve, not just the ones this case showed up in — comparable to every other finding's msPerSolve. */
+  msPerSolve: number;
+}
+
 export interface CoachInputs {
   metrics: readonly SolveMetrics[];
   habits: readonly MistakeHabit[];
   f2l: F2lConsistencyReport | null;
   alg: AlgSpeedReport | null;
   look: LookaheadReport | null;
+  /** The single OLL/PLL/F2L case that has cost the most real time across your whole history, by absolute time — a different cut than f2l's turn-consistency spread. */
+  worstCase?: WorstCaseFinding | null;
+}
+
+/** A case needs at least this many occurrences before its average means anything. */
+const MIN_WORST_CASE_COUNT = 3;
+
+/** Pure-ish: replays every solve's cases once (solveCases is WeakMap-cached per solve) to find the single case costing the most real time overall. */
+export function worstCaseFinding(solves: readonly Solve[]): WorstCaseFinding | null {
+  if (!solves.length) return null;
+  const occurrences = solves.flatMap(solveCases);
+  if (!occurrences.length) return null;
+  let best: WorstCaseFinding | null = null;
+  for (const group of ["OLL", "PLL", "F2L"] as const) {
+    const n = occurrences.filter((o) => o.group === group).length;
+    for (const c of caseStats(occurrences, group, n)) {
+      if (c.count < MIN_WORST_CASE_COUNT) continue;
+      const msPerSolve = (c.totalMs * c.count) / solves.length;
+      if (!best || msPerSolve > best.msPerSolve) best = { group, key: c.key, name: c.name, count: c.count, msPerSolve };
+    }
+  }
+  return best;
 }
 
 export const MIN_SOLVES = 20;
@@ -49,7 +81,7 @@ const s = (ms: number) => (ms / 1000).toFixed(2);
 const list = (names: readonly string[]) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : (names[0] ?? ""));
 
 /** Pure: ranks findings from already-built reports, so it's testable without replaying a solve. */
-export function buildCoach({ metrics, habits, f2l, alg, look }: CoachInputs): CoachReport | null {
+export function buildCoach({ metrics, habits, f2l, alg, look, worstCase }: CoachInputs): CoachReport | null {
   if (metrics.length < MIN_SOLVES) return null;
   const findings: CoachFinding[] = [];
 
@@ -131,6 +163,17 @@ export function buildCoach({ metrics, habits, f2l, alg, look }: CoachInputs): Co
     });
   }
 
+  if (worstCase) {
+    findings.push({
+      id: "worst-case",
+      title: `${worstCase.name} is your costliest ${worstCase.group} case`,
+      detail: `${worstCase.count} times across your history — no other case has cost you this much real time.`,
+      action: "Open its history, pick your best version, and lock it in.",
+      msPerSolve: worstCase.msPerSolve,
+      href: `/cases?case=${encodeURIComponent(worstCase.key)}&group=${worstCase.group}`,
+    });
+  }
+
   const ranked = findings.filter((f) => f.msPerSolve >= MIN_FINDING_MS).sort((a, b) => b.msPerSolve - a.msPerSolve);
   const typicalMs = quantile(
     metrics.map((m) => m.totalMs),
@@ -149,5 +192,12 @@ export function buildCoach({ metrics, habits, f2l, alg, look }: CoachInputs): Co
 export function analyzeCoach(solves: readonly Solve[]): CoachReport | null {
   const metrics = metricsFor(solves);
   if (metrics.length < MIN_SOLVES) return null;
-  return buildCoach({ metrics, habits: mistakeHabits(solves), f2l: analyzeF2lConsistency(solves), alg: analyzeAlgSpeed(solves), look: analyzeLookahead(solves) });
+  return buildCoach({
+    metrics,
+    habits: mistakeHabits(solves),
+    f2l: analyzeF2lConsistency(solves),
+    alg: analyzeAlgSpeed(solves),
+    look: analyzeLookahead(solves),
+    worstCase: worstCaseFinding(solves),
+  });
 }

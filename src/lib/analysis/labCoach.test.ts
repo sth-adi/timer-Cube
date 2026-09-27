@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { Solve } from "@/types";
+import { fullSolveOn } from "@/lib/smartcube/testSolves";
 import type { SolveMetrics } from "@/lib/analytics/solveMetrics";
 import type { AlgSpeedReport, AlgSpeed } from "./algSpeed";
 import type { F2lConsistencyReport } from "./f2lConsistency";
-import { MIN_SOLVES, buildCoach } from "./labCoach";
+import { MIN_SOLVES, buildCoach, worstCaseFinding } from "./labCoach";
 
 const metrics = (n: number, f2lPause: (i: number) => number) =>
   Array.from({ length: n }, (_, i) => ({ totalMs: 20_000, phases: [3000, 10_000, 4000, 3000], f2lPauseMs: f2lPause(i) }) as unknown as SolveMetrics);
@@ -46,5 +48,47 @@ describe("buildCoach", () => {
     ];
     const r = buildCoach({ metrics: metrics(40, () => 0), habits, f2l: null, alg: null, look: null })!;
     expect(r.findings.map((f) => f.id)).toEqual(["mistake-wasted-turns"]);
+  });
+
+  it("adds a costliest-case finding, deep-linked to its case history", () => {
+    const r = buildCoach({
+      metrics: metrics(40, () => 0),
+      habits: [],
+      f2l: null,
+      alg: null,
+      look: null,
+      worstCase: { group: "OLL", key: "Sune", name: "Sune", count: 10, msPerSolve: 500 },
+    })!;
+    const finding = r.findings.find((f) => f.id === "worst-case")!;
+    expect(finding).toBeDefined();
+    expect(finding.href).toBe("/cases?case=Sune&group=OLL");
+  });
+});
+
+const saved = (id: string, scramble: string, moves: string[], gap: number, date: number): Solve => ({
+  id,
+  sessionId: "x",
+  penalty: "none",
+  scramble,
+  reconstruction: moves.join(" "),
+  moveTimestamps: moves.map((_, i) => i * gap),
+  timeMs: (moves.length - 1) * gap,
+  date,
+});
+
+describe("worstCaseFinding", () => {
+  it("finds the single case that has cost the most real time, once it's repeated enough", () => {
+    const { scramble, moves } = fullSolveOn("U");
+    const solves = [0, 1, 2, 3].map((k) => saved(`s${k}`, scramble, moves, 120 + k * 5, k));
+    const finding = worstCaseFinding(solves)!;
+    expect(finding).not.toBeNull();
+    expect(finding.count).toBeGreaterThanOrEqual(3);
+    expect(finding.msPerSolve).toBeGreaterThan(0);
+  }, 60_000);
+
+  it("returns null with no solves, or too few repeats of any one case", () => {
+    expect(worstCaseFinding([])).toBeNull();
+    const keyboard: Solve = { id: "k", sessionId: "x", penalty: "none", scramble: "R", timeMs: 9000, date: 0 };
+    expect(worstCaseFinding([keyboard])).toBeNull();
   });
 });

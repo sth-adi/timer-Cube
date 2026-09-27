@@ -20,6 +20,7 @@ const SORTS = [
   { key: "count", label: "Most seen" },
   { key: "total", label: "Slowest" },
   { key: "look", label: "Slowest to recognise" },
+  { key: "inconsistent", label: "Least consistent" },
 ] as const;
 type SortKey = (typeof SORTS)[number]["key"];
 
@@ -121,6 +122,10 @@ function CasesPageInner() {
     const list = [...stats];
     if (sort === "total") list.sort((a, b) => b.totalMs - a.totalMs);
     if (sort === "look") list.sort((a, b) => b.recognitionMs - a.recognitionMs);
+    // The gap between what you usually take and your own best for it — a
+    // case that's slow but steady is a different problem from one that's
+    // sometimes fast and sometimes not, and this is the one that surfaces it.
+    if (sort === "inconsistent") list.sort((a, b) => b.totalMs - b.bestTotalMs - (a.totalMs - a.bestTotalMs));
     return list;
   }, [stats, sort]);
   const maxTotal = Math.max(1, ...stats.map((s) => s.totalMs));

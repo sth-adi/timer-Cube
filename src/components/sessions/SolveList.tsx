@@ -13,7 +13,7 @@ import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Check, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Trash2, Wand2 } from "lucide-react";
+import { Check, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Trash2, TriangleAlert, Wand2 } from "lucide-react";
 import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveSummary, type SolveSummary } from "@/lib/analysis/solveFilter";
 import { CROSS_FACE_COLOR, CROSS_FACE_HEX } from "@/lib/smartcube/crossFrame";
@@ -106,6 +106,7 @@ function SolveRow({
         <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
         {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
         {solve.reconstruction && <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />}
+        {summary?.hasMistake && <TriangleAlert size={11} className="text-warning mr-1" aria-label="Mistake Radar flagged something in this solve" />}
         {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
       </button>
       {open && (

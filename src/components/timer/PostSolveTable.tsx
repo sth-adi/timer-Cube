@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { PostSolvePhaseRow } from "@/lib/analysis/postSolveTable";
 import type { SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
@@ -23,6 +24,7 @@ import { caseRecords, type CaseRecord } from "@/lib/analysis/caseRecord";
 import { f2lCaseStats, type F2lCaseStat } from "@/lib/analysis/f2lCaseStats";
 import { recognitionStats, type RecognitionStat } from "@/lib/analysis/caseHistory";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
+import { analyzeCrossOrientations, type CrossAdvisorReport } from "@/lib/analysis/crossAdvisor";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
 
@@ -171,6 +173,24 @@ function CrossEfficiencyLine({ turns, optimal }: { turns: number; optimal: numbe
 }
 
 /**
+ * Under the Cross row: whether your own lifetime numbers say a different
+ * cross colour would pay off — the Cross Color Advisor's own question
+ * (`/crosscolor`), reused here instead of asking it again from scratch on
+ * every solve. Silent unless the gap is the same size the Advisor itself
+ * treats as meaningful.
+ */
+function CrossAdvisorLine({ report }: { report: CrossAdvisorReport | null }) {
+  if (!report || report.best.face === report.current.face) return null;
+  const gap = report.current.avgLen - report.best.avgLen;
+  if (gap < 0.3) return null;
+  return (
+    <Link href="/crosscolor" className="mt-0.5 block text-[10px] leading-tight text-muted-2 underline decoration-dotted underline-offset-2 hover:text-accent">
+      a {report.best.colorName} cross usually runs {gap.toFixed(2)} moves shorter for you — Cross Color Advisor
+    </Link>
+  );
+}
+
+/**
  * Under an F2L row: this pair's own turn count against how many you usually
  * need for this exact case — not a computer's minimum (a one-look human
  * rarely matches that anyway), but proof, from your own history, that a
@@ -250,6 +270,7 @@ export function PostSolveTable({
   }, [scramble]);
   const crossRow = rows.find((r) => r.label === "Cross");
   const crossTurns = crossRow?.atMs != null ? moves.filter((m) => m.timeStampMs <= crossRow.atMs!).length : null;
+  const crossAdvisor = useMemo(() => analyzeCrossOrientations(allSolves), [allSolves]);
   const router = useRouter();
 
   return (
@@ -284,6 +305,7 @@ export function PostSolveTable({
                       return exec ? <AlgLine exec={exec} seen={seen[myAlgKey(exec.step, exec.caseName)]} caseRecord={caseName ? caseHistory.get(caseName) : undefined} /> : null;
                     })()}
                   {row.label === "Cross" && crossTurns !== null && crossOptimal !== null && <CrossEfficiencyLine turns={crossTurns} optimal={crossOptimal} />}
+                  {row.label === "Cross" && <CrossAdvisorLine report={crossAdvisor} />}
                   {f2lKey && f2lTurns !== null && <F2lEfficiencyLine turns={f2lTurns} stat={f2lHistory.get(f2lKey)} />}
                   {caseLink && row.recognitionMs !== null && (
                     <RecognitionLine pausedMs={row.recognitionMs} stat={recogHistory.get(`${caseLink.group}:${caseLink.key}`)} />

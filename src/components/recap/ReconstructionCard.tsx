@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, ExternalLink, ScrollText } from "lucide-react";
+import { Check, Copy, ExternalLink, ScrollText, TriangleAlert } from "lucide-react";
 import type { Reconstruction } from "@/lib/analysis/reconText";
+import type { Mistake } from "@/lib/analysis/mistakeRadar";
 
 /**
  * The solve written out step by step in your own grip — cross, each pair,
  * OLL and PLL with its case, time and turn count — ready to copy or open
- * in Twizzle (the scramble set up, the solve playing on a 3D cube).
+ * in Twizzle (the scramble set up, the solve playing on a 3D cube). Steps
+ * the Mistake Radar flagged carry a small marker, so the written record and
+ * the radar agree on where the time actually went instead of living as two
+ * separate readings of the same solve.
  */
-export function ReconstructionCard({ recon }: { recon: Reconstruction }) {
+export function ReconstructionCard({ recon, stepMistakes }: { recon: Reconstruction; stepMistakes?: Map<number, Mistake[]> | null }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -39,10 +43,17 @@ export function ReconstructionCard({ recon }: { recon: Reconstruction }) {
         {recon.rotation ? <span className="font-mono text-foreground">{recon.rotation}</span> : "No rotation"} — held {recon.gripLabel}
       </p>
       <div className="flex flex-col gap-1">
-        {recon.steps.map((s, k) => (
+        {recon.steps.map((s, k) => {
+          const hits = stepMistakes?.get(k);
+          return (
           <div key={s.label} className="grid grid-cols-[4.5rem_1fr_auto] items-baseline gap-2 text-[11px]">
-            <span className="truncate font-semibold text-foreground" title={s.caseName ?? undefined}>
+            <span className="flex items-center gap-1 truncate font-semibold text-foreground" title={s.caseName ?? undefined}>
               {s.label}
+              {hits && hits.length > 0 && (
+                <TriangleAlert size={10} className="shrink-0 text-warning">
+                  <title>{hits.map((m) => m.title).join("; ")}</title>
+                </TriangleAlert>
+              )}
             </span>
             <span className="min-w-0 break-words font-mono text-muted">
               {s.moves.join(" ") || (k > 0 ? <span className="font-sans italic text-muted-2">came in with {recon.steps[k - 1].label}</span> : "—")}
@@ -52,7 +63,8 @@ export function ReconstructionCard({ recon }: { recon: Reconstruction }) {
               {(s.ms / 1000).toFixed(2)} · {s.moves.length}
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

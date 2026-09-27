@@ -25,7 +25,7 @@ import { GyroTwin } from "@/components/lab/GyroTwin";
 import { GyroReconstructionCard } from "@/components/lab/GyroReconstructionCard";
 import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
 import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
-import { analyzeMistakes, mistakeHabits } from "@/lib/analysis/mistakeRadar";
+import { analyzeMistakes, mistakeHabits, mistakesByRow } from "@/lib/analysis/mistakeRadar";
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
 import { inspectionReport } from "@/lib/inspection/report";
@@ -502,6 +502,12 @@ export function SmartCubeTimer() {
     () => (savedBreakdown && savedSolve ? writeReconstruction(savedBreakdown, savedSolve.scramble, { totalMs: savedBreakdown.totalMs, title: `${formatTime(savedSolve.timeMs)} solve` }) : null),
     [savedBreakdown, savedSolve],
   );
+  // Which reconstruction step each flagged mistake landed in — saved solve
+  // and mistake report share the solve's own moveTimestamps clock.
+  const reconStepMistakes = useMemo(
+    () => (savedBreakdown && mistakeReport ? mistakesByRow(savedBreakdown.rows, mistakeReport.mistakes) : null),
+    [savedBreakdown, mistakeReport],
+  );
 
   // The OLL and PLL algorithms you executed (and whether in one look), for the recap table.
   const executions = useMemo(
@@ -827,7 +833,7 @@ export function SmartCubeTimer() {
                 </div>
               )}
 
-              {recon && <ReconstructionCard recon={recon} />}
+              {recon && <ReconstructionCard recon={recon} stepMistakes={reconStepMistakes} />}
 
               {mistakeReport && <MistakeRadarCard report={mistakeReport} totalMs={elapsedMs} habits={mistakeHabitHistory} />}
 

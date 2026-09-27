@@ -356,3 +356,23 @@ export function mistakeHabits(solves: readonly Solve[]): MistakeHabit[] {
     .map((x) => analyzeMistakes({ scramble: x.scramble, moves: x.reconstruction!.split(/\s+/).filter(Boolean), timesMs: x.moveTimestamps!, totalMs: x.timeMs }));
   return aggregateMistakes(reports);
 }
+
+/**
+ * Sorts flagged mistakes into the post-solve rows they landed in — a
+ * mistake's `atMs` falls between the row before it finishing (`startMs`,
+ * "the previous phase's end") and this row finishing (`atMs`). Keyed by the
+ * row's own index among rows that have a boundary at all, matching the same
+ * filter reconText.ts uses to build recon.steps, so the map's keys line up
+ * with a Reconstruction's own step indices.
+ */
+export function mistakesByRow(rows: readonly { startMs: number | null; atMs: number | null }[], mistakes: readonly Mistake[]): Map<number, Mistake[]> {
+  const map = new Map<number, Mistake[]>();
+  let idx = -1;
+  for (const row of rows) {
+    if (row.atMs === null) continue;
+    idx++;
+    const hits = mistakes.filter((m) => m.atMs > (row.startMs ?? -1) && m.atMs <= row.atMs!);
+    if (hits.length) map.set(idx, hits);
+  }
+  return map;
+}
