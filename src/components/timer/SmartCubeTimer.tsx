@@ -51,6 +51,7 @@ import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveProjection } from "./LiveProjection";
 import { LiveSessionCoach } from "./LiveSessionCoach";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
+import { InspectionRing } from "@/components/timer/InspectionRing";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
 import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
@@ -304,7 +305,8 @@ export function SmartCubeTimer() {
   const timestamps = useMemo(() => moves.map((m) => m.timeStampMs), [moves]);
   const buckets = useMemo(() => computeTpsBuckets(timestamps), [timestamps]);
   const avgTps = useMemo(() => averageTps(timestamps), [timestamps]);
-  const maxBucket = Math.max(1, peakTps(buckets));
+  const peakBucketTps = useMemo(() => peakTps(buckets), [buckets]);
+  const maxBucket = Math.max(1, peakBucketTps);
   // A live speedometer: how fast your hands are moving *right now*, not the
   // whole-solve average — slides with the clock (nowMs) rather than sitting
   // at fixed one-second buckets from the start, so it reads correctly
@@ -668,6 +670,7 @@ export function SmartCubeTimer() {
 
   return (
     <div className="flex w-full max-w-md flex-1 flex-col items-center gap-4 py-2">
+      <InspectionRing remainingMs={flow.inspectionRemainingMs} active={armed && !recording && flow.phase === "inspecting"} />
       <div className="flex items-center gap-1.5 text-xs text-success">
         <BluetoothConnected size={14} />
         {deviceName}
@@ -687,6 +690,12 @@ export function SmartCubeTimer() {
           Disconnect
         </button>
       </div>
+
+      {batterySupported && batteryLevel !== null && batteryLevel <= 12 && (
+        <p className="flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-medium text-danger">
+          <BatteryWarning size={12} /> Cube battery at {batteryLevel}% — a dying battery is a common cause of a mid-solve Bluetooth drop
+        </p>
+      )}
 
       {pendingEvent && (
         <p className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-medium text-accent">
@@ -770,7 +779,11 @@ export function SmartCubeTimer() {
           <div className="flex items-center gap-3 text-xs text-muted">
             {crossFace && crossFace !== "U" && <span>{CROSS_FACE_COLOR[crossFace]} cross</span>}
             <span>{moves.length} moves</span>
-            {avgTps !== null && <span>{avgTps.toFixed(2)} TPS</span>}
+            {avgTps !== null && (
+              <span>
+                {avgTps.toFixed(2)} TPS{peakBucketTps > avgTps && <span className="text-muted-2"> (peak {peakBucketTps.toFixed(1)})</span>}
+              </span>
+            )}
             {finishedScramble &&
               (savedSolveExists ? (
                 <span className="flex items-center gap-1 text-success">

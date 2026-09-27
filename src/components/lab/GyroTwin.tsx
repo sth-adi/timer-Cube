@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Crosshair } from "lucide-react";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { subscribeGyro } from "@/lib/store/smartCubeBus";
@@ -11,17 +12,21 @@ import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, orientationLabel, type 
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Each face's placement in the body frame (white on top), and where its
- * 9-facelet block starts in the Kociemba string. With these transforms the
- * natural row-major sticker order lands correctly on all six faces.
+ * Each face's placement in the body frame (white on top), where its
+ * 9-facelet block starts in the Kociemba string, and a fixed brightness —
+ * baked into the face itself (not the current view), like a faint material
+ * difference sculpted into the plastic, so it reads as depth from any
+ * orientation instead of a directional light that would go wrong the
+ * moment the twin turns. With these transforms the natural row-major
+ * sticker order lands correctly on all six faces.
  */
-const FACES: { start: number; transform: (h: number) => string }[] = [
-  { start: 0, transform: (h) => `rotateX(90deg) translateZ(${h}px)` }, // U
-  { start: 9, transform: (h) => `rotateY(90deg) translateZ(${h}px)` }, // R
-  { start: 18, transform: (h) => `translateZ(${h}px)` }, // F
-  { start: 27, transform: (h) => `rotateX(-90deg) translateZ(${h}px)` }, // D
-  { start: 36, transform: (h) => `rotateY(-90deg) translateZ(${h}px)` }, // L
-  { start: 45, transform: (h) => `rotateY(180deg) translateZ(${h}px)` }, // B
+const FACES: { start: number; transform: (h: number) => string; shade: number }[] = [
+  { start: 0, transform: (h) => `rotateX(90deg) translateZ(${h}px)`, shade: 1.08 }, // U
+  { start: 9, transform: (h) => `rotateY(90deg) translateZ(${h}px)`, shade: 0.96 }, // R
+  { start: 18, transform: (h) => `translateZ(${h}px)`, shade: 1.0 }, // F
+  { start: 27, transform: (h) => `rotateX(-90deg) translateZ(${h}px)`, shade: 0.82 }, // D
+  { start: 36, transform: (h) => `rotateY(-90deg) translateZ(${h}px)`, shade: 0.9 }, // L
+  { start: 45, transform: (h) => `rotateY(180deg) translateZ(${h}px)`, shade: 0.88 }, // B
 ];
 
 /** A fixed camera slightly above and to the right, so at any orientation you see three faces — like looking down at the cube in your own hands. */
@@ -35,7 +40,7 @@ function CubeFaces({ facelets, size }: { facelets: string; size: number }) {
         <div
           key={face.start}
           className="absolute left-0 top-0 grid grid-cols-3 grid-rows-3 rounded-[6px] bg-black p-[3px]"
-          style={{ width: size, height: size, gap: 3, transform: face.transform(half), backfaceVisibility: "hidden" }}
+          style={{ width: size, height: size, gap: 3, transform: face.transform(half), backfaceVisibility: "hidden", filter: `brightness(${face.shade})` }}
         >
           {Array.from({ length: 9 }, (_, i) => (
             <div key={i} className="rounded-[3px]" style={{ background: FACELET_COLORS[facelets[face.start + i]] ?? "#555" }} />
@@ -152,6 +157,16 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
             </div>
           )}
         </div>
+      )}
+
+      {/* The compact view used inline in the live timer skips the full controls
+          row (no room, and no re-center gesture mid-solve) — but "the twin may
+          not track your real cube's tilt" is worth a line even there, not
+          just on the dedicated Lab page. */}
+      {!showControls && gyroActive && !calibrated && (
+        <Link href="/lab" className="text-[10px] text-warning underline decoration-dotted underline-offset-2">
+          Uncalibrated gyro — calibrate in Lab
+        </Link>
       )}
     </div>
   );
