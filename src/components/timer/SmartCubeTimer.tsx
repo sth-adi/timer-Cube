@@ -17,6 +17,7 @@ import {
   Play,
   Radio,
   Sparkles,
+  TriangleAlert,
   Wand2,
 } from "lucide-react";
 import { useSmartCubeStore, getGyroLog } from "@/lib/store/smartCubeStore";
@@ -27,6 +28,7 @@ import { GyroReconstructionCard } from "@/components/lab/GyroReconstructionCard"
 import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
 import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
 import { analyzeMistakes, mistakeHabits, mistakesByRow } from "@/lib/analysis/mistakeRadar";
+import { caseStats, solveCases, type CaseGroup } from "@/lib/analysis/caseHistory";
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
 import { inspectionReport } from "@/lib/inspection/report";
@@ -62,9 +64,11 @@ import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
 import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps, rollingTps } from "@/lib/analysis/tps";
+import { consistencyScore } from "@/lib/analysis/cadence";
 import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
 import { computeSessionStats, normalSolves } from "@/lib/stats/stats";
-import { metricsFor } from "@/lib/analytics/solveMetrics";
+import { avg, metricsFor, sd } from "@/lib/analytics/solveMetrics";
+import { PAUSE_MS } from "@/lib/analytics/pause";
 import { buildPostSolveBaseline, paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
@@ -85,6 +89,13 @@ import { TimeWonLostCard } from "@/components/recap/TimeWonLostCard";
 import { cn } from "@/lib/utils/cn";
 
 const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
+
+/** A case needs at least this many past occurrences before its average is trusted enough to flag as "weak". */
+const MIN_CASE_OCCURRENCES = 3;
+/** A case's own average total time (recognition + execution) needs to run at least this much over the group average to count as a weak case. */
+const WEAK_CASE_RATIO = 1.3;
+/** Below this many qualifying turning gaps, a solve's rhythm isn't a meaningful sample — matches cadence.ts's own MIN_GAPS. */
+const MIN_CADENCE_GAPS = 12;
 
 /** Cumulative phase-boundary ms (from solve start), null for a phase not yet reached. */
 interface PhaseBoundaries {
@@ -125,12 +136,15 @@ function PhaseSplitsRow({
   currentPhaseIndex,
   liveCurrentMs,
   baseline,
+  f2lPairCount,
 }: {
   durations: (number | null)[];
   currentPhaseIndex: number;
   liveCurrentMs: number | null;
   /** Your usual time per phase: a finished phase reads green when it was one of your good ones, amber when slow. */
   baseline?: PostSolveBaseline | null;
+  /** How many of the 4 F2L pairs are in so far — shown next to the F2L chip once at least one has landed. */
+  f2lPairCount?: number;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -154,7 +168,8 @@ function PhaseSplitsRow({
                   : "bg-bg-panel-2 text-muted-2",
             )}
           >
-            {label} {done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
+            {label}
+            {i === 1 && f2lPairCount ? ` ${Math.min(f2lPairCount, 4)}/4` : ""} {done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
           </span>
         );
       })}
@@ -162,7 +177,18 @@ function PhaseSplitsRow({
   );
 }
 
-function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; pllCaseName: string | null }) {
+function CaseBadges({
+  ollCaseName,
+  pllCaseName,
+  weakOllCases,
+  weakPllCases,
+}: {
+  ollCaseName: string | null;
+  pllCaseName: string | null;
+  /** Case names running meaningfully slower than your own average for the group — see WEAK_CASE_RATIO below. */
+  weakOllCases: ReadonlySet<string>;
+  weakPllCases: ReadonlySet<string>;
+}) {
   // Your main algorithm for the case (learned or picked), else the book's.
   const chosen = useMyAlgsStore((s) => s.chosen);
   if (!ollCaseName && !pllCaseName) return null;
@@ -174,6 +200,8 @@ function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; 
   };
   const oll = badge("OLL", ollCaseName);
   const pll = badge("PLL", pllCaseName);
+  const ollWeak = ollCaseName !== null && weakOllCases.has(ollCaseName);
+  const pllWeak = pllCaseName !== null && weakPllCases.has(pllCaseName);
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {ollCaseName && (
@@ -182,6 +210,9 @@ function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; 
           <span className="flex flex-col items-start gap-0.5">
             <span className="flex items-center gap-1">
               <Sparkles size={11} /> OLL: {ollCaseName}
+              {ollWeak && (
+                <TriangleAlert size={11} className="text-warning" aria-label="One of your slower OLL cases — take your time recognizing it" />
+              )}
             </span>
             {oll?.alg && <span className="font-mono text-[10px] font-normal text-accent/70">{oll.alg}</span>}
           </span>
@@ -193,6 +224,9 @@ function CaseBadges({ ollCaseName, pllCaseName }: { ollCaseName: string | null; 
           <span className="flex flex-col items-start gap-0.5">
             <span className="flex items-center gap-1">
               <Sparkles size={11} /> PLL: {pllCaseName}
+              {pllWeak && (
+                <TriangleAlert size={11} className="text-warning" aria-label="One of your slower PLL cases — take your time recognizing it" />
+              )}
             </span>
             {pll?.alg && <span className="font-mono text-[10px] font-normal text-accent/70">{pll.alg}</span>}
           </span>
@@ -331,6 +365,19 @@ export function SmartCubeTimer() {
   const avgTps = useMemo(() => averageTps(timestamps), [timestamps]);
   const peakBucketTps = useMemo(() => peakTps(buckets), [buckets]);
   const maxBucket = Math.max(1, peakBucketTps);
+  // How *steady* the turning was, independent of how fast — the same
+  // gap-based coefficient-of-variation score cadence.ts uses for past
+  // solves, computed live off this solve's own timestamps so it's ready the
+  // instant the solve finishes rather than waiting on a saved-solve replay.
+  const turnConsistency = useMemo(() => {
+    const gaps: number[] = [];
+    for (let i = 1; i < timestamps.length; i++) {
+      const g = timestamps[i] - timestamps[i - 1];
+      if (g > 0 && g < PAUSE_MS) gaps.push(g);
+    }
+    if (gaps.length < MIN_CADENCE_GAPS) return null;
+    return consistencyScore(avg(gaps), sd(gaps));
+  }, [timestamps]);
   // A live speedometer: how fast your hands are moving *right now*, not the
   // whole-solve average — slides with the clock (nowMs) rather than sitting
   // at fixed one-second buckets from the start, so it reads correctly
@@ -414,6 +461,18 @@ export function SmartCubeTimer() {
   }, [elapsedMs, recording]);
 
   useEffect(() => () => resetPerformanceAura(), []);
+
+  // Live regrip tally: how many whole-cube rotations GyroTwin's own
+  // RotationTracker has named so far this attempt — a real technique signal
+  // (fewer regrips usually means a smoother solve), fed straight off the
+  // same detector already driving GyroTwin's own live "y"/"x'" pop badge, no
+  // separate tracking. Reset the instant a fresh attempt arms.
+  const [regripCount, setRegripCount] = useState(0);
+  const prevArmedForRegripRef = useRef(armed);
+  useEffect(() => {
+    if (armed && !prevArmedForRegripRef.current) setRegripCount(0);
+    prevArmedForRegripRef.current = armed;
+  }, [armed]);
 
   // "5.20s" means nothing on its own — this reads it against your own history
   // for the post-solve table (see postSolveBaseline.ts). All-time, not just
@@ -553,6 +612,22 @@ export function SmartCubeTimer() {
     [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
   );
   const mistakeHabitHistory = useMemo(() => mistakeHabits(allSolves), [allSolves]);
+
+  // Live "you're usually slow on this one" flags for the case badges — the
+  // same case-history data /cases already builds, just asked live: which
+  // OLL/PLL cases run meaningfully slower (recognition + execution) than
+  // your own average for that group, so a heads-up shows up the instant the
+  // badge names the case, not after the solve is already over.
+  const weakCases = useMemo(() => {
+    const occurrences = allSolves.flatMap(solveCases);
+    const weakSet = (group: CaseGroup) => {
+      const stats = caseStats(occurrences, group, occurrences.length).filter((s) => s.count >= MIN_CASE_OCCURRENCES);
+      if (stats.length === 0) return new Set<string>();
+      const avgMs = stats.reduce((sum, s) => sum + s.totalMs, 0) / stats.length;
+      return new Set(stats.filter((s) => s.totalMs > avgMs * WEAK_CASE_RATIO).map((s) => s.name));
+    };
+    return { oll: weakSet("OLL"), pll: weakSet("PLL") };
+  }, [allSolves]);
 
   // The just-saved solve, rebuilt the way any past solve is: where its time went, and the written reconstruction.
   const savedSolve = useSessionStore((s) => (finishedScramble ? s.solves.find((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : undefined));
@@ -772,7 +847,17 @@ export function SmartCubeTimer() {
       {(armed || recording) && gyroActive ? (
         // A gyro cube gets the live twin instead: same stickers, but it also
         // tilts and turns with the cube in your hands, and names regrips live.
-        <GyroTwin size={84} showControls={false} />
+        <div className="relative">
+          <GyroTwin size={84} showControls={false} onRotation={() => setRegripCount((c) => c + 1)} />
+          {regripCount > 0 && (
+            <span
+              className="absolute -right-1.5 -top-1.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-muted-2"
+              title="Whole-cube rotations so far this attempt — fewer usually means a smoother solve"
+            >
+              {regripCount} regrip{regripCount === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
       ) : (
         (armed || recording) && (
           <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl">
@@ -822,10 +907,16 @@ export function SmartCubeTimer() {
               Stop this solve…
             </button>
           )}
-          <PhaseSplitsRow durations={durations} currentPhaseIndex={currentPhaseIndex} liveCurrentMs={liveCurrentMs} baseline={postSolveBaseline} />
+          <PhaseSplitsRow
+            durations={durations}
+            currentPhaseIndex={currentPhaseIndex}
+            liveCurrentMs={liveCurrentMs}
+            baseline={postSolveBaseline}
+            f2lPairCount={f2lPairAtMs.filter((t) => t !== null).length}
+          />
           <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
-          <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
+          <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} weakOllCases={weakCases.oll} weakPllCases={weakCases.pll} />
         </div>
       )}
 
@@ -838,6 +929,11 @@ export function SmartCubeTimer() {
             {avgTps !== null && (
               <span>
                 {avgTps.toFixed(2)} TPS{peakBucketTps > avgTps && <span className="text-muted-2"> (peak {peakBucketTps.toFixed(1)})</span>}
+              </span>
+            )}
+            {turnConsistency !== null && (
+              <span title="How evenly spaced your turns were, independent of speed — a smooth stream scores higher than the same pace in bursts">
+                {turnConsistency}% steady
               </span>
             )}
             {finishedScramble &&

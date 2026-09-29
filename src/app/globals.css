@@ -376,6 +376,16 @@ body {
   }
 }
 
+/* GhostPaceBar: a brief flash the instant you first pull ahead of your ghost PB. */
+@keyframes lead-pulse {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Live Cube Mimic: a quick ring pulse confirms each turn actually landed. */
 @keyframes turn-flash {
   0% {

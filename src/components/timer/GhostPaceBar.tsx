@@ -31,6 +31,13 @@ export function GhostPaceBar({
   const latestPbRef = useRef<number | null>(pbMs);
   const prevPhaseRef = useRef<TimerPhase>(phase);
   const [target, setTarget] = useState<number | null>(null);
+  // A one-shot flash the instant the bar first crosses from "over" to
+  // "ahead" — the moment you actually pull into the lead, not just any
+  // frame where you happen to be ahead. Tracked via a ref (not state) so it
+  // doesn't itself trigger a render loop, and reset whenever a fresh target
+  // is picked so a new solve starts with a clean slate.
+  const prevOverRef = useRef<boolean | null>(null);
+  const [pulseKey, setPulseKey] = useState(0);
 
   useEffect(() => {
     if (phase !== "running") latestPbRef.current = pbMs;
@@ -39,27 +46,37 @@ export function GhostPaceBar({
   useEffect(() => {
     if (phase === "running" && prevPhaseRef.current !== "running") {
       setTarget(latestPbRef.current);
+      prevOverRef.current = null;
     } else if (phase === "idle") {
       setTarget(null);
     }
     prevPhaseRef.current = phase;
   }, [phase]);
 
+  const overPb = target !== null && target > 0 && elapsedMs > target;
+
+  useEffect(() => {
+    if (phase === "running" && prevOverRef.current === true && !overPb) setPulseKey((k) => k + 1);
+    prevOverRef.current = overPb;
+  }, [overPb, phase]);
+
   if (target === null || target <= 0) return null;
   if (phase !== "running" && phase !== "stopped") return null;
 
-  const overPb = elapsedMs > target;
   const pct = Math.min(100, (elapsedMs / target) * 100);
   const deltaMs = Math.abs(elapsedMs - target);
   const finished = phase === "stopped";
 
   return (
     <div className="flex w-full max-w-xs flex-col items-center gap-1">
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-panel-2">
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-bg-panel-2">
         <div
           className={cn("h-full rounded-full transition-[width] duration-100", overPb ? "bg-danger" : "bg-success")}
           style={{ width: `${pct}%` }}
         />
+        {pulseKey > 0 && !overPb && (
+          <span key={pulseKey} aria-hidden className="absolute inset-0 animate-[lead-pulse_420ms_ease-out] rounded-full bg-success/70" />
+        )}
       </div>
       {!hideTimes && (
         <p className={cn("text-[11px] font-medium", overPb ? "text-danger" : "text-success")}>

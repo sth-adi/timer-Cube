@@ -58,6 +58,8 @@ interface GyroTwinProps {
   showControls?: boolean;
   /** Where the viewer is, as a CSS rotation — defaults to looking down at the cube in your own hands. */
   camera?: string;
+  /** Fires every time a whole-cube rotation settles — lets a caller (e.g. a live regrip tally) count them without duplicating the tracker. */
+  onRotation?: (token: string) => void;
 }
 
 /**
@@ -72,7 +74,7 @@ interface GyroTwinProps {
  * instant they settle ("y", "x'"…) — the same detector that writes them into
  * rotation-aware reconstructions after a solve.
  */
-export function GyroTwin({ size = 120, className, showControls = true, camera = CAMERA }: GyroTwinProps) {
+export function GyroTwin({ size = 120, className, showControls = true, camera = CAMERA, onRotation }: GyroTwinProps) {
   const cubeRef = useRef<HTMLDivElement | null>(null);
   const facelets = useSmartCubeStore((s) => s.liveFacelets);
   const gyroActive = useSmartCubeStore((s) => s.gyroActive);
@@ -83,6 +85,13 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
   const calibrations = useSettingsStore((s) => s.gyroCalibrations);
   const [label, setLabel] = useState(orientationLabel(HOME_ORIENTATION));
   const [lastRotation, setLastRotation] = useState<{ token: string; id: number } | null>(null);
+  // Kept in a ref (not an effect dependency) so a caller passing a fresh
+  // inline callback each render — e.g. SmartCubeTimer's live regrip tally —
+  // never forces the tracker below to tear down and resubscribe.
+  const onRotationRef = useRef(onRotation);
+  useEffect(() => {
+    onRotationRef.current = onRotation;
+  });
 
   useEffect(() => {
     const el = cubeRef.current;
@@ -103,7 +112,10 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
       pending = out.orientation;
       if (!raf) raf = requestAnimationFrame(flush);
       if (out.segment) setLabel(orientationLabel(out.segment.orientation));
-      if (out.rotation) setLastRotation({ token: out.rotation.token, id: ++rotationId });
+      if (out.rotation) {
+        setLastRotation({ token: out.rotation.token, id: ++rotationId });
+        onRotationRef.current?.(out.rotation.token);
+      }
     });
     return () => {
       unsubscribe();
