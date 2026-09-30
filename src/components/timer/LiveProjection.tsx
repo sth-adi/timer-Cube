@@ -7,8 +7,8 @@ import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { liveMilestones, milestoneTimes } from "@/lib/pacer/pacer";
 import { buildProjectionModel, projectAtTime, projectLive, projectPreSolve, type Projection } from "@/lib/analysis/liveProjection";
 import { predictSolveTime } from "@/lib/analysis/prediction";
-import { normalSolves } from "@/lib/stats/stats";
-import { solveFinalMs } from "@/types";
+import { normalSolves, solvesForEvent } from "@/lib/stats/stats";
+import { solveFinalMs, type EventTag } from "@/types";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
@@ -20,7 +20,18 @@ import { cn } from "@/lib/utils/cn";
  * instant the cross is done, updated at every milestone after. Once it's
  * done, the trail of calls it made sits next to the real result.
  */
-export function LiveProjection({ finished, finalMs, scramble }: { finished: boolean; finalMs: number; scramble?: string }) {
+export function LiveProjection({
+  finished,
+  finalMs,
+  scramble,
+  pendingEvent = null,
+}: {
+  finished: boolean;
+  finalMs: number;
+  scramble?: string;
+  /** Which event this attempt is tagged as — the projection model and pre-solve prediction are both built from that event's own history only, same convention as the ghost target and coach card. */
+  pendingEvent?: EventTag | null;
+}) {
   const solves = useSessionStore((s) => s.solves);
   const startedAtMs = useSmartCubeStore((s) => s.startedAtMs);
   const crossAtMs = useSmartCubeStore((s) => s.crossAtMs);
@@ -28,25 +39,30 @@ export function LiveProjection({ finished, finalMs, scramble }: { finished: bool
   const f2lAtMs = useSmartCubeStore((s) => s.f2lAtMs);
   const ollAtMs = useSmartCubeStore((s) => s.ollAtMs);
 
+  const eventSolves = useMemo(
+    () => (pendingEvent === null ? normalSolves(solves) : solvesForEvent(solves, pendingEvent)),
+    [solves, pendingEvent],
+  );
+
   // Only meaningful once finished — mid-solve finalMs ticks every frame and mustn't rebuild the model.
   const excludeMs = finished ? finalMs : null;
   const model = useMemo(() => {
     // Once this solve is saved, judge the calls against a model that never saw it.
-    const latest = solves.reduce<(typeof solves)[number] | null>((a, s) => (!a || s.date > a.date ? s : a), null);
-    const pool = excludeMs !== null && latest?.timeMs === excludeMs ? solves.filter((s) => s !== latest) : solves;
+    const latest = eventSolves.reduce<(typeof eventSolves)[number] | null>((a, s) => (!a || s.date > a.date ? s : a), null);
+    const pool = excludeMs !== null && latest?.timeMs === excludeMs ? eventSolves.filter((s) => s !== latest) : eventSolves;
     const smart = pool.filter((s) => s.scramble && s.reconstruction && s.moveTimestamps?.length && s.penalty !== "dnf");
     const history = smart.map((s) =>
       milestoneTimes({ scramble: s.scramble, moves: s.reconstruction!.split(/\s+/).filter(Boolean), timesMs: s.moveTimestamps! }),
     );
     const finals = pool.map(solveFinalMs).filter((x): x is number => x !== null);
     return buildProjectionModel(history, finals.length ? Math.min(...finals) : null);
-  }, [solves, excludeMs]);
+  }, [eventSolves, excludeMs]);
 
   // Before the cross is even done, the scramble's own difficulty is already
   // a signal — the same pre-solve regression the scramble bar shows (see
   // prediction.ts) — so the projection has something to say from the very
   // start of the solve instead of sitting silent until the first milestone.
-  const preSolvePrediction = useMemo(() => (scramble ? predictSolveTime(normalSolves(solves), scramble) : null), [solves, scramble]);
+  const preSolvePrediction = useMemo(() => (scramble ? predictSolveTime(eventSolves, scramble) : null), [eventSolves, scramble]);
   const preSolveCall = useMemo(() => projectPreSolve(model, preSolvePrediction), [model, preSolvePrediction]);
 
   // Every call the projection has made so far this solve, one per milestone reached.

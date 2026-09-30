@@ -66,7 +66,7 @@ import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps, rollingTps } from "@/lib/analysis/tps";
 import { consistencyScore } from "@/lib/analysis/cadence";
 import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
-import { computeSessionStats, normalSolves } from "@/lib/stats/stats";
+import { computeSessionStats, normalSolves, solvesForEvent } from "@/lib/stats/stats";
 import { avg, metricsFor, sd } from "@/lib/analytics/solveMetrics";
 import { PAUSE_MS } from "@/lib/analytics/pause";
 import { buildPostSolveBaseline, paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
@@ -426,14 +426,21 @@ export function SmartCubeTimer() {
   );
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
-  // For the post-solve coach card: this session's own mean/best, read
-  // whether or not this exact solve has landed in `sessionSolves` yet (the
-  // store refetches asynchronously after recordSolve, and the coach card
-  // only needs an approximate "compared to your usual pace" framing, not a
-  // stat that must exclude this solve to the millisecond).
-  const coachSessionStats = useMemo(() => computeSessionStats(normalSolves(sessionSolves)), [sessionSolves]);
-  // The ghost target for GhostPaceBar — same "ordinary solves only" convention as PB detection, so an OH attempt never races a 2-handed best.
-  const normalPbMs = useMemo(() => (pendingEvent === null ? coachSessionStats.best : null), [pendingEvent, coachSessionStats.best]);
+  // This session's own mean/best for whichever event this attempt is
+  // tagged as — 2-handed by default, or that event's own history when one
+  // of OH/feet/BLD is selected, so the ghost target, the aura, and the
+  // post-solve coach card's "compared to your usual pace" framing all judge
+  // an event solve against its own kind instead of an unrelated 2-handed
+  // baseline (or, previously, nothing at all for the ghost target/aura).
+  // Read whether or not this exact solve has landed in `sessionSolves` yet
+  // (the store refetches asynchronously after recordSolve, and these only
+  // need an approximate framing, not a stat that must exclude this solve to
+  // the millisecond).
+  const eventSessionStats = useMemo(
+    () => computeSessionStats(pendingEvent === null ? normalSolves(sessionSolves) : solvesForEvent(sessionSolves, pendingEvent)),
+    [pendingEvent, sessionSolves],
+  );
+  const eventPbMs = eventSessionStats.best;
 
   // Feeds the ambient background's live pace cue (see AuroraBackground.tsx) —
   // the same signal TimerView's keyboard solves already drive, so a live
@@ -445,15 +452,19 @@ export function SmartCubeTimer() {
   const prevRecordingForAuraRef = useRef(recording);
   useEffect(() => {
     if (recording && !prevRecordingForAuraRef.current) {
-      const prediction = scramble ? predictSolveTime(normalSolves(sessionSolves), scramble) : null;
-      auraTargetRef.current = (prediction?.skill?.useful ? prediction.predictedMs : null) ?? normalPbMs ?? null;
+      // The predictive model is trained on ordinary 2-handed solves only, so
+      // it's only a fair target when this attempt is one too — for a
+      // tagged event, eventPbMs (that event's own best) is the right target
+      // outright, not a fallback behind an unrelated 2-handed estimate.
+      const prediction = pendingEvent === null && scramble ? predictSolveTime(normalSolves(sessionSolves), scramble) : null;
+      auraTargetRef.current = (prediction?.skill?.useful ? prediction.predictedMs : null) ?? eventPbMs ?? null;
     }
     if (!recording) {
       auraTargetRef.current = null;
       resetPerformanceAura();
     }
     prevRecordingForAuraRef.current = recording;
-  }, [recording, scramble, sessionSolves, normalPbMs]);
+  }, [recording, scramble, sessionSolves, eventPbMs, pendingEvent]);
 
   useEffect(() => {
     if (!recording || auraTargetRef.current === null) return;
@@ -477,8 +488,16 @@ export function SmartCubeTimer() {
   // "5.20s" means nothing on its own — this reads it against your own history
   // for the post-solve table (see postSolveBaseline.ts). All-time, not just
   // this session: a fairer, less noisy reference than a handful of solves
-  // since you last opened the app.
-  const postSolveBaseline = useMemo(() => buildPostSolveBaseline(metricsFor(allSolves)), [allSolves]);
+  // since you last opened the app. Scoped to this attempt's own event, same
+  // convention as eventSessionStats above — an OH solve's phase pacing
+  // shouldn't be graded against a 2-handed median (buildPostSolveBaseline
+  // already requires MIN_SOLVES of its own before showing anything, so a
+  // thin event history hides the pace coloring rather than showing a
+  // misleading cross-event one).
+  const postSolveBaseline = useMemo(
+    () => buildPostSolveBaseline(metricsFor(pendingEvent === null ? normalSolves(allSolves) : solvesForEvent(allSolves, pendingEvent))),
+    [allSolves, pendingEvent],
+  );
 
   // Shared by "Full 3D analysis", "View reconstruction", and the auto-save
   // effect below — computed once here rather than re-derived at each call site.
@@ -842,7 +861,7 @@ export function SmartCubeTimer() {
       )}
 
       {/* Always mounted (not just while recording/finished) so its own idle→running transition detection — the same instant-of-liftoff logic the keyboard timer uses — actually fires; mounting it fresh already inside "running" would miss it. */}
-      <GhostPaceBar phase={recording ? "running" : finished ? "stopped" : "idle"} elapsedMs={elapsedMs} pbMs={normalPbMs} hideTimes={false} />
+      <GhostPaceBar phase={recording ? "running" : finished ? "stopped" : "idle"} elapsedMs={elapsedMs} pbMs={eventPbMs} hideTimes={false} />
 
       {(armed || recording) && gyroActive ? (
         // A gyro cube gets the live twin instead: same stickers, but it also
@@ -914,7 +933,7 @@ export function SmartCubeTimer() {
             baseline={postSolveBaseline}
             f2lPairCount={f2lPairAtMs.filter((t) => t !== null).length}
           />
-          <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} />
+          <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} pendingEvent={pendingEvent} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
           <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} weakOllCases={weakCases.oll} weakPllCases={weakCases.pll} />
         </div>
@@ -922,7 +941,7 @@ export function SmartCubeTimer() {
 
       {finished && (
         <>
-          <LiveProjection finished finalMs={elapsedMs} scramble={finishedScramble} />
+          <LiveProjection finished finalMs={elapsedMs} scramble={finishedScramble} pendingEvent={savedSolve?.event ?? pendingEvent} />
           <div className="flex items-center gap-3 text-xs text-muted">
             {crossFace && crossFace !== "U" && <span>{CROSS_FACE_COLOR[crossFace]} cross</span>}
             <span>{moves.length} moves</span>
@@ -956,8 +975,8 @@ export function SmartCubeTimer() {
             rows={postSolveRows}
             totalMs={elapsedMs}
             tps={avgTps}
-            sessionMeanMs={coachSessionStats.mean}
-            isNewPB={coachSessionStats.best !== null && elapsedMs <= coachSessionStats.best}
+            sessionMeanMs={eventSessionStats.mean}
+            isNewPB={eventSessionStats.best !== null && elapsedMs <= eventSessionStats.best}
           />
 
           <div className="flex w-full gap-2">
