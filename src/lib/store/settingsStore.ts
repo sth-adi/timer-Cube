@@ -34,8 +34,8 @@ export type ThemeId = (typeof THEMES)[number]["id"];
 
 /**
  * Background and timer-digit styling are independent of `theme` (which only
- * sets the color palette) and of each other, so the 7 themes × 5 backgrounds
- * × 4 timer styles combine into 140 distinct looks — a big, genuinely varied
+ * sets the color palette) and of each other, so the 7 themes × 7 backgrounds
+ * × 4 timer styles combine into 196 distinct looks — a big, genuinely varied
  * set built from three small, independently reviewable pieces rather than
  * 100+ bespoke one-off designs, the same principle behind statTiles.ts's
  * "big registry, not bespoke" stat tiles.
@@ -45,9 +45,26 @@ export const BACKGROUND_STYLES = [
   { id: "grid", name: "Grid" },
   { id: "particles", name: "Particles" },
   { id: "waves", name: "Waves" },
+  { id: "cubes", name: "Cubes" },
+  { id: "warp", name: "Warp" },
   { id: "minimal", name: "Minimal" },
 ] as const;
 export type BackgroundStyleId = (typeof BACKGROUND_STYLES)[number]["id"];
+
+/**
+ * How much visual spectacle the app puts on. "off" is the original flat look;
+ * "spicy" is all the static upgrades (glowing card borders, floating dock,
+ * holographic digits, film grain) with no pointer-tracking or particles;
+ * "insane" adds everything that moves with you — cursor spotlight, card
+ * tilt, click sparks, solve shockwaves, screen shake. prefers-reduced-motion
+ * flattens the moving parts regardless of this setting.
+ */
+export const FX_LEVELS = [
+  { id: "off", name: "Off" },
+  { id: "spicy", name: "Spicy" },
+  { id: "insane", name: "Insane" },
+] as const;
+export type FxLevelId = (typeof FX_LEVELS)[number]["id"];
 
 export const TIMER_STYLES = [
   { id: "glow", name: "Glow" },
@@ -64,6 +81,7 @@ export interface SettingsState {
   theme: ThemeId;
   backgroundStyle: BackgroundStyleId;
   timerStyle: TimerStyleId;
+  fxLevel: FxLevelId;
   hintSolverEnabled: boolean;
   /** The Live Session Coach strip between solves. */
   liveCoachEnabled: boolean;
@@ -89,6 +107,7 @@ export interface SettingsState {
   setTheme: (v: ThemeId) => void;
   setBackgroundStyle: (v: BackgroundStyleId) => void;
   setTimerStyle: (v: TimerStyleId) => void;
+  setFxLevel: (v: FxLevelId) => void;
   setHintSolverEnabled: (v: boolean) => void;
   setLiveCoachEnabled: (v: boolean) => void;
   setSoundEnabled: (v: boolean) => void;
@@ -108,6 +127,7 @@ export const useSettingsStore = create<SettingsState>()(
       theme: "nebula",
       backgroundStyle: "aurora",
       timerStyle: "glow",
+      fxLevel: "insane",
       hintSolverEnabled: true,
       liveCoachEnabled: true,
       soundEnabled: false,
@@ -122,6 +142,7 @@ export const useSettingsStore = create<SettingsState>()(
       setTheme: (v) => set({ theme: v }),
       setBackgroundStyle: (v) => set({ backgroundStyle: v }),
       setTimerStyle: (v) => set({ timerStyle: v }),
+      setFxLevel: (v) => set({ fxLevel: v }),
       setHintSolverEnabled: (v) => set({ hintSolverEnabled: v }),
       setLiveCoachEnabled: (v) => set({ liveCoachEnabled: v }),
       setSoundEnabled: (v) => set({ soundEnabled: v }),

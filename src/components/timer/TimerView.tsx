@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils/cn";
 import { playInspectionBeep } from "@/lib/utils/sound";
 import { InspectionRing } from "./InspectionRing";
 import { PredictionBadge } from "./PredictionBadge";
+import { TimerStage } from "./TimerStage";
+import { useFxPhase } from "@/lib/fx/useFxPhase";
+import { fxImpact } from "@/lib/fx/fxBus";
 import { LiveSessionCoach } from "./LiveSessionCoach";
 import { GhostPaceBar } from "./GhostPaceBar";
 import { predictSolveTime } from "@/lib/analysis/prediction";
@@ -192,6 +195,16 @@ export function TimerView() {
   // pressing again from "stopped" starts a fresh inspection/hold cycle
   // directly (see useTimer's press()), which is when the display clears.
 
+  useFxPhase(phase);
+  // The moment a run ends: a shockwave off the digits (a PB gets its own, bigger one from PBToast).
+  const prevFxPhaseRef = useRef(phase);
+  useEffect(() => {
+    if (prevFxPhaseRef.current === "running" && phase === "stopped") {
+      fxImpact(lastResult?.penalty === "dnf" ? "dnf" : "solve");
+    }
+    prevFxPhaseRef.current = phase;
+  }, [phase, lastResult]);
+
   const showInspection = (phase === "inspecting" || phase === "holding" || phase === "ready") && inspectionEnabled;
   const labels = PHASE_LABELS[phaseCount];
   const multiphase = phaseCount > 1;
@@ -236,16 +249,18 @@ export function TimerView() {
           {EVENT_TAGS.find((t) => t.id === pendingEvent)?.label}
         </p>
       )}
-      <p
-        className={cn(
-          "timer-digits font-bold transition-colors duration-100",
-          "text-[19vw] leading-none sm:text-[9.5rem]",
-          timerStyle !== "glow" && `timer-digits--${timerStyle}`,
-          PHASE_COLOR[phase],
-        )}
-      >
-        {hideTimeWhileSolving && phase === "running" ? "solving" : formatTime(displayMs)}
-      </p>
+      <TimerStage state={phase}>
+        <p
+          className={cn(
+            "timer-digits font-bold transition-colors duration-100",
+            "text-[19vw] leading-none sm:text-[9.5rem]",
+            timerStyle !== "glow" && `timer-digits--${timerStyle}`,
+            PHASE_COLOR[phase],
+          )}
+        >
+          {hideTimeWhileSolving && phase === "running" ? "solving" : formatTime(displayMs)}
+        </p>
+      </TimerStage>
       {(phase === "running" || phase === "stopped") && (
         <GhostPaceBar
           phase={phase}

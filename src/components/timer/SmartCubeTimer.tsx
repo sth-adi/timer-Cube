@@ -60,6 +60,9 @@ import { LiveSessionCoach } from "./LiveSessionCoach";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { InspectionRing } from "@/components/timer/InspectionRing";
 import { GhostPaceBar } from "@/components/timer/GhostPaceBar";
+import { TimerStage } from "@/components/timer/TimerStage";
+import { useFxPhase } from "@/lib/fx/useFxPhase";
+import { fxImpact, type FxPhase } from "@/lib/fx/fxBus";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
 import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
@@ -758,6 +761,22 @@ export function SmartCubeTimer() {
     cancel();
   };
 
+  const fxState: FxPhase = recording
+    ? "running"
+    : armed && flow.phase === "inspecting"
+      ? "inspecting"
+      : armed
+        ? "ready"
+        : finished
+          ? "stopped"
+          : "idle";
+  useFxPhase(fxState);
+  const prevFinishedForFxRef = useRef(finished);
+  useEffect(() => {
+    if (finished && !prevFinishedForFxRef.current) fxImpact("solve");
+    prevFinishedForFxRef.current = finished;
+  }, [finished]);
+
   const mimicScramble = finished ? finishedScramble : scramble;
 
   // Ways out of a solve that won't finish by itself — the cube missed a turn
@@ -932,17 +951,19 @@ export function SmartCubeTimer() {
         </p>
       )}
 
-      {armed && !recording && flow.phase === "inspecting" ? (
-        <p className={cn("timer-digits text-center text-6xl font-bold text-danger", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
-          {flow.pendingPenalty === "plus2" ? "+2" : flow.pendingPenalty === "dnf" ? "DNF" : Math.ceil(flow.inspectionRemainingMs / 1000)}
-        </p>
-      ) : (
-        (armed || recording || finished) && (
-          <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
-            {hideTimeWhileSolving && recording ? "solving" : formatTime(elapsedMs)}
+      <TimerStage state={fxState}>
+        {armed && !recording && flow.phase === "inspecting" ? (
+          <p className={cn("timer-digits text-center text-6xl font-bold text-danger", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
+            {flow.pendingPenalty === "plus2" ? "+2" : flow.pendingPenalty === "dnf" ? "DNF" : Math.ceil(flow.inspectionRemainingMs / 1000)}
           </p>
-        )
-      )}
+        ) : (
+          (armed || recording || finished) && (
+            <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
+              {hideTimeWhileSolving && recording ? "solving" : formatTime(elapsedMs)}
+            </p>
+          )
+        )}
+      </TimerStage>
 
       {/* Always mounted (not just while recording/finished) so its own idle→running transition detection — the same instant-of-liftoff logic the keyboard timer uses — actually fires; mounting it fresh already inside "running" would miss it. */}
       <GhostPaceBar

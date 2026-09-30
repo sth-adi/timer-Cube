@@ -44,6 +44,8 @@ export function AuroraBackground() {
     <div ref={layerRef} className="aurora-layer" aria-hidden="true">
       <div className="aurora-blob aurora-blob-a" />
       <div className="aurora-blob aurora-blob-b" />
+      <div className="aurora-blob aurora-blob-c" />
+      <div className="aurora-beam" />
       <div className="aurora-vignette" />
     </div>
   );

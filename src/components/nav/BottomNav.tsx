@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Timer as TimerIcon, BarChart3, Gamepad2, ListOrdered, Repeat, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -25,10 +26,12 @@ export type TabId = (typeof TABS)[number]["id"] | "solves";
  */
 export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: TabId) => void }) {
   return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border bg-bg-elevated lg:hidden"
-      style={{ paddingBottom: "var(--safe-bottom)", height: "calc(var(--nav-height) + var(--safe-bottom))" }}
-    >
+    <nav className="fx-dock fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border bg-bg-elevated lg:hidden">
+      <span
+        className="fx-dock-glow"
+        aria-hidden="true"
+        style={{ "--i": Math.max(0, TABS.findIndex((t) => t.id === active)), "--on": TABS.some((t) => t.id === active) ? 1 : 0 } as CSSProperties}
+      />
       {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = active === tab.id;
@@ -38,8 +41,9 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: T
             type="button"
             onClick={() => onChange(tab.id)}
             aria-current={isActive}
+            data-active={isActive}
             className={cn(
-              "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium transition-colors",
+              "fx-dock-item flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium transition-colors",
               isActive ? "text-accent" : "text-muted-2",
             )}
           >
@@ -50,14 +54,14 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: T
       })}
       <Link
         href="/play"
-        className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-2 transition-colors"
+        className="fx-dock-item flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-2 transition-colors"
       >
         <Gamepad2 size={20} strokeWidth={2} />
         Play
       </Link>
       <Link
         href="/solves"
-        className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-2 transition-colors"
+        className="fx-dock-item flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium text-muted-2 transition-colors"
       >
         <ListOrdered size={20} strokeWidth={2} />
         Solves

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
-import { BACKGROUND_STYLES, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
+import { BACKGROUND_STYLES, FX_LEVELS, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -52,6 +52,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const backgroundStyle = useSettingsStore((s) => s.backgroundStyle);
+  const fxLevel = useSettingsStore((s) => s.fxLevel);
+  const setFxLevel = useSettingsStore((s) => s.setFxLevel);
   const setBackgroundStyle = useSettingsStore((s) => s.setBackgroundStyle);
   const timerStyle = useSettingsStore((s) => s.timerStyle);
   const setTimerStyle = useSettingsStore((s) => s.setTimerStyle);
@@ -152,7 +154,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <div className="mt-3">
           <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Background</p>
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-4 gap-1.5">
             {BACKGROUND_STYLES.map((b) => (
               <button
                 key={b.id}
@@ -168,6 +170,29 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="mt-3">
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Visual effects</p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {FX_LEVELS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFxLevel(f.id)}
+                aria-pressed={fxLevel === f.id}
+                className={cn(
+                  "rounded-lg border px-1 py-2 text-center text-[10px] font-medium leading-none transition-colors",
+                  fxLevel === f.id ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:bg-bg-panel-2",
+                )}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[10px] leading-snug text-muted-2">
+            Insane adds cursor spotlight, card tilt, click sparks and solve shockwaves. Reduced-motion systems always get the calm version.
+          </p>
         </div>
 
         <div className="mt-3">

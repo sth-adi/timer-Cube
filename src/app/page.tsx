@@ -150,7 +150,7 @@ function HomeInner() {
         <header className="flex shrink-0 items-center justify-between px-3 py-2">
           <SessionSwitcher />
 
-          <div className="hidden items-center gap-1 rounded-full bg-bg-panel-2 p-1 lg:flex">
+          <div className="fx-pill hidden items-center gap-1 rounded-full bg-bg-panel-2 p-1 lg:flex">
             <button
               type="button"
               onClick={() => setTab("timer")}

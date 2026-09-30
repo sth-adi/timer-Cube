@@ -9,6 +9,7 @@ import { formatTime } from "@/lib/utils/time";
 import { vibrate } from "@/lib/utils/haptics";
 import { playPBChime } from "@/lib/utils/sound";
 import { fireConfetti } from "@/lib/utils/confetti";
+import { fxImpact } from "@/lib/fx/fxBus";
 
 const LABEL: Record<string, string> = {
   single: "New personal best!",
@@ -20,12 +21,17 @@ export function PBToast() {
   const lastPB = useSessionStore((s) => s.lastPB);
   const clearPB = useSessionStore((s) => s.clearPB);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
+  const fxLevel = useSettingsStore((s) => s.fxLevel);
 
   useEffect(() => {
     if (!lastPB) return;
     vibrate(lastPB.kind === "single" ? [40, 60, 80] : 50);
     if (soundEnabled) playPBChime();
-    if (lastPB.kind === "single") fireConfetti();
+    // "insane" celebrates through the FX layer (shockwave rings, sparks, shards, shake); lower levels keep the classic confetti.
+    if (lastPB.kind === "single") {
+      if (fxLevel === "insane") fxImpact("pb");
+      else fireConfetti();
+    }
     const t = setTimeout(() => clearPB(), 2800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,7 +50,7 @@ export function PBToast() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="flex items-center gap-2 rounded-full border border-warning/30 bg-warning/10 px-4 py-2 text-sm font-medium text-warning shadow-lg backdrop-blur"
+            className="fx-toast fx-toast-gold flex items-center gap-2 rounded-full border border-warning/30 bg-warning/10 px-4 py-2 text-sm font-medium text-warning shadow-lg backdrop-blur"
           >
             <Trophy size={15} />
             {LABEL[lastPB.kind]} {formatTime(lastPB.ms)}

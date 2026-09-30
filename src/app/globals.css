@@ -766,3 +766,851 @@ body {
     animation: none;
   }
 }
+
+/* ===========================================================
+   FX — the spectacle layer.
+
+   Everything below is opt-out via settingsStore's `fxLevel`
+   (FxLayer.tsx mirrors it onto <html data-fx-level>):
+     off    → none of this applies; the original flat look
+     spicy  → static upgrades only (borders, dock, digits, grain)
+     insane → + pointer spotlight, card tilt, click sparks,
+              shockwaves, shake, grain drift (FxLayer.tsx)
+   <html data-fx-phase> carries the live timer phase so the whole
+   UI can lean into a solve. prefers-reduced-motion flattens every
+   moving part regardless of level (bottom of this block).
+   =========================================================== */
+
+@property --fx-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@property --beam-a {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@property --party-hue {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes fx-spin {
+  to {
+    --fx-angle: 360deg;
+  }
+}
+@keyframes fx-beam {
+  to {
+    --beam-a: 360deg;
+  }
+}
+@keyframes fx-party-hue {
+  to {
+    --party-hue: 360deg;
+  }
+}
+
+/* --- Global fixtures: canvas, spotlight, flash (mounted by FxLayer) --- */
+.fx-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+}
+.fx-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 79;
+  pointer-events: none;
+  opacity: 0;
+  --fx-flash-c: var(--accent);
+  background:
+    radial-gradient(ellipse at 50% 44%, color-mix(in srgb, var(--fx-flash-c) 55%, transparent), transparent 62%),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, color-mix(in srgb, var(--fx-flash-c) 38%, transparent) 100%);
+}
+.fx-flash[data-kind="pb"] {
+  --fx-flash-c: var(--warning);
+}
+.fx-flash[data-kind="dnf"] {
+  --fx-flash-c: var(--danger);
+}
+.fx-flash.on {
+  animation: fx-flash 0.85s ease-out;
+}
+@keyframes fx-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.fx-spotlight {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  will-change: transform;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 15%, transparent), transparent 62%);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root[data-fx-level="insane"] .fx-spotlight {
+    display: block;
+  }
+}
+:root[data-fx-level="off"] .fx-canvas,
+:root[data-fx-level="off"] .fx-flash {
+  display: none;
+}
+
+/* --- Film grain: a whisper of texture over everything --- */
+:root:not([data-fx-level="off"]) body::after {
+  content: "";
+  position: fixed;
+  inset: -60px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.085;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+:root[data-fx-level="insane"] body::after {
+  animation: fx-grain 0.9s steps(5) infinite;
+}
+@keyframes fx-grain {
+  0% {
+    translate: 0 0;
+  }
+  20% {
+    translate: -22px 14px;
+  }
+  40% {
+    translate: 18px -26px;
+  }
+  60% {
+    translate: -30px -8px;
+  }
+  80% {
+    translate: 24px 22px;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+:root[data-theme="paper"]:not([data-fx-level="off"]) body::after {
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+}
+
+/* --- Scrollbars & focus: the small stuff that sells it --- */
+:root:not([data-fx-level="off"]) * {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+}
+:root:not([data-fx-level="off"]) :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* --- Cards: lit border, pointer spotlight, tilt, scroll reveal --- */
+:root:not([data-fx-level="off"]) .card {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--foreground) 5%, transparent), transparent 46%),
+    color-mix(in srgb, var(--bg-panel) 72%, transparent);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 7%, transparent);
+  transition:
+    transform 0.22s ease-out,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+:root:not([data-fx-level="off"]) .card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+  background: conic-gradient(
+    from var(--fx-angle),
+    transparent 0deg,
+    color-mix(in srgb, var(--accent) 75%, transparent) 55deg,
+    color-mix(in srgb, var(--cyan) 65%, transparent) 105deg,
+    transparent 170deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+:root:not([data-fx-level="off"]) .card:hover {
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 9%, transparent),
+    0 18px 40px -22px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+:root:not([data-fx-level="off"]) .card:hover::before {
+  opacity: 0.95;
+  animation: fx-spin 4.5s linear infinite;
+}
+:root:not([data-fx-level="off"]) .card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 15%, transparent), transparent 65%);
+}
+:root[data-fx-level="insane"] .card:hover::after {
+  opacity: 1;
+}
+:root[data-fx-level="insane"] .card {
+  transform: perspective(900px) rotateX(var(--fx-ry, 0deg)) rotateY(var(--fx-rx, 0deg));
+}
+@supports (animation-timeline: view()) {
+  :root:not([data-fx-level="off"]) .card {
+    animation: fx-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 42%;
+  }
+}
+@keyframes fx-reveal {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+    scale: 0.965;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    filter: blur(0);
+  }
+}
+:root:not([data-fx-level="off"]) .glass-panel {
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 0 60px -24px var(--accent);
+}
+
+/* --- Buttons: press, glow, shine --- */
+:root:not([data-fx-level="off"]) :where(button, [role="button"], a[href]) {
+  transition:
+    scale 0.14s ease,
+    translate 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2),
+    filter 0.2s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.25s ease,
+    opacity 0.25s ease,
+    transform 0.22s ease;
+}
+:root:not([data-fx-level="off"]) :where(button, [role="button"]):not(:disabled):active {
+  scale: 0.94;
+}
+:root:not([data-fx-level="off"]) :is(button, a).bg-accent:not(:disabled):hover {
+  filter: brightness(1.12) saturate(1.15);
+  box-shadow:
+    0 0 26px -4px var(--accent),
+    0 8px 22px -10px var(--accent);
+  background-image: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.38) 50%, transparent 62%);
+  background-size: 260% 100%;
+  animation: fx-shine 0.9s ease-out;
+}
+@keyframes fx-shine {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+:root:not([data-fx-level="off"]) :is(button, a).bg-accent-soft:not(:disabled):hover,
+:root:not([data-fx-level="off"]) button[aria-pressed="true"] {
+  box-shadow: 0 0 18px -6px var(--accent);
+}
+
+/* --- Floating glass dock (mobile nav) --- */
+.fx-dock {
+  padding-bottom: var(--safe-bottom);
+  height: calc(var(--nav-height) + var(--safe-bottom));
+}
+.fx-dock-glow {
+  display: none;
+}
+:root:not([data-fx-level="off"]) {
+  --nav-height: 68px;
+}
+:root:not([data-fx-level="off"]) .fx-dock {
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--safe-bottom) + 8px);
+  height: 62px;
+  padding-bottom: 0;
+  border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--bg-elevated) 68%, transparent);
+  backdrop-filter: blur(24px) saturate(1.7);
+  -webkit-backdrop-filter: blur(24px) saturate(1.7);
+  box-shadow:
+    0 22px 44px -14px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 10%, transparent),
+    0 0 46px -14px var(--accent);
+  transition:
+    translate 0.55s cubic-bezier(0.3, 1.2, 0.4, 1),
+    opacity 0.4s ease;
+}
+:root:not([data-fx-level="off"]) .fx-dock-glow {
+  display: block;
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: calc(100% / 6);
+  border-radius: 18px;
+  pointer-events: none;
+  opacity: var(--on, 1);
+  translate: calc(var(--i, 0) * 100%) 0;
+  transition:
+    translate 0.5s cubic-bezier(0.3, 1.45, 0.5, 1),
+    opacity 0.3s ease;
+  background:
+    radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 70%),
+    color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 26px -6px var(--accent);
+}
+:root:not([data-fx-level="off"]) .fx-dock-item {
+  position: relative;
+  z-index: 1;
+}
+:root:not([data-fx-level="off"]) .fx-dock-item svg {
+  transition:
+    translate 0.4s cubic-bezier(0.3, 1.6, 0.5, 1),
+    scale 0.4s cubic-bezier(0.3, 1.6, 0.5, 1),
+    filter 0.3s ease;
+}
+:root:not([data-fx-level="off"]) .fx-dock-item[data-active="true"] svg {
+  translate: 0 -2px;
+  scale: 1.16;
+  filter: drop-shadow(0 0 7px var(--accent));
+}
+/* Focus mode: the dock slides away the instant a solve is live. */
+:root:not([data-fx-level="off"])[data-fx-phase="running"] .fx-dock {
+  translate: 0 160%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Desktop tab pill --- */
+:root:not([data-fx-level="off"]) .fx-pill {
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  background: color-mix(in srgb, var(--bg-panel-2) 70%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 0 34px -16px var(--accent);
+}
+:root:not([data-fx-level="off"]) .fx-pill > .bg-bg-elevated {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent),
+    0 0 20px -5px var(--accent);
+}
+
+/* --- Timer stage: reactor rings + core behind the digits --- */
+.timer-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+  --rc: var(--accent);
+  --rc2: var(--cyan);
+  --reactor-speed: 1;
+  --reactor-scale: 1;
+  --reactor-o: 0.42;
+}
+.timer-stage:not(:has(.timer-digits)) {
+  display: none;
+}
+.reactor,
+.reactor-core {
+  display: none;
+}
+:root:not([data-fx-level="off"]) .reactor,
+:root:not([data-fx-level="off"]) .reactor-core {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+  z-index: -1;
+  translate: -50% -50%;
+}
+:root:not([data-fx-level="off"]) .reactor {
+  border-radius: 50%;
+  scale: var(--reactor-scale);
+  opacity: var(--reactor-o);
+  transition:
+    scale 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2),
+    opacity 0.5s ease;
+}
+:root:not([data-fx-level="off"]) .reactor-a {
+  width: calc(100% + 150px);
+  height: calc(100% + 60px);
+  background: conic-gradient(from var(--fx-angle), transparent 0 28%, var(--rc) 46%, transparent 58% 78%, var(--rc2) 92%, transparent);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: fx-spin calc(14s / var(--reactor-speed)) linear infinite;
+  filter: drop-shadow(0 0 8px var(--rc));
+}
+:root:not([data-fx-level="off"]) .reactor-b {
+  width: calc(100% + 92px);
+  height: calc(100% + 34px);
+  background: repeating-conic-gradient(from var(--fx-angle), color-mix(in srgb, var(--rc2) 70%, transparent) 0 1.6deg, transparent 1.6deg 8deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px), #000 calc(100% - 1px), transparent);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px), #000 calc(100% - 1px), transparent);
+  animation: fx-spin calc(22s / var(--reactor-speed)) linear infinite reverse;
+  opacity: calc(var(--reactor-o) * 0.75);
+}
+:root:not([data-fx-level="off"]) .reactor-core {
+  width: calc(100% + 40px);
+  height: calc(100% + 30px);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--rc) 26%, transparent), transparent 68%);
+  filter: blur(18px);
+  opacity: var(--reactor-o);
+  animation: fx-core-pulse 3.2s ease-in-out infinite;
+}
+@keyframes fx-core-pulse {
+  0%,
+  100% {
+    scale: 0.92;
+  }
+  50% {
+    scale: 1.08;
+  }
+}
+.timer-stage[data-state="inspecting"] {
+  --rc: var(--warning);
+  --reactor-speed: 1.6;
+  --reactor-o: 0.6;
+}
+.timer-stage[data-state="holding"] {
+  --rc: var(--danger);
+  --rc2: var(--warning);
+  --reactor-speed: 0.35;
+  --reactor-scale: 0.9;
+  --reactor-o: 0.85;
+}
+.timer-stage[data-state="ready"] {
+  --rc: var(--success);
+  --rc2: var(--cyan);
+  --reactor-speed: 3;
+  --reactor-scale: 1.1;
+  --reactor-o: 1;
+}
+.timer-stage[data-state="running"] {
+  --reactor-speed: 5.5;
+  --reactor-scale: 1.04;
+  --reactor-o: 0.8;
+}
+.timer-stage[data-state="stopped"] {
+  --reactor-speed: 0.7;
+  --reactor-o: 0.55;
+}
+.timer-stage.fx-shaking {
+  animation: fx-shake var(--fx-shake-ms, 400ms) cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes fx-shake {
+  10%,
+  90% {
+    translate: calc(var(--fx-shake, 6px) * -0.3) 0;
+  }
+  20%,
+  80% {
+    translate: calc(var(--fx-shake, 6px) * 0.6) calc(var(--fx-shake, 6px) * 0.2);
+  }
+  30%,
+  50%,
+  70% {
+    translate: calc(var(--fx-shake, 6px) * -1) calc(var(--fx-shake, 6px) * -0.3);
+  }
+  40%,
+  60% {
+    translate: var(--fx-shake, 6px) calc(var(--fx-shake, 6px) * 0.3);
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* --- Holographic digits --- */
+:root:not([data-fx-level="off"]) .timer-digits:not(.timer-digits--flat):not(.timer-digits--gradient):not(.timer-digits--outline) {
+  text-shadow:
+    0 0 var(--timer-glow) color-mix(in srgb, currentColor 55%, transparent),
+    0 0 calc(var(--timer-glow) * 2.8) color-mix(in srgb, currentColor 24%, transparent);
+}
+:root:not([data-fx-level="off"]) .timer-digits--gradient {
+  background-size: 220% 100%;
+  animation: fx-sheen 5s linear infinite;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 55%, transparent));
+}
+@keyframes fx-sheen {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 220% 0;
+  }
+}
+:root:not([data-fx-level="off"]) .timer-digits--outline {
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent));
+}
+:root:not([data-fx-level="off"]) .timer-digits {
+  transition:
+    scale 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.3),
+    color 0.12s ease;
+}
+:root:not([data-fx-level="off"]) .timer-stage[data-state="holding"] .timer-digits {
+  scale: 0.965;
+}
+:root:not([data-fx-level="off"]) .timer-stage[data-state="ready"] .timer-digits {
+  scale: 1.035;
+}
+:root[data-fx-level="insane"][data-fx-phase="running"] .timer-digits:not(.timer-digits--flat):not(.timer-digits--gradient):not(.timer-digits--outline) {
+  animation: fx-aberrate 2.2s ease-in-out infinite;
+}
+@keyframes fx-aberrate {
+  0%,
+  100% {
+    text-shadow:
+      -2px 0 rgba(255, 40, 110, 0.55),
+      2px 0 rgba(40, 225, 255, 0.55),
+      0 0 var(--timer-glow) color-mix(in srgb, currentColor 50%, transparent);
+  }
+  50% {
+    text-shadow:
+      -5px 0 rgba(255, 40, 110, 0.6),
+      5px 0 rgba(40, 225, 255, 0.6),
+      0 0 calc(var(--timer-glow) * 1.4) color-mix(in srgb, currentColor 60%, transparent);
+  }
+}
+
+/* --- Whole-UI reactions to a live solve --- */
+:root[data-fx-phase="running"]:not([data-fx-level="off"]) .aurora-layer {
+  --aurora-pace-speed: 2.4;
+}
+
+/* --- Toasts: a travelling light around the pill --- */
+:root:not([data-fx-level="off"]) .fx-toast {
+  position: relative;
+  isolation: isolate;
+  box-shadow:
+    0 10px 30px -10px color-mix(in srgb, currentColor 55%, transparent),
+    0 0 26px -8px currentColor;
+}
+:root:not([data-fx-level="off"]) .fx-toast::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  pointer-events: none;
+  background: conic-gradient(from var(--fx-angle), transparent 0deg, currentColor 70deg, #ffffff 100deg, transparent 160deg, transparent 360deg);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: fx-spin 2.2s linear infinite;
+}
+:root:not([data-fx-level="off"]) .fx-toast-gold {
+  background-image: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  background-size: 250% 100%;
+  animation: fx-shine 1.6s ease-out 0.3s both;
+}
+
+/* --- Party mode (Konami code) --- */
+:root.fx-party {
+  animation: fx-party-hue 3.6s linear infinite;
+  filter: hue-rotate(var(--party-hue)) saturate(1.45);
+}
+
+/* --- Aurora, upgraded: a third blob plus sweeping light beams --- */
+.aurora-blob-c {
+  left: 28%;
+  top: 35%;
+  width: 46vmax;
+  height: 46vmax;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 16%, transparent), transparent 66%);
+  animation: aurora-drift-b calc(38s / var(--aurora-pace-speed, 1)) ease-in-out infinite reverse;
+}
+.aurora-beam {
+  display: none;
+}
+:root:not([data-fx-level="off"]) .aurora-beam {
+  display: block;
+  position: absolute;
+  inset: -25%;
+  opacity: 1;
+  filter: blur(38px) saturate(1.4);
+  background: conic-gradient(
+    from var(--beam-a) at 50% 112%,
+    transparent 0deg,
+    var(--aurora-1) 22deg,
+    transparent 46deg,
+    transparent 170deg,
+    var(--aurora-2) 204deg,
+    transparent 236deg,
+    transparent 360deg
+  );
+  animation: fx-beam calc(46s / var(--aurora-pace-speed, 1)) linear infinite;
+}
+:root[data-fx-level="off"] .aurora-blob-c {
+  display: none;
+}
+
+/* --- Background: synthwave grid floor (upgrades "Grid") ---
+   The layer's own flat grid + radial mask move to ::before so the
+   perspective floor on ::after isn't clipped by that mask. */
+.grid-layer::before,
+.grid-layer::after {
+  content: none;
+}
+:root:not([data-fx-level="off"]) .grid-layer {
+  background-image: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root:not([data-fx-level="off"]) .grid-layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+:root:not([data-fx-level="off"]) .grid-layer::after {
+  content: "";
+  position: absolute;
+  left: -60%;
+  right: -60%;
+  bottom: -3%;
+  height: 150%;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 65%, transparent) 2px, transparent 2px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 65%, transparent) 2px, transparent 2px);
+  background-size: 72px 72px;
+  transform: perspective(620px) rotateX(72deg);
+  transform-origin: 50% 100%;
+  -webkit-mask-image: linear-gradient(to top, black 0%, black 18%, transparent 62%);
+  mask-image: linear-gradient(to top, black 0%, black 18%, transparent 62%);
+  animation: fx-floor 2.4s linear infinite;
+}
+@keyframes fx-floor {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 72px;
+  }
+}
+
+/* --- Background: Cubes --- */
+.cubes-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fx-cube-wrap {
+  position: absolute;
+  width: var(--s);
+  height: var(--s);
+  perspective: 700px;
+  opacity: var(--o);
+  filter: blur(var(--blur));
+  translate: calc(var(--fx-px, 0) * var(--depth) * -1px) calc(var(--fx-py, 0) * var(--depth) * -1px);
+  animation: fx-cube-float var(--float) ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+}
+@keyframes fx-cube-float {
+  from {
+    transform: translate3d(-14px, 12px, 0);
+  }
+  to {
+    transform: translate3d(18px, -22px, 0);
+  }
+}
+.fx-cube {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: fx-cube-tumble var(--tumble) linear infinite;
+  animation-delay: var(--delay);
+}
+@keyframes fx-cube-tumble {
+  from {
+    transform: rotate3d(var(--ax), var(--ay), var(--az), 0deg);
+  }
+  to {
+    transform: rotate3d(var(--ax), var(--ay), var(--az), 360deg);
+  }
+}
+.fx-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 10%;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.55);
+  background-image:
+    linear-gradient(90deg, transparent 31.5%, rgba(0, 0, 0, 0.6) 31.5% 35%, transparent 35% 65%, rgba(0, 0, 0, 0.6) 65% 68.5%, transparent 68.5%),
+    linear-gradient(0deg, transparent 31.5%, rgba(0, 0, 0, 0.6) 31.5% 35%, transparent 35% 65%, rgba(0, 0, 0, 0.6) 65% 68.5%, transparent 68.5%);
+}
+.fx-face-f {
+  background-color: #1faa59;
+  transform: translateZ(calc(var(--s) / 2));
+}
+.fx-face-b {
+  background-color: #1e5fd6;
+  transform: rotateY(180deg) translateZ(calc(var(--s) / 2));
+}
+.fx-face-r {
+  background-color: #d72c2c;
+  transform: rotateY(90deg) translateZ(calc(var(--s) / 2));
+}
+.fx-face-l {
+  background-color: #ff8a1f;
+  transform: rotateY(-90deg) translateZ(calc(var(--s) / 2));
+}
+.fx-face-u {
+  background-color: #f4f4f0;
+  transform: rotateX(90deg) translateZ(calc(var(--s) / 2));
+}
+.fx-face-d {
+  background-color: #ffd60a;
+  transform: rotateX(-90deg) translateZ(calc(var(--s) / 2));
+}
+
+/* --- Background: Warp --- */
+.warp-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  --warp-speed: 1;
+}
+:root[data-fx-phase="running"] .warp-layer {
+  --warp-speed: 2.4;
+}
+.warp-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60vmax;
+  height: 60vmax;
+  translate: -50% -50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
+  animation: fx-core-pulse 6s ease-in-out infinite;
+}
+.fx-star {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  transform-origin: 0 50%;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--c));
+  box-shadow: 0 0 8px var(--c);
+  animation: fx-warp calc(var(--d) / var(--warp-speed)) cubic-bezier(0.5, 0, 0.9, 0.6) infinite;
+  animation-delay: var(--dl);
+}
+@keyframes fx-warp {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(var(--from)) scaleX(0.3);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(78vmax) scaleX(var(--len));
+  }
+}
+
+/* --- Calm mode: reduced motion flattens every moving part --- */
+@media (prefers-reduced-motion: reduce) {
+  :root body::after,
+  .fx-canvas,
+  .fx-spotlight,
+  .fx-flash {
+    display: none;
+  }
+  .reactor-a,
+  .reactor-b,
+  .reactor-core,
+  .aurora-beam,
+  .aurora-blob-c,
+  .grid-layer::after,
+  .fx-cube-wrap,
+  .fx-cube,
+  .fx-star,
+  .warp-glow,
+  .timer-digits,
+  .timer-digits--gradient,
+  .timer-stage.fx-shaking,
+  .fx-toast::before,
+  .fx-toast-gold,
+  :root:not([data-fx-level="off"]) .card,
+  :root:not([data-fx-level="off"]) .card::before,
+  :root:not([data-fx-level="off"]) :is(button, a).bg-accent:hover {
+    animation: none !important;
+  }
+  :root.fx-party {
+    animation: none;
+    filter: none;
+  }
+  .fx-dock,
+  .fx-dock-glow {
+    transition: none;
+  }
+}

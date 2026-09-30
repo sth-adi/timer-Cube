@@ -65,6 +65,98 @@ function WavesBackground() {
   );
 }
 
+const CUBE_COUNT = 9;
+const FACES = ["f", "b", "r", "l", "u", "d"] as const;
+
+/** Sticker-coloured 3D cubes tumbling at different depths, parallaxing against the pointer (see FxLayer). */
+function CubesBackground() {
+  const cubes = useMemo(() => {
+    const rand = mulberry32(777001);
+    return Array.from({ length: CUBE_COUNT }, (_, i) => {
+      const depth = 0.25 + rand() * 0.75;
+      return {
+        key: i,
+        left: `${(rand() * 92 + 2).toFixed(1)}%`,
+        top: `${(rand() * 88 + 2).toFixed(1)}%`,
+        size: `${Math.round(40 + depth * 84)}px`,
+        depth: Math.round(14 + depth * 46),
+        blur: `${((1 - depth) * 3.2).toFixed(1)}px`,
+        opacity: (0.1 + depth * 0.2).toFixed(2),
+        float: `${(16 + rand() * 18).toFixed(1)}s`,
+        tumble: `${(22 + rand() * 26).toFixed(1)}s`,
+        delay: `${(-rand() * 30).toFixed(1)}s`,
+        ax: rand().toFixed(2),
+        ay: rand().toFixed(2),
+        az: rand().toFixed(2),
+      };
+    });
+  }, []);
+
+  return (
+    <div className="cubes-layer fx-parallax" aria-hidden="true">
+      {cubes.map((c) => (
+        <div
+          key={c.key}
+          className="fx-cube-wrap"
+          style={
+            {
+              left: c.left,
+              top: c.top,
+              "--s": c.size,
+              "--depth": c.depth,
+              "--blur": c.blur,
+              "--o": c.opacity,
+              "--float": c.float,
+              "--tumble": c.tumble,
+              "--delay": c.delay,
+              "--ax": c.ax,
+              "--ay": c.ay,
+              "--az": c.az,
+            } as React.CSSProperties
+          }
+        >
+          <div className="fx-cube">
+            {FACES.map((f) => (
+              <span key={f} className={`fx-face fx-face-${f}`} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const STAR_COUNT = 90;
+
+/** Hyperspace: streaks fly out of the centre, and get a lot faster once a solve is actually running. */
+function WarpBackground() {
+  const stars = useMemo(() => {
+    const rand = mulberry32(31337);
+    return Array.from({ length: STAR_COUNT }, (_, i) => ({
+      key: i,
+      angle: `${(rand() * 360).toFixed(1)}deg`,
+      dur: `${(2.6 + rand() * 4.4).toFixed(2)}s`,
+      delay: `${(-rand() * 7).toFixed(2)}s`,
+      len: (8 + rand() * 18).toFixed(1),
+      from: `${(2 + rand() * 9).toFixed(1)}vmax`,
+      hue: rand() < 0.55 ? "var(--accent)" : rand() < 0.5 ? "var(--cyan)" : "#ffffff",
+    }));
+  }, []);
+
+  return (
+    <div className="warp-layer" aria-hidden="true">
+      <div className="warp-glow" />
+      {stars.map((s) => (
+        <span
+          key={s.key}
+          className="fx-star"
+          style={{ "--a": s.angle, "--d": s.dur, "--dl": s.delay, "--len": s.len, "--from": s.from, "--c": s.hue } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
  * Picks one of settingsStore.ts's BACKGROUND_STYLES. "aurora" keeps the
  * original component (it's also wired to the live pace-color bus during a
@@ -83,6 +175,10 @@ export function AppBackground() {
       return <ParticlesBackground />;
     case "waves":
       return <WavesBackground />;
+    case "cubes":
+      return <CubesBackground />;
+    case "warp":
+      return <WarpBackground />;
     case "minimal":
       return null;
   }
