@@ -84,7 +84,7 @@ export function CubeStatus() {
 const PAD = ["R", "R'", "L", "L'", "U", "U'", "D", "D'", "F", "F'", "B", "B'"];
 const KEY_FOR = Object.fromEntries(Object.entries(KEY_TURNS).map(([k, t]) => [t, k.toUpperCase()]));
 /** Which color each grip face is in the home grip (yellow top, green front). */
-const HOME_COLOR: Record<string, string> = { U: "D", D: "U", R: "L", L: "R", F: "F", B: "B" };
+export const HOME_COLOR: Record<string, string> = { U: "D", D: "U", R: "L", L: "R", F: "F", B: "B" };
 
 /**
  * On-screen turns in grip notation, for playing without a cube. Each key

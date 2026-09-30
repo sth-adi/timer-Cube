@@ -207,3 +207,62 @@ export function WakeArt({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function EchoArt({ className }: { className?: string }) {
+  // A row of move chips lighting up in order, each one a fainter echo of the last.
+  const chips: { t: string; c: string; o: number }[] = [
+    { t: "R", c: C.r, o: 0.3 },
+    { t: "U'", c: C.w, o: 0.5 },
+    { t: "F", c: C.g, o: 0.75 },
+    { t: "L'", c: C.o, o: 1 },
+  ];
+  return (
+    <svg viewBox="0 0 200 150" className={className} aria-hidden>
+      <defs>
+        <radialGradient id="ec" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#3dffb0" stopOpacity="0.45" />
+          <stop offset="1" stopColor="#3dffb0" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="100" cy="76" r="72" fill="url(#ec)" />
+      {[58, 44, 30].map((r, i) => (
+        <circle key={r} cx="100" cy="76" r={r} fill="none" stroke="#3dffb0" strokeOpacity={0.1 + i * 0.12} strokeWidth="2" />
+      ))}
+      {chips.map((chip, i) => (
+        <g key={chip.t} opacity={chip.o}>
+          <rect x={20 + i * 40} y={56} width="34" height="40" rx="9" fill="#0d1a16" stroke={chip.c} strokeWidth="3" />
+          <text x={37 + i * 40} y={83} textAnchor="middle" fontSize="20" fontWeight="900" fill={chip.c} fontFamily="system-ui">
+            {chip.t}
+          </text>
+        </g>
+      ))}
+      <text x="100" y="128" textAnchor="middle" fontSize="11" fontWeight="800" letterSpacing="3" fill="#3dffb0" fontFamily="system-ui">
+        NOW YOU
+      </text>
+    </svg>
+  );
+}
+
+export function GolfArt({ className }: { className?: string }) {
+  // A green with a flag in the hole, and a cube sitting where the ball would be.
+  return (
+    <svg viewBox="0 0 200 150" className={className} aria-hidden>
+      <defs>
+        <radialGradient id="gf" cx="0.5" cy="0.7" r="0.6">
+          <stop offset="0" stopColor="#7dff6a" stopOpacity="0.4" />
+          <stop offset="1" stopColor="#7dff6a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="100" cy="92" r="74" fill="url(#gf)" />
+      <ellipse cx="108" cy="118" rx="80" ry="22" fill="#10230f" stroke="#7dff6a" strokeOpacity="0.45" />
+      <ellipse cx="146" cy="116" rx="11" ry="4" fill="#050b05" />
+      <line x1="146" y1="116" x2="146" y2="52" stroke="#e9ffe5" strokeWidth="3" strokeLinecap="round" />
+      <polygon points="146,52 176,62 146,72" fill="#7dff6a" />
+      <text x="157" y="66" textAnchor="middle" fontSize="11" fontWeight="900" fill="#0b1a0a" fontFamily="system-ui">
+        4
+      </text>
+      <IsoCube x={70} y={84} s={30} top={[C.w, C.r, C.b, C.g, C.w, C.o, C.y, C.b, C.r]} left={[C.g, C.y, C.o, C.r, C.g, C.w, C.b, C.o, C.g]} right={[C.r, C.b, C.w, C.o, C.r, C.g, C.y, C.w, C.b]} />
+      <path d="M96 100 Q120 60 142 106" fill="none" stroke="#7dff6a" strokeWidth="2" strokeDasharray="4 5" strokeLinecap="round" opacity="0.8" />
+    </svg>
+  );
+}

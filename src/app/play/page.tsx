@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { CubeStatus } from "@/components/play/PlayShell";
-import { MazeArt, PortraitArt, TwistrisArt, VaultArt, WakeArt } from "@/components/play/Art";
+import { EchoArt, GolfArt, MazeArt, PortraitArt, TwistrisArt, VaultArt, WakeArt } from "@/components/play/Art";
 import { cn } from "@/lib/utils/cn";
 
 const GAMES = [
@@ -53,6 +53,24 @@ const GAMES = [
     Art: WakeArt,
     needs: "Any cube",
   },
+  {
+    href: "/echo",
+    name: "Echo",
+    hook: "Your cube is the memory test.",
+    body: "Watch a run of turns, play it back from memory, and it adds one more each round. One wrong turn ends it.",
+    accent: "#3dffb0",
+    Art: EchoArt,
+    needs: "Any cube",
+  },
+  {
+    href: "/golf",
+    name: "Cube Golf",
+    hook: "Your cube is the course.",
+    body: "Scramble a few turns, then solve it in as few as you can. Par is the shortest solution that exists — worked out exactly, and revealed after every hole.",
+    accent: "#7dff6a",
+    Art: GolfArt,
+    needs: "Any cube",
+  },
 ] as const;
 
 /**
@@ -73,7 +91,7 @@ export default function PlayHub() {
         <header className="flex flex-col gap-2 pt-2">
           <h1 className="play-title text-[68px] sm:text-[88px]">Play</h1>
           <p className="max-w-md text-[14px] leading-snug text-[var(--play-dim)]">
-            Five things your smart cube was never meant to do. No cube handy? Every one works with the keyboard or the on-screen pad too.
+            Seven things your smart cube was never meant to do. No cube handy? Every one works with the keyboard or the on-screen pad too.
           </p>
         </header>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
