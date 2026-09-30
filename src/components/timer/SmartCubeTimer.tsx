@@ -17,6 +17,7 @@ import {
   Play,
   Radio,
   Sparkles,
+  Trash2,
   TriangleAlert,
   Wand2,
 } from "lucide-react";
@@ -70,7 +71,7 @@ import { computeSessionStats, normalSolves, solvesForEvent } from "@/lib/stats/s
 import { avg, metricsFor, sd } from "@/lib/analytics/solveMetrics";
 import { PAUSE_MS } from "@/lib/analytics/pause";
 import { buildPostSolveBaseline, paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
-import { playSolveChime } from "@/lib/utils/sound";
+import { playInspectionBeep, playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
@@ -137,6 +138,7 @@ function PhaseSplitsRow({
   liveCurrentMs,
   baseline,
   f2lPairCount,
+  hideTimes,
 }: {
   durations: (number | null)[];
   currentPhaseIndex: number;
@@ -145,15 +147,17 @@ function PhaseSplitsRow({
   baseline?: PostSolveBaseline | null;
   /** How many of the 4 F2L pairs are in so far — shown next to the F2L chip once at least one has landed. */
   f2lPairCount?: number;
+  /** Masks every duration (and the pace/overdue judgments that depend on one) behind a placeholder — the live half of Settings' "hide time while solving". */
+  hideTimes?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {PHASE_LABELS_4.map((label, i) => {
         const done = durations[i];
         const isCurrent = i === currentPhaseIndex;
-        const pace = paceFor(done, baseline?.phases[i] ?? null);
+        const pace = hideTimes ? null : paceFor(done, baseline?.phases[i] ?? null);
         // Already past your usual for this phase while it's still running: worth knowing now.
-        const overdue = isCurrent && liveCurrentMs !== null && (baseline?.phases[i]?.medianMs ?? Infinity) * 1.3 < liveCurrentMs;
+        const overdue = !hideTimes && isCurrent && liveCurrentMs !== null && (baseline?.phases[i]?.medianMs ?? Infinity) * 1.3 < liveCurrentMs;
         return (
           <span
             key={label}
@@ -169,7 +173,8 @@ function PhaseSplitsRow({
             )}
           >
             {label}
-            {i === 1 && f2lPairCount ? ` ${Math.min(f2lPairCount, 4)}/4` : ""} {done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
+            {i === 1 && f2lPairCount ? ` ${Math.min(f2lPairCount, 4)}/4` : ""}{" "}
+            {hideTimes ? "·" : done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
           </span>
         );
       })}
@@ -324,12 +329,15 @@ export function SmartCubeTimer() {
   const setPenalty = useSessionStore((s) => s.setPenalty);
   const cubeGesturesOn = useSettingsStore((s) => s.cubeGestures);
   const recordSolve = useSessionStore((s) => s.recordSolve);
+  const removeSolve = useSessionStore((s) => s.removeSolve);
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
   const sessionSolves = useSessionStore((s) => s.solves);
   const allSolves = useSessionStore((s) => s.allSolves);
   const summarizeHeartRate = useHeartRateStore((s) => s.summarize);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
+  const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
+  const timerStyle = useSettingsStore((s) => s.timerStyle);
   // The post-solve extras (coach, mistakes, inspection, pace, gyro, X-ray) wait behind one tap.
   const [showDetails, setShowDetails] = useState(false);
 
@@ -341,6 +349,41 @@ export function SmartCubeTimer() {
   // Step-by-step scramble guidance, with live undo instructions for wrong turns.
   useScrambleGuide(scramble, connected && !armed && !recording && flow.phase === "scrambling");
   const pacer = useSplitPacer();
+
+  // WCA-style 8s/12s audible inspection warnings — the same cues the
+  // keyboard timer's inspection already plays, missing here even though
+  // this flow's own inspectionRemainingMs already tracks the identical
+  // 15s window. One-shot per inspection, tracked in a ref rather than
+  // state since a beep is a side effect, not something to re-render for.
+  const showInspection = armed && !recording && flow.phase === "inspecting";
+  const beepedRef = useRef({ eight: false, twelve: false });
+  useEffect(() => {
+    if (!showInspection || !soundEnabled) return;
+    if (!beepedRef.current.eight && flow.inspectionRemainingMs <= 7000) {
+      beepedRef.current.eight = true;
+      playInspectionBeep();
+    }
+    if (!beepedRef.current.twelve && flow.inspectionRemainingMs <= 3000) {
+      beepedRef.current.twelve = true;
+      playInspectionBeep();
+    }
+  }, [showInspection, soundEnabled, flow.inspectionRemainingMs]);
+  useEffect(() => {
+    if (!showInspection) beepedRef.current = { eight: false, twelve: false };
+  }, [showInspection]);
+
+  // Which event this attempt actually started as — captured the instant it
+  // arms (inspection/recording begins), same reasoning as the keyboard
+  // timer's useSolveCompletion.onStart: the event tag strip stays clickable
+  // the whole time a solve is live, so reading pendingEvent fresh when the
+  // solve is *saved* would mislabel the attempt if it got tapped mid-solve.
+  // State (not a plain ref) since render itself needs this value.
+  const [pendingEventAtStart, setPendingEventAtStart] = useState(pendingEvent);
+  const prevArmedForEventRef = useRef(armed);
+  useEffect(() => {
+    if (armed && !prevArmedForEventRef.current) setPendingEventAtStart(pendingEvent);
+    prevArmedForEventRef.current = armed;
+  }, [armed, pendingEvent]);
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
   const lastMoveMs = moves[moves.length - 1]?.timeStampMs ?? startedAtMs ?? 0;
@@ -426,6 +469,15 @@ export function SmartCubeTimer() {
   );
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
+  // Which event to score against: the live tab selection while nothing's
+  // finished yet (so the ghost target/live projection are ready for
+  // whatever you're about to attempt), but pinned to the event this
+  // just-finished solve actually started as once it's done — otherwise
+  // switching tabs to line up your next attempt while the recap is still
+  // up (it stays up until you scramble again) would retroactively judge
+  // the solve you already did against the wrong event's history.
+  const effectivePendingEvent = finished ? pendingEventAtStart : pendingEvent;
+
   // This session's own mean/best for whichever event this attempt is
   // tagged as — 2-handed by default, or that event's own history when one
   // of OH/feet/BLD is selected, so the ghost target, the aura, and the
@@ -437,8 +489,8 @@ export function SmartCubeTimer() {
   // need an approximate framing, not a stat that must exclude this solve to
   // the millisecond).
   const eventSessionStats = useMemo(
-    () => computeSessionStats(pendingEvent === null ? normalSolves(sessionSolves) : solvesForEvent(sessionSolves, pendingEvent)),
-    [pendingEvent, sessionSolves],
+    () => computeSessionStats(effectivePendingEvent === null ? normalSolves(sessionSolves) : solvesForEvent(sessionSolves, effectivePendingEvent)),
+    [effectivePendingEvent, sessionSolves],
   );
   const eventPbMs = eventSessionStats.best;
 
@@ -495,8 +547,11 @@ export function SmartCubeTimer() {
   // thin event history hides the pace coloring rather than showing a
   // misleading cross-event one).
   const postSolveBaseline = useMemo(
-    () => buildPostSolveBaseline(metricsFor(pendingEvent === null ? normalSolves(allSolves) : solvesForEvent(allSolves, pendingEvent))),
-    [allSolves, pendingEvent],
+    () =>
+      buildPostSolveBaseline(
+        metricsFor(effectivePendingEvent === null ? normalSolves(allSolves) : solvesForEvent(allSolves, effectivePendingEvent)),
+      ),
+    [allSolves, effectivePendingEvent],
   );
 
   // Shared by "Full 3D analysis", "View reconstruction", and the auto-save
@@ -566,7 +621,7 @@ export function SmartCubeTimer() {
       elapsedMs,
       scramble,
       splits,
-      pendingEvent ?? undefined,
+      pendingEventAtStart ?? undefined,
       turnsAddUp ? reconstruction : undefined,
       heartRate,
       crossMs,
@@ -596,7 +651,7 @@ export function SmartCubeTimer() {
     scramble,
     boundaries,
     crossMs,
-    pendingEvent,
+    pendingEventAtStart,
     recordSolve,
     summarizeHeartRate,
     soundEnabled,
@@ -710,7 +765,7 @@ export function SmartCubeTimer() {
     if (how !== "discard" && startedAtMs !== null) {
       // The turns recorded don't solve the scramble, so the solve keeps its time but not a reconstruction the analyses would trip over.
       const timeMs = how === "solved" ? lastMoveMs - startedAtMs : elapsedMs;
-      void recordSolve(timeMs, scramble, undefined, pendingEvent ?? undefined, undefined, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, undefined, undefined, how === "dnf" ? "dnf" : undefined);
+      void recordSolve(timeMs, scramble, undefined, pendingEventAtStart ?? undefined, undefined, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, undefined, undefined, how === "dnf" ? "dnf" : undefined);
     }
     // "It's solved" means the real cube is solved whatever the app thought — put the two back in step.
     if (how === "solved") resyncSolved();
@@ -851,17 +906,24 @@ export function SmartCubeTimer() {
       )}
 
       {armed && !recording && flow.phase === "inspecting" ? (
-        <p className="tabular-timer text-center text-6xl font-bold text-danger">
+        <p className={cn("timer-digits text-center text-6xl font-bold text-danger", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
           {flow.pendingPenalty === "plus2" ? "+2" : flow.pendingPenalty === "dnf" ? "DNF" : Math.ceil(flow.inspectionRemainingMs / 1000)}
         </p>
       ) : (
         (armed || recording || finished) && (
-          <p className="tabular-timer text-center text-6xl font-bold">{formatTime(elapsedMs)}</p>
+          <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
+            {hideTimeWhileSolving && recording ? "solving" : formatTime(elapsedMs)}
+          </p>
         )
       )}
 
       {/* Always mounted (not just while recording/finished) so its own idle→running transition detection — the same instant-of-liftoff logic the keyboard timer uses — actually fires; mounting it fresh already inside "running" would miss it. */}
-      <GhostPaceBar phase={recording ? "running" : finished ? "stopped" : "idle"} elapsedMs={elapsedMs} pbMs={eventPbMs} hideTimes={false} />
+      <GhostPaceBar
+        phase={recording ? "running" : finished ? "stopped" : "idle"}
+        elapsedMs={elapsedMs}
+        pbMs={eventPbMs}
+        hideTimes={hideTimeWhileSolving && recording}
+      />
 
       {(armed || recording) && gyroActive ? (
         // A gyro cube gets the live twin instead: same stickers, but it also
@@ -932,8 +994,9 @@ export function SmartCubeTimer() {
             liveCurrentMs={liveCurrentMs}
             baseline={postSolveBaseline}
             f2lPairCount={f2lPairAtMs.filter((t) => t !== null).length}
+            hideTimes={hideTimeWhileSolving && recording}
           />
-          <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} pendingEvent={pendingEvent} />
+          <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} pendingEvent={pendingEventAtStart} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
           <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} weakOllCases={weakCases.oll} weakPllCases={weakCases.pll} />
         </div>
@@ -956,10 +1019,18 @@ export function SmartCubeTimer() {
               </span>
             )}
             {finishedScramble &&
-              (savedSolveExists ? (
-                <span className="flex items-center gap-1 text-success">
-                  <Check size={12} /> Saved
-                </span>
+              (savedSolveExists && savedSolve ? (
+                <button
+                  type="button"
+                  onClick={() => void removeSolve(savedSolve.id)}
+                  className="group flex items-center gap-1 text-success hover:text-danger"
+                  title="Mis-scramble, false start, wrong penalty — discard this solve, same as Delete/Backspace on the keyboard timer"
+                >
+                  <Check size={12} className="group-hover:hidden" />
+                  <Trash2 size={12} className="hidden group-hover:block" />
+                  <span className="group-hover:hidden">Saved</span>
+                  <span className="hidden group-hover:block">Discard</span>
+                </button>
               ) : (
                 <span className="text-muted-2">Deleted</span>
               ))}
