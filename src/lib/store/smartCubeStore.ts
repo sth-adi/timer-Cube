@@ -13,6 +13,7 @@ import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
 import { useGyroStore } from "./gyroStore";
 import { recordTimeMachineMove, resetTimeMachine } from "@/lib/smartcube/timeMachine";
 import { friendlyConnectError } from "@/lib/smartcube/friendlyConnectError";
+import { readLastCube, writeLastCube } from "@/lib/smartcube/connectMemory";
 import { correctBurstTimestamp, type BurstTimestampState } from "@/lib/smartcube/burstTimestamp";
 
 /**
@@ -152,7 +153,24 @@ interface SmartCubeState {
    * nothing in the solving flow depends on it.
    */
   hardwareInfo: { name: string | null; softwareVersion: string | null; hardwareVersion: string | null; productDate: string | null } | null;
-  connect: () => Promise<void>;
+  /** What the connection is doing right now ("Select your cube…", "Reading advertisements…", "Connecting…") — null when idle. */
+  connectStatus: string | null;
+  /**
+   * Set while the connection library is asking for the cube's Bluetooth
+   * address because the browser wouldn't hand it over: the UI shows a prompt
+   * and answers through submitMac. Null otherwise.
+   */
+  macRequest: { deviceName: string | null } | null;
+  /** The cube connected to last time, so the connect screen can offer to reconnect to it. */
+  lastCubeName: string | null;
+  /** `deviceName`: only offer cubes advertising that name in the picker (a reconnect). */
+  connect: (opts?: { deviceName?: string }) => Promise<void>;
+  /** Answers macRequest with the address typed in, or null to give up. */
+  submitMac: (mac: string | null) => void;
+  /** Gives up on a connection in progress (picker open, address search, address prompt). */
+  cancelConnect: () => void;
+  /** Forgets the remembered cube. */
+  forgetLastCube: () => void;
   disconnect: () => void;
   arm: () => void;
   cancel: () => void;
@@ -175,6 +193,11 @@ interface SmartCubeState {
 }
 
 let conn: SmartCubeConnection | null = null;
+/** Identifies the connect attempt in flight, so one that's been cancelled can't connect after the fact. */
+let connectAttempt = 0;
+let connectAbort: AbortController | null = null;
+/** Resolves the connection library's pending request for the cube's address. */
+let pendingMac: ((mac: string | null) => void) | null = null;
 let sub: Subscription | null = null;
 let liveCube: CubeJSInstance = newCube();
 /**
@@ -286,12 +309,42 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   gyroActive: false,
   hardwareInfo: null,
 
-  connect: async () => {
+  connectStatus: null,
+  macRequest: null,
+  lastCubeName: readLastCube(),
+
+  submitMac: (mac) => {
+    const resolve = pendingMac;
+    pendingMac = null;
+    set({ macRequest: null });
+    resolve?.(mac);
+  },
+
+  cancelConnect: () => {
+    connectAttempt++;
+    connectAbort?.abort();
+    connectAbort = null;
+    const resolve = pendingMac;
+    pendingMac = null;
+    resolve?.(null);
+    set({ connecting: false, connectStatus: null, macRequest: null, error: null });
+  },
+
+  forgetLastCube: () => {
+    writeLastCube(null);
+    set({ lastCubeName: null });
+  },
+
+  connect: async (opts) => {
     if (!get().supported) {
       set({ error: "This browser doesn't support Web Bluetooth (try Chrome, Edge, or Android)." });
       return;
     }
-    set({ connecting: true, error: null });
+    const attempt = ++connectAttempt;
+    connectAbort?.abort();
+    const abort = new AbortController();
+    connectAbort = abort;
+    set({ connecting: true, error: null, connectStatus: null, macRequest: null });
     try {
       // A test seam: browser tests define window.__smartCubeTestDriver (same
       // connectSmartCube shape) to drive the whole solving flow with scripted
@@ -300,10 +353,30 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       const { connectSmartCube } = testDriver ?? (await import("smartcube-web-bluetooth"));
       // enableAddressSearch lets MoYu32/QiYi cubes resolve their AES MAC
       // address from a bounded set of candidates when the advertisement
-      // itself doesn't hand it over — slower, but this app has no manual
-      // "enter your cube's MAC" fallback UI, so it's worth the extra time
-      // to make the automatic path succeed more often.
-      const connection = await connectSmartCube({ enableAddressSearch: true });
+      // itself doesn't hand it over. When even that fails (Chrome without
+      // advertisement access can't read a GAN cube's address at all), the
+      // library asks for it — the address prompt answers.
+      const connection = await connectSmartCube({
+        enableAddressSearch: true,
+        signal: abort.signal,
+        ...(opts?.deviceName ? { deviceName: opts.deviceName } : {}),
+        onStatus: (message) => {
+          if (attempt === connectAttempt) set({ connectStatus: message });
+        },
+        macAddressProvider: async (device, isFallbackCall) => {
+          // The first ask comes before the library has looked for the address itself; only the fallback is worth interrupting for.
+          if (!isFallbackCall || attempt !== connectAttempt) return null;
+          return new Promise<string | null>((resolve) => {
+            pendingMac = resolve;
+            set({ macRequest: { deviceName: device.name ?? null }, connectStatus: "Waiting for the cube's address…" });
+          });
+        },
+      });
+      // Cancelled while it was still working: don't let it connect after the fact.
+      if (attempt !== connectAttempt) {
+        void connection.disconnect().catch(() => {});
+        return;
+      }
       conn = connection;
       liveCube = newCube();
       frames = freshFrames();
@@ -455,7 +528,11 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         }
       });
 
+      writeLastCube(connection.deviceName || null);
       set({
+        lastCubeName: connection.deviceName || null,
+        connectStatus: null,
+        macRequest: null,
         connected: true,
         connecting: false,
         deviceName: connection.deviceName || connection.protocol.name,
@@ -481,13 +558,17 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       if (connection.capabilities.facelets) void connection.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
       if (connection.capabilities.hardware) void connection.sendCommand({ type: "REQUEST_HARDWARE" }).catch(() => {});
     } catch (err) {
-      // The user cancelling the browser's device picker throws too — that's
+      // Cancelled by the user (or superseded by a newer attempt): already handled, say nothing.
+      if (attempt !== connectAttempt) return;
+      // The user dismissing the browser's device picker throws too — that's
       // not a real error, just "never mind".
       const message = err instanceof Error ? err.message : String(err);
       teardown();
       set({
         connecting: false,
-        error: /cancelled|user gesture/i.test(message) ? null : friendlyConnectError(message),
+        connectStatus: null,
+        macRequest: null,
+        error: /cancelled|user gesture|abort/i.test(message) ? null : friendlyConnectError(message),
       });
     }
   },

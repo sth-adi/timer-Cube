@@ -13,7 +13,6 @@ import {
   Check,
   ChevronDown,
   FlaskConical,
-  Loader2,
   Play,
   Radio,
   RotateCcw,
@@ -51,6 +50,8 @@ import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useVoiceCoach } from "@/hooks/useVoiceCoach";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { ConnectControls } from "@/components/smartcube/ConnectControls";
 import { useFreestyle } from "@/hooks/useFreestyle";
 import { useScrambleVoice } from "@/hooks/useScrambleVoice";
 import { scrambleForState } from "@/lib/smartcube/adoptScramble";
@@ -349,7 +350,6 @@ function BatteryBadge({ level, onRefresh }: { level: number | null; onRefresh: (
 export function SmartCubeTimer() {
   const {
     supported,
-    connecting,
     connected,
     deviceName,
     error,
@@ -372,7 +372,6 @@ export function SmartCubeTimer() {
     gyroActive,
     protocolName,
     deviceMac,
-    connect,
     disconnect,
     cancel,
     refreshBattery,
@@ -392,6 +391,7 @@ export function SmartCubeTimer() {
   const nickname = useSettingsStore((s) => (cube ? s.cubeNicknames[cube.id] : undefined));
   const freestyle = useSettingsStore((s) => s.freestyle);
   const voiceScramble = useSettingsStore((s) => s.voiceScramble);
+  const keepAwake = useSettingsStore((s) => s.keepAwake);
   const setVoiceScramble = useSettingsStore((s) => s.setVoiceScramble);
   const setFreestyle = useSettingsStore((s) => s.setFreestyle);
   // Each capture remembers which solve was on screen when it was taken; it's spent once the *next* solve has been saved (its recap exists), which frees the flow to start listening again.
@@ -430,6 +430,7 @@ export function SmartCubeTimer() {
   });
   // Step-by-step scramble guidance, with live undo instructions for wrong turns.
   useScrambleGuide(scramble, connected && !armed && !recording && flow.phase === "scrambling");
+  useWakeLock(connected && keepAwake);
   useScrambleVoice(voiceScramble && connected && !armed && !recording && flow.phase === "scrambling" && !freestyle);
   const guideUndoCount = useScrambleGuideStore((s) => s.view?.undo.length ?? 0);
   const [adopting, setAdopting] = useState(false);
@@ -1038,15 +1039,7 @@ export function SmartCubeTimer() {
             ? `The Bluetooth link dropped${droppedMidSolveMoves ? ` ${droppedMidSolveMoves} move${droppedMidSolveMoves === 1 ? "" : "s"} into your solve` : ""} — not a step you missed, the connection itself. Reconnect and start the scramble again.`
             : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case names and all."}
         </p>
-        <button
-          type="button"
-          onClick={() => void connect()}
-          disabled={connecting}
-          className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50"
-        >
-          {connecting && <Loader2 size={14} className="animate-spin" />}
-          {connecting ? "Connecting…" : droppedMidSolve ? "Reconnect smart cube" : "Connect smart cube"}
-        </button>
+        <ConnectControls label={droppedMidSolve ? "Reconnect smart cube" : "Connect smart cube"} />
         {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
         {!droppedMidSolve && (
           <p className="max-w-xs text-[11px] text-muted-2">

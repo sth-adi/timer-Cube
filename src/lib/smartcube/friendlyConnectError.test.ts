@@ -23,6 +23,12 @@ describe("friendlyConnectError", () => {
     expect(friendlyConnectError("[QiYi] Cannot find required characteristic")).toMatch(/didn't respond the way/i);
   });
 
+  it("tells a wrong hand-typed address apart from a missing one", () => {
+    const wrong = friendlyConnectError("Timed out waiting for cube data. Check the Bluetooth MAC address and try again.");
+    expect(wrong).toMatch(/didn't answer with that Bluetooth address/i);
+    expect(friendlyConnectError("Unable to determine cube MAC address, connection is not possible!")).toMatch(/couldn't identify/i);
+  });
+
   it("passes an unrecognized message through unchanged", () => {
     expect(friendlyConnectError("Some brand-new failure mode")).toBe("Some brand-new failure mode");
   });

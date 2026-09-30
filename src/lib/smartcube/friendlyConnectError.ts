@@ -9,6 +9,9 @@
  * unchanged rather than guessed at.
  */
 export function friendlyConnectError(message: string): string {
+  if (/timed out waiting for cube data/i.test(message)) {
+    return "The cube didn't answer with that Bluetooth address — check it's the right one (letters and numbers, six pairs) and try again.";
+  }
   if (/mac address/i.test(message)) {
     return "Couldn't identify this cube's Bluetooth address — move it closer and try again, or forget and re-pair it in your OS Bluetooth settings.";
   }

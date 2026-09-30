@@ -54,6 +54,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const backgroundStyle = useSettingsStore((s) => s.backgroundStyle);
   const fxLevel = useSettingsStore((s) => s.fxLevel);
+  const keepAwake = useSettingsStore((s) => s.keepAwake);
+  const setKeepAwake = useSettingsStore((s) => s.setKeepAwake);
   const voiceCoach = useSettingsStore((s) => s.voiceCoach);
   const setVoiceCoach = useSettingsStore((s) => s.setVoiceCoach);
   const setFxLevel = useSettingsStore((s) => s.setFxLevel);
@@ -223,6 +225,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <Toggle checked={hintSolverEnabled} onChange={setHintSolverEnabled} label="Solve hints (cross / CFOP)" />
           <Toggle checked={liveCoachEnabled} onChange={setLiveCoachEnabled} label="Live coach between solves" />
           <Toggle checked={soundEnabled} onChange={setSoundEnabled} label="Sound on solve" />
+          <Toggle checked={keepAwake} onChange={setKeepAwake} label="Keep screen awake while a cube is connected" />
           <Toggle
             checked={hideTimeWhileSolving}
             onChange={setHideTimeWhileSolving}

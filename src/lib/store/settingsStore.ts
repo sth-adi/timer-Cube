@@ -82,6 +82,8 @@ export interface SettingsState {
   freestyle: boolean;
   /** Read the smart-cube scramble aloud as you make it. */
   voiceScramble: boolean;
+  /** Keep the screen on while a smart cube is connected — a sleeping phone drops the Bluetooth link. */
+  keepAwake: boolean;
   /** Names you've given your smart cubes, by cube id (see lib/smartcube/cubeIdentity.ts). */
   cubeNicknames: Record<string, string>;
   inspectionEnabled: boolean;
@@ -128,6 +130,7 @@ export interface SettingsState {
   setVoiceCoach: (v: VoiceMode) => void;
   setFreestyle: (v: boolean) => void;
   setVoiceScramble: (v: boolean) => void;
+  setKeepAwake: (v: boolean) => void;
   setCubeNickname: (id: string, nickname: string) => void;
 }
 
@@ -152,6 +155,7 @@ export const useSettingsStore = create<SettingsState>()(
       voiceCoach: "off",
       freestyle: false,
       voiceScramble: false,
+      keepAwake: true,
       cubeNicknames: {},
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
@@ -177,6 +181,7 @@ export const useSettingsStore = create<SettingsState>()(
       setVoiceCoach: (v) => set({ voiceCoach: v }),
       setFreestyle: (v) => set({ freestyle: v }),
       setVoiceScramble: (v) => set({ voiceScramble: v }),
+      setKeepAwake: (v) => set({ keepAwake: v }),
       setCubeNickname: (id, nickname) =>
         set((s) => {
           const next = { ...s.cubeNicknames };

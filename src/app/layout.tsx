@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UsageTracker } from "@/components/chrome/UsageTracker";
 import { FxLayer } from "@/components/chrome/FxLayer";
+import { MacPromptDialog } from "@/components/smartcube/MacPromptDialog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <UsageTracker />
         {children}
         <FxLayer />
+        <MacPromptDialog />
       </body>
     </html>
   );
