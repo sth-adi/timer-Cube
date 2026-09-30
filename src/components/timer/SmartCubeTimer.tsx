@@ -341,8 +341,11 @@ export function SmartCubeTimer() {
   // the cube (see useFreestyle) — until one is captured there is none.
   const freestyle = useSettingsStore((s) => s.freestyle);
   const setFreestyle = useSettingsStore((s) => s.setFreestyle);
-  const [freestyleScramble, setFreestyleScramble] = useState("");
-  const scramble = freestyle ? freestyleScramble : storeScramble;
+  // Each capture remembers which solve was on screen when it was taken; it's spent once the *next* solve has been saved (its recap exists), which frees the flow to start listening again.
+  const [freestyleCapture, setFreestyleCapture] = useState<{ scramble: string; afterSolvedAtMs: number | null } | null>(null);
+  const recapSavedFor = useRecapStore((s) => s.recap?.solvedAtMs ?? null);
+  const freestyleSpent = !!freestyleCapture && solvedAtMs !== null && solvedAtMs !== freestyleCapture.afterSolvedAtMs && recapSavedFor === solvedAtMs;
+  const scramble = freestyle ? (freestyleCapture && !freestyleSpent ? freestyleCapture.scramble : "") : storeScramble;
   const nextScramble = useScrambleStore((s) => s.nextScramble);
   const previousScramble = useScrambleStore((s) => s.previousScramble);
   const canGoBack = useScrambleStore((s) => s.canGoBack);
@@ -369,7 +372,7 @@ export function SmartCubeTimer() {
   // the existing recording/solved-detection below takes over.
   const flow = useSmartCubeFlow(scramble);
   const freestyleControls = useFreestyle(freestyle, connected && !armed && !recording && flow.phase === "scrambling", (captured) => {
-    setFreestyleScramble(captured);
+    setFreestyleCapture({ scramble: captured, afterSolvedAtMs: solvedAtMs });
     loadExternalScramble(captured);
   });
   // Step-by-step scramble guidance, with live undo instructions for wrong turns.
@@ -688,13 +691,6 @@ export function SmartCubeTimer() {
     protocolName,
     correctedDuringSolve,
   ]);
-
-  // Freestyle has no "next scramble" to roll after a solve — the recap now
-  // holds the scramble it belonged to, so clear the target: that's what sends
-  // the flow back to "scrambling" and re-opens the capture for the next mix.
-  useEffect(() => {
-    if (freestyle && finished && freestyleScramble && useRecapStore.getState().recap?.solvedAtMs === solvedAtMs) setFreestyleScramble("");
-  }, [freestyle, finished, freestyleScramble, solvedAtMs]);
 
   const moveTokens = useMemo(() => moves.map((m) => m.token), [moves]);
   // The solve as the analyses read it: relabelled so its cross is on white,
