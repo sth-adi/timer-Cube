@@ -13,6 +13,7 @@ import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
 import { useGyroStore } from "./gyroStore";
 import { recordTimeMachineMove, resetTimeMachine } from "@/lib/smartcube/timeMachine";
 import { friendlyConnectError } from "@/lib/smartcube/friendlyConnectError";
+import { correctBurstTimestamp, type BurstTimestampState } from "@/lib/smartcube/burstTimestamp";
 
 /**
  * Bridges a real Bluetooth smart cube into this app via
@@ -171,6 +172,12 @@ let sync = newStateSync();
 let settleTimer: ReturnType<typeof setTimeout> | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let batteryPollTimer: ReturnType<typeof setInterval> | null = null;
+/**
+ * State for correctBurstTimestamp, kept across the whole connection (not
+ * just one solve) since the cube's own hardware clock it's anchored to
+ * never resets between solves.
+ */
+let burstState: BurstTimestampState | null = null;
 /** How long the cube must be still before a disagreeing report is believed. */
 const SETTLE_MS = 400;
 /** After this long without a turn (and not mid-solve), ask the cube where it's at. */
@@ -199,6 +206,7 @@ function clearSyncTimers(): void {
 function freshFrames(): Record<CrossFace, CubeJSInstance> {
   return Object.fromEntries(CROSS_FACES.map((f) => [f, newCube()])) as Record<CrossFace, CubeJSInstance>;
 }
+
 /**
  * Every gyro sample since the current solve was armed — the raw material
  * for rotation detection once it finishes (see lib/gyro/orientation.ts's
@@ -221,6 +229,7 @@ function teardown(): void {
   caps = null;
   if (batteryPollTimer) clearInterval(batteryPollTimer);
   batteryPollTimer = null;
+  burstState = null;
   clearSyncTimers();
 }
 
@@ -366,6 +375,13 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         }
         if (event.type !== "MOVE") return;
 
+        // See correctBurstTimestamp's own comment: several turns can arrive
+        // in one Bluetooth notification sharing a single host timestamp —
+        // this recovers their real spacing from the cube's own hardware
+        // clock where the protocol provides one.
+        burstState = correctBurstTimestamp(burstState, event);
+        const ts = burstState.correctedTimestamp;
+
         onTurn(sync);
         if (idleTimer) clearTimeout(idleTimer);
         // Once the turning stops (between solves), check the app's picture against the cube's own.
@@ -373,8 +389,8 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
           if (caps?.facelets && !get().recording) void conn?.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
         }, IDLE_CHECK_MS);
 
-        emitRawMove({ token: event.move, timeStampMs: event.timestamp });
-        recordTimeMachineMove(event.move, event.timestamp);
+        emitRawMove({ token: event.move, timeStampMs: ts });
+        recordTimeMachineMove(event.move, ts);
         liveCube.move(event.move);
         for (const f of CROSS_FACES) frames[f].move(relabelMove(event.move, f));
         const facelets = liveCube.asString();
@@ -390,22 +406,22 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         // never reports an atomic 180° turn, only two 90° clicks.
         const rawToken = event.move;
         const lastMove = state.moves[state.moves.length - 1];
-        const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, event.timestamp);
+        const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, ts);
         const move: SmartCubeMove = isDoubleTurn
-          ? { token: `${rawToken[0]}2`, timeStampMs: event.timestamp }
-          : { token: rawToken, timeStampMs: event.timestamp };
-        const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], event.timestamp);
+          ? { token: `${rawToken[0]}2`, timeStampMs: ts }
+          : { token: rawToken, timeStampMs: ts };
+        const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], ts);
 
         set((s) => ({
           ...milestones,
           recording: true,
-          startedAtMs: s.startedAtMs ?? event.timestamp,
+          startedAtMs: s.startedAtMs ?? ts,
           moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
           liveFacelets: facelets,
         }));
 
         if (facelets === SOLVED_FACELETS) {
-          set({ armed: false, recording: false, solvedAtMs: event.timestamp });
+          set({ armed: false, recording: false, solvedAtMs: ts });
         }
       });
 

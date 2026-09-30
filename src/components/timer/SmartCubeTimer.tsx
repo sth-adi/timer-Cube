@@ -510,7 +510,7 @@ export function SmartCubeTimer() {
       // it's only a fair target when this attempt is one too — for a
       // tagged event, eventPbMs (that event's own best) is the right target
       // outright, not a fallback behind an unrelated 2-handed estimate.
-      const prediction = pendingEvent === null && scramble ? predictSolveTime(normalSolves(sessionSolves), scramble) : null;
+      const prediction = pendingEventAtStart === null && scramble ? predictSolveTime(normalSolves(sessionSolves), scramble) : null;
       auraTargetRef.current = (prediction?.skill?.useful ? prediction.predictedMs : null) ?? eventPbMs ?? null;
     }
     if (!recording) {
@@ -518,7 +518,7 @@ export function SmartCubeTimer() {
       resetPerformanceAura();
     }
     prevRecordingForAuraRef.current = recording;
-  }, [recording, scramble, sessionSolves, eventPbMs, pendingEvent]);
+  }, [recording, scramble, sessionSolves, eventPbMs, pendingEventAtStart]);
 
   useEffect(() => {
     if (!recording || auraTargetRef.current === null) return;
@@ -1021,7 +1021,7 @@ export function SmartCubeTimer() {
 
       {finished && (
         <>
-          <LiveProjection finished finalMs={elapsedMs} scramble={finishedScramble} pendingEvent={savedSolve?.event ?? pendingEvent} />
+          <LiveProjection finished finalMs={elapsedMs} scramble={finishedScramble} pendingEvent={savedSolve?.event ?? pendingEventAtStart} />
           <div className="flex items-center gap-3 text-xs text-muted">
             {crossFace && crossFace !== "U" && <span>{CROSS_FACE_COLOR[crossFace]} cross</span>}
             <span>{moves.length} moves</span>
