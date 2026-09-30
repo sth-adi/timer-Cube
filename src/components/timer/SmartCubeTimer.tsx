@@ -16,9 +16,12 @@ import {
   Loader2,
   Play,
   Radio,
+  Shuffle,
   Sparkles,
   Trash2,
   TriangleAlert,
+  Volume2,
+  VolumeX,
   Wand2,
 } from "lucide-react";
 import { useSmartCubeStore, getGyroLog } from "@/lib/store/smartCubeStore";
@@ -46,6 +49,10 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
+import { useVoiceCoach } from "@/hooks/useVoiceCoach";
+import { useFreestyle } from "@/hooks/useFreestyle";
+import { FreestylePanel } from "@/components/smartcube/FreestylePanel";
+import { VOICE_MODES } from "@/lib/smartcube/voiceCoach";
 import { useRecapStore } from "@/lib/store/recapStore";
 import { useScrambleGuide } from "@/hooks/useScrambleGuide";
 import { ScrambleGuidePanel } from "@/components/smartcube/ScrambleGuidePanel";
@@ -328,7 +335,14 @@ export function SmartCubeTimer() {
     correctedDuringSolve,
     hardwareInfo,
   } = useSmartCubeStore();
-  const scramble = useScrambleStore((s) => s.scramble);
+  const storeScramble = useScrambleStore((s) => s.scramble);
+  const loadExternalScramble = useScrambleStore((s) => s.loadExternalScramble);
+  // Freestyle: the scramble is whatever state you mix the cube into, read off
+  // the cube (see useFreestyle) — until one is captured there is none.
+  const freestyle = useSettingsStore((s) => s.freestyle);
+  const setFreestyle = useSettingsStore((s) => s.setFreestyle);
+  const [freestyleScramble, setFreestyleScramble] = useState("");
+  const scramble = freestyle ? freestyleScramble : storeScramble;
   const nextScramble = useScrambleStore((s) => s.nextScramble);
   const previousScramble = useScrambleStore((s) => s.previousScramble);
   const canGoBack = useScrambleStore((s) => s.canGoBack);
@@ -344,6 +358,8 @@ export function SmartCubeTimer() {
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
   const timerStyle = useSettingsStore((s) => s.timerStyle);
+  const voiceCoach = useSettingsStore((s) => s.voiceCoach);
+  const setVoiceCoach = useSettingsStore((s) => s.setVoiceCoach);
   // The post-solve extras (coach, mistakes, inspection, pace, gyro, X-ray) wait behind one tap.
   const [showDetails, setShowDetails] = useState(false);
 
@@ -352,6 +368,10 @@ export function SmartCubeTimer() {
   // machine. Only meaningful before `arm()` has been called; once armed,
   // the existing recording/solved-detection below takes over.
   const flow = useSmartCubeFlow(scramble);
+  const freestyleControls = useFreestyle(freestyle, connected && !armed && !recording && flow.phase === "scrambling", (captured) => {
+    setFreestyleScramble(captured);
+    loadExternalScramble(captured);
+  });
   // Step-by-step scramble guidance, with live undo instructions for wrong turns.
   useScrambleGuide(scramble, connected && !armed && !recording && flow.phase === "scrambling");
   const pacer = useSplitPacer();
@@ -646,8 +666,9 @@ export function SmartCubeTimer() {
     // state against this new `scramble`) is what actually clears it, by
     // calling arm() — which resets solvedAtMs to null — the instant you
     // finish scrambling to match it. No fixed timer, no refresh for no reason.
-    void nextScramble();
+    if (!freestyle) void nextScramble();
   }, [
+    freestyle,
     finished,
     flow.inspectionStartedAtMs,
     solvedAtMs,
@@ -667,6 +688,13 @@ export function SmartCubeTimer() {
     protocolName,
     correctedDuringSolve,
   ]);
+
+  // Freestyle has no "next scramble" to roll after a solve — the recap now
+  // holds the scramble it belonged to, so clear the target: that's what sends
+  // the flow back to "scrambling" and re-opens the capture for the next mix.
+  useEffect(() => {
+    if (freestyle && finished && freestyleScramble && useRecapStore.getState().recap?.solvedAtMs === solvedAtMs) setFreestyleScramble("");
+  }, [freestyle, finished, freestyleScramble, solvedAtMs]);
 
   const moveTokens = useMemo(() => moves.map((m) => m.token), [moves]);
   // The solve as the analyses read it: relabelled so its cross is on white,
@@ -771,6 +799,26 @@ export function SmartCubeTimer() {
           ? "stopped"
           : "idle";
   useFxPhase(fxState);
+
+  // Voice Coach (off by default): phase calls, the time, inspection marks, PB.
+  const voiceBestMs = useMemo(
+    () => computeSessionStats(effectivePendingEvent === null ? normalSolves(allSolves) : solvesForEvent(allSolves, effectivePendingEvent)).best,
+    [allSolves, effectivePendingEvent],
+  );
+  useVoiceCoach({
+    recording,
+    finished,
+    startedAtMs,
+    crossAtMs,
+    f2lAtMs,
+    ollAtMs,
+    solvedAtMs,
+    penalty: startedAtMs !== null && flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs - flow.inspectionStartedAtMs) : "none",
+    baseline: postSolveBaseline,
+    bestMs: voiceBestMs ?? null,
+    inspecting: armed && !recording && flow.phase === "inspecting",
+    inspectionRemainingMs: flow.inspectionRemainingMs,
+  });
   const prevFinishedForFxRef = useRef(finished);
   useEffect(() => {
     if (finished && !prevFinishedForFxRef.current) fxImpact("solve");
@@ -792,7 +840,7 @@ export function SmartCubeTimer() {
     // "It's solved" means the real cube is solved whatever the app thought — put the two back in step.
     if (how === "solved") resyncSolved();
     cancel();
-    void nextScramble();
+    if (!freestyle) void nextScramble();
   };
 
   // Cube Gestures — hands-free control between solves, straight from the
@@ -925,6 +973,25 @@ export function SmartCubeTimer() {
         <Link href="/lab" className="ml-2 flex items-center gap-1 text-accent hover:underline">
           <FlaskConical size={12} /> Lab
         </Link>
+        <button
+          type="button"
+          onClick={() => setVoiceCoach(VOICE_MODES[(VOICE_MODES.findIndex((m) => m.id === voiceCoach) + 1) % VOICE_MODES.length].id)}
+          className={cn("ml-2 flex items-center gap-1 hover:underline", voiceCoach === "off" ? "text-muted-2" : "text-accent")}
+          title="Voice coach: calls your splits and time out loud. Tap to cycle Off / Splits / Full."
+        >
+          {voiceCoach === "off" ? <VolumeX size={12} /> : <Volume2 size={12} />} Voice: {VOICE_MODES.find((m) => m.id === voiceCoach)?.name}
+        </button>
+        {!armed && !recording && (
+          <button
+            type="button"
+            onClick={() => setFreestyle(!freestyle)}
+            aria-pressed={freestyle}
+            className={cn("ml-2 flex items-center gap-1 hover:underline", freestyle ? "text-accent" : "text-muted-2")}
+            title="Freestyle: scramble the cube any way you like — its state becomes the scramble, instead of following a generated one."
+          >
+            <Shuffle size={12} /> Freestyle{freestyle ? ": on" : ""}
+          </button>
+        )}
         <button type="button" onClick={disconnect} className="ml-2 text-muted-2 underline hover:text-muted">
           Disconnect
         </button>
@@ -1218,8 +1285,14 @@ export function SmartCubeTimer() {
             </div>
           )}
           {scramble && !finished && <PredictionBadge />}
-          <ScrambleGuidePanel />
-          <p className="text-[11px] text-muted-2">Inspection starts automatically once it matches.</p>
+          {freestyle ? (
+            <FreestylePanel onCaptureNow={freestyleControls.captureNow} onUseAnyway={freestyleControls.useAnyway} />
+          ) : (
+            <>
+              <ScrambleGuidePanel />
+              <p className="text-[11px] text-muted-2">Inspection starts automatically once it matches.</p>
+            </>
+          )}
           <button
             type="button"
             onClick={resyncSolved}

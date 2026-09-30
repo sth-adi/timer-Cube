@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Boxes, Check, ChevronLeft, Copy, RefreshCw, Swords } from "lucide-react";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useScrambleGuideStore } from "@/lib/store/scrambleGuideStore";
+import { useFreestyleStore } from "@/lib/store/freestyleStore";
 import { WCA_EVENTS } from "@/types";
 import { cn } from "@/lib/utils/cn";
 import { ScrambleNet } from "./ScrambleNet";
@@ -18,6 +19,8 @@ export function ScrambleBar({ className }: { className?: string }) {
   const event = useScrambleStore((s) => s.event);
   // While a smart cube is being scrambled, the steps light up as you make them.
   const guide = useScrambleGuideStore();
+  // Freestyle smart-cube mode: until you've mixed the cube, there's no scramble to show.
+  const freestyleAwaiting = useFreestyleStore((s) => s.awaiting);
   const guided = guide.scramble === scramble && !guide.rerouted && guide.view ? guide.view : null;
   const offTrack = !!guided && (guided.undo.length > 0 || guided.fix !== null);
   // The 2D scramble diagram is a hardcoded 3x3 net — not meaningful for other puzzle sizes.
@@ -73,7 +76,9 @@ export function ScrambleBar({ className }: { className?: string }) {
       </div>
       <div className="flex items-start justify-center gap-2">
         <p className="tabular-timer max-w-3xl text-center text-lg sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
-          {loading && !scramble
+          {freestyleAwaiting
+            ? "Freestyle — scramble your cube however you like"
+            : loading && !scramble
             ? "Generating scramble…"
             : guided
               ? guided.steps.map((t, i) => (

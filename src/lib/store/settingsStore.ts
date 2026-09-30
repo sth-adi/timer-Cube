@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { GyroCalibration } from "@/lib/gyro/orientation";
+import type { VoiceMode } from "@/lib/smartcube/voiceCoach";
 
 export type InputMethod = "spacebar" | "tap";
 
@@ -75,6 +76,10 @@ export const TIMER_STYLES = [
 export type TimerStyleId = (typeof TIMER_STYLES)[number]["id"];
 
 export interface SettingsState {
+  /** What the Voice Coach says out loud during a smart-cube solve — see lib/smartcube/voiceCoach.ts. */
+  voiceCoach: VoiceMode;
+  /** Smart cube: scramble it by hand and let the cube's own state be the scramble, instead of following a generated one. */
+  freestyle: boolean;
   inspectionEnabled: boolean;
   inputMethod: InputMethod;
   holdToStartMs: number;
@@ -116,6 +121,8 @@ export interface SettingsState {
   setPhaseCount: (v: PhaseCount) => void;
   setGyroCalibration: (protocol: string, calibration: GyroCalibration | null) => void;
   setCubeGestures: (v: boolean) => void;
+  setVoiceCoach: (v: VoiceMode) => void;
+  setFreestyle: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -136,6 +143,8 @@ export const useSettingsStore = create<SettingsState>()(
       phaseCount: 1,
       gyroCalibrations: {},
       cubeGestures: true,
+      voiceCoach: "off",
+      freestyle: false,
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
@@ -157,6 +166,8 @@ export const useSettingsStore = create<SettingsState>()(
           return { gyroCalibrations: next };
         }),
       setCubeGestures: (v) => set({ cubeGestures: v }),
+      setVoiceCoach: (v) => set({ voiceCoach: v }),
+      setFreestyle: (v) => set({ freestyle: v }),
     }),
     {
       name: "cube-timer-settings",
