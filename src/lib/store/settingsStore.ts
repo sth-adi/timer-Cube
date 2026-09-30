@@ -80,6 +80,8 @@ export interface SettingsState {
   voiceCoach: VoiceMode;
   /** Smart cube: scramble it by hand and let the cube's own state be the scramble, instead of following a generated one. */
   freestyle: boolean;
+  /** Read the smart-cube scramble aloud as you make it. */
+  voiceScramble: boolean;
   /** Names you've given your smart cubes, by cube id (see lib/smartcube/cubeIdentity.ts). */
   cubeNicknames: Record<string, string>;
   inspectionEnabled: boolean;
@@ -125,6 +127,7 @@ export interface SettingsState {
   setCubeGestures: (v: boolean) => void;
   setVoiceCoach: (v: VoiceMode) => void;
   setFreestyle: (v: boolean) => void;
+  setVoiceScramble: (v: boolean) => void;
   setCubeNickname: (id: string, nickname: string) => void;
 }
 
@@ -148,6 +151,7 @@ export const useSettingsStore = create<SettingsState>()(
       cubeGestures: true,
       voiceCoach: "off",
       freestyle: false,
+      voiceScramble: false,
       cubeNicknames: {},
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
@@ -172,6 +176,7 @@ export const useSettingsStore = create<SettingsState>()(
       setCubeGestures: (v) => set({ cubeGestures: v }),
       setVoiceCoach: (v) => set({ voiceCoach: v }),
       setFreestyle: (v) => set({ freestyle: v }),
+      setVoiceScramble: (v) => set({ voiceScramble: v }),
       setCubeNickname: (id, nickname) =>
         set((s) => {
           const next = { ...s.cubeNicknames };

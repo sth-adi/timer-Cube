@@ -16,6 +16,7 @@ import {
   Loader2,
   Play,
   Radio,
+  RotateCcw,
   Shuffle,
   Sparkles,
   Trash2,
@@ -51,6 +52,9 @@ import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useVoiceCoach } from "@/hooks/useVoiceCoach";
 import { useFreestyle } from "@/hooks/useFreestyle";
+import { useScrambleVoice } from "@/hooks/useScrambleVoice";
+import { scrambleForState } from "@/lib/smartcube/adoptScramble";
+import { useScrambleGuideStore } from "@/lib/store/scrambleGuideStore";
 import { cubeIdentity } from "@/lib/smartcube/cubeIdentity";
 import { PenaltyControls, SessionStrip } from "@/components/timer/SessionStrip";
 import { repairLostTurns, type TurnRepair } from "@/lib/smartcube/turnRepair";
@@ -387,6 +391,8 @@ export function SmartCubeTimer() {
   const cube = useMemo(() => cubeIdentity({ deviceMac, deviceName, protocolName }), [deviceMac, deviceName, protocolName]);
   const nickname = useSettingsStore((s) => (cube ? s.cubeNicknames[cube.id] : undefined));
   const freestyle = useSettingsStore((s) => s.freestyle);
+  const voiceScramble = useSettingsStore((s) => s.voiceScramble);
+  const setVoiceScramble = useSettingsStore((s) => s.setVoiceScramble);
   const setFreestyle = useSettingsStore((s) => s.setFreestyle);
   // Each capture remembers which solve was on screen when it was taken; it's spent once the *next* solve has been saved (its recap exists), which frees the flow to start listening again.
   const [freestyleCapture, setFreestyleCapture] = useState<{ scramble: string; afterSolvedAtMs: number | null } | null>(null);
@@ -424,6 +430,20 @@ export function SmartCubeTimer() {
   });
   // Step-by-step scramble guidance, with live undo instructions for wrong turns.
   useScrambleGuide(scramble, connected && !armed && !recording && flow.phase === "scrambling");
+  useScrambleVoice(voiceScramble && connected && !armed && !recording && flow.phase === "scrambling" && !freestyle);
+  const guideUndoCount = useScrambleGuideStore((s) => s.view?.undo.length ?? 0);
+  const [adopting, setAdopting] = useState(false);
+  // "Keep what's on the cube": when it's wandered several turns off the scramble, solve where it is instead of undoing.
+  const adoptCubeAsScramble = async () => {
+    if (adopting) return;
+    setAdopting(true);
+    try {
+      const adopted = await scrambleForState(useSmartCubeStore.getState().liveFacelets);
+      if (adopted) loadExternalScramble(adopted);
+    } finally {
+      setAdopting(false);
+    }
+  };
   const pacer = useSplitPacer();
 
   // WCA-style 8s/12s audible inspection warnings — the same cues the
@@ -1320,9 +1340,25 @@ export function SmartCubeTimer() {
               {showDetails ? "Fewer details" : "More details"}
               <ChevronDown size={13} className={cn("transition-transform", showDetails && "rotate-180")} />
             </button>
-            <Link href="/cases" className="text-xs font-medium text-accent hover:underline">
-              All your cases →
-            </Link>
+            <div className="flex items-center gap-3">
+              {finishedScramble && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (freestyle) setFreestyleCapture({ scramble: finishedScramble, afterSolvedAtMs: solvedAtMs });
+                    loadExternalScramble(finishedScramble);
+                  }}
+                  className="flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground"
+                  title="Scramble this same scramble again — a second go at the same solve"
+                  data-testid="redo-scramble"
+                >
+                  <RotateCcw size={12} /> Redo this scramble
+                </button>
+              )}
+              <Link href="/cases" className="text-xs font-medium text-accent hover:underline">
+                All your cases →
+              </Link>
+            </div>
           </div>
 
           {showDetails && (
@@ -1411,7 +1447,31 @@ export function SmartCubeTimer() {
           ) : (
             <>
               <ScrambleGuidePanel />
-              <p className="text-[11px] text-muted-2">Inspection starts automatically once it matches.</p>
+              {guideUndoCount >= 3 && (
+                <button
+                  type="button"
+                  onClick={() => void adoptCubeAsScramble()}
+                  disabled={adopting}
+                  className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-medium text-foreground hover:bg-bg-panel disabled:opacity-50"
+                  title="Skip the undo: whatever's on the cube right now becomes the scramble, and inspection starts"
+                  data-testid="keep-cube"
+                >
+                  {adopting ? "Reading the cube…" : "Keep what's on the cube as the scramble"}
+                </button>
+              )}
+              <div className="flex items-center gap-3 text-[11px] text-muted-2">
+                <span>Inspection starts automatically once it matches.</span>
+                <button
+                  type="button"
+                  onClick={() => setVoiceScramble(!voiceScramble)}
+                  aria-pressed={voiceScramble}
+                  className={cn("flex items-center gap-1 hover:underline", voiceScramble && "text-accent")}
+                  title="Read each turn aloud as you scramble, and what to undo after a wrong one"
+                  data-testid="voice-scramble"
+                >
+                  {voiceScramble ? <Volume2 size={11} /> : <VolumeX size={11} />} Read aloud
+                </button>
+              </div>
             </>
           )}
           <button

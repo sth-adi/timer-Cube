@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Boxes, Check, ChevronLeft, Copy, RefreshCw, Swords } from "lucide-react";
+import { Boxes, Check, ChevronLeft, ClipboardPaste, Copy, RefreshCw, Swords } from "lucide-react";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useScrambleGuideStore } from "@/lib/store/scrambleGuideStore";
 import { useFreestyleStore } from "@/lib/store/freestyleStore";
 import { WCA_EVENTS } from "@/types";
 import { cn } from "@/lib/utils/cn";
 import { ScrambleNet } from "./ScrambleNet";
+import { parseScramble } from "@/lib/scramble/parseScramble";
 
 export function ScrambleBar({ className }: { className?: string }) {
   const scramble = useScrambleStore((s) => s.scramble);
   const loading = useScrambleStore((s) => s.loadingScramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
   const previousScramble = useScrambleStore((s) => s.previousScramble);
+  const loadExternalScramble = useScrambleStore((s) => s.loadExternalScramble);
   const historyIndex = useScrambleStore((s) => s.historyIndex);
   const practiceMode = useScrambleStore((s) => s.practiceMode);
   const event = useScrambleStore((s) => s.event);
@@ -28,6 +30,23 @@ export function ScrambleBar({ className }: { className?: string }) {
   const [netOpen, setNetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [pasteState, setPasteState] = useState<"idle" | "ok" | "bad">("idle");
+
+  // Paste a scramble from elsewhere (a competition sheet, csTimer, a friend) and solve that one.
+  const onPaste = async () => {
+    let text = "";
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      // Clipboard reads need permission; fall back to asking for it by hand.
+      text = window.prompt("Paste a 3x3 scramble") ?? "";
+    }
+    if (!text.trim()) return;
+    const parsed = parseScramble(text);
+    if (parsed) loadExternalScramble(parsed);
+    setPasteState(parsed ? "ok" : "bad");
+    setTimeout(() => setPasteState("idle"), 1800);
+  };
 
   const onCopy = async () => {
     if (!scramble) return;
@@ -121,6 +140,21 @@ export function ScrambleBar({ className }: { className?: string }) {
           >
             {copied ? <Check size={17} /> : <Copy size={16} />}
           </button>
+          {netAvailable && !freestyleAwaiting && (
+            <button
+              type="button"
+              onClick={() => void onPaste()}
+              aria-label="Paste a scramble"
+              title={pasteState === "bad" ? "That isn't a 3x3 scramble — only U D L R F B turns" : "Paste a scramble from your clipboard and solve that one"}
+              className={cn(
+                "tap-target rounded-full transition-colors",
+                pasteState === "ok" ? "text-success" : pasteState === "bad" ? "text-danger" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
+              )}
+              data-testid="paste-scramble"
+            >
+              {pasteState === "ok" ? <Check size={17} /> : <ClipboardPaste size={16} />}
+            </button>
+          )}
           {netAvailable && (
             <button
               type="button"
