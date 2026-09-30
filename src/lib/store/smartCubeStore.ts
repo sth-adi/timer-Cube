@@ -12,6 +12,7 @@ import type { GyroSample } from "@/lib/gyro/orientation";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
 import { useGyroStore } from "./gyroStore";
 import { recordTimeMachineMove, resetTimeMachine } from "@/lib/smartcube/timeMachine";
+import { friendlyConnectError } from "@/lib/smartcube/friendlyConnectError";
 
 /**
  * Bridges a real Bluetooth smart cube into this app via
@@ -44,6 +45,8 @@ interface SmartCubeState {
   deviceName: string | null;
   /** Which protocol driver actually handled this device, e.g. "MoYu32", "GAN Gen2" — mostly diagnostic. */
   protocolName: string | null;
+  /** The cube's Bluetooth MAC, when the protocol resolves one — diagnostic only, e.g. telling apart two cubes of the same model. */
+  deviceMac: string | null;
   error: string | null;
   /** True from the moment recording is armed until a solve completes or is cancelled. */
   armed: boolean;
@@ -131,6 +134,14 @@ interface SmartCubeState {
    * gyro on at connect and stream it despite advertising no gyroscope.
    */
   gyroActive: boolean;
+  /**
+   * What the cube itself reports about its make/firmware, when the
+   * protocol supports asking (REQUEST_HARDWARE) — null until that answer
+   * comes back, or if it never does. Purely diagnostic (confirming the
+   * right cube paired, or that a firmware update might fix a quirk), so
+   * nothing in the solving flow depends on it.
+   */
+  hardwareInfo: { name: string | null; softwareVersion: string | null; hardwareVersion: string | null; productDate: string | null } | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   arm: () => void;
@@ -159,10 +170,19 @@ let caps: SmartCubeCapabilities | null = null;
 let sync = newStateSync();
 let settleTimer: ReturnType<typeof setTimeout> | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let batteryPollTimer: ReturnType<typeof setInterval> | null = null;
 /** How long the cube must be still before a disagreeing report is believed. */
 const SETTLE_MS = 400;
 /** After this long without a turn (and not mid-solve), ask the cube where it's at. */
 const IDLE_CHECK_MS = 1500;
+/**
+ * How often to re-poll battery on a connection that supports it. Cubes
+ * don't push battery updates on any schedule of their own (see
+ * refreshBattery's own comment), so left alone the indicator would freeze
+ * at whatever it read right after connecting — stale within the first long
+ * practice session on a cube that was already low.
+ */
+const BATTERY_POLL_MS = 5 * 60 * 1000;
 
 /** Takes a full state (from the cube's own report) as the truth. */
 function adoptFacelets(facelets: string): void {
@@ -199,6 +219,8 @@ function teardown(): void {
   sub = null;
   conn = null;
   caps = null;
+  if (batteryPollTimer) clearInterval(batteryPollTimer);
+  batteryPollTimer = null;
   clearSyncTimers();
 }
 
@@ -208,6 +230,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   connected: false,
   deviceName: null,
   protocolName: null,
+  deviceMac: null,
   error: null,
   armed: false,
   recording: false,
@@ -230,6 +253,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   batterySupported: false,
   batteryLevel: null,
   gyroActive: false,
+  hardwareInfo: null,
 
   connect: async () => {
     if (!get().supported) {
@@ -267,11 +291,13 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
             connected: false,
             deviceName: null,
             protocolName: null,
+            deviceMac: null,
             armed: false,
             recording: false,
             batterySupported: false,
             batteryLevel: null,
             gyroActive: false,
+            hardwareInfo: null,
             // Only ever set here, never on a deliberate disconnect() call —
             // that's the one signal that distinguishes "the Bluetooth link
             // itself dropped mid-attempt" from "you meant to disconnect".
@@ -297,6 +323,17 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
           set({ batteryLevel: event.batteryLevel });
           return;
         }
+        if (event.type === "HARDWARE") {
+          set({
+            hardwareInfo: {
+              name: event.hardwareName ?? null,
+              softwareVersion: event.softwareVersion ?? null,
+              hardwareVersion: event.hardwareVersion ?? null,
+              productDate: event.productDate ?? null,
+            },
+          });
+          return;
+        }
         if (event.type === "FACELETS") {
           const verdict = onReport(sync, event.facelets);
           if (verdict === "adopt") {
@@ -310,9 +347,19 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
               if (!fix) return;
               adoptFacelets(fix);
               const st = get();
-              set({ liveFacelets: fix, stateSource: "cube", ...(st.armed || st.recording ? { correctedDuringSolve: true } : {}) });
-              // A correction can complete the solve the lost turn was hiding.
-              if (fix === SOLVED_FACELETS && st.recording) set({ armed: false, recording: false, solvedAtMs: st.moves[st.moves.length - 1]?.timeStampMs ?? event.timestamp });
+              // A correction can complete the solve the lost turn was hiding —
+              // when it does, catch up the milestones/case names too, since no
+              // further MOVE event will come along to run advanceMilestones
+              // for us the way it normally does after every turn.
+              const completesSolve = fix === SOLVED_FACELETS && st.recording;
+              const milestones = completesSolve ? advanceMilestones(pickMilestones(st), liveCube, (f) => frames[f], event.timestamp) : {};
+              set({
+                ...milestones,
+                liveFacelets: fix,
+                stateSource: "cube",
+                ...(st.armed || st.recording ? { correctedDuringSolve: true } : {}),
+              });
+              if (completesSolve) set({ armed: false, recording: false, solvedAtMs: st.moves[st.moves.length - 1]?.timeStampMs ?? event.timestamp });
             }, SETTLE_MS);
           }
           return;
@@ -367,19 +414,25 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         connecting: false,
         deviceName: connection.deviceName || connection.protocol.name,
         protocolName: connection.protocol.name,
+        deviceMac: connection.deviceMAC || null,
         liveFacelets: SOLVED_FACELETS,
         batterySupported: connection.capabilities.battery,
         batteryLevel: null,
         gyroActive: false,
+        hardwareInfo: null,
         stateSource: "assumed",
         reportsState: connection.capabilities.facelets,
         correctedDuringSolve: false,
         droppedMidSolve: false,
         droppedMidSolveMoves: null,
       });
-      if (connection.capabilities.battery) get().refreshBattery();
+      if (connection.capabilities.battery) {
+        get().refreshBattery();
+        batteryPollTimer = setInterval(() => get().refreshBattery(), BATTERY_POLL_MS);
+      }
       // Ask where every piece is right now — the connect-time report can go out before this subscription existed.
       if (connection.capabilities.facelets) void connection.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
+      if (connection.capabilities.hardware) void connection.sendCommand({ type: "REQUEST_HARDWARE" }).catch(() => {});
     } catch (err) {
       // The user cancelling the browser's device picker throws too — that's
       // not a real error, just "never mind".
@@ -387,7 +440,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       teardown();
       set({
         connecting: false,
-        error: /cancelled|user gesture/i.test(message) ? null : message,
+        error: /cancelled|user gesture/i.test(message) ? null : friendlyConnectError(message),
       });
     }
   },
@@ -399,11 +452,13 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       connected: false,
       deviceName: null,
       protocolName: null,
+      deviceMac: null,
       armed: false,
       recording: false,
       batterySupported: false,
       batteryLevel: null,
       gyroActive: false,
+      hardwareInfo: null,
       // A deliberate disconnect, not the link dropping out from under you —
       // any earlier unexpected-drop banner no longer applies.
       droppedMidSolve: false,

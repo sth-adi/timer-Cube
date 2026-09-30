@@ -313,6 +313,7 @@ export function SmartCubeTimer() {
     batteryLevel,
     gyroActive,
     protocolName,
+    deviceMac,
     connect,
     disconnect,
     cancel,
@@ -321,6 +322,7 @@ export function SmartCubeTimer() {
     stateSource,
     reportsState,
     correctedDuringSolve,
+    hardwareInfo,
   } = useSmartCubeStore();
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
@@ -875,7 +877,22 @@ export function SmartCubeTimer() {
       <InspectionRing remainingMs={flow.inspectionRemainingMs} active={armed && !recording && flow.phase === "inspecting"} />
       <div className="flex items-center gap-1.5 text-xs text-success">
         <BluetoothConnected size={14} />
-        {deviceName}
+        <span
+          title={
+            [
+              protocolName && `protocol ${protocolName}`,
+              hardwareInfo?.name,
+              hardwareInfo?.hardwareVersion && `hw ${hardwareInfo.hardwareVersion}`,
+              hardwareInfo?.softwareVersion && `fw ${hardwareInfo.softwareVersion}`,
+              hardwareInfo?.productDate && `made ${hardwareInfo.productDate}`,
+              deviceMac && `MAC ${deviceMac}`,
+            ]
+              .filter(Boolean)
+              .join(" · ") || undefined
+          }
+        >
+          {deviceName}
+        </span>
         {batterySupported && (
           <>
             <span className="text-border">·</span>
