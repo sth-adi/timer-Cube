@@ -321,6 +321,7 @@ export function SmartCubeTimer() {
     resyncSolved,
     stateSource,
     reportsState,
+    faceletsUnreliable,
     correctedDuringSolve,
     hardwareInfo,
   } = useSmartCubeStore();
@@ -913,6 +914,15 @@ export function SmartCubeTimer() {
       {batterySupported && batteryLevel !== null && batteryLevel <= 12 && (
         <p className="flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-medium text-danger">
           <BatteryWarning size={12} /> Cube battery at {batteryLevel}% — a dying battery is a common cause of a mid-solve Bluetooth drop
+        </p>
+      )}
+
+      {faceletsUnreliable && (
+        <p
+          className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning"
+          title="Several state reports in a row came back garbled rather than just out of date — its position tracking may drift until one comes back clean. Solve it and tap 'Cube out of sync?' if a scramble or solve stops matching."
+        >
+          <TriangleAlert size={12} /> This cube&apos;s state reports look corrupted
         </p>
       )}
 

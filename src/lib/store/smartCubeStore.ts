@@ -109,6 +109,15 @@ interface SmartCubeState {
   /** The cube can report its state at all (every supported brand but the MoYu MHC). */
   reportsState: boolean;
   /**
+   * Several state reports in a row came back malformed (wrong length, a
+   * sticker count that can't be a real cube) rather than just disagreeing
+   * with the app's own count — a lost turn corrects itself the moment the
+   * cube goes still, but garbled reports never will, so "Cube out of sync?"
+   * needs calling out explicitly instead of just quietly never resolving.
+   * Clears the moment one good report comes back.
+   */
+  faceletsUnreliable: boolean;
+  /**
    * The app's state was corrected from the cube's own report during this
    * solve (a turn was lost over Bluetooth): the time and splits stand, but
    * the recorded turns no longer add up to the solve.
@@ -178,10 +187,14 @@ let batteryPollTimer: ReturnType<typeof setInterval> | null = null;
  * never resets between solves.
  */
 let burstState: BurstTimestampState | null = null;
+/** Consecutive FACELETS reports rejected outright (not even well-formed) — see faceletsUnreliable's own comment. */
+let invalidFaceletsStreak = 0;
 /** How long the cube must be still before a disagreeing report is believed. */
 const SETTLE_MS = 400;
 /** After this long without a turn (and not mid-solve), ask the cube where it's at. */
 const IDLE_CHECK_MS = 1500;
+/** This many bad reports in a row (no good one between) before flagging faceletsUnreliable. */
+const INVALID_FACELETS_STREAK_THRESHOLD = 3;
 /**
  * How often to re-poll battery on a connection that supports it. Cubes
  * don't push battery updates on any schedule of their own (see
@@ -230,6 +243,7 @@ function teardown(): void {
   if (batteryPollTimer) clearInterval(batteryPollTimer);
   batteryPollTimer = null;
   burstState = null;
+  invalidFaceletsStreak = 0;
   clearSyncTimers();
 }
 
@@ -256,6 +270,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   liveFacelets: SOLVED_FACELETS,
   stateSource: "assumed",
   reportsState: false,
+  faceletsUnreliable: false,
   correctedDuringSolve: false,
   droppedMidSolve: false,
   droppedMidSolveMoves: null,
@@ -307,6 +322,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
             batteryLevel: null,
             gyroActive: false,
             hardwareInfo: null,
+            faceletsUnreliable: false,
             // Only ever set here, never on a deliberate disconnect() call —
             // that's the one signal that distinguishes "the Bluetooth link
             // itself dropped mid-attempt" from "you meant to disconnect".
@@ -345,6 +361,13 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         }
         if (event.type === "FACELETS") {
           const verdict = onReport(sync, event.facelets);
+          if (verdict === "ignore") {
+            invalidFaceletsStreak++;
+            if (invalidFaceletsStreak >= INVALID_FACELETS_STREAK_THRESHOLD && !get().faceletsUnreliable) set({ faceletsUnreliable: true });
+            return;
+          }
+          if (invalidFaceletsStreak > 0) invalidFaceletsStreak = 0;
+          if (get().faceletsUnreliable) set({ faceletsUnreliable: false });
           if (verdict === "adopt") {
             // The first report since connecting: start from wherever the cube really is.
             adoptFacelets(event.facelets);
@@ -438,6 +461,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
         hardwareInfo: null,
         stateSource: "assumed",
         reportsState: connection.capabilities.facelets,
+        faceletsUnreliable: false,
         correctedDuringSolve: false,
         droppedMidSolve: false,
         droppedMidSolveMoves: null,
@@ -475,6 +499,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       batteryLevel: null,
       gyroActive: false,
       hardwareInfo: null,
+      faceletsUnreliable: false,
       // A deliberate disconnect, not the link dropping out from under you —
       // any earlier unexpected-drop banner no longer applies.
       droppedMidSolve: false,
@@ -521,10 +546,19 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   resyncSolved: () => {
     liveCube = newCube();
     frames = freshFrames();
-    // Tell the cube too, where it can be told; otherwise stop believing its old count until it agrees.
+    // Tell the cube too, where it can be told — but don't take that on
+    // faith even then: a stale report already in flight from before the
+    // reset landed would otherwise be trusted as a disagreement and
+    // "corrected" straight back to the wrong state. Distrusting always
+    // means no report gets believed until one actually agrees, reset or not.
     if (caps?.reset) void conn?.sendCommand({ type: "REQUEST_RESET" }).catch(() => {});
-    else distrust(sync);
+    distrust(sync);
     set({ liveFacelets: SOLVED_FACELETS });
+    // Confirm it right away rather than waiting on the idle-check timer,
+    // which only fires up to IDLE_CHECK_MS after whatever turn you just
+    // made solving it — the whole point of tapping this is to trust the
+    // cube again as soon as possible.
+    if (caps?.facelets) void conn?.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
   },
 
   refreshBattery: () => {
