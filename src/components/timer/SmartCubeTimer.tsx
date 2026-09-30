@@ -52,6 +52,7 @@ import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useVoiceCoach } from "@/hooks/useVoiceCoach";
 import { useFreestyle } from "@/hooks/useFreestyle";
 import { cubeIdentity } from "@/lib/smartcube/cubeIdentity";
+import { PenaltyControls, SessionStrip } from "@/components/timer/SessionStrip";
 import { repairLostTurns, type TurnRepair } from "@/lib/smartcube/turnRepair";
 import type { SolveRecap } from "@/lib/store/recapStore";
 import { FreestylePanel } from "@/components/smartcube/FreestylePanel";
@@ -84,6 +85,7 @@ import { computeSessionStats, normalSolves, solvesForEvent } from "@/lib/stats/s
 import { avg, metricsFor, sd } from "@/lib/analytics/solveMetrics";
 import { PAUSE_MS } from "@/lib/analytics/pause";
 import { buildPostSolveBaseline, paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
+import { buildPhaseBests, deltaToBest, findGolds } from "@/lib/analysis/phaseBests";
 import { playInspectionBeep, playSolveChime } from "@/lib/utils/sound";
 import { EVENT_TAGS } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
@@ -152,6 +154,8 @@ function PhaseSplitsRow({
   baseline,
   f2lPairCount,
   hideTimes,
+  bests,
+  skips,
 }: {
   durations: (number | null)[];
   currentPhaseIndex: number;
@@ -162,10 +166,16 @@ function PhaseSplitsRow({
   f2lPairCount?: number;
   /** Masks every duration (and the pace/overdue judgments that depend on one) behind a placeholder — the live half of Settings' "hide time while solving". */
   hideTimes?: boolean;
+  /** Your best-ever time per phase, for gold splits and the delta next to each finished one. */
+  bests?: readonly (number | null)[];
+  /** Phases the scramble skipped — never golds, never compared. */
+  skips?: readonly boolean[];
 }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {PHASE_LABELS_4.map((label, i) => {
+        const delta = hideTimes ? null : deltaToBest(durations[i], bests?.[i], skips?.[i]);
+        const gold = delta !== null && delta < 0;
         const done = durations[i];
         const isCurrent = i === currentPhaseIndex;
         const pace = hideTimes ? null : paceFor(done, baseline?.phases[i] ?? null);
@@ -181,16 +191,47 @@ function PhaseSplitsRow({
                   ? "bg-warning/15 text-warning"
                   : "bg-accent-soft text-accent"
                 : done !== null
-                  ? cn("bg-bg-panel-2", pace === "fast" ? "text-success" : pace === "slow" ? "text-warning" : "text-muted")
+                  ? gold
+                    ? "bg-warning/20 text-warning ring-1 ring-warning/60"
+                    : cn("bg-bg-panel-2", pace === "fast" ? "text-success" : pace === "slow" ? "text-warning" : "text-muted")
                   : "bg-bg-panel-2 text-muted-2",
             )}
+            data-gold={gold || undefined}
           >
+            {gold ? "★ " : ""}
             {label}
             {i === 1 && f2lPairCount ? ` ${Math.min(f2lPairCount, 4)}/4` : ""}{" "}
             {hideTimes ? "·" : done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
+            {delta !== null && (
+              <span className={cn("ml-1 text-[10px] font-normal", gold ? "text-warning" : "text-muted-2")}>
+                {delta < 0 ? "−" : "+"}
+                {(Math.abs(delta) / 1000).toFixed(2)}
+              </span>
+            )}
           </span>
         );
       })}
+    </div>
+  );
+}
+
+const PHASE_NAMES = ["Cross", "F2L", "OLL", "PLL"] as const;
+
+/** After a solve: the phases that set a new best, and how far this solve sat from your sum of bests. */
+function GoldSummary({ golds, sumOfBestMs, totalMs }: { golds: { phase: 0 | 1 | 2 | 3; underBy: number }[]; sumOfBestMs: number | null; totalMs: number }) {
+  if (golds.length === 0 && sumOfBestMs === null) return null;
+  return (
+    <div className="flex flex-col items-center gap-0.5 text-[11px]" data-testid="gold-summary">
+      {golds.map((g) => (
+        <span key={g.phase} className="font-semibold text-warning">
+          ★ New best {PHASE_NAMES[g.phase]} — {(g.underBy / 1000).toFixed(2)}s under your old one
+        </span>
+      ))}
+      {sumOfBestMs !== null && (
+        <span className="text-muted-2" title="Your best-ever Cross, F2L, OLL and PLL added together — a solve you've proven you can do, just never all at once">
+          Sum of bests {formatTime(sumOfBestMs)} · this solve {totalMs <= sumOfBestMs ? "beat it" : `${((totalMs - sumOfBestMs) / 1000).toFixed(2)}s off`}
+        </span>
+      )}
     </div>
   );
 }
@@ -581,13 +622,20 @@ export function SmartCubeTimer() {
   // already requires MIN_SOLVES of its own before showing anything, so a
   // thin event history hides the pace coloring rather than showing a
   // misleading cross-event one).
-  const postSolveBaseline = useMemo(
-    () =>
-      buildPostSolveBaseline(
-        metricsFor(effectivePendingEvent === null ? normalSolves(allSolves) : solvesForEvent(allSolves, effectivePendingEvent)),
-      ),
+  const phaseMetrics = useMemo(
+    () => metricsFor(effectivePendingEvent === null ? normalSolves(allSolves) : solvesForEvent(allSolves, effectivePendingEvent)),
     [allSolves, effectivePendingEvent],
   );
+  const postSolveBaseline = useMemo(() => buildPostSolveBaseline(phaseMetrics), [phaseMetrics]);
+  // Your best-ever time per phase (gold splits) — frozen when a solve starts so the solve being judged can't move the bar it's judged against.
+  const liveBests = useMemo(() => buildPhaseBests(phaseMetrics), [phaseMetrics]);
+  const [frozenBests, setFrozenBests] = useState(liveBests);
+  const [wasRecording, setWasRecording] = useState(recording);
+  if (recording !== wasRecording) {
+    setWasRecording(recording);
+    if (recording) setFrozenBests(liveBests);
+  }
+  const phaseSkips = [false, false, ollCaseName === "OLL skip", pllCaseName === "PLL skip"];
 
   // Shared by "Full 3D analysis", "View reconstruction", and the auto-save
   // effect below — computed once here rather than re-derived at each call site.
@@ -1161,6 +1209,8 @@ export function SmartCubeTimer() {
             baseline={postSolveBaseline}
             f2lPairCount={f2lPairAtMs.filter((t) => t !== null).length}
             hideTimes={hideTimeWhileSolving && recording}
+            bests={frozenBests.bests}
+            skips={phaseSkips}
           />
           <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} pendingEvent={pendingEventAtStart} />
           {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
@@ -1200,7 +1250,10 @@ export function SmartCubeTimer() {
               ) : (
                 <span className="text-muted-2">Deleted</span>
               ))}
+            {savedSolveExists && savedSolve && <PenaltyControls solve={savedSolve} onSet={(p) => void setPenalty(savedSolve.id, p)} />}
           </div>
+
+          <GoldSummary golds={findGolds(durations, frozenBests.bests, phaseSkips)} sumOfBestMs={frozenBests.sumOfBestMs} totalMs={elapsedMs} />
 
           {recap?.turnLoss?.kind === "repaired" && (
             <p className="flex items-start gap-1.5 rounded-lg bg-warning/10 px-3 py-2 text-[11px] leading-snug text-warning" data-testid="turn-repair-notice">
@@ -1370,6 +1423,7 @@ export function SmartCubeTimer() {
             Cube out of sync? Solve it, then tap here
           </button>
           {cubeGesturesOn && <GestureHint />}
+          <SessionStrip />
           <LiveSessionCoach />
         </div>
       )}
