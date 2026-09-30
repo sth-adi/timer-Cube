@@ -51,6 +51,7 @@ import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useVoiceCoach } from "@/hooks/useVoiceCoach";
 import { useFreestyle } from "@/hooks/useFreestyle";
+import { cubeIdentity } from "@/lib/smartcube/cubeIdentity";
 import { FreestylePanel } from "@/components/smartcube/FreestylePanel";
 import { VOICE_MODES } from "@/lib/smartcube/voiceCoach";
 import { useRecapStore } from "@/lib/store/recapStore";
@@ -339,6 +340,9 @@ export function SmartCubeTimer() {
   const loadExternalScramble = useScrambleStore((s) => s.loadExternalScramble);
   // Freestyle: the scramble is whatever state you mix the cube into, read off
   // the cube (see useFreestyle) — until one is captured there is none.
+  // Which physical cube this is, stamped on every solve it makes (see CubeGarageCard).
+  const cube = useMemo(() => cubeIdentity({ deviceMac, deviceName, protocolName }), [deviceMac, deviceName, protocolName]);
+  const nickname = useSettingsStore((s) => (cube ? s.cubeNicknames[cube.id] : undefined));
   const freestyle = useSettingsStore((s) => s.freestyle);
   const setFreestyle = useSettingsStore((s) => s.setFreestyle);
   // Each capture remembers which solve was on screen when it was taken; it's spent once the *next* solve has been saved (its recap exists), which frees the flow to start listening again.
@@ -659,6 +663,7 @@ export function SmartCubeTimer() {
       // Inspection ran from the moment the scramble matched to the first
       // turn: +2 past 15s, DNF past 17s — same rule as the keyboard timer.
       flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs! - flow.inspectionStartedAtMs) : undefined,
+      cube ? { ...cube, corrected: correctedDuringSolve } : undefined,
     );
     if (soundEnabled) playSolveChime();
     // Rolls the next target scramble right away, in the background — but
@@ -690,6 +695,7 @@ export function SmartCubeTimer() {
     moveTimestampsRel,
     protocolName,
     correctedDuringSolve,
+    cube,
   ]);
 
   const moveTokens = useMemo(() => moves.map((m) => m.token), [moves]);
@@ -831,7 +837,7 @@ export function SmartCubeTimer() {
     if (how !== "discard" && startedAtMs !== null) {
       // The turns recorded don't solve the scramble, so the solve keeps its time but not a reconstruction the analyses would trip over.
       const timeMs = how === "solved" ? lastMoveMs - startedAtMs : elapsedMs;
-      void recordSolve(timeMs, scramble, undefined, pendingEventAtStart ?? undefined, undefined, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, undefined, undefined, how === "dnf" ? "dnf" : undefined);
+      void recordSolve(timeMs, scramble, undefined, pendingEventAtStart ?? undefined, undefined, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, undefined, undefined, how === "dnf" ? "dnf" : undefined, cube ? { ...cube, corrected: correctedDuringSolve } : undefined);
     }
     // "It's solved" means the real cube is solved whatever the app thought — put the two back in step.
     if (how === "solved") resyncSolved();
@@ -955,7 +961,7 @@ export function SmartCubeTimer() {
               .join(" · ") || undefined
           }
         >
-          {deviceName}
+          {nickname ?? deviceName}
         </span>
         {batterySupported && (
           <>

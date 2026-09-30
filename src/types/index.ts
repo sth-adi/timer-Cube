@@ -47,6 +47,13 @@ export interface Solve {
    * weakness report can look back across solved-and-analyzed history.
    */
   reconstruction?: string;
+  /**
+   * Which smart cube this solve was made on — absent for keyboard/manual
+   * solves and for smart-cube solves from before cubes were tracked.
+   * `corrected` marks a solve in which a turn was lost over Bluetooth and
+   * repaired from the cube's own state report.
+   */
+  cube?: { id: string; name: string; protocol?: string; corrected?: boolean };
   /** Average/max BPM during this solve, from a connected BLE heart-rate monitor. */
   heartRate?: { avg: number; max: number };
   /**

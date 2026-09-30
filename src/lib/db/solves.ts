@@ -15,6 +15,7 @@ export async function addSolve(input: {
   rotations?: { atMs: number; token: string }[];
   orientedReconstruction?: string;
   gyroStream?: { atMs: number[]; qx: number[]; qy: number[]; qz: number[]; qw: number[] };
+  cube?: Solve["cube"];
 }): Promise<Solve> {
   const solve: Solve = {
     id: newId(),
@@ -35,6 +36,7 @@ export async function addSolve(input: {
     ...(input.rotations ? { rotations: input.rotations } : {}),
     ...(input.orientedReconstruction ? { orientedReconstruction: input.orientedReconstruction } : {}),
     ...(input.gyroStream ? { gyroStream: input.gyroStream } : {}),
+    ...(input.cube ? { cube: input.cube } : {}),
   };
   await db.solves.add(solve);
   return solve;
@@ -90,6 +92,7 @@ export async function importSolves(
       | "moveTimestamps"
       | "rotations"
       | "orientedReconstruction"
+      | "cube"
     >
   >,
 ): Promise<number> {
@@ -111,6 +114,7 @@ export async function importSolves(
     ...(s.moveTimestamps && s.moveTimestamps.length > 0 ? { moveTimestamps: s.moveTimestamps } : {}),
     ...(s.rotations ? { rotations: s.rotations } : {}),
     ...(s.orientedReconstruction ? { orientedReconstruction: s.orientedReconstruction } : {}),
+    ...(s.cube ? { cube: s.cube } : {}),
   }));
   await db.solves.bulkAdd(rows);
   return rows.length;

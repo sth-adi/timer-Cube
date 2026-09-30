@@ -60,6 +60,8 @@ interface SessionState {
     },
     /** A penalty earned before the solve started (inspection overrun: +2 or DNF). */
     penalty?: Penalty,
+    /** The smart cube this solve was made on. */
+    cube?: Solve["cube"],
   ) => Promise<void>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
@@ -149,7 +151,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty) => {
+  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty, cube) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return;
     // PB detection and achievements only ever look at ordinary 2-handed
@@ -173,6 +175,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       rotations: gyro?.rotations,
       orientedReconstruction: gyro?.orientedReconstruction,
       gyroStream: gyro?.stream ?? undefined,
+      cube,
     });
     const solves = await getSessionSolves(activeSessionId);
     const allSolves = await getAllSolves();

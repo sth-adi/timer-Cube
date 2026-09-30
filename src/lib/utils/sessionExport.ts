@@ -29,6 +29,7 @@ export interface SessionExport {
     moveTimestamps?: number[];
     rotations?: { atMs: number; token: string }[];
     orientedReconstruction?: string;
+    cube?: Solve["cube"];
   }>;
 }
 
@@ -51,6 +52,7 @@ export function buildSessionExport(sessionName: string, solves: Solve[]): Sessio
       moveTimestamps: s.moveTimestamps,
       rotations: s.rotations,
       orientedReconstruction: s.orientedReconstruction,
+      cube: s.cube,
     })),
   };
 }
@@ -68,6 +70,12 @@ export function downloadJson(filename: string, data: unknown): void {
 }
 
 const VALID_PENALTIES: Penalty[] = ["none", "plus2", "dnf"];
+
+function isCubeRef(v: unknown): v is NonNullable<Solve["cube"]> {
+  if (typeof v !== "object" || v === null) return false;
+  const c = v as Record<string, unknown>;
+  return typeof c.id === "string" && typeof c.name === "string" && (c.protocol === undefined || typeof c.protocol === "string") && (c.corrected === undefined || typeof c.corrected === "boolean");
+}
 
 function isRotationList(v: unknown): v is { atMs: number; token: string }[] {
   return (
@@ -117,6 +125,7 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
           : undefined,
       rotations: isRotationList(s.rotations) ? s.rotations : undefined,
       orientedReconstruction: typeof s.orientedReconstruction === "string" ? s.orientedReconstruction : undefined,
+      cube: isCubeRef(s.cube) ? s.cube : undefined,
     };
   });
 }

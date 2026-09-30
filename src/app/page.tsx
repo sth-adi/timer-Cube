@@ -11,6 +11,7 @@ import { StatsPanel } from "@/components/stats/StatsPanel";
 import { InsightsPanel } from "@/components/stats/InsightsPanel";
 import { PhaseSplitsCard } from "@/components/stats/PhaseSplitsCard";
 import { CubeDnaCard } from "@/components/stats/CubeDnaCard";
+import { CubeGarageCard } from "@/components/stats/CubeGarageCard";
 import { TriggerHeatmapCard } from "@/components/stats/TriggerHeatmapCard";
 import { ScrambleBar } from "@/components/scramble/ScrambleBar";
 import { EventTagSelector } from "@/components/timer/EventTagSelector";
@@ -280,6 +281,7 @@ function HomeInner() {
                 <SolveList limit={5} hideHeader />
               </div>
               <PhaseSplitsCard />
+              <CubeGarageCard />
               {/* The essentials above stay in view; the deeper cards wait behind one tap. */}
               <button
                 type="button"
