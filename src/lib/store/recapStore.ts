@@ -8,6 +8,12 @@ export interface SolveRecap {
   scramble: string;
   gyro: SolveGyroSummary | null;
   gaze: { report: GazeReport; facelets: string } | null;
+  /**
+   * A solve that lost a turn over Bluetooth: what was put back ("repaired"),
+   * or that nothing could be ("time-only" — the time stands, the recap
+   * doesn't). Absent when no turn was lost.
+   */
+  turnLoss?: { kind: "repaired"; change: { kind: "inserted" | "removed"; index: number; tokens: string[] } } | { kind: "time-only" };
 }
 
 /**

@@ -62,6 +62,8 @@ interface SessionState {
     penalty?: Penalty,
     /** The smart cube this solve was made on. */
     cube?: Solve["cube"],
+    /** A turn put back (or removed) from the cube's own state report. */
+    repaired?: Solve["repaired"],
   ) => Promise<void>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
@@ -151,7 +153,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty, cube) => {
+  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty, cube, repaired) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return;
     // PB detection and achievements only ever look at ordinary 2-handed
@@ -176,6 +178,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       orientedReconstruction: gyro?.orientedReconstruction,
       gyroStream: gyro?.stream ?? undefined,
       cube,
+      repaired,
     });
     const solves = await getSessionSolves(activeSessionId);
     const allSolves = await getAllSolves();

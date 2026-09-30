@@ -6,7 +6,7 @@ import type { SmartCubeCapabilities, SmartCubeConnection, SmartCubeEvent } from 
 import { Cube, newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { CROSS_FACES, relabelFacelets, relabelMove, type CrossFace } from "@/lib/smartcube/crossFrame";
 import { distrust, newStateSync, onReport, onTurn, settle } from "@/lib/smartcube/stateSync";
-import { advanceMilestones, pickMilestones } from "@/lib/smartcube/milestones";
+import { advanceMilestones, pickMilestones, type Milestones } from "@/lib/smartcube/milestones";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
 import type { GyroSample } from "@/lib/gyro/orientation";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
@@ -165,6 +165,13 @@ interface SmartCubeState {
   resyncSolved: () => void;
   /** Asks the cube to report its battery level again — cubes don't push this on their own on any regular schedule, so this is also fired once right after connecting. */
   refreshBattery: () => void;
+  /**
+   * A finished solve that lost a turn over Bluetooth has had it put back (see
+   * lib/smartcube/turnRepair.ts): swap in the repaired turns and the
+   * milestones replayed from them, so the recap reads the solve as it really
+   * went. Does nothing mid-attempt.
+   */
+  adoptRepairedSolve: (moves: SmartCubeMove[], milestones: Milestones) => void;
 }
 
 let conn: SmartCubeConnection | null = null;
@@ -559,6 +566,12 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
     // made solving it — the whole point of tapping this is to trust the
     // cube again as soon as possible.
     if (caps?.facelets) void conn?.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
+  },
+
+  adoptRepairedSolve: (moves, milestones) => {
+    const st = get();
+    if (st.armed || st.recording || st.solvedAtMs === null) return;
+    set({ moves, ...pickMilestones(milestones) });
   },
 
   refreshBattery: () => {

@@ -52,6 +52,8 @@ import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useVoiceCoach } from "@/hooks/useVoiceCoach";
 import { useFreestyle } from "@/hooks/useFreestyle";
 import { cubeIdentity } from "@/lib/smartcube/cubeIdentity";
+import { repairLostTurns, type TurnRepair } from "@/lib/smartcube/turnRepair";
+import type { SolveRecap } from "@/lib/store/recapStore";
 import { FreestylePanel } from "@/components/smartcube/FreestylePanel";
 import { VOICE_MODES } from "@/lib/smartcube/voiceCoach";
 import { useRecapStore } from "@/lib/store/recapStore";
@@ -640,7 +642,39 @@ export function SmartCubeTimer() {
       gazeRef && gyroLog.length > 0
         ? analyzeGaze(gyroLog, gazeRef, calibrationFor(protocolName).calibration, gyroLog[0].atMs, startedAtMs!, startFacelets)
         : null;
-    useRecapStore.setState({ recap: { solvedAtMs, scramble, gyro, gaze: gaze ? { report: gaze, facelets: startFacelets } : null } });
+    // A turn lost over Bluetooth leaves the recorded turns short of solved. Try to put it back
+    // from where the cube's state says it went missing; if that can't be done, the time still
+    // stands and the recap doesn't.
+    let saveReconstruction: string | undefined = reconstruction;
+    let saveTimestamps: number[] | undefined = moveTimestampsRel;
+    let repair: TurnRepair | null = null;
+    let repairedSplits: number[] | undefined;
+    let repairedCrossMs: number | undefined;
+    let turnLoss: SolveRecap["turnLoss"];
+    if (correctedDuringSolve && startedAtMs !== null) {
+      const fixed = repairLostTurns(scramble, moves.map((m) => m.token), moveTimestampsRel);
+      if (fixed === "intact") {
+        turnLoss = undefined;
+      } else if (fixed) {
+        repair = fixed;
+        saveReconstruction = fixed.tokens.join(" ");
+        saveTimestamps = fixed.times;
+        const absolute = fixed.times.map((t) => startedAtMs + t);
+        const bd = solveBreakdown({ id: "repair", sessionId: "", timeMs: elapsedMs, penalty: "none", scramble, date: 0, reconstruction: saveReconstruction, moveTimestamps: absolute });
+        if (bd) {
+          const m = bd.milestones;
+          if (m.crossAtMs !== null) repairedCrossMs = m.crossAtMs - startedAtMs;
+          if (m.crossAtMs !== null && m.f2lAtMs !== null && m.ollAtMs !== null) repairedSplits = [m.crossAtMs, m.f2lAtMs, m.ollAtMs].map((t) => t - startedAtMs);
+          useSmartCubeStore.getState().adoptRepairedSolve(fixed.tokens.map((token, i) => ({ token, timeStampMs: absolute[i] })), m);
+        }
+        turnLoss = { kind: "repaired", change: fixed.change };
+      } else {
+        saveReconstruction = undefined;
+        saveTimestamps = undefined;
+        turnLoss = { kind: "time-only" };
+      }
+    }
+    useRecapStore.setState({ recap: { solvedAtMs, scramble, gyro, gaze: gaze ? { report: gaze, facelets: startFacelets } : null, turnLoss } });
     // Unlike the keyboard timer, a smart-cube solve has a real absolute
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
@@ -648,22 +682,21 @@ export function SmartCubeTimer() {
     const splits = boundaries && boundaries.f2l !== null && boundaries.oll !== null
       ? [boundaries.cross!, boundaries.f2l, boundaries.oll]
       : undefined;
-    // A turn lost over Bluetooth and corrected from the cube's own report: the time and splits stand, but the recorded turns don't add up to the solve.
-    const turnsAddUp = !correctedDuringSolve;
     void recordSolve(
       elapsedMs,
       scramble,
-      splits,
+      repairedSplits ?? splits,
       pendingEventAtStart ?? undefined,
-      turnsAddUp ? reconstruction : undefined,
+      saveReconstruction,
       heartRate,
-      crossMs,
-      turnsAddUp ? moveTimestampsRel : undefined,
+      repairedCrossMs ?? crossMs,
+      saveTimestamps,
       gyro ? { rotations: gyro.rotations, orientedReconstruction: gyro.orientedReconstruction, stream: gyro.stream } : undefined,
       // Inspection ran from the moment the scramble matched to the first
       // turn: +2 past 15s, DNF past 17s — same rule as the keyboard timer.
       flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs! - flow.inspectionStartedAtMs) : undefined,
       cube ? { ...cube, corrected: correctedDuringSolve } : undefined,
+      repair?.change,
     );
     if (soundEnabled) playSolveChime();
     // Rolls the next target scramble right away, in the background — but
@@ -837,7 +870,23 @@ export function SmartCubeTimer() {
     if (how !== "discard" && startedAtMs !== null) {
       // The turns recorded don't solve the scramble, so the solve keeps its time but not a reconstruction the analyses would trip over.
       const timeMs = how === "solved" ? lastMoveMs - startedAtMs : elapsedMs;
-      void recordSolve(timeMs, scramble, undefined, pendingEventAtStart ?? undefined, undefined, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, undefined, undefined, how === "dnf" ? "dnf" : undefined, cube ? { ...cube, corrected: correctedDuringSolve } : undefined);
+      // "It's solved" with the app's turns short of it: if a lost turn can be put back, the solve keeps its recap.
+      let reconstructionOut: string | undefined;
+      let timestampsOut: number[] | undefined;
+      let fix: TurnRepair | null = null;
+      if (how === "solved") {
+        const rel = moves.map((m) => m.timeStampMs - startedAtMs);
+        const r = repairLostTurns(scramble, moves.map((m) => m.token), rel);
+        if (r === "intact") {
+          reconstructionOut = reconstruction;
+          timestampsOut = rel;
+        } else if (r) {
+          fix = r;
+          reconstructionOut = r.tokens.join(" ");
+          timestampsOut = r.times;
+        }
+      }
+      void recordSolve(timeMs, scramble, undefined, pendingEventAtStart ?? undefined, reconstructionOut, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, timestampsOut, undefined, how === "dnf" ? "dnf" : undefined, cube ? { ...cube, corrected: correctedDuringSolve } : undefined, fix?.change);
     }
     // "It's solved" means the real cube is solved whatever the app thought — put the two back in step.
     if (how === "solved") resyncSolved();
@@ -1081,8 +1130,8 @@ export function SmartCubeTimer() {
             {" — solve the cube to stop"}
           </p>
           {correctedDuringSolve && (
-            <p className="text-[11px] text-warning" title="A turn went unreported over Bluetooth and was corrected from the cube's own state report — the time still stands, but the move-by-move recap won't be available for this one">
-              A turn was corrected mid-solve — this one saves as time only
+            <p className="text-[11px] text-warning" title="A turn went unreported over Bluetooth and was corrected from the cube's own state report — the time still stands, and when you finish the app works out where the missing turn went so the recap can still be built">
+              A turn was lost over Bluetooth — the time stands; the recap is rebuilt when you finish
             </p>
           )}
           {stopOpen ? (
@@ -1152,6 +1201,23 @@ export function SmartCubeTimer() {
                 <span className="text-muted-2">Deleted</span>
               ))}
           </div>
+
+          {recap?.turnLoss?.kind === "repaired" && (
+            <p className="flex items-start gap-1.5 rounded-lg bg-warning/10 px-3 py-2 text-[11px] leading-snug text-warning" data-testid="turn-repair-notice">
+              <TriangleAlert size={12} className="mt-0.5 shrink-0" />
+              <span>
+                {recap.turnLoss.change.kind === "inserted"
+                  ? `The cube never reported ${recap.turnLoss.change.tokens.join(" ")} — it's put back where the cube's state says it happened, so this recap is rebuilt, not recorded.`
+                  : `The cube reported ${recap.turnLoss.change.tokens.join(" ")} twice — the echo is removed, so this recap is rebuilt, not recorded.`}
+              </span>
+            </p>
+          )}
+          {recap?.turnLoss?.kind === "time-only" && (
+            <p className="flex items-start gap-1.5 rounded-lg bg-warning/10 px-3 py-2 text-[11px] leading-snug text-warning" data-testid="turn-loss-notice">
+              <TriangleAlert size={12} className="mt-0.5 shrink-0" />
+              <span>Turns went missing over Bluetooth in more than one place, so they couldn&apos;t be put back — the time is saved, the move-by-move recap isn&apos;t.</span>
+            </p>
+          )}
 
           {savedSolveExists && <LearnedAlgNotice solveDate={lastSolve?.date ?? null} />}
 

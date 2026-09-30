@@ -54,6 +54,14 @@ export interface Solve {
    * repaired from the cube's own state report.
    */
   cube?: { id: string; name: string; protocol?: string; corrected?: boolean };
+  /**
+   * Set when a turn the cube never reported (or reported twice) was put back
+   * from its own state report, so `reconstruction` is the solve as it must
+   * have happened rather than as recorded — see lib/smartcube/turnRepair.ts.
+   * `index` is into the final reconstruction for an insertion, into the
+   * recorded list for a removal.
+   */
+  repaired?: { kind: "inserted" | "removed"; index: number; tokens: string[] };
   /** Average/max BPM during this solve, from a connected BLE heart-rate monitor. */
   heartRate?: { avg: number; max: number };
   /**
