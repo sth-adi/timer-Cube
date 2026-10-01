@@ -163,6 +163,49 @@ function rowToSolve(r: SolveRow): Solve {
   };
 }
 
+/** Rows per request are capped by serialized size so none runs long enough to hit the server's statement timeout. */
+const CHUNK_BYTES = 400_000;
+const CHUNK_ROWS = 40;
+/** Re-send a little before the last push, so a clock that's slightly off never skips a change. */
+const PUSH_SLACK_MS = 60_000;
+
+function chunkBySize<T>(rows: T[]): T[][] {
+  const chunks: T[][] = [];
+  let current: T[] = [];
+  let bytes = 0;
+  for (const row of rows) {
+    const size = JSON.stringify(row).length;
+    if (current.length > 0 && (bytes + size > CHUNK_BYTES || current.length >= CHUNK_ROWS)) {
+      chunks.push(current);
+      current = [];
+      bytes = 0;
+    }
+    current.push(row);
+    bytes += size;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+const pushedAtKey = (userId: string) => `cube-timer-cloud-pushed-at:${userId}`;
+
+function readPushedAt(userId: string): number {
+  try {
+    const n = Number(window.localStorage.getItem(pushedAtKey(userId)));
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writePushedAt(userId: string, at: number): void {
+  try {
+    window.localStorage.setItem(pushedAtKey(userId), String(at));
+  } catch {
+    // Without it every sync just re-sends everything (in chunks) — slower, still correct.
+  }
+}
+
 /**
  * Pushes this device's state — every session, solve and deletion record —
  * after a pull has merged the cloud's state in (see syncWithCloud), so what
@@ -173,6 +216,7 @@ function rowToSolve(r: SolveRow): Solve {
  * older version of this app — can't undo anything.
  */
 export async function pushAll(userId: string): Promise<void> {
+  const startedAt = Date.now();
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { sessions, solves, deletions } = await readLocalState();
@@ -185,10 +229,17 @@ export async function pushAll(userId: string): Promise<void> {
     const { error } = await withTimeout(supabase.from("sessions").upsert(sessions.map((s) => sessionToRow(s, userId))));
     check(error);
   }
-  if (solves.length > 0) {
-    const { error } = await withTimeout(supabase.from("solves").upsert(solves.map((s) => solveToRow(s, userId))));
+  // Only what changed since the last complete push — a smart-cube solve carries a per-move (and
+  // possibly gyro) stream, so the whole history is megabytes, and sending it as one request runs
+  // past the database's statement timeout (HTTP 500) and sync never finishes.
+  const since = readPushedAt(userId);
+  const pending = solves.filter((s) => (s.updatedAt ?? s.date) > since - PUSH_SLACK_MS);
+  const rows = pending.map((s) => solveToRow(s, userId));
+  for (const chunk of chunkBySize(rows)) {
+    const { error } = await withTimeout(supabase.from("solves").upsert(chunk), 30_000);
     check(error);
   }
+  writePushedAt(userId, startedAt);
 }
 
 /**
