@@ -17,7 +17,7 @@ export function EventTagSelector() {
   const setPendingEvent = useSessionStore((s) => s.setPendingEvent);
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1 px-4">
+    <div className="no-scrollbar flex items-center gap-1 overflow-x-auto px-4 max-sm:justify-start sm:flex-wrap sm:justify-center [&>*]:shrink-0">
       <button
         type="button"
         onClick={() => setPendingEvent(null)}

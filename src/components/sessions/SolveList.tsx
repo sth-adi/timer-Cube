@@ -101,7 +101,7 @@ function SolveRow({
         onClick={() => (selecting ? selecting.toggle() : setOpen((o) => !o))}
         aria-pressed={selecting ? selecting.ticked : undefined}
         className={cn(
-          "w-full flex items-center justify-between rounded-lg px-2.5 py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
+          "w-full flex items-center justify-between rounded-lg px-2.5 py-0.5 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
           isBest && "text-success",
           isWorst && "text-danger",
           selecting?.ticked && "bg-accent-soft",

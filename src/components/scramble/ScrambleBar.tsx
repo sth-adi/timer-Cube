@@ -73,7 +73,7 @@ export function ScrambleBar({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn("flex flex-col items-center gap-3 px-4", className)}>
+    <div className={cn("flex flex-col items-center gap-1.5 px-4 sm:gap-3", className)}>
       <div className="flex items-center gap-1.5">
         {event !== "333" && (
           <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
@@ -93,8 +93,8 @@ export function ScrambleBar({ className }: { className?: string }) {
           </span>
         )}
       </div>
-      <div className="flex items-start justify-center gap-2">
-        <p className="tabular-timer max-w-3xl text-center text-lg sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
+      <div className="flex flex-col items-center gap-0.5 sm:flex-row sm:items-start sm:justify-center sm:gap-2">
+        <p className="tabular-timer max-w-3xl text-center text-base leading-snug sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
           {freestyleAwaiting
             ? "Freestyle — scramble your cube however you like"
             : loading && !scramble
@@ -118,7 +118,7 @@ export function ScrambleBar({ className }: { className?: string }) {
                 ))
               : scramble}
         </p>
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-0.5 max-sm:-mt-0.5">
           <button
             type="button"
             onClick={previousScramble}

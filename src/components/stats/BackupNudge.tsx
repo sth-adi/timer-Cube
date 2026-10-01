@@ -32,11 +32,12 @@ export function BackupNudge() {
 
   if (!kind || cloudCovered) return null;
   return (
-    <div className="card flex flex-col gap-2 rounded-xl border border-warning/30 px-3 py-2.5" data-testid="backup-nudge">
+    <div className="card flex flex-col gap-1.5 rounded-xl border border-warning/30 px-3 py-2 max-lg:border-transparent" data-testid="backup-nudge">
       <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
         <ShieldAlert size={13} /> {kind === "never" ? `${total} solves, and no backup` : "Your last backup is getting old"}
       </p>
-      <p className="text-[11px] leading-snug text-muted">{isSupabaseConfigured()
+      <p className="text-[11px] leading-snug text-muted sm:hidden">Stored in this browser only. Sign in under Settings for a cloud copy, or save a file.</p>
+      <p className="text-[11px] leading-snug text-muted max-sm:hidden">{isSupabaseConfigured()
           ? "Your solves are stored in this browser only — clearing site data, or a new phone, would lose them. Sign in under Settings to keep a cloud copy, or save a backup file."
           : "Your solves are stored in this browser only — clearing site data, or a new phone, would lose them. A backup is one file."}</p>
       <div className="flex gap-2">

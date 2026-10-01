@@ -206,7 +206,7 @@ function HomeInner() {
         <div className={cn("shrink-0", tab === "timer" ? "block" : "hidden", "lg:block")}>
           <ScrambleBar className="mt-1" />
           <EventTagSelector />
-          <div className="mt-1 flex justify-center gap-1">
+          <div className="mt-0.5 flex justify-center gap-1">
             {(["keyboard", "smartcube"] as const).map((m) => (
               <button
                 key={m}
@@ -224,7 +224,7 @@ function HomeInner() {
           </div>
         </div>
 
-        <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 px-4 lg:pb-4">
+        <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 px-3 sm:px-4 lg:grid-cols-[1fr_360px] lg:pb-4">
           <div
             className={cn(
               // No justify-center here: combined with overflow-y-auto, centering
@@ -232,7 +232,7 @@ function HomeInner() {
               // once it's taller than the viewport — see TrainerHub's Library
               // sub-view. Components that want vertical centering while short
               // (TimerView) already do it themselves via their own flex-1.
-              "min-h-0 flex-col items-center gap-4 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-0",
+              "min-h-0 flex-col items-center gap-3 overflow-y-auto lg:gap-4 pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-0",
               mainPaneActive ? "flex" : "hidden",
               "lg:flex",
             )}
@@ -253,12 +253,12 @@ function HomeInner() {
 
           <aside
             className={cn(
-              "min-h-0 flex-col gap-4 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-2",
+              "min-h-0 flex-col gap-3 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-2",
               !mainPaneActive ? "flex" : "hidden",
               "lg:flex",
             )}
           >
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 lg:gap-3">
               <BackupNudge />
               <StatsPanel />
               <Link

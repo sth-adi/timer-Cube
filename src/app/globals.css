@@ -1642,3 +1642,31 @@ body {
     transition: none;
   }
 }
+
+/* --- Phones: flatter, less boxy ---
+   Lit borders, glass blur and per-card tilt earn their keep on a wide screen; on a phone they
+   box every section in. Cards become soft fills with no outline, and scroll-reveal is dropped
+   so content is simply there. Placed last so it wins over the FX card rules above. */
+@media (max-width: 1023px) {
+  .card,
+  :root:not([data-fx-level="off"]) .card,
+  :root[data-fx-level="insane"] .card {
+    background: color-mix(in srgb, var(--bg-panel) 58%, transparent);
+    border-color: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    transform: none;
+    animation: none;
+  }
+  :root:not([data-fx-level="off"]) .card::before,
+  :root:not([data-fx-level="off"]) .card::after {
+    display: none;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

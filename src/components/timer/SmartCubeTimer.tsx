@@ -1122,9 +1122,9 @@ export function SmartCubeTimer() {
   }
 
   return (
-    <div className="flex w-full max-w-md flex-1 flex-col items-center gap-4 py-2">
+    <div className="flex w-full max-w-md flex-1 flex-col items-center gap-2.5 py-1 sm:gap-4 sm:py-2">
       <InspectionRing remainingMs={flow.inspectionRemainingMs} active={armed && !recording && flow.phase === "inspecting"} />
-      <div className="flex items-center gap-1.5 text-xs text-success">
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-success [&>*]:whitespace-nowrap">
         <BluetoothConnected size={14} />
         <span
           title={
@@ -1148,16 +1148,16 @@ export function SmartCubeTimer() {
             <BatteryBadge level={batteryLevel} onRefresh={refreshBattery} />
           </>
         )}
-        <span className="ml-1 text-[10px] text-muted-2" title={reportsState ? "The cube reports its own state; the app checks against it whenever you pause" : "This cube can't report its state, so the app assumed it was solved when you connected"}>
+        <span className="text-[10px] text-muted-2" title={reportsState ? "The cube reports its own state; the app checks against it whenever you pause" : "This cube can't report its state, so the app assumed it was solved when you connected"}>
           {reportsState ? (stateSource === "cube" ? "· state read from cube" : "· reading state…") : "· assumed solved at connect"}
         </span>
-        <Link href="/lab" className="ml-2 flex items-center gap-1 text-accent hover:underline">
+        <Link href="/lab" className="flex items-center gap-1 text-accent hover:underline">
           <FlaskConical size={12} /> Lab
         </Link>
         <button
           type="button"
           onClick={() => setVoiceCoach(VOICE_MODES[(VOICE_MODES.findIndex((m) => m.id === voiceCoach) + 1) % VOICE_MODES.length].id)}
-          className={cn("ml-2 flex items-center gap-1 hover:underline", voiceCoach === "off" ? "text-muted-2" : "text-accent")}
+          className={cn("flex items-center gap-1 hover:underline", voiceCoach === "off" ? "text-muted-2" : "text-accent")}
           title="Voice coach: calls your splits and time out loud. Tap to cycle Off / Splits / Full."
         >
           {voiceCoach === "off" ? <VolumeX size={12} /> : <Volume2 size={12} />} Voice: {VOICE_MODES.find((m) => m.id === voiceCoach)?.name}
@@ -1167,13 +1167,13 @@ export function SmartCubeTimer() {
             type="button"
             onClick={() => setFreestyle(!freestyle)}
             aria-pressed={freestyle}
-            className={cn("ml-2 flex items-center gap-1 hover:underline", freestyle ? "text-accent" : "text-muted-2")}
+            className={cn("flex items-center gap-1 hover:underline", freestyle ? "text-accent" : "text-muted-2")}
             title="Freestyle: scramble the cube any way you like — its state becomes the scramble, instead of following a generated one."
           >
             <Shuffle size={12} /> Freestyle{freestyle ? ": on" : ""}
           </button>
         )}
-        <button type="button" onClick={disconnect} className="ml-2 text-muted-2 underline hover:text-muted">
+        <button type="button" onClick={disconnect} className="text-muted-2 underline hover:text-muted">
           Disconnect
         </button>
       </div>

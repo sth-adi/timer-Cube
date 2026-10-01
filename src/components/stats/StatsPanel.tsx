@@ -22,7 +22,7 @@ function Stat({ label, value, onClick }: { label: string; value: string; onClick
       <span className="tabular-timer text-base font-semibold text-foreground group-hover:text-accent">{value}</span>
     </>
   );
-  const cls = "group flex flex-col items-start gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2 text-left";
+  const cls = "group flex flex-col items-start gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2 text-left max-lg:bg-transparent max-lg:px-1 max-lg:py-1";
   if (onClick) {
     return (
       <button type="button" onClick={onClick} title="Jump to this solve's reconstruction" className={cn(cls, "transition-colors hover:bg-bg-panel-2")}>
@@ -105,7 +105,7 @@ export function StatsPanel() {
     : undefined;
 
   return (
-    <div className="card rounded-xl p-4">
+    <div className="card rounded-xl p-3 lg:p-4">
       {presentTags.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5 border-b border-border pb-3">
           <button
@@ -160,7 +160,7 @@ export function StatsPanel() {
         <Sparkline values={ao5Trail} />
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-1.5">
+      <div className="mt-2 grid grid-cols-3 gap-x-1.5 gap-y-0.5 lg:mt-3 lg:gap-1.5">
         <Stat label="best" value={fmt(stats.best)} onClick={onJumpToBest} />
         <Stat label="ao12" value={fmt(stats.ao12)} />
         <Stat label="ao100" value={fmt(stats.ao100)} />
@@ -171,7 +171,7 @@ export function StatsPanel() {
         <Stat label="solves" value={String(stats.count)} />
       </div>
       {solves.length >= 2 && (
-        <div className="mt-4 border-t border-border pt-3">
+        <div className="mt-2 border-t border-border/60 pt-2 lg:mt-4 lg:pt-3">
           <SolveTrendChart solves={solves} />
         </div>
       )}
