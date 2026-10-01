@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Solve } from "@/types";
 import { computeHourOfDay } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
+import { cn } from "@/lib/utils/cn";
 
 // Collapse into 6 four-hour blocks — 24 individual bars is too noisy at this size.
 const BLOCKS = [
@@ -56,19 +57,23 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
           >
             <div className="relative flex h-16 w-full items-end">
               <div
-                className="w-full rounded-t-sm transition-colors"
+                className="w-full rounded-t-[4px] transition-opacity"
                 style={{
                   height: b.mean === null ? "2px" : `${heightPct}%`,
-                  background: b.mean === null ? "var(--border)" : isBest ? "var(--success)" : "var(--accent-soft)",
+                  background: b.mean === null ? "var(--border)" : isBest ? "var(--accent)" : "var(--accent)",
+                  opacity: b.mean === null ? 1 : isBest || hover === i ? 1 : 0.38,
                 }}
               />
+              {isBest && hover !== i && b.mean !== null && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-accent tabular-timer">{formatTime(b.mean)}</span>
+              )}
               {hover === i && b.mean !== null && (
                 <div className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-bg-panel-2 border border-border-strong px-2 py-1 text-[11px] tabular-timer shadow-lg">
                   {formatTime(b.mean)} avg · {b.count}
                 </div>
               )}
             </div>
-            <span className="text-[10px] text-muted-2 whitespace-nowrap">{b.label}</span>
+            <span className={cn("whitespace-nowrap text-[10px]", isBest ? "font-semibold text-foreground" : "text-muted-2")}>{b.label}</span>
           </div>
         );
       })}

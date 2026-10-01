@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import type { PostSolvePhaseRow } from "@/lib/analysis/postSolveTable";
 import type { SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
@@ -106,6 +107,20 @@ function viewFor(row: PostSolvePhaseRow, scramble: string, moves: SmartCubeMove[
     f2lTurns: null,
     caseLink: row.group && row.caseName ? { group: row.group, key: row.caseName } : null,
   };
+}
+
+/** One tint per step (cross, F2L, OLL, PLL) — the same order PHASE_TINTS uses everywhere else. Full class names so Tailwind sees them. */
+const TINT = [
+  { solid: "bg-accent", soft: "bg-accent/35" },
+  { solid: "bg-cyan", soft: "bg-cyan/35" },
+  { solid: "bg-warning", soft: "bg-warning/35" },
+  { solid: "bg-success", soft: "bg-success/35" },
+] as const;
+
+function tintIndex(row: PostSolvePhaseRow): number {
+  if (row.label === "Cross") return 0;
+  if (row.f2lPairIndex !== null) return 1;
+  return row.group === "OLL" ? 2 : 3;
 }
 
 const PACE_CLASS = { fast: "text-success", normal: "text-foreground", slow: "text-warning" } as const;
@@ -273,76 +288,143 @@ export function PostSolveTable({
   const crossAdvisor = useMemo(() => analyzeCrossOrientations(allSolves), [allSolves]);
   const router = useRouter();
 
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (label: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  const maxWithMedians = Math.max(max, ...rows.map((_, i) => baseline?.segments[i]?.medianMs ?? 0));
+
   return (
-    <div className="w-full rounded-xl bg-bg-panel-2 p-3">
-      <div className="flex flex-col gap-2.5">
+    <div className="w-full rounded-2xl bg-bg-panel-2 p-3">
+      <div className="flex flex-col divide-y divide-border/60">
         {views.map(({ row, icon, caseName, f2lKey, f2lTurns, caseLink }, i) => {
           const look = row.recognitionMs ?? 0;
           const turn = row.executionMs ?? row.totalMs ?? 0;
-          const pace = paceFor(row.totalMs, baseline?.segments[i] ?? null);
+          const seg = baseline?.segments[i] ?? null;
+          const pace = paceFor(row.totalMs, seg);
+          const tint = TINT[tintIndex(row)];
+          const turns = row.atMs !== null ? moves.filter((m) => m.timeStampMs > (row.startMs ?? -Infinity) && m.timeStampMs <= row.atMs!).length : null;
+          const exec = row.group ? executions.find((e) => e.step === row.group) : undefined;
+          const recogStat = caseLink ? recogHistory.get(`${caseLink.group}:${caseLink.key}`) : undefined;
+          const f2lStat = f2lKey ? f2lHistory.get(f2lKey) : undefined;
+
+          // The single most useful thing to say about this step, if anything — the rest waits behind the chevron.
+          let note: { text: string; tone: "good" | "warn" } | null = null;
+          if (row.label === "Cross" && crossOptimal !== null && crossTurns !== null && crossTurns > 0 && crossTurns === crossOptimal) note = { text: "optimal", tone: "good" };
+          else if (f2lKey && f2lTurns !== null && f2lStat && f2lStat.count >= 3 && f2lTurns - f2lStat.meanTurns >= 2) note = { text: `+${Math.round(f2lTurns - f2lStat.meanTurns)} turns`, tone: "warn" };
+          else if (exec && !exec.oneLook) note = { text: "two looks", tone: "warn" };
+          else if (row.recognitionMs !== null && recogStat && recogStat.count >= 3 && row.recognitionMs - recogStat.meanMs >= 500) note = { text: "slow read", tone: "warn" };
+          else if (exec) {
+            const mine = seen[myAlgKey(exec.step, exec.caseName)]?.find((x) => normalizedAlg(x.alg) === normalizedAlg(exec.mergedAlg));
+            if (mine && mine.count >= 2 && exec.executionMs <= mine.bestExecMs) note = { text: "best execution", tone: "good" };
+          }
+
+          const delta = row.totalMs !== null && seg && seg.medianMs > 0 ? row.totalMs - seg.medianMs : null;
+          const isOpen = open.has(row.label);
+          const detailId = `pst-${i}`;
           return (
-            <div key={row.label} className="flex items-center gap-2.5">
-              {icon}
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="min-w-0 text-xs leading-tight" title={caseName ?? undefined}>
-                  <span className={cn("font-semibold", row.totalMs !== null ? "text-foreground" : "text-muted-2")}>{row.label}</span>
-                  {caseName &&
-                    (caseLink ? (
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/cases?case=${encodeURIComponent(caseLink.key)}&group=${caseLink.group}`)}
-                        className="block max-w-full truncate text-left text-[11px] text-muted-2 underline decoration-dotted underline-offset-2 hover:text-accent"
-                        title={`See every time you've had ${caseName}`}
-                      >
-                        {caseName}
-                      </button>
-                    ) : (
-                      <span className="block truncate text-[11px] text-muted-2">{caseName}</span>
-                    ))}
-                  {row.group &&
-                    (() => {
-                      const exec = executions.find((e) => e.step === row.group);
-                      return exec ? <AlgLine exec={exec} seen={seen[myAlgKey(exec.step, exec.caseName)]} caseRecord={caseName ? caseHistory.get(caseName) : undefined} /> : null;
-                    })()}
-                  {row.label === "Cross" && crossTurns !== null && crossOptimal !== null && <CrossEfficiencyLine turns={crossTurns} optimal={crossOptimal} />}
-                  {row.label === "Cross" && <CrossAdvisorLine report={crossAdvisor} />}
-                  {f2lKey && f2lTurns !== null && <F2lEfficiencyLine turns={f2lTurns} stat={f2lHistory.get(f2lKey)} />}
-                  {caseLink && row.recognitionMs !== null && (
-                    <RecognitionLine pausedMs={row.recognitionMs} stat={recogHistory.get(`${caseLink.group}:${caseLink.key}`)} />
-                  )}
-                </p>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-bg-elevated">
-                  <div className="h-full bg-warning/50" style={{ width: `${(look / max) * 100}%` }} />
-                  <div className="h-full bg-accent" style={{ width: `${(turn / max) * 100}%` }} />
+            <div key={row.label} className="py-2.5 first:pt-1 last:pb-1">
+              <div className="flex items-center gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-bg-elevated/70">{icon}</span>
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="flex min-w-0 items-baseline gap-2">
+                    <span className={cn("shrink-0 text-[13px] font-semibold leading-none", row.totalMs !== null ? "text-foreground" : "text-muted-2")}>{row.label}</span>
+                    {caseName &&
+                      (caseLink ? (
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/cases?case=${encodeURIComponent(caseLink.key)}&group=${caseLink.group}`)}
+                          className="min-w-0 truncate text-left text-[11px] leading-none text-muted-2 underline decoration-dotted underline-offset-2 hover:text-accent"
+                          title={`See every time you've had ${caseName}`}
+                        >
+                          {caseName}
+                        </button>
+                      ) : (
+                        <span className="min-w-0 truncate text-[11px] leading-none text-muted-2">{caseName}</span>
+                      ))}
+                  </div>
+                  {/* look (soft) then turn (solid) in this step's own hue; the tick is where you usually finish it */}
+                  <div className="relative h-1.5 rounded-full bg-bg-elevated">
+                    <div className="flex h-full overflow-hidden rounded-full">
+                      <div className={cn("h-full", tint.soft)} style={{ width: `${(look / maxWithMedians) * 100}%` }} />
+                      <div className={cn("h-full", tint.solid)} style={{ width: `${(turn / maxWithMedians) * 100}%` }} />
+                    </div>
+                    {seg && seg.medianMs > 0 && (
+                      <span
+                        aria-hidden
+                        title={`Your usual: ${formatTime(seg.medianMs)}`}
+                        className="absolute -top-0.5 h-2.5 w-0.5 rounded-full bg-foreground/60"
+                        style={{ left: `calc(${(Math.min(seg.medianMs, maxWithMedians) / maxWithMedians) * 100}% - 1px)` }}
+                      />
+                    )}
+                  </div>
+                  <p className="flex min-w-0 items-center gap-1.5 text-[10px] leading-none tabular-nums text-muted-2">
+                    {turns !== null && turns > 0 && <span>{turns} turn{turns === 1 ? "" : "s"}</span>}
+                    {row.recognitionMs !== null && row.executionMs !== null && (
+                      <span>
+                        · look {secs(row.recognitionMs)} · turn {secs(row.executionMs)}
+                      </span>
+                    )}
+                    {note && (
+                      <span className={cn("rounded-full px-1.5 py-[2px] font-semibold", note.tone === "good" ? "bg-success/12 text-success" : "bg-warning/12 text-warning")}>{note.text}</span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <div className="w-14 text-right">
+                    <p
+                      className={cn("text-[15px] font-semibold leading-none tabular-nums", row.totalMs === null ? "text-muted-2" : pace ? PACE_CLASS[pace] : "text-foreground")}
+                      title={pace === "fast" ? "One of your better ones for this step" : pace === "slow" ? "Slower than usual for this step" : undefined}
+                    >
+                      {row.totalMs === null ? "—" : formatTime(row.totalMs)}
+                    </p>
+                    {delta !== null && Math.abs(delta) >= 50 && (
+                      <p className={cn("mt-1 text-[10px] leading-none tabular-nums", delta < 0 ? "text-success" : "text-muted-2")}>
+                        {delta < 0 ? "−" : "+"}
+                        {(Math.abs(delta) / 1000).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggle(row.label)}
+                    aria-expanded={isOpen}
+                    aria-controls={detailId}
+                    aria-label={`${isOpen ? "Hide" : "Show"} details for ${row.label}`}
+                    className="grid h-7 w-6 place-items-center rounded-md text-muted-2 hover:bg-bg-elevated hover:text-foreground"
+                  >
+                    <ChevronDown size={14} className={cn("transition-transform", isOpen && "rotate-180")} />
+                  </button>
                 </div>
               </div>
-              <div className="w-14 shrink-0 text-right">
-                <p
-                  className={cn("text-sm font-semibold tabular-nums", row.totalMs === null ? "text-muted-2" : pace ? PACE_CLASS[pace] : "text-foreground")}
-                  title={pace === "fast" ? "One of your better ones for this step" : pace === "slow" ? "Slower than usual for this step" : undefined}
-                >
-                  {row.totalMs === null ? "—" : formatTime(row.totalMs)}
-                </p>
-                {row.recognitionMs !== null && row.executionMs !== null && (
-                  <p className="text-[10px] tabular-nums text-muted-2">
-                    {secs(row.recognitionMs)} + {secs(row.executionMs)}
-                  </p>
-                )}
-              </div>
+              {isOpen && (
+                <div id={detailId} className="ml-14 mt-2 flex min-w-0 flex-col gap-0.5 border-l border-border pl-3 text-xs">
+                  {exec && <AlgLine exec={exec} seen={seen[myAlgKey(exec.step, exec.caseName)]} caseRecord={caseName ? caseHistory.get(caseName) : undefined} />}
+                  {row.label === "Cross" && crossTurns !== null && crossOptimal !== null && <CrossEfficiencyLine turns={crossTurns} optimal={crossOptimal} />}
+                  {row.label === "Cross" && <CrossAdvisorLine report={crossAdvisor} />}
+                  {f2lKey && f2lTurns !== null && <F2lEfficiencyLine turns={f2lTurns} stat={f2lStat} />}
+                  {caseLink && row.recognitionMs !== null && <RecognitionLine pausedMs={row.recognitionMs} stat={recogStat} />}
+                  {!exec && !caseLink && row.label !== "Cross" && <span className="text-[10px] text-muted-2">Nothing more to say about this one.</span>}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-      <p className="mt-2.5 flex items-center justify-center gap-3 text-[10px] text-muted-2">
+      <p className="mt-2 flex items-center justify-center gap-3 text-[10px] text-muted-2">
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-3 rounded-full bg-warning/50" /> recognising
+          <span className="h-1.5 w-3 rounded-full bg-foreground/30" /> looking
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-3 rounded-full bg-accent" /> turning
+          <span className="h-1.5 w-3 rounded-full bg-foreground/80" /> turning
         </span>
         {baseline && (
           <span className="flex items-center gap-1">
-            <span className={cn("h-1.5 w-3 rounded-full bg-current", PACE_CLASS.fast)} /> vs. your own history
+            <span className="h-2.5 w-0.5 rounded-full bg-foreground/60" /> your usual
           </span>
         )}
       </p>

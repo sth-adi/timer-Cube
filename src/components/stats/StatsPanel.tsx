@@ -1,38 +1,54 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
-import { comparableTime, computeSessionStats, eventTagsPresent, normalSolves, solvesForEvent } from "@/lib/stats/stats";
+import { comparableTime, computeSessionStats, eventTagsPresent, normalSolves, rollingAverages, solvesForEvent } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
 import { EVENT_TAGS, type EventTag } from "@/types";
 import { solveFinalMs } from "@/types";
 import { cn } from "@/lib/utils/cn";
 import { SolveTrendChart } from "./SolveTrendChart";
 
+/** A small tile: label over value, with an optional "jump" action. */
 function Stat({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) {
+  const body = (
+    <>
+      <span className="flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-2 group-hover:text-accent">
+        {label}
+        {onClick && <ArrowUpRight size={10} className="opacity-0 transition-opacity group-hover:opacity-100" />}
+      </span>
+      <span className="tabular-timer text-base font-semibold text-foreground group-hover:text-accent">{value}</span>
+    </>
+  );
+  const cls = "group flex flex-col items-start gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2 text-left";
   if (onClick) {
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        title="Jump to this solve's reconstruction"
-        className="group flex flex-col items-start gap-0.5 text-left"
-      >
-        <span className="flex items-center gap-0.5 text-[11px] uppercase tracking-wide text-muted-2 group-hover:text-accent">
-          {label}
-          <ArrowUpRight size={11} className="opacity-0 transition-opacity group-hover:opacity-100" />
-        </span>
-        <span className="tabular-timer text-lg font-semibold text-foreground group-hover:text-accent">{value}</span>
+      <button type="button" onClick={onClick} title="Jump to this solve's reconstruction" className={cn(cls, "transition-colors hover:bg-bg-panel-2")}>
+        {body}
       </button>
     );
   }
+  return <div className={cls}>{body}</div>;
+}
+
+/** The last stretch of the ao5 line, drawn small beside the headline number. */
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 3) return null;
+  const W = 120;
+  const H = 36;
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = hi - lo || 1;
+  const pt = (v: number, i: number) => `${((i / (values.length - 1)) * (W - 6) + 3).toFixed(1)},${(H - 5 - ((v - lo) / span) * (H - 10)).toFixed(1)}`;
+  const d = values.map((v, i) => `${i === 0 ? "M" : "L"}${pt(v, i)}`).join(" ");
+  const last = pt(values[values.length - 1], values.length - 1).split(",");
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] uppercase tracking-wide text-muted-2">{label}</span>
-      <span className="tabular-timer text-lg font-semibold text-foreground">{value}</span>
-    </div>
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-9 w-[7.5rem] shrink-0" aria-hidden>
+      <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.9} />
+      <circle cx={last[0]} cy={last[1]} r={3} fill="var(--accent)" stroke="var(--bg-panel)" strokeWidth={1.5} />
+    </svg>
   );
 }
 
@@ -68,6 +84,13 @@ export function StatsPanel() {
       }
     }
     return Number.isFinite(winnerMs) ? winner : null;
+  }, [solves]);
+
+  // The ao5 line's last stretch (for the sparkline) and how the latest solve moved it.
+  const { ao5Trail, ao5Delta } = useMemo(() => {
+    const rolling = rollingAverages(solves, 5).filter((v): v is number => v !== null && Number.isFinite(v));
+    const n = rolling.length;
+    return { ao5Trail: rolling.slice(-24), ao5Delta: n >= 2 ? rolling[n - 1] - rolling[n - 2] : null };
   }, [solves]);
 
   const onJumpToBest = bestSolve
@@ -116,16 +139,36 @@ export function StatsPanel() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
-        <Stat label="ao5" value={fmt(stats.ao5)} />
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-2">Current ao5</p>
+          <p className="tabular-timer bg-gradient-to-b from-foreground to-accent bg-clip-text text-4xl font-bold leading-none text-transparent">
+            {fmt(stats.ao5)}
+          </p>
+          {ao5Delta !== null && (
+            <p
+              className={cn(
+                "mt-1.5 flex items-center gap-0.5 text-[11px] font-medium tabular-nums",
+                ao5Delta < -5 ? "text-success" : ao5Delta > 5 ? "text-warning" : "text-muted-2",
+              )}
+            >
+              {ao5Delta < -5 ? <ArrowDownRight size={12} /> : ao5Delta > 5 ? <ArrowUpRight size={12} /> : <Minus size={12} />}
+              {Math.abs(ao5Delta) <= 5 ? "Level" : `${ao5Delta < 0 ? "−" : "+"}${(Math.abs(ao5Delta) / 1000).toFixed(2)}`} since the last solve
+            </p>
+          )}
+        </div>
+        <Sparkline values={ao5Trail} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <Stat label="best" value={fmt(stats.best)} onClick={onJumpToBest} />
         <Stat label="ao12" value={fmt(stats.ao12)} />
         <Stat label="ao100" value={fmt(stats.ao100)} />
-        <Stat label="best" value={fmt(stats.best)} onClick={onJumpToBest} />
         <Stat label="mean" value={fmt(stats.mean)} />
-        <Stat label="worst" value={fmt(stats.worst)} />
-        <Stat label="solves" value={String(stats.count)} />
         <Stat label="best ao5" value={fmt(stats.bestAo5)} />
         <Stat label="best ao12" value={fmt(stats.bestAo12)} />
+        <Stat label="worst" value={fmt(stats.worst)} />
+        <Stat label="solves" value={String(stats.count)} />
       </div>
       {solves.length >= 2 && (
         <div className="mt-4 border-t border-border pt-3">

@@ -151,6 +151,72 @@ function phaseForMs(ms: number, boundaries: PhaseBoundaries | null): number {
   return 3;
 }
 
+/** Rough share of a solve each step takes, used to size the ribbon until your own history says otherwise. */
+const DEFAULT_PHASE_WEIGHT_MS = [1500, 6500, 3500, 1200] as const;
+const RIBBON_TINT = [
+  { solid: "bg-accent", soft: "bg-accent/20" },
+  { solid: "bg-cyan", soft: "bg-cyan/20" },
+  { solid: "bg-warning", soft: "bg-warning/20" },
+  { solid: "bg-success", soft: "bg-success/20" },
+] as const;
+
+/**
+ * The solve as one strip: Cross, F2L, OLL, PLL sized by how long each usually
+ * takes you, finished steps filled in their own colour, the current one filling as it
+ * goes (F2L by pairs in, the rest against your usual time for the step). Glance
+ * down mid-solve and you can see how far through you are without reading a number.
+ */
+function PhaseRibbon({
+  durations,
+  currentPhaseIndex,
+  liveCurrentMs,
+  baseline,
+  f2lPairCount,
+  gold,
+}: {
+  durations: (number | null)[];
+  currentPhaseIndex: number;
+  liveCurrentMs: number | null;
+  baseline?: PostSolveBaseline | null;
+  f2lPairCount: number;
+  /** Steps that just set a new best — marked with a star. */
+  gold: readonly boolean[];
+}) {
+  const weights = PHASE_LABELS_4.map((_, i) => Math.max(500, baseline?.phases[i]?.medianMs ?? DEFAULT_PHASE_WEIGHT_MS[i]));
+  return (
+    <div className="flex w-full max-w-xs gap-[3px]" role="progressbar" aria-label="Solve progress" aria-valuemin={0} aria-valuemax={4} aria-valuenow={Math.min(4, currentPhaseIndex)}>
+      {PHASE_LABELS_4.map((label, i) => {
+        const done = durations[i] !== null;
+        const current = i === currentPhaseIndex && !done;
+        let fill = done ? 100 : 0;
+        if (current) {
+          if (i === 1 && f2lPairCount > 0) fill = Math.min(95, (Math.min(f2lPairCount, 4) / 4) * 100);
+          else fill = Math.min(95, ((liveCurrentMs ?? 0) / weights[i]) * 100);
+        }
+        const tint = RIBBON_TINT[i];
+        return (
+          <div key={label} className="flex flex-col gap-1" style={{ flexGrow: weights[i], flexBasis: 0 }}>
+            <div className={cn("relative h-2 overflow-hidden rounded-full", tint.soft, current && "ring-1 ring-foreground/15")}>
+              <div className={cn("h-full rounded-full transition-[width] duration-200 ease-out", tint.solid, !done && !current && "opacity-0")} style={{ width: `${fill}%` }} />
+              {i === 1 && (
+                <>
+                  {[25, 50, 75].map((p) => (
+                    <span key={p} aria-hidden className="absolute inset-y-0 w-px bg-bg-panel/80" style={{ left: `${p}%` }} />
+                  ))}
+                </>
+              )}
+            </div>
+            <span className={cn("truncate text-center text-[9px] font-semibold uppercase leading-none tracking-wider", gold[i] ? "text-warning" : current ? "text-foreground" : done ? "text-muted" : "text-muted-2")}>
+              {gold[i] ? "★ " : ""}
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Cubeast-style running phase breakdown: finished phases show their time, the current one counts up live. */
 function PhaseSplitsRow({
   durations,
@@ -1154,6 +1220,17 @@ export function SmartCubeTimer() {
         pbMs={eventPbMs}
         hideTimes={hideTimeWhileSolving && recording}
       />
+
+      {recording && (
+        <PhaseRibbon
+          durations={durations}
+          currentPhaseIndex={currentPhaseIndex}
+          liveCurrentMs={liveCurrentMs}
+          baseline={postSolveBaseline}
+          f2lPairCount={f2lPairAtMs.filter((t) => t !== null).length}
+          gold={PHASE_LABELS_4.map((_, i) => !(hideTimeWhileSolving && recording) && (deltaToBest(durations[i], frozenBests.bests?.[i], phaseSkips?.[i]) ?? 0) < 0)}
+        />
+      )}
 
       {(armed || recording) && gyroActive ? (
         // A gyro cube gets the live twin instead: same stickers, but it also

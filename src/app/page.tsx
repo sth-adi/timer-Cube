@@ -272,7 +272,10 @@ function HomeInner() {
               </Link>
               <div className="card rounded-xl p-3">
                 <div className="mb-1 flex items-center justify-between px-1">
-                  <span className="text-[11px] uppercase tracking-wide text-muted-2">Recent solves</span>
+                  <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-2">
+                    <span aria-hidden className="h-3 w-0.5 rounded-full bg-accent" />
+                    Recent solves
+                  </span>
                   <Link
                     href="/solves"
                     className="flex items-center gap-0.5 text-[11px] font-medium text-accent hover:brightness-110"
