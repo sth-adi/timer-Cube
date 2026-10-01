@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { backupNudge } from "@/lib/backup/backup";
+import { useAuthStore } from "@/lib/store/authStore";
+import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { downloadBackup, readBackupMeta, writeBackupMeta } from "@/lib/backup/restore";
 
 const WEEK = 7 * 86_400_000;
@@ -12,6 +15,11 @@ const wallNow = () => Date.now();
 /** A quiet reminder, once there's real history on the line, that it lives only in this browser. */
 export function BackupNudge() {
   const total = useSessionStore((s) => s.allSolves.length);
+  // Signed in and syncing: the solves already have a copy in the cloud, so there's nothing to warn about.
+  const signedIn = useAuthStore((s) => s.user !== null);
+  const syncStatus = useCloudSyncStore((s) => s.status);
+  const lastSyncedAt = useCloudSyncStore((s) => s.lastSyncedAt);
+  const cloudCovered = signedIn && lastSyncedAt !== null && syncStatus !== "error";
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const kind = useMemo(() => {
@@ -22,13 +30,15 @@ export function BackupNudge() {
     return backupNudge(meta, total, wallNow());
   }, [total, version]);
 
-  if (!kind) return null;
+  if (!kind || cloudCovered) return null;
   return (
     <div className="card flex flex-col gap-2 rounded-xl border border-warning/30 px-3 py-2.5" data-testid="backup-nudge">
       <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
         <ShieldAlert size={13} /> {kind === "never" ? `${total} solves, and no backup` : "Your last backup is getting old"}
       </p>
-      <p className="text-[11px] leading-snug text-muted">Your solves are stored in this browser only — clearing site data, or a new phone, would lose them. A backup is one file.</p>
+      <p className="text-[11px] leading-snug text-muted">{isSupabaseConfigured()
+          ? "Your solves are stored in this browser only — clearing site data, or a new phone, would lose them. Sign in under Settings to keep a cloud copy, or save a backup file."
+          : "Your solves are stored in this browser only — clearing site data, or a new phone, would lose them. A backup is one file."}</p>
       <div className="flex gap-2">
         <button
           type="button"
