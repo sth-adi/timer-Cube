@@ -11,6 +11,7 @@ import { StatsPanel } from "@/components/stats/StatsPanel";
 import { InsightsPanel } from "@/components/stats/InsightsPanel";
 import { PhaseSplitsCard } from "@/components/stats/PhaseSplitsCard";
 import { CubeDnaCard } from "@/components/stats/CubeDnaCard";
+import { BackupNudge } from "@/components/stats/BackupNudge";
 import { CubeGarageCard } from "@/components/stats/CubeGarageCard";
 import { TriggerHeatmapCard } from "@/components/stats/TriggerHeatmapCard";
 import { ScrambleBar } from "@/components/scramble/ScrambleBar";
@@ -258,6 +259,7 @@ function HomeInner() {
             )}
           >
             <div className="flex flex-col gap-3">
+              <BackupNudge />
               <StatsPanel />
               <Link
                 href="/cases"

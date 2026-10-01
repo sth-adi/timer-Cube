@@ -129,13 +129,16 @@ export function FxLayer() {
             continue;
           }
           ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = Math.max(0, p.life) * 0.85;
+          // The glow is a wider, fainter second stroke rather than canvas shadowBlur, which re-blurs every
+          // shape on every frame and is the slowest thing a 2D canvas can do.
           ctx.strokeStyle = p.color;
-          ctx.lineWidth = 1 + p.life * 5;
-          ctx.shadowColor = p.color;
-          ctx.shadowBlur = 18;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.globalAlpha = Math.max(0, p.life) * 0.22;
+          ctx.lineWidth = (1 + p.life * 5) * 3.4;
+          ctx.stroke();
+          ctx.globalAlpha = Math.max(0, p.life) * 0.85;
+          ctx.lineWidth = 1 + p.life * 5;
           ctx.stroke();
         } else if (p.kind === "spark") {
           p.vy += p.g;
@@ -148,14 +151,15 @@ export function FxLayer() {
             continue;
           }
           ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = Math.max(0, p.life);
           ctx.strokeStyle = p.color;
-          ctx.shadowColor = p.color;
-          ctx.shadowBlur = 10;
-          ctx.lineWidth = p.size * (0.4 + p.life * 0.6);
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
           ctx.lineTo(p.x - p.vx * 2.2, p.y - p.vy * 2.2);
+          ctx.globalAlpha = Math.max(0, p.life) * 0.25;
+          ctx.lineWidth = p.size * (0.4 + p.life * 0.6) * 2.8;
+          ctx.stroke();
+          ctx.globalAlpha = Math.max(0, p.life);
+          ctx.lineWidth = p.size * (0.4 + p.life * 0.6);
           ctx.stroke();
         } else {
           p.vy += 0.22;
@@ -169,7 +173,6 @@ export function FxLayer() {
             continue;
           }
           ctx.globalCompositeOperation = "source-over";
-          ctx.shadowBlur = 0;
           ctx.globalAlpha = Math.min(1, p.life * 1.6);
           ctx.fillStyle = p.color;
           ctx.save();
@@ -180,7 +183,6 @@ export function FxLayer() {
         }
       }
       ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
       if (particles.length > 0 && !document.hidden) {
         raf = requestAnimationFrame(frame);
       } else {

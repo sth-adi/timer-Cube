@@ -238,3 +238,23 @@ describe("convergence", () => {
     }
   });
 });
+
+describe("withLocalOnlyFields", () => {
+  const base = { sessionId: "s", timeMs: 1000, penalty: "none" as Penalty, scramble: "R", date: 1 };
+  it("puts the cube and repair back on a row that came from the cloud without them", async () => {
+    const { withLocalOnlyFields } = await import("./merge");
+    const local: Solve = { id: "a", ...base, updatedAt: 5, cube: { id: "mac:AA", name: "GAN" }, repaired: { kind: "inserted", index: 3, tokens: ["U"] } };
+    const remote: Solve = { id: "a", ...base, updatedAt: 5 };
+    const [merged] = withLocalOnlyFields([remote], [local]);
+    expect(merged.cube).toEqual(local.cube);
+    expect(merged.repaired).toEqual(local.repaired);
+    // …so the tie with the local row is no longer a content coin-flip.
+    expect(contentKey(merged)).toBe(contentKey(local));
+  });
+  it("leaves other rows, and rows with nothing to carry, alone", async () => {
+    const { withLocalOnlyFields } = await import("./merge");
+    const remote: Solve = { id: "b", ...base };
+    expect(withLocalOnlyFields([remote], [])).toEqual([remote]);
+    expect(withLocalOnlyFields([remote], [{ id: "b", ...base }])[0]).toBe(remote);
+  });
+});

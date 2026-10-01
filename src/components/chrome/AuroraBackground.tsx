@@ -28,11 +28,13 @@ export function AuroraBackground() {
       const el = layerRef.current;
       if (!el) return;
       if (status === null) {
+        el.removeAttribute("data-pace");
         el.style.removeProperty("--aurora-pace-hue");
         el.style.removeProperty("--aurora-pace-sat");
         el.style.removeProperty("--aurora-pace-speed");
         return;
       }
+      el.setAttribute("data-pace", status);
       const hue = status === "ahead" ? HUE_AHEAD_DEG * intensity : status === "behind" ? HUE_BEHIND_DEG * intensity : 0;
       el.style.setProperty("--aurora-pace-hue", `${hue}deg`);
       el.style.setProperty("--aurora-pace-sat", `${1 + intensity * 0.6}`);

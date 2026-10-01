@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   BatteryFull,
@@ -811,9 +811,12 @@ export function SmartCubeTimer() {
 
   // Mistake Radar: a full move-by-move replay of the finished solve against
   // its scramble — only once it's finished and its scramble is pinned.
+  // The replay-based analyses below are heavy (hundreds of ms on a phone). They key off a deferred copy of
+  // `finished` so the final time and the saved check-mark paint first and the deeper recap fills in right after.
+  const finishedLate = useDeferredValue(finished);
   const mistakeReport = useMemo(
     () =>
-      finished && finishedScramble
+      finishedLate && finishedScramble
         ? analyzeMistakes({
             scramble: analysisScramble,
             moves: analysisTokens,
@@ -821,7 +824,7 @@ export function SmartCubeTimer() {
             totalMs: elapsedMs,
           })
         : null,
-    [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
+    [finishedLate, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
   );
   const mistakeHabitHistory = useMemo(() => mistakeHabits(allSolves), [allSolves]);
 
@@ -861,14 +864,14 @@ export function SmartCubeTimer() {
 
   // The OLL and PLL algorithms you executed (and whether in one look), for the recap table.
   const executions = useMemo(
-    () => (finished && finishedScramble ? extractAlgExecutions({ scramble: analysisScramble, moves: analysisTokens, timesMs: moveTimestampsRel }) : []),
-    [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel],
+    () => (finishedLate && finishedScramble ? extractAlgExecutions({ scramble: analysisScramble, moves: analysisTokens, timesMs: moveTimestampsRel }) : []),
+    [finishedLate, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel],
   );
 
   // Inspection Report Card: graded from how the cross came out.
   const inspection = useMemo(
-    () => (finished && finishedScramble ? inspectionReport(analysisScramble, analysisTokens, moveTimestampsRel) : null),
-    [finished, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel],
+    () => (finishedLate && finishedScramble ? inspectionReport(analysisScramble, analysisTokens, moveTimestampsRel) : null),
+    [finishedLate, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel],
   );
 
   const onAnalyze = () => {

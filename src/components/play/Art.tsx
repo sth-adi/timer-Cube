@@ -144,6 +144,9 @@ const SAMPLE_MOVES = "U' R2 F R U R' U' F' L U L' D R U2 R' U' R U R' F R U R' U
 const SAMPLE_TIMES = SAMPLE_MOVES.map((_, i) => i * 140 + (i === 7 ? 900 : 0) + (i > 7 ? 900 : 0) + (i > 20 ? 1100 : 0) + (i > 30 ? 600 : 0));
 const SAMPLE = portrait(SAMPLE_MOVES, SAMPLE_TIMES, [SAMPLE_TIMES[7], SAMPLE_TIMES[20], SAMPLE_TIMES[30]]);
 
+/** Trig comes out a last-digit different on the server's engine than in the browser's; rounding keeps the server HTML and the client's identical. */
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
 export function PortraitArt({ className }: { className?: string }) {
   const { scale, ox, oy } = fitTransform(SAMPLE.bounds, 200, 150, 0.1);
   return (
@@ -161,12 +164,12 @@ export function PortraitArt({ className }: { className?: string }) {
         {SAMPLE.segs.map((s, i) => (
           <line
             key={i}
-            x1={s.x1 * scale + ox}
-            y1={s.y1 * scale + oy}
-            x2={s.x2 * scale + ox}
-            y2={s.y2 * scale + oy}
+            x1={r2(s.x1 * scale + ox)}
+            y1={r2(s.y1 * scale + oy)}
+            x2={r2(s.x2 * scale + ox)}
+            y2={r2(s.y2 * scale + oy)}
             stroke={PHASE_INK[s.phase]}
-            strokeWidth={s.w * 1.3}
+            strokeWidth={r2(s.w * 1.3)}
             strokeLinecap="round"
           />
         ))}

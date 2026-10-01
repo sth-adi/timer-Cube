@@ -13,7 +13,7 @@ import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
 import { useGyroStore } from "./gyroStore";
 import { recordTimeMachineMove, resetTimeMachine } from "@/lib/smartcube/timeMachine";
 import { friendlyConnectError } from "@/lib/smartcube/friendlyConnectError";
-import { readLastCube, writeLastCube } from "@/lib/smartcube/connectMemory";
+import { writeLastCube } from "@/lib/smartcube/connectMemory";
 import { correctBurstTimestamp, type BurstTimestampState } from "@/lib/smartcube/burstTimestamp";
 
 /**
@@ -278,7 +278,8 @@ function teardown(): void {
 }
 
 export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
-  supported: typeof navigator !== "undefined" && "bluetooth" in navigator,
+  // Both read from the browser, so they start empty and are filled in after hydration (components/chrome/ClientEnv.tsx) — reading them here would make the server's HTML and the client's first render disagree.
+  supported: false,
   connecting: false,
   connected: false,
   deviceName: null,
@@ -311,7 +312,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
 
   connectStatus: null,
   macRequest: null,
-  lastCubeName: readLastCube(),
+  lastCubeName: null,
 
   submitMac: (mac) => {
     const resolve = pendingMac;

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UsageTracker } from "@/components/chrome/UsageTracker";
 import { FxLayer } from "@/components/chrome/FxLayer";
+import { ClientEnv } from "@/components/chrome/ClientEnv";
 import { MacPromptDialog } from "@/components/smartcube/MacPromptDialog";
 
 const geistSans = Geist({
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <FxLayer />
         <MacPromptDialog />
+        <ClientEnv />
       </body>
     </html>
   );

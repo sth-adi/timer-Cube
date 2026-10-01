@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
+import { BackupPanel } from "./BackupPanel";
 import { VOICE_MODES } from "@/lib/smartcube/voiceCoach";
 import { BACKGROUND_STYLES, FX_LEVELS, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -405,6 +406,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <AccountPanel />
         <DeviceSyncPanel />
+        <BackupPanel />
 
         <div className="mt-4 border-t border-border pt-3">
           <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Keyboard shortcuts</p>

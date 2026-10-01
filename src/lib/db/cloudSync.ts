@@ -2,6 +2,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { withTimeout, SupabaseTimeoutError } from "@/lib/supabase/withTimeout";
 import { db } from "./db";
 import { mergeSyncPayload, readLocalState, type MergeResult } from "./sync";
+import { withLocalOnlyFields } from "./merge";
 import { computeSessionStats } from "@/lib/stats/stats";
 import type { Deletion, Session, Solve } from "@/types";
 
@@ -241,7 +242,7 @@ export async function pullAll(userId: string): Promise<MergeResult> {
   check(deletionRes.error);
   return mergeSyncPayload({
     sessions: (sessionRes.data ?? []).map((r) => rowToSession(r as SessionRow)),
-    solves: (solveRes.data ?? []).map((r) => rowToSolve(r as SolveRow)),
+    solves: withLocalOnlyFields((solveRes.data ?? []).map((r) => rowToSolve(r as SolveRow)), await db.solves.toArray()),
     deletions: (deletionRes.data ?? []).map((r) => {
       const d = r as DeletionRow;
       return { id: d.id, kind: d.kind, deletedAt: d.deleted_at } satisfies Deletion;

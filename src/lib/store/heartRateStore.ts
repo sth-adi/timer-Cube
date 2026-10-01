@@ -35,7 +35,8 @@ let gattServer: BluetoothRemoteGATTServer | null = null;
 let characteristic: BluetoothRemoteGATTCharacteristic | null = null;
 
 export const useHeartRateStore = create<HeartRateState>((set, get) => ({
-  supported: typeof navigator !== "undefined" && "bluetooth" in navigator,
+  // Filled in after hydration (components/chrome/ClientEnv.tsx): reading the browser here would make server and client HTML disagree.
+  supported: false,
   connecting: false,
   connected: false,
   deviceName: null,

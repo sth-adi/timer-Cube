@@ -24,6 +24,21 @@ export interface SyncState {
   deletions: Deletion[];
 }
 
+/**
+ * Solve fields the cloud has no column for. A row coming back from the cloud
+ * can't carry them, so merging it as-is would either drop them or, when it
+ * ties a local row on timestamp, lose a coin-flip on content and drop them
+ * anyway — copy them over from the local row of the same id first.
+ */
+export function withLocalOnlyFields(remote: Solve[], local: readonly Solve[]): Solve[] {
+  const byId = new Map(local.map((s) => [s.id, s]));
+  return remote.map((r) => {
+    const mine = byId.get(r.id);
+    if (!mine || (!mine.cube && !mine.repaired)) return r;
+    return { ...r, ...(mine.cube ? { cube: mine.cube } : {}), ...(mine.repaired ? { repaired: mine.repaired } : {}) };
+  });
+}
+
 export const solveRevision = (s: Solve) => s.updatedAt ?? s.date;
 export const sessionRevision = (s: Session) => s.updatedAt ?? s.createdAt;
 

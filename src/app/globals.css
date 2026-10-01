@@ -463,10 +463,14 @@ body {
   width: 70vmax;
   height: 70vmax;
   border-radius: 50%;
-  /* hue/saturation nudged live by the performance aura bus while a solve is
-     running (see AuroraBackground.tsx) — 0deg/1 is a no-op the rest of the time. */
-  filter: blur(80px) hue-rotate(var(--aurora-pace-hue, 0deg)) saturate(var(--aurora-pace-sat, 1));
-  will-change: transform, filter;
+  /* A radial gradient that fades to transparent is already as soft as a blurred one, and a blur
+     filter on an element this size is re-rendered on every frame of its drift — by far the
+     costliest thing on the page. hue/saturation are nudged live by the performance aura bus
+     while a solve is running (see AuroraBackground.tsx), and only then does the filter apply. */
+  will-change: transform;
+}
+.aurora-layer[data-pace] .aurora-blob {
+  filter: hue-rotate(var(--aurora-pace-hue, 0deg)) saturate(var(--aurora-pace-sat, 1));
 }
 
 .aurora-blob-a {
@@ -786,11 +790,6 @@ body {
   initial-value: 0deg;
   inherits: false;
 }
-@property --beam-a {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
 @property --party-hue {
   syntax: "<angle>";
   initial-value: 0deg;
@@ -804,7 +803,12 @@ body {
 }
 @keyframes fx-beam {
   to {
-    --beam-a: 360deg;
+    rotate: 360deg;
+  }
+}
+@keyframes fx-turn {
+  to {
+    rotate: 360deg;
   }
 }
 @keyframes fx-party-hue {
@@ -1185,23 +1189,42 @@ body {
     scale 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2),
     opacity 0.5s ease;
 }
+/* Each ring is a static elliptical mask with a square conic gradient inside it that turns — compositor-only. */
+:root:not([data-fx-level="off"]) .reactor-a,
+:root:not([data-fx-level="off"]) .reactor-b {
+  overflow: hidden;
+}
+:root:not([data-fx-level="off"]) .reactor-a::before,
+:root:not([data-fx-level="off"]) .reactor-b::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  will-change: transform;
+}
 :root:not([data-fx-level="off"]) .reactor-a {
   width: calc(100% + 150px);
   height: calc(100% + 60px);
-  background: conic-gradient(from var(--fx-angle), transparent 0 28%, var(--rc) 46%, transparent 58% 78%, var(--rc2) 92%, transparent);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-  animation: fx-spin calc(14s / var(--reactor-speed)) linear infinite;
-  filter: drop-shadow(0 0 8px var(--rc));
+}
+:root:not([data-fx-level="off"]) .reactor-a::before {
+  background: conic-gradient(transparent 0 28%, var(--rc) 46%, transparent 58% 78%, var(--rc2) 92%, transparent);
+  animation: fx-turn calc(14s / var(--reactor-speed)) linear infinite;
 }
 :root:not([data-fx-level="off"]) .reactor-b {
   width: calc(100% + 92px);
   height: calc(100% + 34px);
-  background: repeating-conic-gradient(from var(--fx-angle), color-mix(in srgb, var(--rc2) 70%, transparent) 0 1.6deg, transparent 1.6deg 8deg);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px), #000 calc(100% - 1px), transparent);
   mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px), #000 calc(100% - 1px), transparent);
-  animation: fx-spin calc(22s / var(--reactor-speed)) linear infinite reverse;
   opacity: calc(var(--reactor-o) * 0.75);
+}
+:root:not([data-fx-level="off"]) .reactor-b::before {
+  background: repeating-conic-gradient(color-mix(in srgb, var(--rc2) 70%, transparent) 0 1.6deg, transparent 1.6deg 8deg);
+  animation: fx-turn calc(22s / var(--reactor-speed)) linear infinite reverse;
 }
 :root:not([data-fx-level="off"]) .reactor-core {
   width: calc(100% + 40px);
@@ -1379,14 +1402,18 @@ body {
 .aurora-beam {
   display: none;
 }
+/* The beam is a fixed conic gradient that turns as a whole — a compositor-only rotation. Animating the gradient's own angle would repaint this oversized layer every frame. */
 :root:not([data-fx-level="off"]) .aurora-beam {
   display: block;
   position: absolute;
-  inset: -25%;
+  left: 50%;
+  top: 112%;
+  width: 260vmax;
+  height: 260vmax;
+  margin: -130vmax 0 0 -130vmax;
   opacity: 1;
-  filter: blur(38px) saturate(1.4);
   background: conic-gradient(
-    from var(--beam-a) at 50% 112%,
+    from 0deg at 50% 50%,
     transparent 0deg,
     var(--aurora-1) 22deg,
     transparent 46deg,
@@ -1395,6 +1422,7 @@ body {
     transparent 236deg,
     transparent 360deg
   );
+  will-change: transform;
   animation: fx-beam calc(46s / var(--aurora-pace-speed, 1)) linear infinite;
 }
 :root[data-fx-level="off"] .aurora-blob-c {

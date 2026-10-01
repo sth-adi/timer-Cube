@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bluetooth } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { normalizeMac } from "@/lib/smartcube/connectMemory";
@@ -23,6 +23,14 @@ function MacForm({ deviceName, onSubmit }: { deviceName: string | null; onSubmit
   const [text, setText] = useState("");
   const [touched, setTouched] = useState(false);
   const mac = normalizeMac(text);
+  // Escape gives up, like Cancel — a dialog you can't dismiss from the keyboard is a trap.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onSubmit(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onSubmit]);
   const invalid = touched && text.trim() !== "" && !mac;
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Enter the cube's Bluetooth address" data-testid="mac-dialog">
