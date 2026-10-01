@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
 import { BackupPanel } from "./BackupPanel";
-import { VOICE_MODES } from "@/lib/smartcube/voiceCoach";
+import { SmartCubeSettings } from "./SmartCubeSettings";
 import { BACKGROUND_STYLES, FX_LEVELS, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
@@ -13,7 +13,7 @@ import { DeviceSyncPanel } from "./DeviceSyncPanel";
 import { AccountPanel } from "./AccountPanel";
 import { cn } from "@/lib/utils/cn";
 
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button
       type="button"
@@ -55,10 +55,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const backgroundStyle = useSettingsStore((s) => s.backgroundStyle);
   const fxLevel = useSettingsStore((s) => s.fxLevel);
-  const keepAwake = useSettingsStore((s) => s.keepAwake);
-  const setKeepAwake = useSettingsStore((s) => s.setKeepAwake);
-  const voiceCoach = useSettingsStore((s) => s.voiceCoach);
-  const setVoiceCoach = useSettingsStore((s) => s.setVoiceCoach);
+
   const setFxLevel = useSettingsStore((s) => s.setFxLevel);
   const setBackgroundStyle = useSettingsStore((s) => s.setBackgroundStyle);
   const timerStyle = useSettingsStore((s) => s.timerStyle);
@@ -226,7 +223,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <Toggle checked={hintSolverEnabled} onChange={setHintSolverEnabled} label="Solve hints (cross / CFOP)" />
           <Toggle checked={liveCoachEnabled} onChange={setLiveCoachEnabled} label="Live coach between solves" />
           <Toggle checked={soundEnabled} onChange={setSoundEnabled} label="Sound on solve" />
-          <Toggle checked={keepAwake} onChange={setKeepAwake} label="Keep screen awake while a cube is connected" />
           <Toggle
             checked={hideTimeWhileSolving}
             onChange={setHideTimeWhileSolving}
@@ -234,32 +230,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        <div className="mt-4 border-t border-border pt-3">
-          <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Voice coach (smart cube)</p>
-          <div className="grid grid-cols-3 gap-1.5">
-            {VOICE_MODES.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setVoiceCoach(v.id)}
-                aria-pressed={voiceCoach === v.id}
-                className={cn(
-                  "rounded-lg px-2 py-2 text-xs font-medium transition-colors",
-                  voiceCoach === v.id ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
-                )}
-              >
-                {v.name}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">
-            {voiceCoach === "off"
-              ? "Silent."
-              : voiceCoach === "splits"
-                ? "Calls each phase the moment the cube finishes it, then your time."
-                : "Splits, plus the 8 and 12-second inspection marks, whether each phase ran fast or slow for you, and a personal-best call."}
-          </p>
-        </div>
+        <SmartCubeSettings />
 
         <div className="mt-4 border-t border-border pt-3">
           <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Phase splits</p>

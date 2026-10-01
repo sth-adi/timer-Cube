@@ -258,3 +258,20 @@ describe("withLocalOnlyFields", () => {
     expect(withLocalOnlyFields([remote], [{ id: "b", ...base }])[0]).toBe(remote);
   });
 });
+
+describe("undoing a deletion", () => {
+  it("a restored solve (newer than its deletion record, which is gone) beats the deletion still held by another device", () => {
+    const row: Solve = { id: "x", sessionId: "s", timeMs: 9000, penalty: "none", scramble: "R", date: 1, updatedAt: 100 };
+    const restored: Solve = { ...row, updatedAt: 5000 };
+    const other = { sessions: [], solves: [], deletions: [{ id: "x", kind: "solve" as const, deletedAt: 3000 }] };
+    const here = { sessions: [], solves: [restored], deletions: [] };
+    const merged = mergeStates(here, other);
+    expect(merged.solves.map((s) => s.id)).toEqual(["x"]);
+    expect(merged.deletions.some((d) => d.id === "x")).toBe(false);
+  });
+  it("…while a restore that didn't bump updatedAt would have lost, which is why restoreSolves does", () => {
+    const stale: Solve = { id: "x", sessionId: "s", timeMs: 9000, penalty: "none", scramble: "R", date: 1, updatedAt: 100 };
+    const other = { sessions: [], solves: [], deletions: [{ id: "x", kind: "solve" as const, deletedAt: 3000 }] };
+    expect(mergeStates({ sessions: [], solves: [stale], deletions: [] }, other).solves).toEqual([]);
+  });
+});

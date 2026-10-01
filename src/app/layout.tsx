@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UsageTracker } from "@/components/chrome/UsageTracker";
 import { FxLayer } from "@/components/chrome/FxLayer";
+import { UndoToast } from "@/components/chrome/UndoToast";
 import { ClientEnv } from "@/components/chrome/ClientEnv";
 import { MacPromptDialog } from "@/components/smartcube/MacPromptDialog";
 
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <FxLayer />
         <MacPromptDialog />
+        <UndoToast />
         <ClientEnv />
       </body>
     </html>

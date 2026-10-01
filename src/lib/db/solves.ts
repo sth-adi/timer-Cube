@@ -49,6 +49,20 @@ export async function updateSolve(id: string, changes: Partial<Omit<Solve, "id">
   await db.solves.update(id, { ...changes, updatedAt: Date.now() });
 }
 
+/**
+ * Puts deleted solves back: removes their deletion records and re-adds the rows
+ * with a fresh `updatedAt`, which is what makes the restore win over the
+ * deletion on every other device too (the newest change wins — see merge.ts).
+ */
+export async function restoreSolves(solves: Solve[]): Promise<void> {
+  if (solves.length === 0) return;
+  const now = Date.now();
+  await db.transaction("rw", db.solves, db.deletions, async () => {
+    await db.deletions.bulkDelete(solves.map((s) => s.id));
+    await db.solves.bulkPut(solves.map((s) => ({ ...s, updatedAt: Math.max(now, (s.updatedAt ?? 0) + 1) })));
+  });
+}
+
 /** Deletes a solve and records the deletion, so syncing can't bring it back from another device. */
 export async function deleteSolve(id: string): Promise<void> {
   await db.transaction("rw", db.solves, db.deletions, async () => {

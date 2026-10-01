@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
-import { addSolve, deleteSolve, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
+import { addSolve, deleteSolve, restoreSolves, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
 import { repairLateStart } from "@/lib/db/repairLateStart";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -72,6 +72,12 @@ interface SessionState {
   pendingEvent: EventTag | null;
   setPendingEvent: (event: EventTag | null) => void;
   removeSolve: (solveId: string) => Promise<void>;
+  /** Deletes several solves at once (one undo brings them all back). */
+  removeSolves: (solveIds: string[]) => Promise<void>;
+  /** The solves deleted most recently, held so they can be put back — see UndoToast. */
+  lastRemoved: { solves: Solve[]; id: number } | null;
+  undoRemove: () => Promise<void>;
+  dismissUndo: () => void;
   clearPB: () => void;
   clearAchievementToast: () => void;
   exportActiveSession: () => void;
@@ -93,6 +99,7 @@ interface SessionState {
 }
 
 let pbEventId = 0;
+let removedId = 0;
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   sessions: [],
@@ -226,11 +233,29 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   setPendingEvent: (event) => set({ pendingEvent: event }),
 
-  removeSolve: async (solveId) => {
-    await deleteSolve(solveId);
+  lastRemoved: null,
+
+  removeSolve: async (solveId) => get().removeSolves([solveId]),
+
+  removeSolves: async (solveIds) => {
+    const { allSolves, solves, activeSessionId } = get();
+    const known = new Map([...allSolves, ...solves].map((s) => [s.id, s]));
+    const gone = solveIds.map((id) => known.get(id)).filter((s): s is Solve => !!s);
+    for (const id of solveIds) await deleteSolve(id);
+    set({ lastRemoved: gone.length ? { solves: gone, id: ++removedId } : get().lastRemoved });
+    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
+  },
+
+  undoRemove: async () => {
+    const pending = get().lastRemoved;
+    if (!pending) return;
+    set({ lastRemoved: null });
+    await restoreSolves(pending.solves);
     const { activeSessionId } = get();
     if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
   },
+
+  dismissUndo: () => set({ lastRemoved: null }),
 
   clearPB: () => set({ lastPB: null }),
   clearAchievementToast: () => set({ achievementToast: null }),
