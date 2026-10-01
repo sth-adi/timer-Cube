@@ -2,16 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Timer as TimerIcon, Music, FlaskConical, ScanLine, Clapperboard } from "lucide-react";
+import { Timer as TimerIcon, Music, FlaskConical, ScanLine, Clapperboard, ListChecks, Trash2 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useSettingsStore } from "@/lib/store/settingsStore";
 import { SolveList } from "@/components/sessions/SolveList";
 import { eventTagsPresent, normalSolves, solvesForEvent } from "@/lib/stats/stats";
 import {
   filterAndSort,
   hasFilter,
   presentCases,
+  presentCubes,
   solveSummary,
   type SolveFilter,
   type SolveSort,
@@ -40,9 +42,27 @@ export default function SolvesPage() {
   const [filter, setFilter] = useState<SolveFilter>({});
   const [sort, setSort] = useState<SolveSort>("recent");
   const cases = useMemo(() => presentCases(solves), [solves]);
-  const smart = cases.crosses.length > 0;
+  const cubes = useMemo(() => presentCubes(solves), [solves]);
+  const nicknames = useSettingsStore((s) => s.cubeNicknames);
+  const smart = cases.crosses.length > 0 || cubes.length > 0;
+  const updateSolves = useSessionStore((s) => s.updateSolves);
+  const removeSolves = useSessionStore((s) => s.removeSolves);
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const view = useMemo(() => filterAndSort(solves, filter, sort), [solves, filter, sort]);
   const filtered = hasFilter(filter);
+  const showView = smart && (filtered || sort !== "recent");
+  // What's on screen, in order — "select all" means these, not everything behind a filter.
+  const shownIds = useMemo(() => (showView ? view : [...solves].reverse()).map((s) => s.id), [showView, view, solves]);
+  // A tick on a solve that has since scrolled out of the list (a filter changed) must not be acted on blind.
+  const livePicked = useMemo(() => shownIds.filter((id) => picked.has(id)), [shownIds, picked]);
   const matchSummary = useMemo(() => {
     if (!filtered) return null;
     const finals = view.map(solveFinalMs).filter((x): x is number => x !== null);
@@ -71,6 +91,22 @@ export default function SolvesPage() {
           <div className="flex items-center justify-between px-1">
             <h1 className="text-lg font-semibold text-foreground">Solves</h1>
             <div className="flex flex-wrap justify-end gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelecting((v) => !v);
+                  setPicked(new Set());
+                }}
+                aria-pressed={selecting}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  selecting ? "bg-accent text-accent-fg" : "bg-accent-soft text-accent hover:bg-accent-soft/80",
+                )}
+                data-testid="select-toggle"
+              >
+                <ListChecks size={13} />
+                {selecting ? "Done" : "Select"}
+              </button>
               <Link
                 href="/xray"
                 className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
@@ -138,6 +174,14 @@ export default function SolvesPage() {
           {smart && (
             <div className="flex flex-wrap items-center gap-1.5 px-1" aria-label="Filter and sort solves">
               <PillSelect label="Sort" value={sort} onChange={(v) => setSort(v as SolveSort)} options={SORTS} />
+              {cubes.length > 0 && (
+                <PillSelect
+                  label="Cube"
+                  value={filter.cube ?? ""}
+                  onChange={(v) => setFilter((f) => ({ ...f, cube: v || null }))}
+                  options={[{ value: "", label: "Any cube" }, ...cubes.map((c) => ({ value: c.id, label: nicknames[c.id] || c.name }))]}
+                />
+              )}
               {cases.crosses.length > 1 && (
                 <PillSelect
                   label="Cross"
@@ -221,8 +265,64 @@ export default function SolvesPage() {
             </p>
           )}
 
+          {selecting && (
+            <div className="card sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-xl px-3 py-2" data-testid="bulk-bar">
+              <span className="mr-1 text-xs font-medium text-foreground" data-testid="bulk-count">
+                {livePicked.length} selected
+              </span>
+              <button type="button" onClick={() => setPicked(new Set(shownIds))} className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
+                All shown ({shownIds.length})
+              </button>
+              <button type="button" onClick={() => setPicked(new Set())} className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
+                None
+              </button>
+              <span className="mx-0.5 h-4 w-px bg-border" />
+              {(["plus2", "dnf", "none"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  disabled={livePicked.length === 0}
+                  onClick={() => void updateSolves(livePicked, { penalty: p })}
+                  className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-bg-panel disabled:opacity-40"
+                >
+                  {p === "plus2" ? "+2" : p === "dnf" ? "DNF" : "Clear penalty"}
+                </button>
+              ))}
+              <select
+                aria-label="Tag selected solves"
+                disabled={livePicked.length === 0}
+                value=""
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v) void updateSolves(livePicked, { event: v === "normal" ? null : (v as EventTag) });
+                }}
+                className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground disabled:opacity-40"
+              >
+                <option value="">Tag as…</option>
+                <option value="normal">Normal</option>
+                {EVENT_TAGS.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={livePicked.length === 0}
+                onClick={() => {
+                  void removeSolves(livePicked);
+                  setPicked(new Set());
+                }}
+                className="ml-auto flex items-center gap-1 rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-semibold text-danger disabled:opacity-40"
+                data-testid="bulk-delete"
+              >
+                <Trash2 size={11} /> Delete
+              </button>
+            </div>
+          )}
+
           <div className="card rounded-xl p-3">
-            <SolveList solves={solves} view={smart && (filtered || sort !== "recent") ? view : undefined} />
+            <SolveList solves={solves} view={showView ? view : undefined} selection={selecting ? { selected: picked, toggle } : undefined} />
           </div>
         </div>
       </div>

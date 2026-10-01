@@ -13,7 +13,7 @@ import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Check, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Trash2, TriangleAlert, Wand2 } from "lucide-react";
+import { Check, CheckSquare, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Square, Trash2, TriangleAlert, Wand2 } from "lucide-react";
 import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveSummary, type SolveSummary } from "@/lib/analysis/solveFilter";
 import { CROSS_FACE_COLOR, CROSS_FACE_HEX } from "@/lib/smartcube/crossFrame";
@@ -26,6 +26,7 @@ function SolveRow({
   isBest,
   isWorst,
   detailed,
+  selecting,
 }: {
   solve: Solve;
   index: number;
@@ -33,6 +34,8 @@ function SolveRow({
   isWorst: boolean;
   /** Show the smart-cube step bar and cases under the time. */
   detailed: boolean;
+  /** In select mode a tap ticks the row instead of opening it. */
+  selecting?: { ticked: boolean; toggle: () => void };
 }) {
   const setPenalty = useSessionStore((s) => s.setPenalty);
   const setComment = useSessionStore((s) => s.setComment);
@@ -95,13 +98,16 @@ function SolveRow({
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (selecting ? selecting.toggle() : setOpen((o) => !o))}
+        aria-pressed={selecting ? selecting.ticked : undefined}
         className={cn(
           "w-full flex items-center justify-between rounded-lg px-2.5 py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
           isBest && "text-success",
           isWorst && "text-danger",
+          selecting?.ticked && "bg-accent-soft",
         )}
       >
+        {selecting && (selecting.ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
         <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
         <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
         {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
@@ -334,9 +340,11 @@ interface SolveListProps {
    * #12 when it's sorted to the top. Defaults to every solve, newest first.
    */
   view?: Solve[];
+  /** Select mode: which solves are ticked, and how to tick one. */
+  selection?: { selected: ReadonlySet<string>; toggle: (id: string) => void };
 }
 
-export function SolveList({ solves: solvesProp, limit, hideHeader, view }: SolveListProps = {}) {
+export function SolveList({ solves: solvesProp, limit, hideHeader, view, selection }: SolveListProps = {}) {
   const sessionSolves = useSessionStore((s) => s.solves);
   const solves = solvesProp ?? sessionSolves;
   const [manualOpen, setManualOpen] = useState(false);
@@ -383,6 +391,7 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view }: Solve
                 solve={solve}
                 index={numberOf.get(solve.id) ?? 0}
                 detailed={limit === undefined}
+                selecting={selection ? { ticked: selection.selected.has(solve.id), toggle: () => selection.toggle(solve.id) } : undefined}
                 isBest={best !== null && t === best}
                 isWorst={worst !== null && t === worst && finite.length > 2}
               />

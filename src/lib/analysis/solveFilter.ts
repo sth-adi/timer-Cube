@@ -38,6 +38,8 @@ export function solveSummary(solve: Solve): SolveSummary | null {
 }
 
 export interface SolveFilter {
+  /** Only solves made on this cube (its id — see lib/smartcube/cubeIdentity.ts). Needs no breakdown. */
+  cube?: string | null;
   oll?: string | null;
   pll?: string | null;
   cross?: CrossFace | null;
@@ -48,13 +50,29 @@ export interface SolveFilter {
 export type SolveSort = "recent" | "fastest" | "slowest" | "cross" | "f2l" | "oll" | "pll";
 const STEP_INDEX: Partial<Record<SolveSort, number>> = { cross: 0, f2l: 1, oll: 2, pll: 3 };
 
-export const hasFilter = (f: SolveFilter) => !!(f.oll || f.pll || f.cross || f.twoLook || f.mistake);
+export const hasFilter = (f: SolveFilter) => !!(f.cube || f.oll || f.pll || f.cross || f.twoLook || f.mistake);
+
+/** The filters that read a solve's breakdown (the rest only need the row itself). */
+const needsBreakdown = (f: SolveFilter) => !!(f.oll || f.pll || f.cross || f.twoLook || f.mistake);
+
+/** The cubes solves were made on, newest first — for the cube filter's choices. */
+export function presentCubes(solves: readonly Solve[]): { id: string; name: string; last: number }[] {
+  const byId = new Map<string, { id: string; name: string; last: number }>();
+  for (const s of solves) {
+    if (!s.cube) continue;
+    const prev = byId.get(s.cube.id);
+    if (!prev || s.date > prev.last) byId.set(s.cube.id, { id: s.cube.id, name: s.cube.name, last: s.date });
+  }
+  return [...byId.values()].sort((a, b) => b.last - a.last);
+}
 
 /** The solves matching the filter, in the chosen order (most recent first by default). Filters need a smart-cube breakdown. */
 export function filterAndSort(solves: readonly Solve[], filter: SolveFilter, sort: SolveSort): Solve[] {
   let out = [...solves];
   if (hasFilter(filter)) {
     out = out.filter((s) => {
+      if (filter.cube && s.cube?.id !== filter.cube) return false;
+      if (!needsBreakdown(filter)) return true;
       const m = solveSummary(s);
       if (!m) return false;
       return (

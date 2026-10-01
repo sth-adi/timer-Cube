@@ -49,3 +49,23 @@ describe("filtering and sorting solves", () => {
     expect(flagged.map((s) => s.id)).not.toContain("k");
   }, 60_000);
 });
+
+describe("filtering by cube", () => {
+  const mk = (id: string, cube?: { id: string; name: string }, date = 1): Solve => ({ id, sessionId: "x", penalty: "none", scramble: "R", timeMs: 9000, date, ...(cube ? { cube } : {}) });
+  const A = { id: "mac:A", name: "GAN12 ui" };
+  const B = { id: "mac:B", name: "MoYu V10" };
+  const all = [mk("1", A, 1), mk("2", B, 2), mk("3", A, 3), mk("4")];
+
+  it("keeps only that cube's solves — keyboard solves and other cubes drop out — without needing a breakdown", async () => {
+    const { filterAndSort, hasFilter } = await import("./solveFilter");
+    expect(hasFilter({ cube: "mac:A" })).toBe(true);
+    expect(filterAndSort(all, { cube: "mac:A" }, "recent").map((s) => s.id)).toEqual(["3", "1"]);
+    expect(filterAndSort(all, { cube: "mac:B" }, "recent").map((s) => s.id)).toEqual(["2"]);
+  });
+
+  it("lists the cubes present, most recently used first", async () => {
+    const { presentCubes } = await import("./solveFilter");
+    expect(presentCubes(all).map((c) => c.id)).toEqual(["mac:A", "mac:B"]);
+    expect(presentCubes([mk("k")])).toEqual([]);
+  });
+});

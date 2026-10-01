@@ -72,6 +72,8 @@ interface SessionState {
   pendingEvent: EventTag | null;
   setPendingEvent: (event: EventTag | null) => void;
   removeSolve: (solveId: string) => Promise<void>;
+  /** Applies the same penalty and/or practice tag to several solves at once. `event: null` makes them ordinary solves again. */
+  updateSolves: (solveIds: string[], changes: { penalty?: Penalty; event?: EventTag | null }) => Promise<void>;
   /** Deletes several solves at once (one undo brings them all back). */
   removeSolves: (solveIds: string[]) => Promise<void>;
   /** The solves deleted most recently, held so they can be put back — see UndoToast. */
@@ -236,6 +238,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   lastRemoved: null,
 
   removeSolve: async (solveId) => get().removeSolves([solveId]),
+
+  updateSolves: async (solveIds, changes) => {
+    const patch: Partial<Solve> = {};
+    if (changes.penalty !== undefined) patch.penalty = changes.penalty;
+    if (changes.event !== undefined) patch.event = changes.event ?? undefined;
+    for (const id of solveIds) await updateSolve(id, patch);
+    const { activeSessionId } = get();
+    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
+  },
 
   removeSolves: async (solveIds) => {
     const { allSolves, solves, activeSessionId } = get();
