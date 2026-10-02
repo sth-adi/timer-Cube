@@ -1683,6 +1683,11 @@ body {
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
   }
+  /* Elements that opt in to selection with a utility class (the scramble) are covered too. */
+  .select-text {
+    -webkit-user-select: none;
+    user-select: none;
+  }
   input,
   textarea,
   [contenteditable="true"],

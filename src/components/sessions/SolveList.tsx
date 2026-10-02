@@ -96,25 +96,38 @@ function SolveRow({
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        onClick={() => (selecting ? selecting.toggle() : setOpen((o) => !o))}
-        aria-pressed={selecting ? selecting.ticked : undefined}
-        className={cn(
-          "w-full flex items-center justify-between rounded-lg px-2.5 py-0.5 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
-          isBest && "text-success",
-          isWorst && "text-danger",
-          selecting?.ticked && "bg-accent-soft",
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => (selecting ? selecting.toggle() : setOpen((o) => !o))}
+          aria-pressed={selecting ? selecting.ticked : undefined}
+          className={cn(
+            "min-w-0 flex-1 flex items-center justify-between rounded-lg px-2.5 py-0.5 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
+            isBest && "text-success",
+            isWorst && "text-danger",
+            selecting?.ticked && "bg-accent-soft",
+          )}
+        >
+          {selecting && (selecting.ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
+          <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
+          <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
+          {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
+          {solve.reconstruction && <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />}
+          {summary?.hasMistake && <TriangleAlert size={11} className="text-warning mr-1" aria-label="Mistake Radar flagged something in this solve" />}
+          {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
+        </button>
+        {detailed && !selecting && (
+          <button
+            type="button"
+            onClick={() => void removeSolve(solve.id)}
+            aria-label={`Delete solve ${index}`}
+            title="Delete (undo from the toast)"
+            className="tap-target ml-0.5 shrink-0 rounded-full text-muted-2 transition-colors hover:text-danger active:text-danger"
+          >
+            <Trash2 size={14} />
+          </button>
         )}
-      >
-        {selecting && (selecting.ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
-        <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
-        <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
-        {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
-        {solve.reconstruction && <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />}
-        {summary?.hasMistake && <TriangleAlert size={11} className="text-warning mr-1" aria-label="Mistake Radar flagged something in this solve" />}
-        {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
-      </button>
+      </div>
       {open && (
         <div className="absolute right-0 top-full z-20 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-bg-elevated p-2.5 shadow-lg animate-fade-in-up">
           {hasBreakdown(solve) && (
@@ -278,46 +291,78 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
   const recordSolve = useSessionStore((s) => s.recordSolve);
   const scramble = useScrambleStore((s) => s.scramble);
   const nextScramble = useScrambleStore((s) => s.nextScramble);
+  const removeSolve = useSessionStore((s) => s.removeSolve);
+  const solves = useSessionStore((s) => s.solves);
   const [value, setValue] = useState("");
   const [error, setError] = useState(false);
+  // The last few times added here, each one tap from deleted — for the typo you spot a second later.
+  const [added, setAdded] = useState<{ id: string; ms: number }[]>([]);
+  const stillThere = new Set(solves.map((x) => x.id));
+  const recent = added.filter((x) => stillThere.has(x.id));
 
-  const submit = () => {
+  const submit = async () => {
     const ms = parseTimeInput(value);
     if (ms === null) {
       setError(true);
       return;
     }
-    recordSolve(ms, scramble);
+    await recordSolve(ms, scramble);
+    const latest = useSessionStore.getState().solves.at(-1);
+    if (latest) setAdded((a) => [...a.slice(-4), { id: latest.id, ms }]);
+    setValue("");
     void nextScramble();
-    onDone();
   };
 
   return (
-    <div className="flex items-center gap-1.5 px-1 pb-2">
-      <input
-        autoFocus
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          setError(false);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") submit();
-          if (e.key === "Escape") onDone();
-        }}
-        placeholder="12.34 or 1:02.34"
-        className={cn(
-          "flex-1 rounded-md bg-bg-panel-2 border px-2 py-1 text-xs tabular-timer text-foreground placeholder:text-muted-2 focus:outline-none",
-          error ? "border-danger" : "border-border focus:border-accent",
+    <div className="flex flex-col gap-1.5 px-1 pb-2">
+      <div className="flex items-center gap-1.5">
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void submit();
+            if (e.key === "Escape") onDone();
+          }}
+          placeholder="12.34 or 1:02.34"
+          className={cn(
+            "flex-1 rounded-md bg-bg-panel-2 border px-2 py-1 text-xs tabular-timer text-foreground placeholder:text-muted-2 focus:outline-none",
+            error ? "border-danger" : "border-border focus:border-accent",
+          )}
+        />
+        <button
+          type="button"
+          onClick={() => void submit()}
+          className="rounded-md bg-accent-soft px-2 py-1 text-xs font-medium text-accent hover:brightness-110"
+        >
+          Add
+        </button>
+        {recent.length > 0 && (
+          <button type="button" onClick={onDone} className="px-1 text-xs text-muted-2 hover:text-muted">
+            Done
+          </button>
         )}
-      />
-      <button
-        type="button"
-        onClick={submit}
-        className="rounded-md bg-accent-soft px-2 py-1 text-xs font-medium text-accent hover:brightness-110"
-      >
-        Add
-      </button>
+      </div>
+      {recent.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1" aria-label="Times just added">
+          {recent.map((x) => (
+            <span key={x.id} className="flex items-center gap-0.5 rounded-full bg-bg-panel-2 py-0.5 pl-2 pr-0.5 text-xs tabular-timer text-foreground">
+              {formatTime(x.ms)}
+              <button
+                type="button"
+                onClick={() => void removeSolve(x.id)}
+                aria-label={`Delete ${formatTime(x.ms)}`}
+                className="grid h-5 w-5 place-items-center rounded-full text-muted-2 hover:bg-danger/15 hover:text-danger"
+              >
+                <Trash2 size={11} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
