@@ -14,7 +14,7 @@
 //    work offline too.
 //
 // Bump VERSION on any change here; activate() drops caches from older versions.
-const VERSION = "v3";
+const VERSION = "v4";
 const STATIC = `cube-static-${VERSION}`;
 const PAGES = `cube-pages-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 4000;
@@ -74,10 +74,19 @@ async function networkFirst(event, request, key) {
   return network;
 }
 
+/**
+ * A worker's own address comes from the response it was loaded from, and a saved response carries
+ * the address it was saved under — without the "#params=…" the app's worker script needs to start.
+ * A freshly built response has no address of its own, so the worker keeps the one it asked for.
+ */
+async function synthetic(res) {
+  return new Response(await res.blob(), { status: res.status, headers: res.headers });
+}
+
 async function staticFirst(request) {
   const cache = await caches.open(STATIC);
   const hit = await cache.match(request);
-  if (hit) return hit;
+  if (hit) return request.destination === "worker" ? synthetic(hit) : hit;
   const res = await fetch(request);
   if (isCacheable(res)) {
     cache.put(request, res.clone());

@@ -169,7 +169,7 @@ const CHUNK_ROWS = 40;
 /** Re-send a little before the last push, so a clock that's slightly off never skips a change. */
 const PUSH_SLACK_MS = 60_000;
 
-function chunkBySize<T>(rows: T[]): T[][] {
+export function chunkBySize<T>(rows: T[]): T[][] {
   const chunks: T[][] = [];
   let current: T[] = [];
   let bytes = 0;
