@@ -125,6 +125,19 @@ export function initCloudSync(): void {
     if (useAuthStore.getState().user) void useCloudSyncStore.getState().syncNow();
   });
 
+  // The "online" event can be missed (a phone coming out of a tunnel, a tab asleep through it), and
+  // the automatic retries above stop after a few attempts. Coming back to the app, or just waiting
+  // a minute, tries again whenever the last sync didn't finish.
+  const retryIfStuck = () => {
+    if (!useAuthStore.getState().user || typeof navigator === "undefined" || !navigator.onLine) return;
+    const { status } = useCloudSyncStore.getState();
+    if (status === "error") void useCloudSyncStore.getState().syncNow();
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") retryIfStuck();
+  });
+  window.setInterval(retryIfStuck, 60_000);
+
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   useSessionStore.subscribe((state, prev) => {
     if (state.allSolves === prev.allSolves && state.sessions === prev.sessions) return;

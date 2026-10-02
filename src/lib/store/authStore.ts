@@ -15,13 +15,37 @@ interface AuthState {
   signOut: () => Promise<void>;
 }
 
+/**
+ * The account saved in this browser by the last sign-in. With no connection, Supabase can't
+ * renew an expired login and reports "no session" — which would make an offline app look signed
+ * out (and hide the sync status). The saved login stays valid on the server; it's renewed
+ * automatically once the connection is back, so until then the saved account stands in for it.
+ */
+function rememberedUser(): User | null {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !/^sb-.+-auth-token$/.test(key)) continue;
+      const parsed = JSON.parse(localStorage.getItem(key) ?? "null") as { user?: User } | null;
+      if (parsed?.user?.id) return parsed.user;
+    }
+  } catch {
+    // Unreadable storage: no remembered account.
+  }
+  return null;
+}
+
+const isOffline = () => typeof navigator !== "undefined" && !navigator.onLine;
+
 export const useAuthStore = create<AuthState>((set) => {
   const supabase = getSupabaseClient();
 
   if (supabase) {
-    void supabase.auth.getSession().then(({ data }) => set({ user: data.session?.user ?? null, ready: true }));
-    supabase.auth.onAuthStateChange((_event, session) => {
-      set({ user: session?.user ?? null, ready: true });
+    void supabase.auth.getSession().then(({ data }) => set({ user: data.session?.user ?? (isOffline() ? rememberedUser() : null), ready: true }));
+    supabase.auth.onAuthStateChange((event, session) => {
+      // A missing session while offline is "couldn't renew", not "signed out" — only an explicit sign-out clears the account.
+      const user = session?.user ?? (event !== "SIGNED_OUT" && isOffline() ? rememberedUser() : null);
+      set({ user, ready: true });
     });
   }
 

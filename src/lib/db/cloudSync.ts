@@ -189,6 +189,12 @@ function chunkBySize<T>(rows: T[]): T[][] {
 
 const pushedAtKey = (userId: string) => `cube-timer-cloud-pushed-at:${userId}`;
 
+/** How many solves haven't been sent to the cloud yet (new or edited since the last complete push). */
+export function countUnpushed(userId: string, solves: readonly Solve[]): number {
+  const since = readPushedAt(userId) - PUSH_SLACK_MS;
+  return solves.reduce((n, s) => ((s.updatedAt ?? s.date) > since ? n + 1 : n), 0);
+}
+
 function readPushedAt(userId: string): number {
   try {
     const n = Number(window.localStorage.getItem(pushedAtKey(userId)));

@@ -5,6 +5,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { initCloudSync } from "@/lib/store/cloudSyncStore";
+import { initOffline } from "@/lib/store/offlineStore";
 import { useAlgLearner } from "@/components/algorithms/useAlgLearner";
 
 export function AppBootstrap() {
@@ -20,13 +21,7 @@ export function AppBootstrap() {
   }, [initSessions, initScramble]);
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
-        // Offline support is a nice-to-have, not a hard requirement — a
-        // failed registration (unsupported browser, blocked by settings)
-        // should never break the app.
-      });
-    }
+    initOffline();
   }, []);
 
   // Every deploy renames the JS chunks (hashed filenames). A tab that's been

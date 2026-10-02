@@ -26,6 +26,7 @@ import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
 import { BottomNav, type TabId } from "@/components/nav/BottomNav";
 import { AppBackground } from "@/components/chrome/AppBackground";
+import { ConnectionPill } from "@/components/chrome/ConnectionPill";
 import { OnlinePresenceBadge } from "@/components/chrome/OnlinePresenceBadge";
 import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
@@ -189,6 +190,7 @@ function HomeInner() {
           </div>
 
           <div className="flex items-center gap-2">
+            <ConnectionPill />
             <OnlinePresenceBadge />
             <button
               type="button"
