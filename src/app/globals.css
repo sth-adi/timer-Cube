@@ -1670,3 +1670,25 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* --- Touch screens: no accidental text selection ---
+   Pressing and holding is how the timer starts, and a thumb that lands on any text (the scramble,
+   a hint, a card) would otherwise open the browser's selection handles and callout instead — the
+   hold never reaches the timer. Applied to the whole app on touch devices rather than patched
+   panel by panel; text fields stay editable and selectable, and the scramble has a Copy button. */
+@media (pointer: coarse) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input,
+  textarea,
+  [contenteditable="true"],
+  [contenteditable=""] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}
