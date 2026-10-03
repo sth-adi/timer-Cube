@@ -17,13 +17,13 @@ import { SolveTrendChart } from "./SolveTrendChart";
 function Stat({ label, value, note, onClick }: { label: string; value: string; note?: string; onClick?: () => void }) {
   const body = (
     <>
-      <span className="flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-2 group-hover:text-accent">
+      <span className="flex items-center gap-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-2 group-hover:text-accent">
         {label}
         {onClick && <ArrowUpRight size={10} className="opacity-0 transition-opacity group-hover:opacity-100" />}
       </span>
       <span className="flex flex-wrap items-baseline gap-x-1">
         <span className="tabular-timer text-base font-semibold text-foreground group-hover:text-accent">{value}</span>
-        {note && <span className="text-[10px] font-normal text-muted-2">{note}</span>}
+        {note && <span className="text-[11px] font-normal text-muted-2">{note}</span>}
       </span>
     </>
   );
@@ -133,7 +133,7 @@ export function StatsPanel() {
             onClick={() => setScope(opt.id)}
             aria-pressed={scope === opt.id}
             className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+              "hit-y rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
               scope === opt.id ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >
@@ -148,7 +148,7 @@ export function StatsPanel() {
             onClick={() => setSelected(null)}
             aria-pressed={selected === null}
             className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+              "hit-y rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
               selected === null ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >
@@ -163,7 +163,7 @@ export function StatsPanel() {
                 onClick={() => setSelected(tag)}
                 aria-pressed={selected === tag}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  "hit-y rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
                   selected === tag ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >
@@ -176,7 +176,7 @@ export function StatsPanel() {
 
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-2">Current ao5</p>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-2">Current ao5</p>
           <p className="tabular-timer bg-gradient-to-b from-foreground to-accent bg-clip-text text-4xl font-bold leading-none text-transparent">
             {fmt(stats.ao5)}
           </p>

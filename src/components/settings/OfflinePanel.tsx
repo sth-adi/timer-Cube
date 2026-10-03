@@ -42,7 +42,7 @@ export function OfflinePanel() {
         type="button"
         onClick={() => warmNow()}
         disabled={!available || warming || !online}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110 disabled:opacity-50"
+        className="flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110 disabled:opacity-50"
         data-testid="offline-save"
       >
         {warming ? <Loader2 size={13} className="animate-spin" /> : <CloudDownload size={13} />} Save for offline now

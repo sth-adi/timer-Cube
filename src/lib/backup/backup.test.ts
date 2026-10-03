@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Solve } from "@/types";
-import { mergeStates } from "@/lib/db/merge";
-import { BACKUP_APP, NUDGE_MIN_SOLVES, backupNudge, backupSummary, buildBackup, collectStorage, isBackupKey, parseBackup } from "./backup";
+import { mergeStates, planMerge } from "@/lib/db/merge";
+import { BACKUP_APP, NUDGE_MIN_SOLVES, backupNudge, backupSummary, buildBackup, collectStorage, decodeBackupBytes, encodeBackup, isBackupKey, isGzip, parseBackup, serializeBackup } from "./backup";
 
 const solve = (id: string, over: Partial<Solve> = {}): Solve => ({ id, sessionId: "s1", timeMs: 12000, penalty: "none", scramble: "R U", date: 1000, updatedAt: 1000, ...over });
 const session = { id: "s1", name: "Session 1", event: "333" as const, createdAt: 1, order: 0, updatedAt: 1 };
@@ -75,6 +75,66 @@ describe("restoring is a merge", () => {
     const ids = merged.solves.map((s) => s.id).sort();
     expect(ids).toEqual(["a", "b", "c"]);
     expect(merged.solves.find((s) => s.id === "b")?.penalty).toBe("dnf");
+  });
+
+  it("restoring the same backup twice adds nothing the second time", () => {
+    const backup = { sessions: [session], solves: [solve("a"), solve("b"), solve("c")], deletions: [] };
+    const empty = { sessions: [], solves: [], deletions: [] };
+    expect(planMerge(empty, backup).added.solves).toBe(3);
+    const after = mergeStates(empty, backup);
+    const again = planMerge(after, JSON.parse(serializeBackup(buildBackup(backup, {}, 1))).sync);
+    expect(again.added.solves).toBe(0);
+    expect(again.putSolves).toHaveLength(0);
+  });
+});
+
+describe("backup file encoding", () => {
+  const gyroSolve = solve("g", {
+    moveTimestamps: [100, 200, 300],
+    rotations: [{ atMs: 120, token: "y" }],
+    gyroStream: { atMs: [0, 50, 100], qx: [0, 0.12345678, 0.2], qy: [0, 0, 0.05], qz: [0, -0.1, 0], qw: [1, 0.99, 0.97] },
+  });
+  const file = buildBackup({ sessions: [session], solves: [solve("a"), gyroSolve], deletions: [{ id: "x", kind: "solve", deletedAt: 9 }] }, { "cube-timer-settings": '{"a":1}' }, 5);
+  const restore = async (bytes: Uint8Array<ArrayBuffer>) => parseBackup(JSON.parse(await decodeBackupBytes(bytes))).file;
+
+  it("writes compact JSON — no indentation", () => {
+    const text = serializeBackup(file);
+    expect(text).not.toMatch(/\n/);
+    expect(text.length).toBeLessThan(JSON.stringify(file, null, 2).length * 0.75);
+  });
+
+  it("round-trips plain JSON exactly", async () => {
+    const { bytes, gzip } = await encodeBackup(file);
+    expect(gzip).toBe(false);
+    expect(isGzip(bytes)).toBe(false);
+    expect(await restore(bytes)).toEqual(file);
+  });
+
+  it("round-trips gzip, detected by its magic bytes", async () => {
+    const { bytes, gzip } = await encodeBackup(file, { gzip: true });
+    expect(gzip).toBe(true);
+    expect(isGzip(bytes)).toBe(true);
+    expect(await restore(bytes)).toEqual(file);
+  });
+
+  it("still reads the pretty-printed backups older versions wrote", async () => {
+    const old = new TextEncoder().encode(JSON.stringify(file, null, 2));
+    expect(await restore(old)).toEqual(file);
+  });
+
+  it("gzip makes a long smart-cube history much smaller", async () => {
+    const n = 400;
+    const stream = { atMs: Array.from({ length: n }, (_, i) => i * 50), qx: Array.from({ length: n }, (_, i) => Math.sin(i / 7)), qy: Array.from({ length: n }, (_, i) => Math.cos(i / 9)), qz: Array.from({ length: n }, () => 0.01), qw: Array.from({ length: n }, () => 0.99) };
+    const big = buildBackup({ sessions: [session], solves: Array.from({ length: 50 }, (_, i) => solve(`s${i}`, { gyroStream: stream })), deletions: [] }, {}, 1);
+    const plain = (await encodeBackup(big)).bytes.length;
+    const packed = await encodeBackup(big, { gzip: true });
+    expect(packed.bytes.length).toBeLessThan(plain / 3);
+    expect(await restore(packed.bytes)).toEqual(big);
+  });
+
+  it("says so when a gzip file is damaged", async () => {
+    const { bytes } = await encodeBackup(file, { gzip: true });
+    await expect(decodeBackupBytes(bytes.slice(0, 20))).rejects.toThrow(/damaged/);
   });
 });
 

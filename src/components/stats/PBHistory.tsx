@@ -33,7 +33,7 @@ export function PBHistory({ solves }: { solves: Solve[] }) {
             {i === 0 && <Trophy size={8} />}
           </span>
           <span className={cn("tabular-timer font-semibold", i === 0 ? "text-lg text-foreground" : "text-sm text-muted")}>{formatTime(pb.ms)}</span>
-          {pb.beat !== null && <span className="rounded-full bg-success/10 px-1.5 py-px text-[10px] font-medium tabular-nums text-success">−{(pb.beat / 1000).toFixed(2)}</span>}
+          {pb.beat !== null && <span className="rounded-full bg-success/10 px-1.5 py-px text-[11px] font-medium tabular-nums text-success">−{(pb.beat / 1000).toFixed(2)}</span>}
           <span className="ml-auto text-[11px] text-muted-2">
             #{pb.solveIndex} · {new Date(pb.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
           </span>

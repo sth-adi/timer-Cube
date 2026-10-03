@@ -81,13 +81,13 @@ export function TriggerHeatmapCard() {
         <div className="inline-grid gap-px" style={{ gridTemplateColumns: `28px repeat(${FACE_TURNS.length}, 14px)` }}>
           <div />
           {FACE_TURNS.map((col) => (
-            <div key={col} className="flex h-5 items-end justify-center font-mono text-[8px] text-muted-2">
+            <div key={col} className="flex h-5 items-end justify-center font-mono text-[10px] text-muted-2">
               {col}
             </div>
           ))}
           {FACE_TURNS.map((row) => (
             <div key={row} className="contents">
-              <div className="flex h-3.5 items-center font-mono text-[8px] text-muted-2">{row}</div>
+              <div className="flex h-3.5 items-center font-mono text-[10px] text-muted-2">{row}</div>
               {FACE_TURNS.map((col) => {
                 const pair = `${row} ${col}`;
                 const stat = byPair.get(pair);
@@ -108,7 +108,7 @@ export function TriggerHeatmapCard() {
 
       <div className="mt-3 grid grid-cols-1 gap-3 border-t border-border pt-2.5 sm:grid-cols-2">
         <div>
-          <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-danger">
+          <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-danger">
             <Flame size={10} /> Weakest triggers
           </p>
           <div className="space-y-1">
@@ -118,7 +118,7 @@ export function TriggerHeatmapCard() {
           </div>
         </div>
         <div>
-          <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-success">
+          <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-success">
             <Zap size={10} /> Fastest triggers
           </p>
           <div className="space-y-1">

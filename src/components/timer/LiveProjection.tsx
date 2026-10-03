@@ -4,9 +4,9 @@ import { useMemo } from "react";
 import { TrendingDown } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
-import { liveMilestones, milestoneTimes } from "@/lib/pacer/pacer";
-import { buildProjectionModel, projectAtTime, projectLive, projectPreSolve, type Projection } from "@/lib/analysis/liveProjection";
-import { predictSolveTime } from "@/lib/analysis/prediction";
+import { liveMilestones } from "@/lib/pacer/pacer";
+import { buildProjectionModel, projectAtTime, projectLive, projectPreSolve, solveMilestoneTimes, type Projection } from "@/lib/analysis/liveProjection";
+import { useSolvePrediction } from "@/lib/prediction/useSolvePrediction";
 import { normalSolves, solvesForEvent } from "@/lib/stats/stats";
 import { solveFinalMs, type EventTag } from "@/types";
 import { formatTime } from "@/lib/utils/time";
@@ -51,9 +51,8 @@ export function LiveProjection({
     const latest = eventSolves.reduce<(typeof eventSolves)[number] | null>((a, s) => (!a || s.date > a.date ? s : a), null);
     const pool = excludeMs !== null && latest?.timeMs === excludeMs ? eventSolves.filter((s) => s !== latest) : eventSolves;
     const smart = pool.filter((s) => s.scramble && s.reconstruction && s.moveTimestamps?.length && s.penalty !== "dnf");
-    const history = smart.map((s) =>
-      milestoneTimes({ scramble: s.scramble, moves: s.reconstruction!.split(/\s+/).filter(Boolean), timesMs: s.moveTimestamps! }),
-    );
+    // Replaying every smart solve is ~1ms each; solveMilestoneTimes caches per solve, so a new solve replays only itself.
+    const history = smart.map(solveMilestoneTimes);
     const finals = pool.map(solveFinalMs).filter((x): x is number => x !== null);
     return buildProjectionModel(history, finals.length ? Math.min(...finals) : null);
   }, [eventSolves, excludeMs]);
@@ -62,7 +61,8 @@ export function LiveProjection({
   // a signal — the same pre-solve regression the scramble bar shows (see
   // prediction.ts) — so the projection has something to say from the very
   // start of the solve instead of sitting silent until the first milestone.
-  const preSolvePrediction = useMemo(() => (scramble ? predictSolveTime(eventSolves, scramble) : null), [eventSolves, scramble]);
+  // Trained in the prediction worker and cached by history, so this never blocks a frame.
+  const preSolvePrediction = useSolvePrediction(eventSolves, scramble ?? "");
   const preSolveCall = useMemo(() => projectPreSolve(model, preSolvePrediction), [model, preSolvePrediction]);
 
   // Every call the projection has made so far this solve, one per milestone reached.

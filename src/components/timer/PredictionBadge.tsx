@@ -5,7 +5,7 @@ import { Sparkles } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { normalSolves, solvesForEvent } from "@/lib/stats/stats";
-import { predictSolveTime } from "@/lib/analysis/prediction";
+import { useSolvePrediction } from "@/lib/prediction/useSolvePrediction";
 import { formatTime } from "@/lib/utils/time";
 
 /**
@@ -25,10 +25,12 @@ export function PredictionBadge() {
   const rawSolves = useSessionStore((s) => s.solves);
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
 
-  const prediction = useMemo(() => {
-    const trainingSolves = pendingEvent === null ? normalSolves(rawSolves) : solvesForEvent(rawSolves, pendingEvent);
-    return predictSolveTime(trainingSolves, scramble);
-  }, [rawSolves, scramble, pendingEvent]);
+  const trainingSolves = useMemo(
+    () => (pendingEvent === null ? normalSolves(rawSolves) : solvesForEvent(rawSolves, pendingEvent)),
+    [rawSolves, pendingEvent],
+  );
+  // Trained off the main thread and cached by history; shows the last result until a new one lands.
+  const prediction = useSolvePrediction(trainingSolves, scramble);
 
   // Only shown once the model has beaten "your recent average" on your own
   // later solves — otherwise the number says nothing about this scramble.

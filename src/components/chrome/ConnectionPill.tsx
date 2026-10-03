@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { CloudAlert, CloudCheck, CloudUpload, WifiOff } from "lucide-react";
+import { CloudAlert, CloudCheck, CloudOff, CloudUpload, WifiOff } from "lucide-react";
 import { useOfflineStore } from "@/lib/store/offlineStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
@@ -26,14 +26,17 @@ export function ConnectionPill() {
   const lastSyncedAt = useCloudSyncStore((s) => s.lastSyncedAt);
   const syncError = useCloudSyncStore((s) => s.error);
   const syncNow = useCloudSyncStore((s) => s.syncNow);
+  // This device holds another account's solves: nothing is waiting to sync to this one until the user chooses.
+  const paused = useCloudSyncStore((s) => s.ownerConflict !== null);
+  const openOwnerPrompt = useCloudSyncStore((s) => s.openOwnerPrompt);
   const now = useNow();
   const solves = useSessionStore((s) => s.allSolves);
   // Re-count whenever the connection flips or a sync ends, not only when solves change.
   const pending = useMemo(() => {
     void online;
     void status;
-    return userId ? countUnpushed(userId, solves) : 0;
-  }, [userId, solves, online, status]);
+    return userId && !paused ? countUnpushed(userId, solves) : 0;
+  }, [userId, solves, online, status, paused]);
   // Unsent changes older than the threshold. Only changes made after the last finished sync count,
   // because countUnpushed's slack window also covers a few solves that did go up in that sync.
   const stalePending = useMemo(() => {
@@ -89,6 +92,20 @@ export function ConnectionPill() {
       <span>{label}</span>
     </button>
   );
+  if (paused) {
+    return (
+      <button
+        type="button"
+        onClick={openOwnerPrompt}
+        className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
+        title="This device has solves from another account, so sync is paused. Tap to choose what to do with them."
+        aria-label="Sync paused. This device has solves from another account; tap to choose what to do with them."
+      >
+        <CloudOff size={12} className="shrink-0" />
+        <span>Sync paused</span>
+      </button>
+    );
+  }
   if (status === "error") {
     return retry("Sync failed · Retry", syncError ?? "Sync failed. Tap to retry.");
   }

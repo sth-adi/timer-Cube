@@ -449,6 +449,9 @@ export function SmartCubeTimer() {
     faceletsUnreliable,
     correctedDuringSolve,
     hardwareInfo,
+    reconnect,
+    reconnectNotice,
+    dismissReconnectNotice,
   } = useSmartCubeStore();
   const storeScramble = useScrambleStore((s) => s.scramble);
   const loadExternalScramble = useScrambleStore((s) => s.loadExternalScramble);
@@ -498,7 +501,8 @@ export function SmartCubeTimer() {
   });
   // Step-by-step scramble guidance, with live undo instructions for wrong turns.
   useScrambleGuide(scramble, connected && !armed && !recording && flow.phase === "scrambling");
-  useWakeLock(connected && keepAwake);
+  // Kept on while the cube is being reconnected too: a phone that sleeps mid-retry drops the page into the background, which ends the retrying.
+  useWakeLock((connected || reconnect !== null) && keepAwake);
   useScrambleVoice(voiceScramble && connected && !armed && !recording && flow.phase === "scrambling" && !freestyle);
   const guideUndoCount = useScrambleGuideStore((s) => s.view?.undo.length ?? 0);
   const [adopting, setAdopting] = useState(false);
@@ -1143,15 +1147,19 @@ export function SmartCubeTimer() {
         <div className={cn("flex h-14 w-14 items-center justify-center rounded-full", droppedMidSolve ? "bg-danger/15" : "bg-accent-soft")}>
           {droppedMidSolve ? <BluetoothOff size={26} className="text-danger" /> : <Bluetooth size={26} className="text-accent" />}
         </div>
-        <h1 className="text-lg font-semibold text-foreground">{droppedMidSolve ? "Your smart cube disconnected" : "Connect your smart cube"}</h1>
+        <h1 className="text-lg font-semibold text-foreground">
+          {reconnect ? "Reconnecting your smart cube…" : droppedMidSolve ? "Your smart cube disconnected" : "Connect your smart cube"}
+        </h1>
         <p className="max-w-xs text-sm text-muted">
           {droppedMidSolve
-            ? `The Bluetooth link dropped${droppedMidSolveMoves ? ` ${droppedMidSolveMoves} move${droppedMidSolveMoves === 1 ? "" : "s"} into your solve` : ""} — not a step you missed, the connection itself. Reconnect and start the scramble again.`
-            : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case names and all."}
+            ? `The Bluetooth link dropped${droppedMidSolveMoves ? ` ${droppedMidSolveMoves} move${droppedMidSolveMoves === 1 ? "" : "s"} into your solve` : ""} — not a step you missed, the connection itself. ${reconnect ? "That solve can't be saved; once the cube is back, start the scramble again." : "Reconnect and start the scramble again."}`
+            : reconnect
+              ? "The Bluetooth link dropped — keep the cube close and awake (turn a face) and it'll be picked straight back up."
+              : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case names and all."}
         </p>
         <ConnectControls label={droppedMidSolve ? "Reconnect smart cube" : "Connect smart cube"} />
         {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
-        {!droppedMidSolve && (
+        {!droppedMidSolve && !reconnect && (
           <p className="max-w-xs text-[11px] text-muted-2">
             Connect it in any state: GAN, Giiker, GoCube, QiYi and MoYu&apos;s AI cubes report where every piece is. (A
             MoYu MHC can&apos;t — connect that one solved.) Then just scramble: matching the target scramble starts
@@ -1222,6 +1230,16 @@ export function SmartCubeTimer() {
       {batterySupported && batteryLevel !== null && batteryLevel <= 12 && (
         <p className="flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-medium text-danger">
           <BatteryWarning size={12} /> Cube battery at {batteryLevel}% — a dying battery is a common cause of a mid-solve Bluetooth drop
+        </p>
+      )}
+
+      {reconnectNotice && (
+        <p className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning" role="status" data-testid="reconnect-notice">
+          <BluetoothConnected size={12} /> Reconnected — the solve the drop interrupted
+          {reconnectNotice.lostMoves ? ` (${reconnectNotice.lostMoves} move${reconnectNotice.lostMoves === 1 ? "" : "s"} in)` : ""} wasn&apos;t saved. Scramble again.
+          <button type="button" onClick={dismissReconnectNotice} aria-label="Dismiss" className="ml-0.5 rounded-full hover:text-foreground">
+            <X size={11} />
+          </button>
         </p>
       )}
 

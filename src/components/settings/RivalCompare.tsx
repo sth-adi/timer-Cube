@@ -16,7 +16,7 @@ function Row({ label, you, rival }: { label: string; you: number | null; rival: 
       <span className={cn("tabular-timer text-right", youWins && "font-semibold text-success")}>
         {you !== null ? formatTime(you) : "—"}
       </span>
-      <span className="text-center text-[10px] uppercase tracking-wide text-muted-2">{label}</span>
+      <span className="text-center text-[11px] uppercase tracking-wide text-muted-2">{label}</span>
       <span className={cn("tabular-timer text-left", rivalWins && "font-semibold text-success")}>
         {rival !== null ? formatTime(rival) : "—"}
       </span>
@@ -63,12 +63,12 @@ export function RivalCompare() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Their username"
-          className="min-w-0 flex-1 rounded-lg bg-bg-panel-2 px-2.5 py-2 text-xs outline-none focus:ring-1 focus:ring-accent"
+          className="min-h-10 min-w-0 flex-1 rounded-lg bg-bg-panel-2 px-2.5 py-2 text-[16px] outline-none focus:ring-1 focus:ring-accent sm:text-xs"
         />
         <button
           type="submit"
           disabled={!username.trim() || busy}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110 disabled:opacity-40"
+          className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110 disabled:opacity-40"
         >
           {busy && <Loader2 size={13} className="animate-spin" />}
           Compare
@@ -89,7 +89,7 @@ export function RivalCompare() {
           <Row label="ao12" you={yours.bestAo12} rival={result.bestAo12Ms} />
           <div className="grid grid-cols-3 items-center gap-1 pt-1 text-xs">
             <span className="tabular-nums text-right">{yours.count}</span>
-            <span className="text-center text-[10px] uppercase tracking-wide text-muted-2">Solves</span>
+            <span className="text-center text-[11px] uppercase tracking-wide text-muted-2">Solves</span>
             <span className="tabular-nums text-left">{result.totalSolves}</span>
           </div>
         </div>

@@ -103,6 +103,52 @@ export function backupSummary(file: BackupFile): { solves: number; sessions: num
   return { solves: file.sync.solves.length, sessions: file.sync.sessions.length, settings: Object.keys(file.storage).length };
 }
 
+// --- file encoding ----------------------------------------------------------
+
+/**
+ * A backup on disk is the JSON written compact (no indentation — a smart-cube
+ * history is mostly number arrays, and pretty-printing them one per line made
+ * files several times larger), optionally gzipped. Restore takes either, and
+ * still reads the pretty-printed files older versions wrote: whitespace is
+ * just JSON.
+ */
+export function serializeBackup(file: BackupFile): string {
+  return JSON.stringify(file);
+}
+
+/** Whether this browser can write a gzipped backup (CompressionStream: every current browser, but not some older Safari). */
+export function canGzip(): boolean {
+  return typeof CompressionStream !== "undefined" && typeof DecompressionStream !== "undefined";
+}
+
+async function pipeBytes(data: BufferSource, stream: CompressionStream | DecompressionStream): Promise<Uint8Array<ArrayBuffer>> {
+  const out = new Blob([data]).stream().pipeThrough(stream);
+  return new Uint8Array(await new Response(out).arrayBuffer());
+}
+
+/** The backup as a file's bytes: plain JSON, or gzip of it when asked (and the browser can). */
+export async function encodeBackup(file: BackupFile, opts: { gzip?: boolean } = {}): Promise<{ bytes: Uint8Array<ArrayBuffer>; gzip: boolean }> {
+  const json = new TextEncoder().encode(serializeBackup(file));
+  if (!opts.gzip || !canGzip()) return { bytes: json, gzip: false };
+  return { bytes: await pipeBytes(json, new CompressionStream("gzip")), gzip: true };
+}
+
+/** A gzip stream starts 1f 8b, whatever the file happens to be called. */
+export function isGzip(bytes: Uint8Array): boolean {
+  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+}
+
+/** A backup file's text, un-gzipping it first when its bytes say it's gzip. Throws with a message fit to show. */
+export async function decodeBackupBytes(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+  if (!isGzip(bytes)) return new TextDecoder().decode(bytes);
+  if (typeof DecompressionStream === "undefined") throw new Error("This browser can't open compressed backups — try a current Chrome, Firefox or Safari.");
+  try {
+    return new TextDecoder().decode(await pipeBytes(bytes, new DecompressionStream("gzip")));
+  } catch {
+    throw new Error("That compressed backup is damaged.");
+  }
+}
+
 // --- reminders ------------------------------------------------------------
 
 export interface BackupMeta {

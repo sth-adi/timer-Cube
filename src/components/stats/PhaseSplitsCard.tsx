@@ -113,7 +113,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
         ))}
       </div>
 
-      <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-2">
+      <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-2">
         <span className="flex-1">Step</span>
         <span className="w-12 text-right">Mean</span>
         <span className="w-12 text-right">ao12</span>
@@ -147,7 +147,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
                 <Sparkline values={st.trend} />
               </div>
               {i > 0 && st.meanMs > 0 && (
-                <div className="ml-4 mt-1 flex items-center gap-2 text-[10px] text-muted-2">
+                <div className="ml-4 mt-1 flex items-center gap-2 text-[11px] text-muted-2">
                   <span className="flex h-1 w-20 shrink-0 overflow-hidden rounded-full bg-bg-panel-2" aria-hidden>
                     <span className="bg-warning/70" style={{ width: `${look * 100}%` }} />
                     <span className="bg-foreground/30" style={{ width: `${(1 - look) * 100}%` }} />

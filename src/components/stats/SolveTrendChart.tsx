@@ -99,7 +99,7 @@ export function SolveTrendChart({ solves }: { solves: Solve[] }) {
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-2">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 text-[11px] text-muted-2">
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-2/70" /> solve
@@ -125,7 +125,7 @@ export function SolveTrendChart({ solves }: { solves: Solve[] }) {
                 }}
                 aria-pressed={windowSize === w}
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors",
+                  "hit-y rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors",
                   windowSize === w ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-foreground",
                 )}
               >

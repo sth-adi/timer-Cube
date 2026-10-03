@@ -1,4 +1,5 @@
-import { MILESTONES } from "@/lib/pacer/pacer";
+import { MILESTONES, milestoneTimes } from "@/lib/pacer/pacer";
+import type { Solve } from "@/types";
 import type { SolvePrediction } from "./prediction";
 
 /**
@@ -27,6 +28,25 @@ export interface ProjectionModel {
   milestones: (MilestoneModel | null)[];
   pbMs: number | null;
   meanMs: number | null;
+}
+
+/**
+ * Milestone times are a pure function of a solve's scramble, moves and move
+ * timestamps, but working them out replays the whole solve (~1ms each), and
+ * the projection model is rebuilt from every smart solve whenever the
+ * session changes. Cached per saved solve — solves are immutable in the
+ * store, and the inputs are re-checked anyway — so a new solve only
+ * replays itself.
+ */
+const milestoneCache = new WeakMap<Solve, { scramble: string; reconstruction: string; timesMs: readonly number[]; result: (number | null)[] }>();
+
+/** milestoneTimes for a saved smart-cube solve (needs scramble, reconstruction and moveTimestamps). */
+export function solveMilestoneTimes(solve: Solve): (number | null)[] {
+  const hit = milestoneCache.get(solve);
+  if (hit && hit.scramble === solve.scramble && hit.reconstruction === solve.reconstruction && hit.timesMs === solve.moveTimestamps) return hit.result;
+  const result = milestoneTimes({ scramble: solve.scramble, moves: solve.reconstruction!.split(/\s+/).filter(Boolean), timesMs: solve.moveTimestamps! });
+  milestoneCache.set(solve, { scramble: solve.scramble, reconstruction: solve.reconstruction!, timesMs: solve.moveTimestamps!, result });
+  return result;
 }
 
 export const MIN_PROJECTION_SOLVES = 5;

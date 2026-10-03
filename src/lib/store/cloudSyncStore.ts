@@ -3,12 +3,36 @@
 import { create } from "zustand";
 import { useAuthStore } from "./authStore";
 import { useSessionStore } from "./sessionStore";
-import { pushPublicStats, syncWithCloud, SyncTimeoutError } from "@/lib/db/cloudSync";
+import {
+  checkDataOwnership,
+  claimLocalData,
+  keepLocalDataOffAccount,
+  pushPublicStats,
+  syncWithCloud,
+  SyncTimeoutError,
+} from "@/lib/db/cloudSync";
 import { displayUsername } from "@/lib/auth/username";
 import { suggestSession, type SessionSuggestion } from "@/lib/db/sessionSuggestion";
 
-/** "offline" is not a failure: nothing was attempted, and reconnecting syncs again. "error" is a sync that was tried and failed. */
-export type CloudSyncStatus = "idle" | "syncing" | "synced" | "offline" | "error";
+/**
+ * "offline" is not a failure: nothing was attempted, and reconnecting syncs again. "error" is a sync that was tried and failed.
+ * "paused": this device holds another account's solves, so nothing syncs until the user says what to do with them (ownerConflict).
+ */
+export type CloudSyncStatus = "idle" | "syncing" | "synced" | "offline" | "error" | "paused";
+
+/** The signed-in account and the account this device's solves belong to differ. */
+export interface OwnerConflict {
+  /** The signed-in account. */
+  userId: string;
+  userName: string;
+  /** The account the solves on this device belong to. */
+  ownerId: string;
+  /** Null for data saved before usernames were recorded. */
+  ownerName: string | null;
+  solveCount: number;
+  /** They already chose to keep the solves on this device without syncing; not asked again unless they reopen it. */
+  keptLocal: boolean;
+}
 
 interface CloudSyncState {
   /** Set after a sync when this device's open session is small but another holds the account's history. */
@@ -18,6 +42,18 @@ interface CloudSyncState {
   lastSyncedAt: number | null;
   error: string | null;
   syncNow: () => Promise<void>;
+  ownerConflict: OwnerConflict | null;
+  /** Whether the "solves from another account" prompt is showing. */
+  ownerPromptOpen: boolean;
+  openOwnerPrompt: () => void;
+  /** Closes the prompt without choosing: sync stays paused for now and it's asked again next sign-in or reload. */
+  dismissOwnerPrompt: () => void;
+  /** Uploads this device's solves to the signed-in account (they stay in the other account too). */
+  addLocalDataToAccount: () => Promise<void>;
+  /** Stays signed in, but this device doesn't sync for this account. */
+  keepLocalDataOnDevice: () => void;
+  /** Signs out again; the device's solves are left as they were. */
+  cancelSignIn: () => Promise<void>;
 }
 
 /**
@@ -83,12 +119,41 @@ let lastFinishedAt = 0;
 /** Automatic (change-triggered) syncs keep at least this much distance, however often the store changes. */
 const AUTO_SYNC_MIN_GAP_MS = 15_000;
 
-export const useCloudSyncStore = create<CloudSyncState>((set) => ({
+export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
   suggestion: null,
   dismissSuggestion: () => set({ suggestion: null }),
   status: "idle",
   lastSyncedAt: null,
   error: null,
+  ownerConflict: null,
+  ownerPromptOpen: false,
+
+  openOwnerPrompt: () => {
+    if (get().ownerConflict) set({ ownerPromptOpen: true });
+  },
+  dismissOwnerPrompt: () => set({ ownerPromptOpen: false }),
+
+  addLocalDataToAccount: async () => {
+    const user = useAuthStore.getState().user;
+    const conflict = get().ownerConflict;
+    if (!user || !conflict || conflict.userId !== user.id) return;
+    claimLocalData(user.id, displayUsername(user));
+    set({ ownerConflict: null, ownerPromptOpen: false, status: "idle" });
+    await get().syncNow();
+  },
+
+  keepLocalDataOnDevice: () => {
+    const user = useAuthStore.getState().user;
+    const conflict = get().ownerConflict;
+    if (!user || !conflict || conflict.userId !== user.id) return;
+    keepLocalDataOffAccount(user.id, conflict.ownerId);
+    set({ ownerConflict: { ...conflict, keptLocal: true }, ownerPromptOpen: false, status: "paused" });
+  },
+
+  cancelSignIn: async () => {
+    set({ ownerConflict: null, ownerPromptOpen: false, status: "idle" });
+    await useAuthStore.getState().signOut();
+  },
 
   syncNow: async () => {
     const user = useAuthStore.getState().user;
@@ -105,6 +170,31 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
     inFlight = true;
     set({ status: "syncing", error: null });
     try {
+      // Before anything is pulled or pushed: whose solves are these? Another account's are never
+      // uploaded (or mixed with this account's) without asking.
+      const ownership = await checkDataOwnership(user.id);
+      if (useAuthStore.getState().user?.id !== user.id) {
+        set({ status: "idle" });
+        return;
+      }
+      const { decision } = ownership;
+      if (decision.kind !== "sync") {
+        const conflict: OwnerConflict = {
+          userId: user.id,
+          userName: displayUsername(user),
+          ownerId: decision.ownerId,
+          ownerName: ownership.ownerName,
+          solveCount: ownership.localSolves,
+          keptLocal: decision.kind === "kept-local",
+        };
+        const prev = get().ownerConflict;
+        const same = prev !== null && prev.userId === conflict.userId && prev.ownerId === conflict.ownerId;
+        clearScheduledRetry();
+        set({ status: "paused", ownerConflict: conflict, ownerPromptOpen: same ? get().ownerPromptOpen : !conflict.keptLocal });
+        return;
+      }
+      claimLocalData(user.id, displayUsername(user));
+      if (get().ownerConflict) set({ ownerConflict: null, ownerPromptOpen: false });
       // Pull-then-push: merging the cloud's state in first means what gets
       // pushed is already the most recent version of everything.
       const result = await syncWithCloud(user.id);
@@ -163,8 +253,11 @@ export function initCloudSync(): void {
   wired = true;
 
   useAuthStore.subscribe((state, prev) => {
-    if (state.user && state.user.id !== prev.user?.id) void useCloudSyncStore.getState().syncNow();
-    if (!state.user && prev.user) clearScheduledRetry();
+    if (state.user?.id === prev.user?.id) return;
+    // A different account (or none): what was known about the last one's sync no longer applies.
+    clearScheduledRetry();
+    useCloudSyncStore.setState({ status: "idle", error: null, lastSyncedAt: null, suggestion: null, ownerConflict: null, ownerPromptOpen: false });
+    if (state.user) void useCloudSyncStore.getState().syncNow();
   });
 
   window.addEventListener("online", () => {

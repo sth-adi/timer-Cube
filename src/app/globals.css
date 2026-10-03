@@ -332,6 +332,38 @@ body {
   justify-content: center;
 }
 
+/* Touch hit area without a visual change: an invisible ::after centred on a
+   small control, grown to 44px (or the control's own size, if bigger), on
+   coarse pointers only. `.hit` grows both ways, `.hit-y` only vertically, for
+   controls sat side by side in a row where widening would cover a neighbour.
+   Leave enough room around the control that the area doesn't spill onto
+   another target. Not for elements that already use ::after (e.g. .card).
+   position: relative sits in the components layer so a utility like
+   `absolute` on the same element still wins. */
+@layer components {
+  .hit,
+  .hit-y {
+    position: relative;
+  }
+}
+@media (pointer: coarse) {
+  .hit::after,
+  .hit-y::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    min-width: 100%;
+    min-height: 100%;
+    transform: translate(-50%, -50%);
+  }
+  .hit-y::after {
+    width: 100%;
+  }
+}
+
 @keyframes fade-in-up {
   from {
     opacity: 0;

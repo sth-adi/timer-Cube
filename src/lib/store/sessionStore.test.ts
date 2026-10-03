@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Solve } from "@/types";
+import type { Session, Solve } from "@/types";
 
 /** The store against an in-memory stand-in for Dexie: what it reads back is what counts. */
 const rows: Solve[] = [];
-const calls = { getAll: 0, getSession: 0, failAdd: false };
+const calls = { getAll: 0, getSession: 0, failAdd: false, failRestore: false };
 let clock = 1_000;
+const s1: Session = { id: "s1", name: "Session 1", event: "333", createdAt: 0, order: 0, updatedAt: 0 };
+const sessionRows: Session[] = [s1];
+const settings = { statsScope: "session" as "session" | "all" };
 
 vi.mock("@/lib/db/db", () => ({ ensureDefaultSession: async () => ({ id: "s1", name: "Session 1", event: "333", createdAt: 0, order: 0, updatedAt: 0 }) }));
 vi.mock("@/lib/db/sessions", () => ({
-  listSessions: async () => [{ id: "s1", name: "Session 1", event: "333", createdAt: 0, order: 0, updatedAt: 0 }],
+  listSessions: async () => [...sessionRows],
   createSession: vi.fn(),
   renameSession: vi.fn(),
   deleteSession: vi.fn(),
@@ -33,6 +36,7 @@ vi.mock("@/lib/db/solves", () => ({
   },
   deleteSolve: async (id: string) => void rows.splice(rows.findIndex((r) => r.id === id), 1),
   restoreSolves: async (list: Solve[]) => {
+    if (calls.failRestore) throw new Error("QuotaExceededError");
     const back = list.map((s) => ({ ...s, updatedAt: ++clock }));
     rows.push(...back);
     return back;
@@ -42,6 +46,7 @@ vi.mock("@/lib/db/solves", () => ({
   importSolves: vi.fn(),
 }));
 vi.mock("@/lib/store/scrambleStore", () => ({ useScrambleStore: { getState: () => ({ setEvent: async () => {} }) } }));
+vi.mock("@/lib/store/settingsStore", () => ({ useSettingsStore: { getState: () => settings } }));
 vi.mock("@/lib/storage/persist", () => ({ requestPersistentStorage: vi.fn(async () => null) }));
 
 const { useSessionStore } = await import("./sessionStore");
@@ -55,9 +60,23 @@ beforeEach(async () => {
   calls.getAll = 0;
   calls.getSession = 0;
   calls.failAdd = false;
-  useSessionStore.setState({ saveError: null, lastPB: null, loaded: false });
+  calls.failRestore = false;
+  sessionRows.length = 0;
+  sessionRows.push(s1);
+  settings.statsScope = "session";
+  useSessionStore.setState({ saveError: null, lastPB: null, loaded: false, undoStack: [] });
   await store().init();
 });
+
+/** Records each time in turn, returning what lastPB was after each. */
+async function record(...times: number[]) {
+  const pbs = [];
+  for (const t of times) {
+    await store().recordSolve(t, "R U");
+    pbs.push(store().lastPB);
+  }
+  return pbs;
+}
 
 describe("sessionStore", () => {
   it("init loads the whole history once", async () => {
@@ -119,5 +138,109 @@ describe("sessionStore", () => {
     await store().undoRemove();
     expect(store().solves.map((s) => s.id)).toEqual(["a", "b"]);
     expect(store().allSolves.map((s) => s.id)).toEqual(["a", "b"]);
+  });
+
+  it("undo walks back through several deletions, newest first, each batch whole", async () => {
+    await record(13_000, 14_000, 15_000); // n2, n3, n4
+    await store().removeSolves(["a", "n3"]);
+    await store().removeSolve("b");
+    await store().removeSolve("n4");
+    expect(store().undoStack.map((b) => b.solves.map((s) => s.id))).toEqual([["a", "n3"], ["b"], ["n4"]]);
+    expect(store().solves.map((s) => s.id)).toEqual(["n2"]);
+
+    await store().undoRemove();
+    expect(store().solves.map((s) => s.id)).toEqual(["n2", "n4"]);
+    await store().undoRemove();
+    expect(store().solves.map((s) => s.id)).toEqual(["b", "n2", "n4"]);
+    await store().undoRemove();
+    expect(store().solves.map((s) => s.id)).toEqual(["a", "b", "n2", "n3", "n4"]);
+    expect(store().allSolves.map((s) => s.id)).toEqual(["a", "b", "n2", "n3", "n4"]);
+    expect(store().undoStack).toEqual([]);
+    expect(store().solves.find((s) => s.id === "n3")?.timeMs).toBe(14_000);
+    await store().undoRemove(); // nothing left: a no-op
+    expect(store().solves).toHaveLength(5);
+  });
+
+  it("two quick presses restore two different batches", async () => {
+    await store().removeSolve("a");
+    await store().removeSolve("b");
+    await Promise.all([store().undoRemove(), store().undoRemove()]);
+    expect(store().solves.map((s) => s.id)).toEqual(["a", "b"]);
+    expect(store().undoStack).toEqual([]);
+  });
+
+  it("undo keeps only the last UNDO_DEPTH deletions", async () => {
+    await record(...Array.from({ length: 10 }, (_, i) => 20_000 + i));
+    for (const s of [...store().solves]) await store().removeSolve(s.id);
+    const ids = store().undoStack.map((b) => b.solves[0].id);
+    expect(ids).toEqual(["n2", "n3", "n4", "n5", "n6", "n7", "n8", "n9", "n10", "n11"]);
+    for (let i = 0; i < 12; i++) await store().undoRemove();
+    expect(store().solves.map((s) => s.id)).toEqual(ids);
+  });
+
+  it("a failed undo keeps the batch to try again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await store().removeSolve("a");
+    await store().removeSolve("b");
+    calls.failRestore = true;
+    await store().undoRemove();
+    expect(store().saveError?.message).toBe("QuotaExceededError");
+    expect(store().undoStack.map((b) => b.solves[0].id)).toEqual(["a", "b"]);
+    calls.failRestore = false;
+    await store().undoRemove();
+    expect(store().solves.map((s) => s.id)).toEqual(["b"]);
+  });
+
+  it("dismissing forgets the whole undo history", async () => {
+    await store().removeSolve("a");
+    await store().removeSolve("b");
+    store().dismissUndo();
+    expect(store().undoStack).toEqual([]);
+    await store().undoRemove();
+    expect(store().solves).toEqual([]);
+  });
+});
+
+describe("PB detection", () => {
+  it("the first ao5 and ao12 of a session are not PBs, later improvements are", async () => {
+    // a=12, b=11 already; slower and slower, so no single or ao5 improves.
+    const pbs = await record(13_000, 14_000, 15_000, 16_000, 17_000, 18_000, 19_000, 20_000, 21_000, 22_000);
+    expect(pbs).toEqual(Array(10).fill(null));
+    expect(store().solves).toHaveLength(12);
+    // ao12: drop 11 and 22 -> (11.5 + 13..21) / 10 = 16.45, beating the first ao12 (16.5); not a single PB.
+    expect(await record(11_500)).toMatchObject([{ kind: "ao12", ms: 16_450 }]);
+  });
+
+  it("an ao5 that beats the session's earlier ao5 is a PB", async () => {
+    // First ao5: [12, 11, 13, 14, 15] -> 13. No toast for it.
+    expect(await record(13_000, 14_000, 15_000)).toEqual([null, null, null]);
+    // [11, 13, 14, 15, 11.5] -> mean(11.5, 13, 14) = 12.83 < 13; 11.5 is no single PB.
+    expect(await record(11_500)).toMatchObject([{ kind: "ao5", ms: (11_500 + 13_000 + 14_000) / 3 }]);
+  });
+
+  it("the first single of an empty session is not a PB", async () => {
+    rows.length = 0;
+    await store().init();
+    expect(await record(9_000, 8_000)).toMatchObject([null, { kind: "single", ms: 8_000 }]);
+  });
+
+  it("under All sessions, records are judged against every session of the event", async () => {
+    settings.statsScope = "all";
+    sessionRows.push({ ...s1, id: "s2", name: "Older" });
+    rows.push(...[5_000, 5_000, 5_000, 5_000, 5_000].map((t, i) => seed(`old${i}`, t, -10 + i, { sessionId: "s2" })));
+    await store().init();
+    await store().switchSession("s1");
+    // Faster than this session's 11s, slower than the older session's 5s; this session's first ao5 is no record either.
+    expect(await record(9_000, 9_500, 10_000)).toEqual([null, null, null]);
+    expect(await record(4_000)).toMatchObject([{ kind: "single", ms: 4_000 }]);
+  });
+
+  it("ignores other events' sessions under All sessions", async () => {
+    settings.statsScope = "all";
+    sessionRows.push({ ...s1, id: "s2", name: "2x2", event: "222" });
+    rows.push(seed("fast", 2_000, -1, { sessionId: "s2" }));
+    await store().init();
+    await store().switchSession("s1");
+    expect(await record(9_000)).toMatchObject([{ kind: "single", ms: 9_000 }]);
   });
 });

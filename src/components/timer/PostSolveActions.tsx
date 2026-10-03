@@ -75,7 +75,7 @@ export function PostSolveActions({
   return (
     <div className="flex flex-col items-center gap-2" data-testid="post-solve-actions" {...stopTouch}>
       <div className="flex flex-wrap items-center justify-center gap-1.5">
-        <span className="[&_button]:px-3 [&_button]:py-1.5">
+        <span className="[&_button]:px-3 [&_button]:py-1.5 [&_button]:text-xs">
           <PenaltyControls solve={solve} onSet={(p: Penalty) => void setPenalty(solve.id, p)} />
         </span>
         <button
@@ -83,7 +83,7 @@ export function PostSolveActions({
           onClick={() => setEditing(true)}
           aria-pressed={hasNote}
           className={cn(
-            "flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors",
+            "hit-y flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
             hasNote ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
           )}
           title={hasNote ? `Note: ${solve.comment}` : "Add a note to this solve"}

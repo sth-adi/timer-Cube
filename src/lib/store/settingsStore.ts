@@ -6,6 +6,9 @@ import type { StatsScope } from "@/lib/stats/scope";
 
 export type InputMethod = "spacebar" | "tap";
 
+/** What times a solve on the Timer tab: the keyboard/touch timer, or a connected smart cube. */
+export type TimerMode = "keyboard" | "smartcube";
+
 /**
  * How many phases a solve is timed in. 1 is an ordinary single-stop timer;
  * above that, each press marks the end of a phase and only the last one stops
@@ -115,6 +118,12 @@ export interface SettingsState {
   cubeGestures: boolean;
   /** Whether the stats and insights panels read the open session or every session of its event. */
   statsScope: StatsScope;
+  /**
+   * The Timer tab's last-picked mode, so a smart-cube user isn't put back on
+   * the keyboard timer every launch. Read through useTimerMode (app/page.tsx),
+   * which renders "keyboard" until after hydration.
+   */
+  timerMode: TimerMode;
   setInspectionEnabled: (v: boolean) => void;
   setInputMethod: (v: InputMethod) => void;
   setHoldToStartMs: (v: number) => void;
@@ -136,6 +145,7 @@ export interface SettingsState {
   setKeepAwake: (v: boolean) => void;
   setCubeNickname: (id: string, nickname: string) => void;
   setStatsScope: (v: StatsScope) => void;
+  setTimerMode: (v: TimerMode) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -162,6 +172,7 @@ export const useSettingsStore = create<SettingsState>()(
       keepAwake: true,
       cubeNicknames: {},
       statsScope: "session",
+      timerMode: "keyboard",
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
@@ -195,6 +206,7 @@ export const useSettingsStore = create<SettingsState>()(
           return { cubeNicknames: next };
         }),
       setStatsScope: (v) => set({ statsScope: v }),
+      setTimerMode: (v) => set({ timerMode: v }),
     }),
     {
       name: "cube-timer-settings",

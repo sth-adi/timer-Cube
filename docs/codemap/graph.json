@@ -483,7 +483,13 @@
     {"id":"src/components/chrome/SaveErrorBanner.tsx","kind":"component","area":"Shared UI / FX","exports":["SaveErrorBanner"],"summary":"Shown when a solve couldn't be written to this device (storage full or blocked) — otherwise the time would sit on screen looking saved…","loc":41,"importedBy":1,"hasTest":false},
     {"id":"src/components/chrome/UpdateToast.tsx","kind":"component","area":"Shared UI / FX","exports":["UpdateToast"],"summary":"\"New version ready — Reload\", once the offline worker has been replaced by a newer build.","loc":30,"importedBy":1,"hasTest":false},
     {"id":"src/hooks/useCoarsePointer.ts","kind":"hook","area":"Other","exports":["useCoarsePointer"],"summary":"True when the primary pointer is a finger (phones, tablets) — for hints like \"touch and hold\" vs \"hold space\".","loc":26,"importedBy":3,"hasTest":false},
-    {"id":"src/lib/storage/persist.ts","kind":"lib","area":"Other","exports":["PersistOutcome","readPersistOutcome","requestPersistentStorage","resetPersistRequestForTests"],"summary":"requestPersistentStorage: Asks the browser not to evict this site's IndexedDB under storage pressure — without it a device that runs low…","loc":47,"importedBy":1,"hasTest":true}
+    {"id":"src/lib/storage/persist.ts","kind":"lib","area":"Other","exports":["PersistOutcome","readPersistOutcome","requestPersistentStorage","resetPersistRequestForTests"],"summary":"requestPersistentStorage: Asks the browser not to evict this site's IndexedDB under storage pressure — without it a device that runs low…","loc":47,"importedBy":1,"hasTest":true},
+    {"id":"src/components/chrome/AccountDataPrompt.tsx","kind":"component","area":"Shared UI / FX","exports":["AccountDataPrompt"],"summary":"Asked when someone signs in on a device that holds another account's solves (see checkDataOwnership in lib/db/cloudSync.ts).","loc":112,"importedBy":1,"hasTest":false},
+    {"id":"src/lib/prediction/client.ts","kind":"lib","area":"Other","exports":["requestPredictionModel","subscribePredictionModels"],"summary":"Subscribe to \"a model finished training\" — for useSyncExternalStore.","loc":89,"importedBy":1,"hasTest":false},
+    {"id":"src/lib/prediction/useSolvePrediction.ts","kind":"hook","area":"Other","exports":["useSolvePrediction"],"summary":"predictSolveTime for components, without the main-thread training: the model for trainingSolves is trained in the prediction worker and…","loc":38,"importedBy":2,"hasTest":false},
+    {"id":"src/lib/prediction/worker.ts","kind":"worker","area":"Other","exports":["PredictionWorkerRequest","PredictionWorkerResponse"],"summary":"","loc":30,"importedBy":1,"hasTest":false},
+    {"id":"src/lib/smartcube/autoReconnect.ts","kind":"lib","area":"Smart cube","exports":["EARLY_ATTEMPT_MIN_GAP_MS","RECONNECT_BACKOFF_MS","RECONNECT_HIDDEN_LIMIT_MS","RECONNECT_STEADY_MS","RECONNECT_WINDOW_MS","hiddenTooLong","reconnectDelay","reconnectTimeline","tryEarly"],"summary":"When to try getting a smart cube back after the Bluetooth link drops out from under you (out of range, the cube napped, an OS hiccup) —…","loc":66,"importedBy":1,"hasTest":true},
+    {"id":"src/lib/smartcube/knownDevice.ts","kind":"lib","area":"Smart cube","exports":["captureChosenDevice","connectKnownDevice","findPermittedDevice","pickProtocol"],"summary":"Runs run (a connectSmartCube call) and records which device the user picked in the chooser it opens.","loc":160,"importedBy":1,"hasTest":false}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},
@@ -2415,7 +2421,25 @@
     {"from":"src/components/timer/TimerView.tsx","to":"src/hooks/useCoarsePointer.ts"},
     {"from":"src/components/trainer/DailyChallengeView.tsx","to":"src/hooks/useCoarsePointer.ts"},
     {"from":"src/components/trainer/TrainerView.tsx","to":"src/hooks/useCoarsePointer.ts"},
-    {"from":"src/lib/store/sessionStore.ts","to":"src/lib/storage/persist.ts"}
+    {"from":"src/lib/store/sessionStore.ts","to":"src/lib/storage/persist.ts"},
+    {"from":"src/app/layout.tsx","to":"src/components/chrome/AccountDataPrompt.tsx"},
+    {"from":"src/app/page.tsx","to":"src/lib/store/settingsStore.ts"},
+    {"from":"src/components/chrome/AccountDataPrompt.tsx","to":"src/lib/store/cloudSyncStore.ts"},
+    {"from":"src/components/settings/SettingsPanel.tsx","to":"src/lib/utils/sessionExport.ts"},
+    {"from":"src/components/timer/LiveProjection.tsx","to":"src/lib/prediction/useSolvePrediction.ts"},
+    {"from":"src/components/timer/PredictionBadge.tsx","to":"src/lib/prediction/useSolvePrediction.ts"},
+    {"from":"src/lib/analysis/liveProjection.ts","to":"src/types/index.ts"},
+    {"from":"src/lib/db/solves.ts","to":"src/lib/db/merge.ts"},
+    {"from":"src/lib/prediction/client.ts","to":"src/lib/analysis/prediction.ts"},
+    {"from":"src/lib/prediction/client.ts","to":"src/lib/prediction/worker.ts"},
+    {"from":"src/lib/prediction/useSolvePrediction.ts","to":"src/lib/analysis/prediction.ts"},
+    {"from":"src/lib/prediction/useSolvePrediction.ts","to":"src/lib/prediction/client.ts"},
+    {"from":"src/lib/prediction/useSolvePrediction.ts","to":"src/types/index.ts"},
+    {"from":"src/lib/prediction/worker.ts","to":"src/lib/analysis/prediction.ts"},
+    {"from":"src/lib/store/sessionStore.ts","to":"src/lib/stats/scope.ts"},
+    {"from":"src/lib/store/sessionStore.ts","to":"src/lib/store/settingsStore.ts"},
+    {"from":"src/lib/store/smartCubeStore.ts","to":"src/lib/smartcube/autoReconnect.ts"},
+    {"from":"src/lib/store/smartCubeStore.ts","to":"src/lib/smartcube/knownDevice.ts"}
   ],
   "routes": {
     "/": "src/app/page.tsx",

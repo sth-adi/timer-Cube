@@ -44,14 +44,14 @@ export function StatTilesGrid({ solves, rawSolves }: { solves: Solve[]; rawSolve
       <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
         <LayoutGrid size={14} className="text-accent" />
         Every stat we track
-        <span className="ml-auto rounded-full bg-bg-panel-2 px-2 py-0.5 text-[10px] font-medium text-muted-2">
+        <span className="ml-auto rounded-full bg-bg-panel-2 px-2 py-0.5 text-[11px] font-medium text-muted-2">
           {resolved.length}
         </span>
       </h3>
       <div className="space-y-4">
         {grouped.map(([category, categoryTiles]) => (
           <div key={category}>
-            <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-2">
+            <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2">
               <span aria-hidden className="h-px w-3 bg-accent" />
               {category}
             </p>
@@ -59,9 +59,9 @@ export function StatTilesGrid({ solves, rawSolves }: { solves: Solve[]; rawSolve
             <div className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-1.5">
               {categoryTiles.map((tile) => (
                 <div key={tile.id} className="rounded-lg bg-bg-panel-2/70 px-2.5 py-2 transition-colors hover:bg-bg-panel-2">
-                  <p className="text-[10px] leading-snug text-muted-2">{tile.label}</p>
+                  <p className="text-[11px] leading-snug text-muted-2">{tile.label}</p>
                   <p className="tabular-nums text-[15px] font-semibold leading-tight text-foreground">{tile.result.value}</p>
-                  {tile.result.sub && <p className="text-[10px] leading-snug text-muted-2">{tile.result.sub}</p>}
+                  {tile.result.sub && <p className="text-[11px] leading-snug text-muted-2">{tile.result.sub}</p>}
                 </div>
               ))}
             </div>

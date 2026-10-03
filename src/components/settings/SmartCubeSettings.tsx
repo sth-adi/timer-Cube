@@ -28,9 +28,9 @@ function NicknameRow({ id, name, nickname, detail, connected }: { id: string; na
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
           aria-label={`Nickname for ${name}`}
-          className="min-w-0 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-foreground/70"
+          className="min-w-0 bg-transparent text-[16px] font-medium text-foreground outline-none placeholder:text-foreground/70 sm:text-sm"
         />
-        {detail && <span className="truncate text-[10px] text-muted-2">{detail}</span>}
+        {detail && <span className="truncate text-[11px] text-muted-2">{detail}</span>}
       </div>
       <Pencil size={11} className="shrink-0 text-muted-2" aria-hidden />
     </div>
@@ -83,7 +83,7 @@ export function SmartCubeSettings() {
             type="button"
             onClick={() => setVoiceCoach(v.id)}
             aria-pressed={voiceCoach === v.id}
-            className={cn("rounded-lg px-2 py-2 text-xs font-medium transition-colors", voiceCoach === v.id ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground")}
+            className={cn("min-h-10 rounded-lg px-2 py-2 text-xs font-medium transition-colors", voiceCoach === v.id ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground")}
           >
             {v.name}
           </button>
@@ -106,13 +106,13 @@ export function SmartCubeSettings() {
 
       <p className="mb-1 mt-3 text-xs text-muted">Your cubes</p>
       {connected && (
-        <p className="mb-1.5 text-[11px] leading-snug text-muted-2" data-testid="connected-cube">
+        <p className="mb-2.5 text-[11px] leading-snug text-muted-2" data-testid="connected-cube">
           Connected: <span className="text-foreground">{nicknames[here?.id ?? ""] ?? deviceName}</span>
           {protocolName ? ` · ${protocolName}` : ""}
           {batteryLevel !== null ? ` · ${batteryLevel}% battery` : ""}
           {hardwareInfo?.softwareVersion ? ` · firmware ${hardwareInfo.softwareVersion}` : ""}
           {" · "}
-          <button type="button" onClick={disconnect} className="underline hover:text-muted">
+          <button type="button" onClick={disconnect} className="hit-y underline hover:text-muted">
             Disconnect
           </button>
         </p>
@@ -129,7 +129,7 @@ export function SmartCubeSettings() {
       {lastCubeName && !connected && (
         <p className="mt-2 text-[11px] text-muted-2">
           The connect screen offers a one-tap reconnect to <span className="text-foreground">{lastCubeName}</span>.{" "}
-          <button type="button" onClick={forgetLastCube} className="underline hover:text-muted">
+          <button type="button" onClick={forgetLastCube} className="hit-y underline hover:text-muted">
             Forget it
           </button>
         </p>

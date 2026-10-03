@@ -16,7 +16,7 @@ function CodeBox({ label, value, hint }: { label: string; value: string; hint: s
         readOnly
         value={value}
         rows={3}
-        className="w-full resize-none rounded-lg bg-bg-panel-2 p-2 font-mono text-[10px] leading-relaxed text-foreground outline-none"
+        className="w-full resize-none rounded-lg bg-bg-panel-2 p-2 font-mono text-[11px] leading-relaxed text-foreground outline-none"
         onFocus={(e) => e.currentTarget.select()}
       />
       <div className="flex items-center gap-2">
@@ -28,7 +28,7 @@ function CodeBox({ label, value, hint }: { label: string; value: string; hint: s
               setTimeout(() => setCopied(false), 1500);
             });
           }}
-          className="rounded-lg bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-fg"
+          className="min-h-10 shrink-0 rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-accent-fg"
         >
           {copied ? "Copied" : "Copy"}
         </button>
@@ -87,14 +87,14 @@ export function DeviceSyncPanel() {
             <button
               type="button"
               onClick={() => void startHosting()}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
             >
               Start on this device
             </button>
             <button
               type="button"
               onClick={startJoining}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
             >
               Join from this device
             </button>
@@ -123,13 +123,13 @@ export function DeviceSyncPanel() {
                   onChange={(e) => setPasteValue(e.target.value)}
                   rows={3}
                   placeholder="The other device's code…"
-                  className="w-full resize-none rounded-lg bg-bg-panel-2 p-2 font-mono text-[10px] leading-relaxed outline-none focus:ring-1 focus:ring-accent"
+                  className="w-full resize-none rounded-lg bg-bg-panel-2 p-2 font-mono text-[11px] leading-relaxed outline-none focus:ring-1 focus:ring-accent"
                 />
                 <button
                   type="button"
                   onClick={() => void submitAnswerCode(pasteValue)}
                   disabled={!pasteValue.trim() || busy}
-                  className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40"
+                  className="min-h-10 self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40"
                 >
                   Connect
                 </button>
@@ -149,13 +149,13 @@ export function DeviceSyncPanel() {
                 onChange={(e) => setPasteValue(e.target.value)}
                 rows={3}
                 placeholder="Its host code…"
-                className="w-full resize-none rounded-lg bg-bg-panel-2 p-2 font-mono text-[10px] leading-relaxed outline-none focus:ring-1 focus:ring-accent"
+                className="w-full resize-none rounded-lg bg-bg-panel-2 p-2 font-mono text-[11px] leading-relaxed outline-none focus:ring-1 focus:ring-accent"
               />
               <button
                 type="button"
                 onClick={() => void submitOfferCode(pasteValue)}
                 disabled={!pasteValue.trim() || busy}
-                className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40"
+                className="min-h-10 self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40"
               >
                 {busy ? "Working…" : "Generate my code"}
               </button>
@@ -203,7 +203,7 @@ export function DeviceSyncPanel() {
       )}
 
       {mode !== "idle" && (
-        <button type="button" onClick={disconnect} className="mt-2 text-[11px] text-muted-2 hover:text-danger">
+        <button type="button" onClick={disconnect} className="mt-1 flex min-h-10 items-center pr-3 text-xs text-muted-2 hover:text-danger">
           {phase === "done" ? "Close" : "Cancel"}
         </button>
       )}

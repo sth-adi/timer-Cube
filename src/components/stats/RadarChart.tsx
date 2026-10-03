@@ -72,7 +72,7 @@ export function RadarChart({ axes, ghost, rival, className }: { axes: DnaAxis[];
             y={p.y}
             textAnchor={anchor}
             dominantBaseline="middle"
-            className="fill-muted-2 text-[9px] font-medium uppercase tracking-wide"
+            className="fill-muted-2 text-[10px] font-medium uppercase tracking-wide"
           >
             {a.label}
           </text>

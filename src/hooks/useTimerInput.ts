@@ -51,6 +51,10 @@ export function useTimerInput({ press, release, cancel, reset, enabled = true }:
   return {
     onTouchStart: (e: React.TouchEvent) => {
       if (!enabled) return;
+      // A tap on a control inside the timer surface (a button, a link, a
+      // [data-no-timer] area) is for that control: no timer press, and no
+      // preventDefault, which would swallow its click.
+      if (isOwnControl(e)) return;
       e.preventDefault();
       // A second finger landing mid-hold is just another touchstart; the
       // machine ignores presses while holding/ready.
@@ -58,7 +62,10 @@ export function useTimerInput({ press, release, cancel, reset, enabled = true }:
     },
     onTouchEnd: (e: React.TouchEvent) => {
       if (!enabled) return;
-      e.preventDefault();
+      // Let a control's tap become a click. Still fall through to release:
+      // if another finger began a hold on the surface and this was the last
+      // one up, the hold must end (release is a no-op when nothing is held).
+      if (!isOwnControl(e)) e.preventDefault();
       // Only the last finger lifting counts as a release.
       if (e.touches.length === 0) release(e.nativeEvent.timeStamp);
     },
@@ -66,4 +73,14 @@ export function useTimerInput({ press, release, cancel, reset, enabled = true }:
       if (enabled) cancel();
     },
   };
+}
+
+/** Touches inside these, within the timer surface, belong to the element, not the timer. */
+const CONTROL_SELECTOR = "button, a[href], input, select, textarea, label, [data-no-timer]";
+
+/** Whether the touch landed on an interactive descendant of the surface (never the surface itself, which is role="button"). */
+function isOwnControl(e: React.TouchEvent): boolean {
+  const target = e.target as Element | null;
+  const control = target?.closest?.(CONTROL_SELECTOR);
+  return !!control && control !== e.currentTarget && e.currentTarget.contains(control);
 }

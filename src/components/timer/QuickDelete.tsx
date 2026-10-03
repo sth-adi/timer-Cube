@@ -17,7 +17,7 @@ export function QuickDelete({ deleted, onDelete }: { deleted: boolean; onDelete:
       // on this button must not reach it.
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
-      className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-medium text-muted transition-colors hover:bg-danger/15 hover:text-danger active:bg-danger/15 active:text-danger"
+      className="hit-y flex items-center gap-1 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-danger/15 hover:text-danger active:bg-danger/15 active:text-danger"
       title="Delete this solve (undo from the toast)"
       data-testid="quick-delete"
     >

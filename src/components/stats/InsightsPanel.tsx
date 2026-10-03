@@ -25,7 +25,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
   return (
     <div className="card rounded-xl p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-2">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2">
           <span aria-hidden className="h-3 w-0.5 rounded-full bg-accent" />
           {title}
         </p>

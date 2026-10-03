@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Settings, Timer as TimerIcon, Repeat, Wand2, ChevronDown, ChevronRight, Gamepad2 } from "lucide-react";
@@ -33,7 +33,23 @@ import { OnlinePresenceBadge } from "@/components/chrome/OnlinePresenceBadge";
 import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useNavigationStore, type PendingTrainerNav } from "@/lib/store/navigationStore";
+import { useSettingsStore, type TimerMode } from "@/lib/store/settingsStore";
 import { cn } from "@/lib/utils/cn";
+
+/**
+ * The Timer tab's mode, remembered across launches in settingsStore. The
+ * server can't know it, so hydration renders the keyboard timer (matching
+ * the server's HTML) and the remembered mode takes over straight after —
+ * reading the persisted store directly in render would make the two
+ * disagree and React would throw the server's markup away.
+ */
+function useTimerMode(): TimerMode {
+  return useSyncExternalStore(
+    useSettingsStore.subscribe,
+    () => (useSettingsStore.getState().timerMode === "smartcube" ? "smartcube" : "keyboard"),
+    () => "keyboard",
+  );
+}
 
 export default function Home() {
   return (
@@ -56,7 +72,8 @@ function HomeInner() {
   // subscribing to a store's requestSeq diff after the fact would.
   const [tab, setTab] = useState<TabId>(() => (searchParams.get("jump") === "analyze" ? "analyze" : "timer"));
   const [moreInsights, setMoreInsights] = useState(false);
-  const [timerMode, setTimerMode] = useState<"keyboard" | "smartcube">("keyboard");
+  const timerMode = useTimerMode();
+  const setTimerMode = useSettingsStore((s) => s.setTimerMode);
   const [pendingTrainerNav, setPendingTrainerNav] = useState<PendingTrainerNav | null>(null);
 
   // Strips the one-shot `?jump=analyze` param once it's been consumed above,

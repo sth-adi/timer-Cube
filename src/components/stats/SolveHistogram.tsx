@@ -47,7 +47,7 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
         ))}
         {medianPct !== null && (
           <div className="pointer-events-none absolute inset-y-0 border-l border-dashed border-foreground/40" style={{ left: `${medianPct}%` }}>
-            <span className="absolute -top-0.5 left-1 whitespace-nowrap text-[9px] font-medium uppercase tracking-wider text-muted">median {formatTime(median!)}</span>
+            <span className="absolute -top-0.5 left-1 whitespace-nowrap text-[11px] font-medium uppercase tracking-wide text-muted">median {formatTime(median!)}</span>
           </div>
         )}
       </div>

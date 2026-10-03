@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { OFFLINE_EXTRAS, OFFLINE_ROUTES } from "@/lib/offline/routes";
 
 const WARMED_AT_KEY = "cube-timer:offline-warmed-at";
+/** The worker's page cache that last warm filled. A new worker version starts with empty caches, so a different (missing) one means warm again now. */
+const WARMED_CACHE_KEY = "cube-timer:offline-warmed-cache";
 /** Re-check the saved copies at most this often; it only downloads what's new. */
 const REWARM_AFTER_MS = 6 * 3_600_000;
 
@@ -60,6 +62,26 @@ function readWarmedAt(): number {
   }
 }
 
+/**
+ * Whether the copies the last warm saved are gone — a new worker version drops the old caches on
+ * taking over, which would otherwise leave pages unsaved until the next scheduled re-check.
+ */
+async function savedCopiesGone(): Promise<boolean> {
+  let name: string | null = null;
+  try {
+    name = localStorage.getItem(WARMED_CACHE_KEY);
+  } catch {
+    // Unreadable: treated like a warm from before this was recorded.
+  }
+  if (!name) return true;
+  try {
+    return !(await caches.has(name));
+  } catch {
+    // Can't tell: keep to the usual schedule.
+    return false;
+  }
+}
+
 let started = false;
 
 /**
@@ -89,13 +111,19 @@ export function initOffline(): void {
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("message", (e: MessageEvent) => {
     if (e.data?.type === "updated") {
-      if (hadController) useOfflineStore.setState({ updateReady: true });
+      if (hadController) {
+        useOfflineStore.setState({ updateReady: true });
+        // The new worker started with empty caches: save the pages again rather than wait for a reload.
+        const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+        if (!saveData) window.setTimeout(() => void warmNow(), 2000);
+      }
       return;
     }
     if (e.data?.type !== "warmed") return;
     const at = typeof e.data.at === "number" ? e.data.at : Date.now();
     try {
       localStorage.setItem(WARMED_AT_KEY, String(at));
+      if (typeof e.data.cache === "string") localStorage.setItem(WARMED_CACHE_KEY, e.data.cache);
     } catch {
       // Without it the worker is simply asked again next visit.
     }
@@ -108,14 +136,14 @@ export function initOffline(): void {
     .then(() => navigator.serviceWorker.ready)
     .then((reg) => {
       const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-      const warmIfDue = () => {
+      const warmIfDue = async () => {
         if (!navigator.onLine || conn?.saveData) return;
-        if (Date.now() - readWarmedAt() < REWARM_AFTER_MS) return;
+        if (Date.now() - readWarmedAt() < REWARM_AFTER_MS && !(await savedCopiesGone())) return;
         reg.active?.postMessage({ type: "warm", routes: OFFLINE_ROUTES, extras: OFFLINE_EXTRAS });
       };
       // Let the page that was asked for finish loading before downloading the rest of the app.
-      window.setTimeout(warmIfDue, 4000);
-      window.addEventListener("online", () => window.setTimeout(warmIfDue, 2000));
+      window.setTimeout(() => void warmIfDue(), 4000);
+      window.addEventListener("online", () => window.setTimeout(() => void warmIfDue(), 2000));
     })
     .catch(() => {
       // Offline support is an extra: a browser that blocks workers just works online as before.

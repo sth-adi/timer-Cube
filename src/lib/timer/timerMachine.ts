@@ -10,7 +10,8 @@ import type { Penalty } from "@/types";
  *
  *   idle ─press→ inspecting (inspection on) or holding
  *   holding/inspecting ─held holdToStartMs→ ready ─release→ running
- *   holding ─early release or cancel→ idle
+ *   inspecting ─press→ holding (a new hold must arm again; a tap never starts the solve)
+ *   holding ─early release or cancel→ inspecting (inspection on) or idle
  *   ready ─cancel→ inspecting (inspection keeps counting) or idle
  *   running ─press→ (split marks, then) stopped
  */
@@ -154,11 +155,14 @@ export class TimerMachine {
         this.phase = this.opts.inspectionEnabled ? "inspecting" : "holding";
         return null;
       case "inspecting":
-        // A press after starting inspection: the solver has already engaged
-        // once, so this arms immediately rather than making them wait out
-        // another full hold.
-        this.holdStartedAt = now;
-        this.phase = "ready";
+        // A new hold during inspection: it shows as holding (red) and has to
+        // last holdToStartMs to arm, exactly as from idle, so a stray tap or
+        // bump never starts the clock. A second press while the first press
+        // of inspection is still down is a repeat and doesn't restart it.
+        if (this.holdStartedAt === null) {
+          this.holdStartedAt = now;
+          this.phase = "holding";
+        }
         return null;
       default:
         // holding / ready: a repeated keydown (auto-repeat, a second finger) changes nothing.
@@ -179,9 +183,10 @@ export class TimerMachine {
         this.phase = "running";
         return;
       case "holding":
-        // Let go before it armed, with no inspection running: back to idle.
+        // Let go before it armed: back to inspecting (its countdown keeps
+        // running), or idle when there's no inspection.
         this.holdStartedAt = null;
-        this.phase = "idle";
+        this.phase = this.inspectionStartedAt !== null ? "inspecting" : "idle";
         return;
       default:
         // inspecting: let go before it armed — inspection keeps counting down.
@@ -195,10 +200,7 @@ export class TimerMachine {
    * to inspecting — the countdown and its penalties keep running — or idle.
    */
   cancel(): void {
-    if (this.phase === "holding") {
-      this.holdStartedAt = null;
-      this.phase = "idle";
-    } else if (this.phase === "ready" || this.phase === "inspecting") {
+    if (this.phase === "holding" || this.phase === "ready" || this.phase === "inspecting") {
       this.holdStartedAt = null;
       this.phase = this.inspectionStartedAt !== null ? "inspecting" : "idle";
     }

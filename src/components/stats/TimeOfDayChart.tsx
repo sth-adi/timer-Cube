@@ -65,7 +65,7 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
                 }}
               />
               {isBest && hover !== i && b.mean !== null && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-accent tabular-timer">{formatTime(b.mean)}</span>
+                <span className="pointer-events-none absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 whitespace-nowrap text-[11px] font-semibold text-accent tabular-timer">{formatTime(b.mean)}</span>
               )}
               {hover === i && b.mean !== null && (
                 <div className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-bg-panel-2 border border-border-strong px-2 py-1 text-[11px] tabular-timer shadow-lg">
@@ -73,7 +73,7 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
                 </div>
               )}
             </div>
-            <span className={cn("whitespace-nowrap text-[10px]", isBest ? "font-semibold text-foreground" : "text-muted-2")}>{b.label}</span>
+            <span className={cn("whitespace-nowrap text-[11px]", isBest ? "font-semibold text-foreground" : "text-muted-2")}>{b.label}</span>
           </div>
         );
       })}

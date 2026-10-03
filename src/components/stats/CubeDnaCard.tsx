@@ -118,7 +118,7 @@ export function CubeDnaCard() {
         </h3>
         <div className="flex items-center gap-1.5">
           {canEvolve && (
-            <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-[11px]">
+            <div className="flex rounded-full bg-bg-panel-2 text-[11px]">
               {(
                 [
                   ["now", "Now"],
@@ -129,7 +129,7 @@ export function CubeDnaCard() {
                   key={id}
                   type="button"
                   onClick={() => setView(id)}
-                  className={cn("px-2.5 py-1 font-medium", view === id ? "bg-accent-soft text-accent" : "text-muted")}
+                  className={cn("hit-y rounded-full px-2.5 py-1 font-medium", view === id ? "bg-accent-soft text-accent" : "text-muted")}
                 >
                   {label}
                 </button>
@@ -140,7 +140,7 @@ export function CubeDnaCard() {
             type="button"
             onClick={() => void onShare()}
             disabled={busy}
-            className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-accent disabled:opacity-50"
+            className="hit-y flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-accent disabled:opacity-50"
           >
             {busy ? <Loader2 size={11} className="animate-spin" /> : <Share2 size={11} />}
             Poster
@@ -154,7 +154,7 @@ export function CubeDnaCard() {
             Every axis is a ratio against your own personal best — 100 means your average already matches your peak.
           </p>
           <RadarChart axes={axes} ghost={canEvolve ? timeline[timeline.length - 2].axes : null} className="mx-auto w-full max-w-[260px]" />
-          {canEvolve && <p className="text-center text-[10px] text-muted-2">Dashed: {timeline[timeline.length - 2].label}</p>}
+          {canEvolve && <p className="text-center text-[11px] text-muted-2">Dashed: {timeline[timeline.length - 2].label}</p>}
         </>
       ) : (
         <div className="flex flex-col gap-2">
@@ -172,14 +172,14 @@ export function CubeDnaCard() {
                 setMorph(null);
                 setPlaying((p) => !p);
               }}
-              className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+              className="hit-y flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
             >
               {playing ? <Pause size={12} /> : <Play size={12} />} {playing ? "Pause" : "Play"}
             </button>
           </div>
           <RadarChart axes={shownAxes} ghost={morph ? timeline[morph.from].axes : (prev?.axes ?? null)} className="mx-auto w-full max-w-[260px]" />
           <p className="text-center text-[11px] text-muted">{snap.trait.line}</p>
-          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+          <div className="-mx-1 -mb-1.5 -mt-2.5 flex gap-1 overflow-x-auto px-1 py-2.5">
             {timeline.map((s, i) => (
               <button
                 key={s.key}
@@ -189,7 +189,7 @@ export function CubeDnaCard() {
                   setMorph(null);
                   setPicked(i);
                 }}
-                className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium", i === index ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
+                className={cn("hit-y shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium", i === index ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
               >
                 {s.label}
               </button>
@@ -203,7 +203,7 @@ export function CubeDnaCard() {
                 {evolution.changes
                   .filter((c) => Math.abs(c.delta) >= 1)
                   .map((c) => (
-                    <span key={c.label} className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", c.delta > 0 ? "bg-success/15 text-success" : "bg-danger/10 text-danger")}>
+                    <span key={c.label} className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", c.delta > 0 ? "bg-success/15 text-success" : "bg-danger/10 text-danger")}>
                       {c.label} {c.delta > 0 ? "+" : ""}
                       {Math.round(c.delta)}
                     </span>

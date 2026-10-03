@@ -15,6 +15,8 @@ import { recordTimeMachineMove, resetTimeMachine } from "@/lib/smartcube/timeMac
 import { friendlyConnectError } from "@/lib/smartcube/friendlyConnectError";
 import { writeLastCube } from "@/lib/smartcube/connectMemory";
 import { correctBurstTimestamp, type BurstTimestampState } from "@/lib/smartcube/burstTimestamp";
+import { hiddenTooLong, reconnectDelay, RECONNECT_HIDDEN_LIMIT_MS, tryEarly } from "@/lib/smartcube/autoReconnect";
+import { captureChosenDevice, connectKnownDevice, findPermittedDevice } from "@/lib/smartcube/knownDevice";
 
 /**
  * Bridges a real Bluetooth smart cube into this app via
@@ -163,6 +165,32 @@ interface SmartCubeState {
   macRequest: { deviceName: string | null } | null;
   /** The cube connected to last time, so the connect screen can offer to reconnect to it. */
   lastCubeName: string | null;
+  /**
+   * Getting the cube back on its own after the link dropped unexpectedly
+   * (see lib/smartcube/autoReconnect.ts for the schedule): how many attempts
+   * have started, and whether one is running right now. Null when not trying
+   * — never set after a deliberate disconnect().
+   */
+  reconnect: { attempt: number; trying: boolean } | null;
+  /**
+   * Why there's no automatic reconnect after an unexpected drop, so the
+   * connect screen can say so next to its one-tap Reconnect: the browser
+   * can't reach the cube without the device chooser ("unsupported"), it
+   * stopped after a few minutes of misses ("gave-up"), or the page sat in
+   * the background ("hidden"). Null otherwise, including after Cancel.
+   */
+  reconnectStopped: "unsupported" | "gave-up" | "hidden" | null;
+  /**
+   * The cube came back on its own after dropping mid-solve: that attempt was
+   * abandoned (the same as a drop you reconnect from by hand), and this says
+   * so on the timer screen until the next solve starts or it's dismissed.
+   */
+  reconnectNotice: { lostMoves: number | null } | null;
+  /** Stops trying to reconnect on its own. */
+  cancelReconnect: () => void;
+  /** Skips the rest of the current wait and tries to reconnect right now. */
+  reconnectNow: () => void;
+  dismissReconnectNotice: () => void;
   /** `deviceName`: only offer cubes advertising that name in the picker (a reconnect). */
   connect: (opts?: { deviceName?: string }) => Promise<void>;
   /** Answers macRequest with the address typed in, or null to give up. */
@@ -277,6 +305,441 @@ function teardown(): void {
   clearSyncTimers();
 }
 
+/** No attempt in progress or on screen — what cancel() leaves behind. */
+const EMPTY_ATTEMPT = {
+  armed: false,
+  recording: false,
+  startedAtMs: null,
+  solvedAtMs: null,
+  crossAtMs: null,
+  f2lAtMs: null,
+  f2lPairAtMs: [null, null, null, null],
+  ollAtMs: null,
+  ollCaseName: null,
+  pllCaseName: null,
+  crossFace: null,
+  moves: [],
+} satisfies Partial<SmartCubeState>;
+
+interface TestDriver {
+  connectSmartCube: typeof import("smartcube-web-bluetooth").connectSmartCube;
+  /** Stands in for a silent reconnect to the remembered cube; without it, the store behaves like a browser that can't. */
+  reconnect?: () => Promise<SmartCubeConnection>;
+}
+
+/**
+ * A test seam: browser tests define window.__smartCubeTestDriver (same
+ * connectSmartCube shape) to drive the whole solving flow with scripted
+ * turns. Never set by the app itself.
+ */
+function testDriver(): TestDriver | undefined {
+  return (globalThis as { __smartCubeTestDriver?: TestDriver }).__smartCubeTestDriver;
+}
+
+/**
+ * The cube the browser's chooser last handed over. Holding on to it is what
+ * makes a silent reconnect possible: device.gatt.connect() needs no click,
+ * only requestDevice() does. Lost on reload (see lib/smartcube/knownDevice.ts).
+ */
+let knownDevice: BluetoothDevice | null = null;
+
+/** One stretch of trying to get the cube back after it dropped. */
+interface ReconnectRun {
+  droppedAtMs: number;
+  /** Attempts started so far. */
+  attempt: number;
+  trying: boolean;
+  lastEndedAtMs: number | null;
+  timer: ReturnType<typeof setTimeout> | null;
+  hiddenSinceMs: number | null;
+  hiddenTimer: ReturnType<typeof setTimeout> | null;
+  abort: AbortController | null;
+  /** Ended because a connect by hand took over, which may be using this same device: leave its link alone. */
+  keepLink: boolean;
+  /** Undoes the listeners (page visibility, the cube's advertisements) this run added. */
+  cleanups: (() => void)[];
+}
+let reconnectRun: ReconnectRun | null = null;
+
+function pageHidden(): boolean {
+  return typeof document !== "undefined" && document.visibilityState === "hidden";
+}
+
+function canListPermittedDevices(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const bluetooth = (navigator as Navigator & { bluetooth?: Bluetooth }).bluetooth;
+  return !!bluetooth && typeof bluetooth.getDevices === "function";
+}
+
+/**
+ * Ends the current run, if any, and records why there won't be another
+ * automatic try (null: no reason to mention). `keepLink`: a connect by hand
+ * is taking over, so an attempt still in flight mustn't drop the device's
+ * link on its way out.
+ */
+function stopAutoReconnect(reason: SmartCubeState["reconnectStopped"], keepLink = false): void {
+  const run = reconnectRun;
+  reconnectRun = null;
+  if (run) {
+    run.keepLink = keepLink;
+    if (run.timer) clearTimeout(run.timer);
+    if (run.hiddenTimer) clearTimeout(run.hiddenTimer);
+    run.abort?.abort();
+    for (const undo of run.cleanups) undo();
+  }
+  const st = useSmartCubeStore.getState();
+  if (st.reconnect !== null || st.reconnectStopped !== reason) useSmartCubeStore.setState({ reconnect: null, reconnectStopped: reason });
+}
+
+function scheduleReconnect(run: ReconnectRun): void {
+  if (reconnectRun !== run) return;
+  const delay = reconnectDelay(run.attempt, Date.now() - run.droppedAtMs);
+  if (delay === null) {
+    stopAutoReconnect("gave-up");
+    return;
+  }
+  run.timer = setTimeout(() => void attemptReconnect(run), delay);
+}
+
+class NothingToReconnectTo extends Error {}
+
+async function attemptReconnect(run: ReconnectRun): Promise<void> {
+  if (reconnectRun !== run || run.trying) return;
+  if (run.timer) clearTimeout(run.timer);
+  run.timer = null;
+  run.trying = true;
+  run.attempt++;
+  const abort = new AbortController();
+  run.abort = abort;
+  useSmartCubeStore.setState({ reconnect: { attempt: run.attempt, trying: true } });
+  const device = knownDevice;
+  try {
+    const driver = testDriver();
+    let connection: SmartCubeConnection;
+    if (driver) {
+      if (!driver.reconnect) throw new NothingToReconnectTo();
+      connection = await driver.reconnect();
+    } else {
+      knownDevice ??= await findPermittedDevice(useSmartCubeStore.getState().lastCubeName);
+      if (!knownDevice) throw new NothingToReconnectTo();
+      connection = await connectKnownDevice(knownDevice, { signal: abort.signal });
+    }
+    // Cancelled (or the user connected by hand) while this was working: let it go.
+    if (reconnectRun !== run) {
+      if (!run.keepLink) void connection.disconnect().catch(() => {});
+      return;
+    }
+    stopAutoReconnect(null);
+    attachConnection(connection, true);
+  } catch (err) {
+    if (reconnectRun !== run) {
+      // Cancelled mid-attempt: don't leave a half-open link behind, unless a connect by hand may be using it.
+      if (!run.keepLink && !conn) {
+        try {
+          (knownDevice ?? device)?.gatt?.disconnect();
+        } catch {
+          // already gone
+        }
+      }
+      return;
+    }
+    run.trying = false;
+    run.abort = null;
+    run.lastEndedAtMs = Date.now();
+    if (err instanceof NothingToReconnectTo) {
+      stopAutoReconnect("unsupported");
+      return;
+    }
+    useSmartCubeStore.setState({ reconnect: { attempt: run.attempt, trying: false } });
+    scheduleReconnect(run);
+  }
+}
+
+/**
+ * The link dropped on its own: keep trying to get the same cube back, on
+ * lib/smartcube/autoReconnect.ts's schedule, without ever opening the
+ * device chooser (that needs a click). Where that isn't possible, it says
+ * so and leaves it to the connect screen's one-tap Reconnect.
+ */
+function startAutoReconnect(): void {
+  stopAutoReconnect(null);
+  const driver = testDriver();
+  if (driver ? !driver.reconnect : !knownDevice && !canListPermittedDevices()) {
+    useSmartCubeStore.setState({ reconnectStopped: "unsupported" });
+    return;
+  }
+  const now = Date.now();
+  const run: ReconnectRun = {
+    droppedAtMs: now,
+    attempt: 0,
+    trying: false,
+    lastEndedAtMs: null,
+    timer: null,
+    hiddenSinceMs: null,
+    hiddenTimer: null,
+    abort: null,
+    keepLink: false,
+    cleanups: [],
+  };
+  reconnectRun = run;
+  useSmartCubeStore.setState({ reconnect: { attempt: 0, trying: false }, reconnectStopped: null });
+
+  // A pocketed phone or a background tab: give it a minute, then stop
+  // rather than keep the radio busy for nobody. Coming back sooner tries
+  // straight away — you're probably holding the cube again.
+  if (typeof document !== "undefined") {
+    const onHidden = () => {
+      run.hiddenSinceMs = Date.now();
+      if (run.hiddenTimer) clearTimeout(run.hiddenTimer);
+      run.hiddenTimer = setTimeout(() => {
+        if (reconnectRun === run) stopAutoReconnect("hidden");
+      }, RECONNECT_HIDDEN_LIMIT_MS);
+    };
+    const onVisibility = () => {
+      if (reconnectRun !== run) return;
+      if (pageHidden()) {
+        onHidden();
+        return;
+      }
+      if (run.hiddenTimer) clearTimeout(run.hiddenTimer);
+      run.hiddenTimer = null;
+      // Background timers get throttled, so the timer above may not have fired yet even when it should have.
+      const tooLong = hiddenTooLong(run.hiddenSinceMs, Date.now());
+      run.hiddenSinceMs = null;
+      if (tooLong) stopAutoReconnect("hidden");
+      else if (tryEarly(run.trying, run.lastEndedAtMs, Date.now())) void attemptReconnect(run);
+    };
+    if (pageHidden()) onHidden();
+    document.addEventListener("visibilitychange", onVisibility);
+    run.cleanups.push(() => document.removeEventListener("visibilitychange", onVisibility));
+  }
+
+  // Where the browser lets the page listen for the cube's advertisements,
+  // hearing it is the cue to try now instead of sitting out the backoff.
+  const device = knownDevice;
+  if (!driver && device && typeof device.watchAdvertisements === "function") {
+    const watch = new AbortController();
+    const onAdvertisement = () => {
+      if (reconnectRun === run && tryEarly(run.trying, run.lastEndedAtMs, Date.now())) void attemptReconnect(run);
+    };
+    device.addEventListener("advertisementreceived", onAdvertisement);
+    device.watchAdvertisements({ signal: watch.signal }).catch(() => {});
+    run.cleanups.push(() => {
+      device.removeEventListener("advertisementreceived", onAdvertisement);
+      watch.abort();
+    });
+  }
+
+  scheduleReconnect(run);
+}
+
+/**
+ * Takes over a live connection — a fresh one from connect(), or one an
+ * auto-reconnect got back (`resumed`) — and starts listening to it.
+ */
+function attachConnection(connection: SmartCubeConnection, resumed: boolean): void {
+  const set = useSmartCubeStore.setState;
+  const get = useSmartCubeStore.getState;
+  conn = connection;
+  // A fresh connection starts from a solved cube until the cube says
+  // otherwise. Coming back from a drop keeps the app's last picture instead:
+  // the cube reports its real state moments later either way, and for one
+  // that can't (MoYu MHC) where it was is a better guess than solved.
+  if (!resumed) {
+    liveCube = newCube();
+    frames = freshFrames();
+  }
+  caps = connection.capabilities;
+  sync = newStateSync();
+  gyroLog = [];
+  resetLatestGyro();
+  resetTimeMachine();
+  useGyroStore.getState().setRef(null);
+
+  sub = connection.events$.subscribe((event: SmartCubeEvent) => {
+    if (event.type === "DISCONNECT") {
+      const dropped = get();
+      const wasActive = dropped.armed || dropped.recording;
+      set({
+        connected: false,
+        deviceName: null,
+        protocolName: null,
+        deviceMac: null,
+        armed: false,
+        recording: false,
+        batterySupported: false,
+        batteryLevel: null,
+        gyroActive: false,
+        hardwareInfo: null,
+        faceletsUnreliable: false,
+        // Only ever set here, never on a deliberate disconnect() call —
+        // that's the one signal that distinguishes "the Bluetooth link
+        // itself dropped mid-attempt" from "you meant to disconnect".
+        droppedMidSolve: wasActive,
+        droppedMidSolveMoves: wasActive ? dropped.moves.length : null,
+        reconnectNotice: null,
+      });
+      teardown();
+      // Not a disconnect() call (that unsubscribes before it lets go), so the link dropped on its own — go and get it back.
+      startAutoReconnect();
+      return;
+    }
+    if (event.type === "GYRO") {
+      const sample = { atMs: event.timestamp, q: event.quaternion };
+      emitGyro(sample);
+      // First sample of a connection doubles as the home reference —
+      // a best guess (the connect screen asks for the yellow-top grip)
+      // that Re-center or the calibration wizard can correct any time.
+      if (!useGyroStore.getState().ref) useGyroStore.getState().setRef(sample.q);
+      if (!get().gyroActive) set({ gyroActive: true });
+      // Capped (~10 min at 50Hz) so an armed-and-forgotten cube can't grow it without bound.
+      if ((get().armed || get().recording) && gyroLog.length < 30000) gyroLog.push(sample);
+      return;
+    }
+    if (event.type === "BATTERY") {
+      set({ batteryLevel: event.batteryLevel });
+      return;
+    }
+    if (event.type === "HARDWARE") {
+      set({
+        hardwareInfo: {
+          name: event.hardwareName ?? null,
+          softwareVersion: event.softwareVersion ?? null,
+          hardwareVersion: event.hardwareVersion ?? null,
+          productDate: event.productDate ?? null,
+        },
+      });
+      return;
+    }
+    if (event.type === "FACELETS") {
+      const verdict = onReport(sync, event.facelets);
+      if (verdict === "ignore") {
+        invalidFaceletsStreak++;
+        if (invalidFaceletsStreak >= INVALID_FACELETS_STREAK_THRESHOLD && !get().faceletsUnreliable) set({ faceletsUnreliable: true });
+        return;
+      }
+      if (invalidFaceletsStreak > 0) invalidFaceletsStreak = 0;
+      if (get().faceletsUnreliable) set({ faceletsUnreliable: false });
+      if (verdict === "adopt") {
+        // The first report since connecting: start from wherever the cube really is.
+        adoptFacelets(event.facelets);
+        set({ liveFacelets: event.facelets, stateSource: "cube" });
+      } else if (verdict === "wait") {
+        if (settleTimer) clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          const fix = settle(sync, liveCube.asString());
+          if (!fix) return;
+          adoptFacelets(fix);
+          const st = get();
+          // A correction can complete the solve the lost turn was hiding —
+          // when it does, catch up the milestones/case names too, since no
+          // further MOVE event will come along to run advanceMilestones
+          // for us the way it normally does after every turn.
+          const completesSolve = fix === SOLVED_FACELETS && st.recording;
+          const milestones = completesSolve ? advanceMilestones(pickMilestones(st), liveCube, (f) => frames[f], event.timestamp) : {};
+          set({
+            ...milestones,
+            liveFacelets: fix,
+            stateSource: "cube",
+            ...(st.armed || st.recording ? { correctedDuringSolve: true } : {}),
+          });
+          if (completesSolve) set({ armed: false, recording: false, solvedAtMs: st.moves[st.moves.length - 1]?.timeStampMs ?? event.timestamp });
+        }, SETTLE_MS);
+      }
+      return;
+    }
+    if (event.type !== "MOVE") return;
+
+    // See correctBurstTimestamp's own comment: several turns can arrive
+    // in one Bluetooth notification sharing a single host timestamp —
+    // this recovers their real spacing from the cube's own hardware
+    // clock where the protocol provides one.
+    burstState = correctBurstTimestamp(burstState, event);
+    const ts = burstState.correctedTimestamp;
+
+    onTurn(sync);
+    if (idleTimer) clearTimeout(idleTimer);
+    // Once the turning stops (between solves), check the app's picture against the cube's own.
+    idleTimer = setTimeout(() => {
+      if (caps?.facelets && !get().recording) void conn?.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
+    }, IDLE_CHECK_MS);
+
+    emitRawMove({ token: event.move, timeStampMs: ts });
+    recordTimeMachineMove(event.move, ts);
+    liveCube.move(event.move);
+    for (const f of CROSS_FACES) frames[f].move(relabelMove(event.move, f));
+    const facelets = liveCube.asString();
+
+    const state = get();
+    if (!state.armed) {
+      set({ liveFacelets: facelets });
+      return;
+    }
+
+    // See mergesIntoDoubleTurn's own doc comment for why this merge
+    // (and its time gate) exists — short version: some cubes' firmware
+    // never reports an atomic 180° turn, only two 90° clicks.
+    const rawToken = event.move;
+    const lastMove = state.moves[state.moves.length - 1];
+    const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, ts);
+    const move: SmartCubeMove = isDoubleTurn
+      ? { token: `${rawToken[0]}2`, timeStampMs: ts }
+      : { token: rawToken, timeStampMs: ts };
+    const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], ts);
+
+    set((s) => ({
+      ...milestones,
+      recording: true,
+      startedAtMs: s.startedAtMs ?? ts,
+      moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
+      liveFacelets: facelets,
+    }));
+
+    if (facelets === SOLVED_FACELETS) {
+      set({ armed: false, recording: false, solvedAtMs: ts });
+    }
+  });
+
+  writeLastCube(connection.deviceName || null);
+  const before = get();
+  set({
+    lastCubeName: connection.deviceName || null,
+    connectStatus: null,
+    macRequest: null,
+    connected: true,
+    connecting: false,
+    deviceName: connection.deviceName || connection.protocol.name,
+    protocolName: connection.protocol.name,
+    deviceMac: connection.deviceMAC || null,
+    liveFacelets: resumed ? liveCube.asString() : SOLVED_FACELETS,
+    batterySupported: connection.capabilities.battery,
+    batteryLevel: null,
+    gyroActive: false,
+    hardwareInfo: null,
+    stateSource: "assumed",
+    reportsState: connection.capabilities.facelets,
+    faceletsUnreliable: false,
+    correctedDuringSolve: false,
+    droppedMidSolve: false,
+    droppedMidSolveMoves: null,
+    reconnect: null,
+    reconnectStopped: null,
+    // Back on its own after dropping mid-solve: that attempt is over (the
+    // drop already disarmed it), so clear it out and say why on screen —
+    // the same outcome as reconnecting by hand, just without the trip
+    // through the connect screen. A drop between solves leaves the last
+    // solve's recap alone.
+    ...(resumed && before.droppedMidSolve ? { ...EMPTY_ATTEMPT, reconnectNotice: { lostMoves: before.droppedMidSolveMoves } } : {}),
+  });
+  if (connection.capabilities.battery) {
+    get().refreshBattery();
+    batteryPollTimer = setInterval(() => get().refreshBattery(), BATTERY_POLL_MS);
+  }
+  // Ask where every piece is right now — the connect-time report can go out before this subscription existed.
+  if (connection.capabilities.facelets) void connection.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
+  if (connection.capabilities.hardware) void connection.sendCommand({ type: "REQUEST_HARDWARE" }).catch(() => {});
+}
+
 export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   // Both read from the browser, so they start empty and are filled in after hydration (components/chrome/ClientEnv.tsx) — reading them here would make the server's HTML and the client's first render disagree.
   supported: false,
@@ -313,6 +776,17 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   connectStatus: null,
   macRequest: null,
   lastCubeName: null,
+  reconnect: null,
+  reconnectStopped: null,
+  reconnectNotice: null,
+
+  cancelReconnect: () => stopAutoReconnect(null),
+
+  reconnectNow: () => {
+    if (reconnectRun) void attemptReconnect(reconnectRun);
+  },
+
+  dismissReconnectNotice: () => set({ reconnectNotice: null }),
 
   submitMac: (mac) => {
     const resolve = pendingMac;
@@ -333,6 +807,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
 
   forgetLastCube: () => {
     writeLastCube(null);
+    knownDevice = null;
     set({ lastCubeName: null });
   },
 
@@ -345,19 +820,18 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
     connectAbort?.abort();
     const abort = new AbortController();
     connectAbort = abort;
-    set({ connecting: true, error: null, connectStatus: null, macRequest: null });
+    // Picking a cube by hand supersedes trying to get the old one back on its own.
+    stopAutoReconnect(null, true);
+    set({ connecting: true, error: null, connectStatus: null, macRequest: null, reconnectNotice: null });
     try {
-      // A test seam: browser tests define window.__smartCubeTestDriver (same
-      // connectSmartCube shape) to drive the whole solving flow with scripted
-      // turns. Never set by the app itself.
-      const testDriver = (globalThis as { __smartCubeTestDriver?: { connectSmartCube: typeof import("smartcube-web-bluetooth").connectSmartCube } }).__smartCubeTestDriver;
-      const { connectSmartCube } = testDriver ?? (await import("smartcube-web-bluetooth"));
+      const { connectSmartCube } = testDriver() ?? (await import("smartcube-web-bluetooth"));
       // enableAddressSearch lets MoYu32/QiYi cubes resolve their AES MAC
       // address from a bounded set of candidates when the advertisement
       // itself doesn't hand it over. When even that fails (Chrome without
       // advertisement access can't read a GAN cube's address at all), the
       // library asks for it — the address prompt answers.
-      const connection = await connectSmartCube({
+      // The chooser's pick is kept so a later drop can be reconnected without it.
+      const { value: connection, device } = await captureChosenDevice(() => connectSmartCube({
         enableAddressSearch: true,
         signal: abort.signal,
         ...(opts?.deviceName ? { deviceName: opts.deviceName } : {}),
@@ -372,192 +846,14 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
             set({ macRequest: { deviceName: device.name ?? null }, connectStatus: "Waiting for the cube's address…" });
           });
         },
-      });
+      }));
       // Cancelled while it was still working: don't let it connect after the fact.
       if (attempt !== connectAttempt) {
         void connection.disconnect().catch(() => {});
         return;
       }
-      conn = connection;
-      liveCube = newCube();
-      frames = freshFrames();
-      caps = connection.capabilities;
-      sync = newStateSync();
-      gyroLog = [];
-      resetLatestGyro();
-      resetTimeMachine();
-      useGyroStore.getState().setRef(null);
-
-      sub = connection.events$.subscribe((event: SmartCubeEvent) => {
-        if (event.type === "DISCONNECT") {
-          const dropped = get();
-          const wasActive = dropped.armed || dropped.recording;
-          set({
-            connected: false,
-            deviceName: null,
-            protocolName: null,
-            deviceMac: null,
-            armed: false,
-            recording: false,
-            batterySupported: false,
-            batteryLevel: null,
-            gyroActive: false,
-            hardwareInfo: null,
-            faceletsUnreliable: false,
-            // Only ever set here, never on a deliberate disconnect() call —
-            // that's the one signal that distinguishes "the Bluetooth link
-            // itself dropped mid-attempt" from "you meant to disconnect".
-            droppedMidSolve: wasActive,
-            droppedMidSolveMoves: wasActive ? dropped.moves.length : null,
-          });
-          teardown();
-          return;
-        }
-        if (event.type === "GYRO") {
-          const sample = { atMs: event.timestamp, q: event.quaternion };
-          emitGyro(sample);
-          // First sample of a connection doubles as the home reference —
-          // a best guess (the connect screen asks for the yellow-top grip)
-          // that Re-center or the calibration wizard can correct any time.
-          if (!useGyroStore.getState().ref) useGyroStore.getState().setRef(sample.q);
-          if (!get().gyroActive) set({ gyroActive: true });
-          // Capped (~10 min at 50Hz) so an armed-and-forgotten cube can't grow it without bound.
-          if ((get().armed || get().recording) && gyroLog.length < 30000) gyroLog.push(sample);
-          return;
-        }
-        if (event.type === "BATTERY") {
-          set({ batteryLevel: event.batteryLevel });
-          return;
-        }
-        if (event.type === "HARDWARE") {
-          set({
-            hardwareInfo: {
-              name: event.hardwareName ?? null,
-              softwareVersion: event.softwareVersion ?? null,
-              hardwareVersion: event.hardwareVersion ?? null,
-              productDate: event.productDate ?? null,
-            },
-          });
-          return;
-        }
-        if (event.type === "FACELETS") {
-          const verdict = onReport(sync, event.facelets);
-          if (verdict === "ignore") {
-            invalidFaceletsStreak++;
-            if (invalidFaceletsStreak >= INVALID_FACELETS_STREAK_THRESHOLD && !get().faceletsUnreliable) set({ faceletsUnreliable: true });
-            return;
-          }
-          if (invalidFaceletsStreak > 0) invalidFaceletsStreak = 0;
-          if (get().faceletsUnreliable) set({ faceletsUnreliable: false });
-          if (verdict === "adopt") {
-            // The first report since connecting: start from wherever the cube really is.
-            adoptFacelets(event.facelets);
-            set({ liveFacelets: event.facelets, stateSource: "cube" });
-          } else if (verdict === "wait") {
-            if (settleTimer) clearTimeout(settleTimer);
-            settleTimer = setTimeout(() => {
-              const fix = settle(sync, liveCube.asString());
-              if (!fix) return;
-              adoptFacelets(fix);
-              const st = get();
-              // A correction can complete the solve the lost turn was hiding —
-              // when it does, catch up the milestones/case names too, since no
-              // further MOVE event will come along to run advanceMilestones
-              // for us the way it normally does after every turn.
-              const completesSolve = fix === SOLVED_FACELETS && st.recording;
-              const milestones = completesSolve ? advanceMilestones(pickMilestones(st), liveCube, (f) => frames[f], event.timestamp) : {};
-              set({
-                ...milestones,
-                liveFacelets: fix,
-                stateSource: "cube",
-                ...(st.armed || st.recording ? { correctedDuringSolve: true } : {}),
-              });
-              if (completesSolve) set({ armed: false, recording: false, solvedAtMs: st.moves[st.moves.length - 1]?.timeStampMs ?? event.timestamp });
-            }, SETTLE_MS);
-          }
-          return;
-        }
-        if (event.type !== "MOVE") return;
-
-        // See correctBurstTimestamp's own comment: several turns can arrive
-        // in one Bluetooth notification sharing a single host timestamp —
-        // this recovers their real spacing from the cube's own hardware
-        // clock where the protocol provides one.
-        burstState = correctBurstTimestamp(burstState, event);
-        const ts = burstState.correctedTimestamp;
-
-        onTurn(sync);
-        if (idleTimer) clearTimeout(idleTimer);
-        // Once the turning stops (between solves), check the app's picture against the cube's own.
-        idleTimer = setTimeout(() => {
-          if (caps?.facelets && !get().recording) void conn?.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
-        }, IDLE_CHECK_MS);
-
-        emitRawMove({ token: event.move, timeStampMs: ts });
-        recordTimeMachineMove(event.move, ts);
-        liveCube.move(event.move);
-        for (const f of CROSS_FACES) frames[f].move(relabelMove(event.move, f));
-        const facelets = liveCube.asString();
-
-        const state = get();
-        if (!state.armed) {
-          set({ liveFacelets: facelets });
-          return;
-        }
-
-        // See mergesIntoDoubleTurn's own doc comment for why this merge
-        // (and its time gate) exists — short version: some cubes' firmware
-        // never reports an atomic 180° turn, only two 90° clicks.
-        const rawToken = event.move;
-        const lastMove = state.moves[state.moves.length - 1];
-        const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, ts);
-        const move: SmartCubeMove = isDoubleTurn
-          ? { token: `${rawToken[0]}2`, timeStampMs: ts }
-          : { token: rawToken, timeStampMs: ts };
-        const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], ts);
-
-        set((s) => ({
-          ...milestones,
-          recording: true,
-          startedAtMs: s.startedAtMs ?? ts,
-          moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
-          liveFacelets: facelets,
-        }));
-
-        if (facelets === SOLVED_FACELETS) {
-          set({ armed: false, recording: false, solvedAtMs: ts });
-        }
-      });
-
-      writeLastCube(connection.deviceName || null);
-      set({
-        lastCubeName: connection.deviceName || null,
-        connectStatus: null,
-        macRequest: null,
-        connected: true,
-        connecting: false,
-        deviceName: connection.deviceName || connection.protocol.name,
-        protocolName: connection.protocol.name,
-        deviceMac: connection.deviceMAC || null,
-        liveFacelets: SOLVED_FACELETS,
-        batterySupported: connection.capabilities.battery,
-        batteryLevel: null,
-        gyroActive: false,
-        hardwareInfo: null,
-        stateSource: "assumed",
-        reportsState: connection.capabilities.facelets,
-        faceletsUnreliable: false,
-        correctedDuringSolve: false,
-        droppedMidSolve: false,
-        droppedMidSolveMoves: null,
-      });
-      if (connection.capabilities.battery) {
-        get().refreshBattery();
-        batteryPollTimer = setInterval(() => get().refreshBattery(), BATTERY_POLL_MS);
-      }
-      // Ask where every piece is right now — the connect-time report can go out before this subscription existed.
-      if (connection.capabilities.facelets) void connection.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
-      if (connection.capabilities.hardware) void connection.sendCommand({ type: "REQUEST_HARDWARE" }).catch(() => {});
+      if (device) knownDevice = device;
+      attachConnection(connection, false);
     } catch (err) {
       // Cancelled by the user (or superseded by a newer attempt): already handled, say nothing.
       if (attempt !== connectAttempt) return;
@@ -575,8 +871,11 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   },
 
   disconnect: () => {
-    void conn?.disconnect();
+    // Stop listening before letting go, so the DISCONNECT this causes can't be mistaken for the link dropping on its own.
+    const leaving = conn;
     teardown();
+    void leaving?.disconnect().catch(() => {});
+    stopAutoReconnect(null);
     set({
       connected: false,
       deviceName: null,
@@ -593,6 +892,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       // any earlier unexpected-drop banner no longer applies.
       droppedMidSolve: false,
       droppedMidSolveMoves: null,
+      reconnectNotice: null,
     });
   },
 
@@ -613,6 +913,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
       moves: [],
       correctedDuringSolve: false,
       error: null,
+      reconnectNotice: null,
     });
   },
 

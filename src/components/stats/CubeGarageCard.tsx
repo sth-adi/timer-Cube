@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils/cn";
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-wide text-muted-2">{label}</span>
+      <span className="text-[11px] uppercase text-muted-2">{label}</span>
       <span className="tabular-timer text-sm font-semibold">{value}</span>
     </div>
   );
@@ -47,9 +47,9 @@ function CubeRow({ cube, connected }: { cube: GarageCube; connected: boolean }) 
               onChange={(e) => setDraft(e.target.value)}
               onBlur={commit}
               aria-label="Cube nickname"
-              className="min-w-0 flex-1 rounded bg-bg px-1.5 py-0.5 text-sm font-semibold outline-none ring-1 ring-accent"
+              className="min-w-0 flex-1 rounded bg-bg px-1.5 py-0.5 text-[16px] font-semibold outline-none ring-1 ring-accent sm:text-sm"
             />
-            <button type="submit" aria-label="Save nickname" className="text-accent">
+            <button type="submit" aria-label="Save nickname" className="hit-y shrink-0 px-2 text-accent">
               <Check size={14} />
             </button>
           </form>
@@ -63,15 +63,15 @@ function CubeRow({ cube, connected }: { cube: GarageCube; connected: boolean }) 
                 setEditing(true);
               }}
               aria-label={`Rename ${cube.label}`}
-              className="text-muted-2 hover:text-foreground"
+              className="hit text-muted-2 hover:text-foreground"
             >
               <Pencil size={12} />
             </button>
           </>
         )}
-        {connected && <span className="ml-auto rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">connected</span>}
+        {connected && <span className="ml-auto rounded-full bg-success/15 px-1.5 py-0.5 text-[11px] font-medium text-success">connected</span>}
       </div>
-      {cube.label !== cube.name && <p className="-mt-1.5 text-[10px] text-muted-2">{cube.name}{cube.protocol ? ` · ${cube.protocol}` : ""}</p>}
+      {cube.label !== cube.name && <p className="-mt-1.5 text-[11px] text-muted-2">{cube.name}{cube.protocol ? ` · ${cube.protocol}` : ""}</p>}
       <div className="grid grid-cols-4 gap-2">
         <Stat label="Solves" value={String(cube.solves)} />
         <Stat label="Best" value={cube.best !== null ? formatTime(cube.best) : "—"} />
@@ -82,7 +82,7 @@ function CubeRow({ cube, connected }: { cube: GarageCube; connected: boolean }) 
         <Stat label="DNFs" value={String(cube.dnfs)} />
         <Stat label="Last used" value={new Date(cube.lastAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
       </div>
-      {!cube.comparable && <p className="text-[10px] text-muted-2">Too few solves yet to compare against another cube.</p>}
+      {!cube.comparable && <p className="text-[11px] text-muted-2">Too few solves yet to compare against another cube.</p>}
     </div>
   );
 }
@@ -143,7 +143,7 @@ export function CubeGarageCard() {
               type="button"
               onClick={() => void claim()}
               disabled={claiming}
-              className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent disabled:opacity-50"
+              className="hit-y shrink-0 rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent disabled:opacity-50"
             >
               {claiming ? "Assigning…" : `They were on ${here.name}`}
             </button>

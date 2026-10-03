@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
-import { downloadBackup, previewBackup, readBackupMeta, restoreBackup } from "@/lib/backup/restore";
-import type { BackupFile } from "@/lib/backup/backup";
+import { downloadBackup, previewBackup, readBackupMeta, readBackupText, restoreBackup } from "@/lib/backup/restore";
+import { canGzip, type BackupFile } from "@/lib/backup/backup";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { downloadCsTimerExport } from "@/lib/utils/csTimerExport";
 
@@ -23,11 +23,14 @@ export function BackupPanel() {
   const [withSettings, setWithSettings] = useState(true);
   const [message, setMessage] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Offered only where the browser can write it; plain .json stays the default either way.
+  const [gzipAvailable] = useState(() => typeof window !== "undefined" && canGzip());
+  const [gzip, setGzip] = useState(false);
 
   const onBackup = async () => {
     setBusy(true);
     try {
-      const file = await downloadBackup();
+      const file = await downloadBackup({ gzip });
       setLastAt(file.exportedAt);
       setMessage({ tone: "ok", text: `Saved a backup of ${file.sync.solves.length} solves.` });
     } catch (e) {
@@ -51,7 +54,7 @@ export function BackupPanel() {
     if (!file) return;
     setMessage(null);
     try {
-      setPreview(previewBackup(await file.text()));
+      setPreview(previewBackup(await readBackupText(file)));
     } catch (e) {
       setPreview(null);
       setMessage({ tone: "bad", text: e instanceof Error ? e.message : "Couldn't read that file." });
@@ -67,7 +70,12 @@ export function BackupPanel() {
       await refresh();
       // A wiped device starts with an empty "Session 1"; land on the restored one instead.
       await adopt();
-      const parts = [`${r.merge.addedSolves} solve${r.merge.addedSolves === 1 ? "" : "s"} added`, r.merge.updated ? `${r.merge.updated} updated` : null, r.settingsRestored ? `${r.settingsRestored} settings restored` : null].filter(Boolean);
+      const parts = [
+        `${r.merge.addedSolves} solve${r.merge.addedSolves === 1 ? "" : "s"} added`,
+        r.merge.updated ? `${r.merge.updated} updated` : null,
+        r.alreadyHere ? `${r.alreadyHere} already here` : null,
+        r.settingsRestored ? `${r.settingsRestored} settings restored` : null,
+      ].filter(Boolean);
       setMessage({ tone: "ok", text: `Restored: ${parts.join(", ")}.${r.settingsRestored ? " Reloading…" : ""}` });
       setPreview(null);
       // Settings are read when the app loads, so pick them up with a reload.
@@ -93,8 +101,14 @@ export function BackupPanel() {
         <button type="button" onClick={() => input.current?.click()} disabled={busy} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-2 py-2 text-xs font-medium text-muted hover:text-foreground disabled:opacity-50">
           <Upload size={13} /> Restore…
         </button>
-        <input ref={input} type="file" accept="application/json,.json" className="hidden" onChange={(e) => void onPick(e.target.files?.[0])} data-testid="backup-file" />
+        <input ref={input} type="file" accept="application/json,.json,application/gzip,.gz" className="hidden" onChange={(e) => void onPick(e.target.files?.[0])} data-testid="backup-file" />
       </div>
+      {gzipAvailable && (
+        <label className="mt-1.5 flex items-center gap-2 text-[11px] text-muted" data-testid="backup-gzip">
+          <input type="checkbox" checked={gzip} onChange={(e) => setGzip(e.target.checked)} />
+          Compress the backup (.json.gz — much smaller; restores the same way)
+        </label>
+      )}
       <div className="mt-1.5 flex gap-1.5">
         <button type="button" onClick={() => onCsTimerExport(false)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-2 py-2 text-xs font-medium text-muted hover:text-foreground" data-testid="cstimer-export">
           <Download size={13} /> Export to csTimer

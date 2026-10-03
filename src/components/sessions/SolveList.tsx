@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useId, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -8,7 +8,7 @@ import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { displayUsername } from "@/lib/auth/username";
 import { createSharedSolve } from "@/lib/social/shareSolve";
-import { formatResult, formatTime, parseTimeInput } from "@/lib/utils/time";
+import { formatResult, formatTime, parseManualTime } from "@/lib/utils/time";
 import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 import type { Penalty, Solve } from "@/types";
@@ -111,7 +111,7 @@ const SolveRow = memo(function SolveRow({
           onClick={() => (selectMode ? onToggle?.(solve.id) : setOpen((o) => !o))}
           aria-pressed={selectMode ? ticked : undefined}
           className={cn(
-            "min-w-0 flex-1 flex items-center justify-between rounded-lg px-2.5 py-0.5 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
+            "min-w-0 flex-1 flex min-h-9 items-center justify-between rounded-lg px-2.5 py-0.5 lg:min-h-0 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
             isBest && "text-success",
             isWorst && "text-danger",
             selectMode && ticked && "bg-accent-soft",
@@ -146,7 +146,7 @@ const SolveRow = memo(function SolveRow({
                 setOpen(false);
                 setRecapOpen(true);
               }}
-              className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2 py-1.5 text-xs font-semibold text-accent-fg"
+              className="mb-2 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2 py-1.5 text-xs font-semibold text-accent-fg"
             >
               <ListChecks size={12} /> Full recap
             </button>
@@ -163,20 +163,20 @@ const SolveRow = memo(function SolveRow({
           )}
           {solve.orientedReconstruction && (
             <div className="mb-2">
-              <p className="text-[10px] font-medium text-accent">
+              <p className="text-[11px] font-medium text-accent">
                 Gyro reconstruction · {solve.rotations?.length ?? 0} regrip{solve.rotations?.length === 1 ? "" : "s"}
               </p>
-              <p className="max-h-20 overflow-y-auto break-words font-mono text-[10px] leading-snug text-muted">
+              <p className="max-h-20 overflow-y-auto break-words font-mono text-[11px] leading-snug text-muted">
                 {solve.orientedReconstruction}
               </p>
             </div>
           )}
-          <div className="mb-2 flex flex-wrap items-center gap-1">
+          <div className="mb-1 flex flex-wrap items-center gap-1">
             <button
               type="button"
               onClick={() => cyclePenalty("plus2")}
               className={cn(
-                "rounded px-2 py-1 text-xs font-medium",
+                "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
                 solve.penalty === "plus2" ? "bg-warning/20 text-warning" : "text-muted hover:text-foreground",
               )}
             >
@@ -186,7 +186,7 @@ const SolveRow = memo(function SolveRow({
               type="button"
               onClick={() => cyclePenalty("dnf")}
               className={cn(
-                "rounded px-2 py-1 text-xs font-medium",
+                "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
                 solve.penalty === "dnf" ? "bg-danger/20 text-danger" : "text-muted hover:text-foreground",
               )}
             >
@@ -209,7 +209,7 @@ const SolveRow = memo(function SolveRow({
                 // nothing on this page is listening to switch tabs on).
                 if (pathname !== "/") router.push("/?jump=analyze");
               }}
-              className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"
+              className="ml-auto flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"
             >
               <Wand2 size={12} /> Analyze
             </button>
@@ -220,7 +220,7 @@ const SolveRow = memo(function SolveRow({
                 disabled={shareState === "busy"}
                 title="Copy a shareable link to this solve's reconstruction and stats"
                 className={cn(
-                  "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium",
+                  "flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium",
                   shareState === "copied"
                     ? "text-success"
                     : shareState === "error"
@@ -248,7 +248,7 @@ const SolveRow = memo(function SolveRow({
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
               placeholder="Add a note…"
-              className="min-w-0 flex-1 rounded-md bg-bg-panel-2 border border-border px-2 py-1 text-xs text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent"
+              className="min-h-10 min-w-0 flex-1 rounded-md bg-bg-panel-2 border border-border px-2 py-1 text-[16px] text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent sm:min-h-0 sm:text-xs"
             />
             <button
               type="button"
@@ -256,7 +256,7 @@ const SolveRow = memo(function SolveRow({
                 setOpen(false);
                 void removeSolve(solve.id);
               }}
-              className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
+              className="flex min-h-10 shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
               aria-label="Delete solve"
             >
               <Trash2 size={12} /> Delete
@@ -303,18 +303,22 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
   const removeSolve = useSessionStore((s) => s.removeSolve);
   const solves = useSessionStore((s) => s.solves);
   const [value, setValue] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hintId = useId();
+  // Digits alone read csTimer-style ("1234" → 12.34); echo what that means so it's never a surprise.
+  const preview = /^\d+$/.test(value.trim()) ? parseManualTime(value) : null;
   // The last few times added here, each one tap from deleted — for the typo you spot a second later.
   const [added, setAdded] = useState<{ id: string; ms: number }[]>([]);
   const stillThere = new Set(solves.map((x) => x.id));
   const recent = added.filter((x) => stillThere.has(x.id));
 
   const submit = async () => {
-    const ms = parseTimeInput(value);
-    if (ms === null) {
-      setError(true);
+    const parsed = parseManualTime(value);
+    if (!parsed.ok) {
+      setError(parsed.error);
       return;
     }
+    const { ms } = parsed;
     await recordSolve(ms, scramble);
     const latest = useSessionStore.getState().solves.at(-1);
     if (latest) setAdded((a) => [...a.slice(-4), { id: latest.id, ms }]);
@@ -327,19 +331,25 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
       <div className="flex items-center gap-1.5">
         <input
           autoFocus
+          inputMode="decimal"
+          enterKeyHint="done"
+          autoComplete="off"
+          aria-label="Time"
+          aria-invalid={error !== null}
+          aria-describedby={hintId}
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
-            setError(false);
+            setError(null);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") void submit();
             if (e.key === "Escape") onDone();
           }}
-          placeholder="12.34 or 1:02.34"
+          placeholder="1234, 12.34 or 1:02.34"
           className={cn(
             "flex-1 rounded-md bg-bg-panel-2 border px-2 py-1 text-xs tabular-timer text-foreground placeholder:text-muted-2 focus:outline-none",
-            error ? "border-danger" : "border-border focus:border-accent",
+            error !== null ? "border-danger" : "border-border focus:border-accent",
           )}
         />
         <button
@@ -355,6 +365,9 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
           </button>
         )}
       </div>
+      <p id={hintId} className={cn("px-0.5 text-[11px]", error !== null ? "text-danger" : "text-muted-2")} role={error !== null ? "alert" : undefined}>
+        {error ?? (preview?.ok ? `= ${formatTime(preview.ms)}` : "\u00a0")}
+      </p>
       {recent.length > 0 && (
         <div className="flex flex-wrap items-center gap-1" aria-label="Times just added">
           {recent.map((x) => (
@@ -468,7 +481,7 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
             <button
               type="button"
               onClick={() => setVisible((v) => v + PAGE_SIZE)}
-              className="mx-auto my-1 rounded-full bg-bg-panel-2 px-3 py-1 text-xs font-medium text-muted hover:text-foreground"
+              className="hit-y mx-auto my-2 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground"
             >
               Show {Math.min(PAGE_SIZE, hidden)} more
               <span className="ml-1 text-muted-2">({hidden} hidden)</span>

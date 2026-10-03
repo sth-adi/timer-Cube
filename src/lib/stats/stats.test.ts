@@ -12,6 +12,7 @@ import {
   eventTagsPresent,
   computeSessionStats,
   rollingAverages,
+  trimCount,
 } from "./stats";
 import type { Solve } from "@/types";
 
@@ -46,6 +47,54 @@ describe("averageOfN", () => {
   it("any single DNF makes an n<5 average DNF", () => {
     const r = averageOfN([1000, Infinity]);
     expect(r.isDnf).toBe(true);
+  });
+
+  it("trims 5% from each end, rounded up", () => {
+    expect([3, 5, 12, 25, 50, 100, 1000].map(trimCount)).toEqual([0, 1, 1, 2, 3, 5, 50]);
+  });
+
+  it("ao12 trims 1 each side", () => {
+    // 1..12 s -> drop 1 and 12 -> mean(2..11) = 6.5 s
+    const times = Array.from({ length: 12 }, (_, i) => (i + 1) * 1000);
+    expect(averageOfN(times).value).toBe(6500);
+  });
+
+  it("ao50 trims 3 each side", () => {
+    // 1..50 s with three huge outliers each end: only the middle 44 count
+    const times = Array.from({ length: 50 }, (_, i) => (i + 1) * 1000);
+    times[0] = 1;
+    times[1] = 2;
+    times[2] = 3;
+    times[47] = 900_000;
+    times[48] = 900_000;
+    times[49] = 900_000;
+    // middle = 4..47 s -> mean 25.5 s
+    expect(averageOfN(times).value).toBe(25_500);
+  });
+
+  it("ao100 trims 5 each side", () => {
+    const times = Array.from({ length: 100 }, (_, i) => (i + 1) * 1000);
+    // middle = 6..95 s -> mean 50.5 s
+    expect(averageOfN(times).value).toBe(50_500);
+  });
+
+  it("an average survives as many DNFs as it trims, and no more", () => {
+    const base = Array.from({ length: 50 }, (_, i) => (i + 1) * 1000);
+    const three = [...base.slice(0, 47), Infinity, Infinity, Infinity];
+    expect(averageOfN(three).isDnf).toBe(false);
+    // 1..47 s, drop 1-3 s and the three DNFs -> mean(4..47) = 25.5 s
+    expect(averageOfN(three).value).toBe(25_500);
+    const four = [...base.slice(0, 46), Infinity, Infinity, Infinity, Infinity];
+    expect(averageOfN(four)).toEqual({ value: null, isDnf: true });
+    const ao100 = Array.from({ length: 100 }, (_, i) => (i < 5 ? Infinity : 1000));
+    expect(averageOfN(ao100).value).toBe(1000);
+    ao100[5] = Infinity;
+    expect(averageOfN(ao100).isDnf).toBe(true);
+  });
+
+  it("ao12 is DNF with two DNFs", () => {
+    const times = [...Array.from({ length: 10 }, () => 1000), Infinity, Infinity];
+    expect(averageOfN(times).isDnf).toBe(true);
   });
 });
 

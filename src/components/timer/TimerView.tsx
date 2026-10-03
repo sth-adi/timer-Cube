@@ -174,7 +174,8 @@ export function TimerView() {
   const prevPhaseForAuraRef = useRef(phase);
   useEffect(() => {
     if (phase === "running" && prevPhaseForAuraRef.current !== "running") {
-      const prediction = scramble ? predictSolveTime(normalSolves(solves), scramble) : null;
+      // A 2-handed estimate is no target for a tagged event (OH, feet…), same as SmartCubeTimer.
+      const prediction = pendingEvent === null && scramble ? predictSolveTime(normalSolves(solves), scramble) : null;
       auraTargetRef.current = (prediction?.skill?.useful ? prediction.predictedMs : null) ?? normalPbMs ?? null;
     }
     if (phase !== "running") {
@@ -182,7 +183,7 @@ export function TimerView() {
       resetPerformanceAura();
     }
     prevPhaseForAuraRef.current = phase;
-  }, [phase, scramble, solves, normalPbMs]);
+  }, [phase, scramble, solves, normalPbMs, pendingEvent]);
 
   useEffect(() => {
     if (phase !== "running" || auraTargetRef.current === null) return;

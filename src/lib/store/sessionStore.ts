@@ -3,13 +3,17 @@ import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession, moveSessionSolves } from "@/lib/db/sessions";
 import { forgetAutoSessionId, pickInitialSession, readAutoSessionId, readSavedSessionId, saveSessionId } from "@/lib/sessions/activeSession";
-import { addSolve, deleteSolve, restoreSolves, updateSolve, updateSolvesBulk, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
+import { addSolve, deleteSolve, restoreSolves, updateSolve, updateSolvesBulk, getSessionSolves, getAllSolves, importSolvesWithReport, type ImportResult } from "@/lib/db/solves";
 import { lateStartRepairPending, markLateStartRepairDone, repairLateStart } from "@/lib/db/repairLateStart";
 import { requestPersistentStorage } from "@/lib/storage/persist";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
-import { computeAchievements, computeSessionStats, normalSolves, type AchievementState } from "@/lib/stats/stats";
+import { useSettingsStore } from "@/lib/store/settingsStore";
+import { scopedSolves } from "@/lib/stats/scope";
+import { computeAchievements, computeSessionStats, normalSolves, type AchievementState, type SessionStats } from "@/lib/stats/stats";
 import { buildSessionExport, downloadJson, parseSessionExport, type SessionExport } from "@/lib/utils/sessionExport";
+
+const NOTHING_IMPORTED: ImportResult = { added: 0, updated: 0, skipped: 0 };
 
 export type PBKind = "single" | "ao5" | "ao12";
 export interface PBEvent {
@@ -30,6 +34,26 @@ let achievementToastId = 0;
 function findNewlyUnlocked(before: AchievementState[], after: AchievementState[]): AchievementState[] {
   const beforeUnlocked = new Set(before.filter((a) => a.unlocked).map((a) => a.id));
   return after.filter((a) => a.unlocked && !beforeUnlocked.has(a.id));
+}
+
+/**
+ * The record a new solve set, comparing stats before and after it. Each kind
+ * only counts when the scope already had one to beat: the first ao5 (or
+ * ao12, or single) that exists is just the first, not a personal best.
+ */
+export function detectPB(prev: SessionStats, next: SessionStats): { kind: PBKind; ms: number } | null {
+  if (next.bestAo12 !== null && prev.bestAo12 !== null && next.bestAo12 < prev.bestAo12) return { kind: "ao12", ms: next.bestAo12 };
+  if (next.bestAo5 !== null && prev.bestAo5 !== null && next.bestAo5 < prev.bestAo5) return { kind: "ao5", ms: next.bestAo5 };
+  if (next.best !== null && prev.best !== null && next.best < prev.best) return { kind: "single", ms: next.best };
+  return null;
+}
+
+/** How many deletions Undo can walk back through, newest first. */
+export const UNDO_DEPTH = 10;
+
+export interface RemovedBatch {
+  solves: Solve[];
+  id: number;
 }
 
 /** The row with `patch` applied wherever its id is listed; untouched rows keep their identity. */
@@ -101,15 +125,17 @@ interface SessionState {
   updateSolves: (solveIds: string[], changes: { penalty?: Penalty; event?: EventTag | null }) => Promise<void>;
   /** Deletes several solves at once (one undo brings them all back). */
   removeSolves: (solveIds: string[]) => Promise<void>;
-  /** The solves deleted most recently, held so they can be put back — see UndoToast. */
-  lastRemoved: { solves: Solve[]; id: number } | null;
+  /** The last UNDO_DEPTH deletions, oldest first, each a batch one Undo puts back — see UndoToast. */
+  undoStack: RemovedBatch[];
+  /** Puts back the most recent deletion still on the stack. */
   undoRemove: () => Promise<void>;
+  /** Forgets every deletion on the stack. */
   dismissUndo: () => void;
   clearPB: () => void;
   clearAchievementToast: () => void;
   exportActiveSession: () => void;
-  importIntoActiveSession: (json: string) => Promise<number>;
-  importRowsIntoActiveSession: (rows: SessionExport["solves"]) => Promise<number>;
+  importIntoActiveSession: (json: string) => Promise<ImportResult>;
+  importRowsIntoActiveSession: (rows: SessionExport["solves"]) => Promise<ImportResult>;
   /** Re-reads sessions/solves straight from Dexie without touching which session is active — for when something outside this store's own actions wrote to the db directly (device sync). */
   refreshFromDb: () => Promise<void>;
   /**
@@ -242,8 +268,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // PB detection and achievements only ever look at ordinary 2-handed
     // solves — see normalSolves() — so tagging a solve OH/feet/BLD never
     // triggers a PB toast or unlocks a milestone that assumes normal timing,
-    // and never corrupts the running normal average either.
-    const prevStats = computeSessionStats(normalSolves(prevSolves));
+    // and never corrupts the running normal average either. PBs are judged
+    // over the same solves the stats panels show ("This session" / "All
+    // sessions" of this event — see scopedSolves), so "New best ao5!" always
+    // agrees with the Best ao5 there.
+    const scope = useSettingsStore.getState().statsScope;
+    const pbSolves = (session: Solve[], all: Solve[]) => normalSolves(scopedSolves(scope, activeSessionId, get().sessions, session, all));
+    const prevStats = computeSessionStats(pbSolves(prevSolves, prevAllSolves));
     const prevAchievements = computeAchievements(normalSolves(prevAllSolves));
 
     let saved: Solve;
@@ -272,21 +303,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // The row addSolve saved is appended in memory — no re-read of the whole history.
     const solves = [...prevSolves, saved];
     const allSolves = [...prevAllSolves, saved];
-    const newStats = computeSessionStats(normalSolves(solves));
+    const newStats = computeSessionStats(pbSolves(solves, allSolves));
     const newAchievements = computeAchievements(normalSolves(allSolves));
 
-    let pb: PBEvent | null = null;
-    if (newStats.bestAo12 !== null && (prevStats.bestAo12 === null || newStats.bestAo12 < prevStats.bestAo12)) {
-      pb = { kind: "ao12", ms: newStats.bestAo12, id: ++pbEventId };
-    } else if (newStats.bestAo5 !== null && (prevStats.bestAo5 === null || newStats.bestAo5 < prevStats.bestAo5)) {
-      pb = { kind: "ao5", ms: newStats.bestAo5, id: ++pbEventId };
-    } else if (
-      prevStats.best !== null &&
-      newStats.best !== null &&
-      newStats.best < prevStats.best
-    ) {
-      pb = { kind: "single", ms: newStats.best, id: ++pbEventId };
-    }
+    const record = detectPB(prevStats, newStats);
+    const pb: PBEvent | null = record ? { ...record, id: ++pbEventId } : null;
 
     const newlyUnlocked = findNewlyUnlocked(prevAchievements, newAchievements);
     const achievementToast: AchievementToastEvent | null = newlyUnlocked[0]
@@ -330,7 +351,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   setPendingEvent: (event) => set({ pendingEvent: event }),
 
-  lastRemoved: null,
+  undoStack: [],
 
   removeSolve: async (solveId) => get().removeSolves([solveId]),
 
@@ -360,21 +381,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
     const ids = new Set(solveIds);
     set((state) => ({
-      lastRemoved: gone.length ? { solves: gone, id: ++removedId } : state.lastRemoved,
+      undoStack: gone.length ? [...state.undoStack, { solves: gone, id: ++removedId }].slice(-UNDO_DEPTH) : state.undoStack,
       solves: state.solves.filter((x) => !ids.has(x.id)),
       allSolves: state.allSolves.filter((x) => !ids.has(x.id)),
     }));
   },
 
   undoRemove: async () => {
-    const pending = get().lastRemoved;
+    const pending = get().undoStack.at(-1);
     if (!pending) return;
-    set({ lastRemoved: null });
+    // Popped before the write, so a second press while this one is in flight takes the batch below.
+    set((state) => ({ undoStack: state.undoStack.filter((b) => b.id !== pending.id) }));
     let rows: Solve[];
     try {
       rows = await restoreSolves(pending.solves);
     } catch (e) {
-      set({ saveError: saveFailure(e), lastRemoved: pending });
+      // Back where it was in the stack (ids only grow), under anything deleted meanwhile.
+      set((state) => ({
+        saveError: saveFailure(e),
+        undoStack: [...state.undoStack, pending].sort((a, b) => a.id - b.id).slice(-UNDO_DEPTH),
+      }));
       return;
     }
     // Back in date order, where a re-read would have put them.
@@ -386,7 +412,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }));
   },
 
-  dismissUndo: () => set({ lastRemoved: null }),
+  dismissUndo: () => set({ undoStack: [] }),
 
   clearPB: () => set({ lastPB: null }),
   clearAchievementToast: () => set({ achievementToast: null }),
@@ -402,16 +428,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   importIntoActiveSession: async (json) => {
     const { activeSessionId, importRowsIntoActiveSession } = get();
-    if (!activeSessionId) return 0;
+    if (!activeSessionId) return NOTHING_IMPORTED;
     return importRowsIntoActiveSession(parseSessionExport(JSON.parse(json)));
   },
 
   importRowsIntoActiveSession: async (rows) => {
     const { activeSessionId } = get();
-    if (!activeSessionId) return 0;
-    const count = await importSolves(activeSessionId, rows);
+    if (!activeSessionId) return NOTHING_IMPORTED;
+    const result = await importSolvesWithReport(activeSessionId, rows);
     set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
-    return count;
+    return result;
   },
 
   refreshFromDb: async () => {

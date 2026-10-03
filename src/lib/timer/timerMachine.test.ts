@@ -26,8 +26,7 @@ function solveStartingAt(startAt: number) {
   const m = make({ inspectionEnabled: true });
   m.press(0); // inspection begins
   m.release(50); // let go straight away — inspection keeps running
-  m.press(startAt - HOLD); // arms immediately (second press during inspection)
-  expect(m.phase).toBe("ready");
+  m.press(startAt - HOLD); // a fresh hold during inspection, armed exactly at release
   m.release(startAt);
   expect(m.phase).toBe("running");
   return m.press(startAt + 10_000)!;
@@ -79,6 +78,82 @@ describe("inspection result in the completion data", () => {
     expect(m.phase).toBe("ready");
     m.release(2000);
     expect(m.press(3000)!.inspection).toEqual({ elapsedMs: 2000, penalty: "none" });
+  });
+});
+
+describe("starting from inspection needs the same hold as from idle", () => {
+  /** Inspection begun at t=0 and the first press let go at once. */
+  const inspecting = () => {
+    const m = make({ inspectionEnabled: true });
+    m.press(0);
+    m.release(50);
+    expect(m.phase).toBe("inspecting");
+    return m;
+  };
+
+  it("a quick tap during inspection does not start the solve", () => {
+    const m = inspecting();
+    m.press(5000);
+    expect(m.phase).toBe("holding"); // red, not ready
+    m.release(5080);
+    expect(m.phase).toBe("inspecting");
+    expect(m.displayMs(6000)).toBe(0);
+    // Inspection is still counting, penalties and all.
+    expect(m.pendingPenalty(16_000)).toBe("plus2");
+  });
+
+  it("releasing one millisecond before the hold arms does not start", () => {
+    const m = inspecting();
+    m.press(5000);
+    m.release(5000 + HOLD - 1);
+    expect(m.phase).toBe("inspecting");
+  });
+
+  it("a hold shows ready only once holdToStartMs has passed, then release starts", () => {
+    const m = inspecting();
+    m.press(5000);
+    m.tick(5000 + HOLD - 1);
+    expect(m.phase).toBe("holding");
+    expect(m.inspecting).toBe(true);
+    expect(m.armAt).toBe(5000 + HOLD);
+    m.tick(5000 + HOLD);
+    expect(m.phase).toBe("ready");
+    m.release(6000);
+    expect(m.phase).toBe("running");
+    expect(m.press(16_000)!.inspection).toEqual({ elapsedMs: 6000, penalty: "none" });
+  });
+
+  it("a repeated press mid-hold doesn't restart the hold", () => {
+    const m = inspecting();
+    m.press(5000);
+    m.press(5200); // second finger
+    m.tick(5000 + HOLD);
+    expect(m.phase).toBe("ready");
+  });
+
+  it("several stray taps in a row never start it", () => {
+    const m = inspecting();
+    for (let t = 1000; t < 10_000; t += 1000) {
+      m.press(t);
+      m.release(t + 100);
+    }
+    expect(m.phase).toBe("inspecting");
+  });
+
+  it("cancelling a hold during inspection goes back to inspecting", () => {
+    const m = inspecting();
+    m.press(5000);
+    m.cancel();
+    expect(m.phase).toBe("inspecting");
+    m.release(5000 + HOLD);
+    expect(m.phase).toBe("inspecting");
+  });
+
+  it("a hold that starts the solve past 17s is still DNF", () => {
+    const m = inspecting();
+    m.press(17_500);
+    m.release(17_500 + HOLD);
+    expect(m.press(27_000)!.penalty).toBe("dnf");
   });
 });
 
@@ -152,7 +227,7 @@ describe("touch cancellation", () => {
     expect(m.phase).toBe("inspecting");
     expect(m.pendingPenalty(16_000)).toBe("plus2");
     m.press(16_000);
-    m.release(16_100);
+    m.release(16_000 + HOLD);
     expect(m.press(20_000)!.penalty).toBe("plus2");
   });
 
@@ -182,8 +257,8 @@ describe("phase splits", () => {
     // Attempt 1: started 16s into inspection → +2.
     m.press(0);
     m.release(50);
-    m.press(16_000);
-    m.release(16_050);
+    m.press(16_000 - HOLD);
+    m.release(16_000);
     expect(m.press(26_000)!.penalty).toBe("plus2");
     expect(m.lastResult!.penalty).toBe("plus2");
     // Attempt 2 (a new inspection from 30s): held straight through and started at once.

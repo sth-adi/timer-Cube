@@ -77,8 +77,8 @@ export function SessionStrip({ className }: { className?: string }) {
       </div>
       {lines.length > 0 && (
         <div className="flex flex-col items-center gap-0.5 border-t border-border pt-1.5" data-testid="session-targets">
-          <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
-            <Target size={10} /> To set a record
+          <span className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+            <Target size={11} /> To set a record
           </span>
           {lines.map((l) => (
             <span key={l} className="tabular-timer text-[11px] text-accent">
@@ -102,7 +102,7 @@ export function PenaltyControls({ solve, onSet }: { solve: Solve; onSet: (penalt
         onClick={() => onSet(on ? "none" : value)}
         aria-pressed={on}
         className={cn(
-          "rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+          "hit-y rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
           on ? (value === "dnf" ? "bg-danger text-white" : "bg-warning text-black") : "bg-bg-panel-2 text-muted hover:text-foreground",
         )}
       >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CheckCircle2, Cloud, Loader2, LogOut, TriangleAlert, WifiOff } from "lucide-react";
+import { CheckCircle2, Cloud, CloudOff, Loader2, LogOut, TriangleAlert, WifiOff } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -32,6 +32,8 @@ export function AccountPanel() {
   const now = useNow();
   const error = useCloudSyncStore((s) => s.error);
   const syncNow = useCloudSyncStore((s) => s.syncNow);
+  const ownerConflict = useCloudSyncStore((s) => s.ownerConflict);
+  const openOwnerPrompt = useCloudSyncStore((s) => s.openOwnerPrompt);
 
   const [mode, setMode] = useState<Mode>("signin");
   const [username, setUsername] = useState("");
@@ -141,19 +143,41 @@ export function AccountPanel() {
               {status === "synced" && <CheckCircle2 size={12} className="shrink-0 text-success" />}
               {status === "error" && <TriangleAlert size={12} className="shrink-0 text-danger" />}
               {status === "offline" && <WifiOff size={12} className="shrink-0" />}
-              {status !== "syncing" &&
-                (lastSyncedAt ? `Last synced ${formatRelativeTime(lastSyncedAt, now)}` : "Not synced yet")}
+              {status === "paused" && <CloudOff size={12} className="shrink-0 text-warning" />}
+              {status === "paused"
+                ? "Sync paused on this device"
+                : status !== "syncing" &&
+                  (lastSyncedAt ? `Last synced ${formatRelativeTime(lastSyncedAt, now)}` : "Not synced yet")}
             </p>
-            <button
-              type="button"
-              onClick={() => void syncNow()}
-              className="shrink-0 text-[11px] font-medium text-accent hover:underline"
-            >
-              Sync now
-            </button>
+            {ownerConflict ? (
+              <button
+                type="button"
+                onClick={openOwnerPrompt}
+                className="shrink-0 text-[11px] font-medium text-accent hover:underline"
+              >
+                Choose…
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void syncNow()}
+                className="shrink-0 text-[11px] font-medium text-accent hover:underline"
+              >
+                Sync now
+              </button>
+            )}
           </div>
+          {ownerConflict && (
+            <p className="text-[11px] leading-relaxed text-muted-2">
+              This device&apos;s {ownerConflict.solveCount} {ownerConflict.solveCount === 1 ? "solve belongs" : "solves belong"} to{" "}
+              {ownerConflict.ownerName ? `@${ownerConflict.ownerName}` : "another account"}, so nothing syncs with this account here
+              until you choose what to do with them.
+            </p>
+          )}
           {status === "error" && error && <p className="text-[11px] leading-relaxed text-danger">{error}</p>}
-          {status === "offline" && <p className="text-[11px] leading-relaxed text-muted-2">Offline — will sync once you&apos;re back online.</p>}
+          {status === "offline" && !ownerConflict && (
+            <p className="text-[11px] leading-relaxed text-muted-2">Offline — will sync once you&apos;re back online.</p>
+          )}
 
           <button
             type="button"

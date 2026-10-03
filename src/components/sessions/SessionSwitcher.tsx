@@ -77,7 +77,7 @@ export function SessionSwitcher() {
     const count = countOf(s.id);
     const isActive = s.id === activeId;
     const meta = (
-      <span className="flex items-center gap-1.5 text-[10px] font-normal text-muted-2">
+      <span className="flex items-center gap-1.5 text-[11px] font-normal text-muted-2">
         <span className="tabular-nums">{count} solve{count === 1 ? "" : "s"}</span>·<span>{lastUsed(summary.get(s.id)?.lastSolveAt ?? null)}</span>
         {s.event !== "333" && <span>· {WCA_EVENTS.find((e) => e.id === s.event)?.label}</span>}
       </span>
@@ -87,7 +87,7 @@ export function SessionSwitcher() {
       return (
         <form
           key={s.id}
-          className="flex items-center gap-1 px-1.5 py-1"
+          className="flex items-center gap-1 px-1.5 py-0.5"
           onSubmit={(e) => {
             e.preventDefault();
             void run(() => renameSessionById(s.id, pending.name));
@@ -99,13 +99,13 @@ export function SessionSwitcher() {
             maxLength={40}
             onChange={(e) => setPending({ ...pending, name: e.target.value })}
             onKeyDown={(e) => e.key === "Escape" && setPending(null)}
-            className="min-w-0 flex-1 rounded-md border border-border bg-bg-panel-2 px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-border bg-bg-panel-2 px-2 py-1 text-[16px] text-foreground focus:border-accent focus:outline-none sm:text-sm"
             aria-label="Session name"
           />
-          <button type="submit" disabled={busy} aria-label="Save name" className="grid h-7 w-7 place-items-center rounded-md text-accent hover:bg-bg-panel-2">
+          <button type="submit" disabled={busy} aria-label="Save name" className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-accent hover:bg-bg-panel-2">
             <Check size={15} />
           </button>
-          <button type="button" onClick={() => setPending(null)} aria-label="Cancel" className="grid h-7 w-7 place-items-center rounded-md text-muted-2 hover:bg-bg-panel-2">
+          <button type="button" onClick={() => setPending(null)} aria-label="Cancel" className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-muted-2 hover:bg-bg-panel-2">
             <X size={15} />
           </button>
         </form>
@@ -126,14 +126,14 @@ export function SessionSwitcher() {
                 type="button"
                 disabled={busy}
                 onClick={() => void run(() => mergeSessions(s.id, t.id))}
-                className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm text-foreground/90 hover:bg-bg-elevated disabled:opacity-50"
+                className="flex min-h-10 items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm text-foreground/90 hover:bg-bg-elevated disabled:opacity-50"
               >
                 <span className="truncate">{t.name}</span>
-                <span className="shrink-0 text-[10px] tabular-nums text-muted-2">{countOf(t.id)} solves</span>
+                <span className="shrink-0 text-[11px] tabular-nums text-muted-2">{countOf(t.id)} solves</span>
               </button>
             ))}
           </div>
-          <button type="button" onClick={() => setPending(null)} className="mt-1 text-[11px] text-muted-2 hover:text-muted">
+          <button type="button" onClick={() => setPending(null)} className="flex min-h-10 items-center px-2 text-xs text-muted-2 hover:text-muted">
             Cancel
           </button>
         </div>
@@ -159,11 +159,11 @@ export function SessionSwitcher() {
               type="button"
               disabled={busy}
               onClick={() => void run(() => removeSession(s.id))}
-              className="rounded-full bg-danger px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+              className="hit-y rounded-full bg-danger px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
             >
               Delete
             </button>
-            <button type="button" onClick={() => setPending(null)} className="px-2 text-[11px] text-muted">
+            <button type="button" onClick={() => setPending(null)} className="hit-y px-2.5 text-xs text-muted">
               Cancel
             </button>
           </div>
@@ -194,7 +194,7 @@ export function SessionSwitcher() {
               type="button"
               onClick={() => setPending({ kind: "rename", id: s.id, name: s.name })}
               aria-label={`Rename ${s.name}`}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-2 hover:bg-bg-panel-2 hover:text-foreground"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-muted-2 hover:bg-bg-panel-2 hover:text-foreground"
             >
               <Pencil size={13} />
             </button>
@@ -203,7 +203,7 @@ export function SessionSwitcher() {
                 type="button"
                 onClick={() => setPending({ kind: "merge", id: s.id })}
                 aria-label={`Merge ${s.name} into another session`}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-2 hover:bg-bg-panel-2 hover:text-foreground"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-muted-2 hover:bg-bg-panel-2 hover:text-foreground"
               >
                 <Merge size={13} />
               </button>
@@ -213,7 +213,7 @@ export function SessionSwitcher() {
                 type="button"
                 onClick={() => setPending({ kind: "delete", id: s.id })}
                 aria-label={`Delete ${s.name}`}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-2 hover:bg-danger/15 hover:text-danger"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-md text-muted-2 hover:bg-danger/15 hover:text-danger"
               >
                 <Trash2 size={13} />
               </button>
@@ -235,7 +235,7 @@ export function SessionSwitcher() {
         <span className="max-w-[9rem] truncate">{active?.name ?? "Session"}</span>
         {active && <span className="text-[11px] font-normal tabular-nums text-muted-2">{countOf(active.id)}</span>}
         {active && active.event !== "333" && (
-          <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+          <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
             {WCA_EVENTS.find((e) => e.id === active.event)?.label}
           </span>
         )}
@@ -246,8 +246,8 @@ export function SessionSwitcher() {
           {/* Tap anywhere else to close. */}
           <button type="button" aria-label="Close sessions" className="fixed inset-0 z-10 cursor-default" onClick={close} />
           <div className="absolute left-0 top-full z-20 mt-1 w-72 max-w-[calc(100vw-1.5rem)] rounded-xl glass-panel p-1.5 shadow-lg">
-            <div className="flex items-center justify-between px-2 pb-1 pt-0.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-2">Sessions</span>
+            <div className="flex items-center justify-between px-2 pb-2.5 pt-0.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-2">Sessions</span>
               <button
                 type="button"
                 onClick={() => {
@@ -257,7 +257,7 @@ export function SessionSwitcher() {
                 }}
                 aria-pressed={managing}
                 className={cn(
-                  "flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors",
+                  "hit-y flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
                   managing ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
                 )}
               >
@@ -279,16 +279,16 @@ export function SessionSwitcher() {
                         void addSession(name, e.id);
                         close();
                       }}
-                      className="flex flex-1 flex-col items-center rounded-lg py-1.5 text-center text-xs font-medium text-muted hover:text-accent hover:bg-bg-panel-2 transition-colors"
+                      className="flex min-h-11 flex-1 flex-col items-center justify-center rounded-lg py-1.5 text-center text-xs font-medium text-muted hover:text-accent hover:bg-bg-panel-2 transition-colors"
                     >
                       {e.label}
-                      <span className={cn("text-[9px] font-normal", e.randomState ? "text-muted-2" : "text-warning")}>
+                      <span className={cn("text-[10px] font-normal", e.randomState ? "text-muted-2" : "text-warning")}>
                         {e.randomState ? "random-state" : "random-move"}
                       </span>
                     </button>
                   ))}
                 </div>
-                <p className="mt-1 max-w-64 px-2 text-[10px] leading-snug text-muted-2">
+                <p className="mt-1 max-w-64 px-2 text-[11px] leading-snug text-muted-2">
                   Only 3x3 scrambles are WCA-style random-state. 2x2, 4x4 and 5x5 use random-move scrambles — fine for practice, not
                   competition-grade.
                 </p>
@@ -297,7 +297,7 @@ export function SessionSwitcher() {
               <button
                 type="button"
                 onClick={() => setPickingEvent(true)}
-                className="flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
+                className="flex min-h-10 w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
               >
                 <Plus size={14} /> New session
               </button>
@@ -309,7 +309,7 @@ export function SessionSwitcher() {
                   setCompareOpen(true);
                   close();
                 }}
-                className="flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
+                className="flex min-h-10 w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
               >
                 <ArrowLeftRight size={14} /> Compare sessions
               </button>
@@ -322,11 +322,11 @@ export function SessionSwitcher() {
                     type="button"
                     disabled={busy}
                     onClick={() => void run(tidyUp)}
-                    className="rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-accent-fg disabled:opacity-50"
+                    className="hit-y rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-50"
                   >
                     Tidy up
                   </button>
-                  <button type="button" onClick={() => setPending(null)} className="px-2 text-[11px] text-muted">
+                  <button type="button" onClick={() => setPending(null)} className="hit-y px-2.5 text-xs text-muted">
                     Cancel
                   </button>
                 </div>
@@ -340,13 +340,13 @@ export function SessionSwitcher() {
                   setTidyResult(null);
                   setPending({ kind: "tidy" });
                 }}
-                className="flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
+                className="flex min-h-10 w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-sm text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
               >
                 <Sparkles size={14} /> Tidy up
               </button>
             )}
             {managing && pending === null && (
-              <p className="px-3 pb-1 pt-0.5 text-[10px] leading-snug text-muted-2">
+              <p className="px-3 pb-1 pt-0.5 text-[11px] leading-snug text-muted-2">
                 Rename, merge one session&apos;s solves into another ({nameOf(activeId ?? "")} stays open unless you merge it away), or delete
                 one. Changes sync to your other devices.
               </p>

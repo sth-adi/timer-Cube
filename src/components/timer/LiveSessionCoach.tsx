@@ -62,7 +62,9 @@ export function LiveSessionCoach() {
   const Icon = ICON[top.kind];
 
   return (
-    <div className="card flex w-full max-w-sm flex-col gap-1.5 rounded-xl px-3 py-2.5" aria-live="polite">
+    // data-no-timer: this card sits on the timer's touch surface; a tap on it (or its
+    // small "more" button) is for the card and must not start a hold.
+    <div className="card flex w-full max-w-sm flex-col gap-1.5 rounded-xl px-3 py-2.5" aria-live="polite" data-no-timer>
       <div className="flex items-start gap-2.5">
         <Icon size={16} className={cn("mt-0.5 shrink-0", TONE[top.tone])} />
         <div className="min-w-0 flex-1">
@@ -90,7 +92,7 @@ export function LiveSessionCoach() {
                 </div>
               );
             })}
-          <button type="button" onClick={() => setOpen((v) => !v)} className="self-end text-[10px] font-medium text-muted-2 hover:text-foreground">
+          <button type="button" onClick={() => setOpen((v) => !v)} className="-m-1.5 self-end p-1.5 text-[10px] font-medium text-muted-2 hover:text-foreground">
             {open ? "less" : `+${rest.length} more`}
           </button>
         </>

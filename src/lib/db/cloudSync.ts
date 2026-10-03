@@ -249,6 +249,118 @@ function writeStoredNumber(key: string, value: number): void {
 const readPushedAt = (userId: string) => readStoredNumber(pushedAtKey(userId));
 const writePushedAt = (userId: string, at: number) => writeStoredNumber(pushedAtKey(userId), at);
 
+// --- Whose solves are on this device ----------------------------------------
+//
+// Signing out keeps everything on the device, and a sync uploads everything on the device. Without
+// knowing whose solves those are, signing in as someone else would copy the last account's whole
+// history into the new one. So the device remembers which account its data belongs to, and a
+// different account signing in is asked first instead of synced.
+
+const DATA_OWNER_KEY = "cube-timer:data-owner";
+const DATA_OWNER_NAME_KEY = "cube-timer:data-owner-name";
+/** Set when the signed-in account chose not to sync this device; holds the owner it was chosen for. */
+const keptLocalKey = (userId: string) => `cube-timer:kept-local:${userId}`;
+const PUSHED_AT_PREFIX = pushedAtKey("");
+
+/**
+ * Which account this device's data belongs to. The stored owner when there is one; otherwise (data
+ * from before owners were recorded) whoever this device last pushed for, read off the per-account
+ * push marks — the account signing in, if it has pushed from here before; null when nobody has,
+ * meaning the data was never anyone's.
+ */
+export function resolveDataOwner(stored: string | null, pushedAt: Readonly<Record<string, number>>, userId: string): string | null {
+  if (stored) return stored;
+  if ((pushedAt[userId] ?? 0) > 0) return userId;
+  let owner: string | null = null;
+  let latest = 0;
+  for (const [id, at] of Object.entries(pushedAt)) {
+    if (id && at > latest) {
+      owner = id;
+      latest = at;
+    }
+  }
+  return owner;
+}
+
+/**
+ * - `sync`: the data is this account's, nobody's yet, or there are no solves to carry over.
+ * - `ask`: it belongs to another account — nothing is pulled or pushed until the user chooses.
+ * - `kept-local`: they already chose to keep it on this device without syncing this account.
+ */
+export type OwnershipDecision = { kind: "sync" } | { kind: "ask"; ownerId: string } | { kind: "kept-local"; ownerId: string };
+
+export function decideOwnership(input: {
+  userId: string;
+  ownerId: string | null;
+  localSolves: number;
+  /** The owner this account chose "keep on this device" for, if it did. */
+  keptLocalFor: string | null;
+}): OwnershipDecision {
+  const { userId, ownerId, localSolves, keptLocalFor } = input;
+  if (ownerId === null || ownerId === userId || localSolves === 0) return { kind: "sync" };
+  if (keptLocalFor === ownerId) return { kind: "kept-local", ownerId };
+  return { kind: "ask", ownerId };
+}
+
+function readStoredString(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key) || null;
+  } catch {
+    return null;
+  }
+}
+
+function readPushedAtMarks(): Record<string, number> {
+  const marks: Record<string, number> = {};
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith(PUSHED_AT_PREFIX)) marks[key.slice(PUSHED_AT_PREFIX.length)] = readStoredNumber(key);
+    }
+  } catch {
+    // Unreadable storage: no legacy marks to go by.
+  }
+  return marks;
+}
+
+export interface DataOwnership {
+  decision: OwnershipDecision;
+  /** The owner's username when it was recorded (null for data from before names were kept). */
+  ownerName: string | null;
+  localSolves: number;
+}
+
+/** Whether `userId` may sync this device's data now (see decideOwnership). */
+export async function checkDataOwnership(userId: string): Promise<DataOwnership> {
+  const stored = readStoredString(DATA_OWNER_KEY);
+  const ownerId = resolveDataOwner(stored, readPushedAtMarks(), userId);
+  const localSolves = await db.solves.count();
+  const decision = decideOwnership({ userId, ownerId, localSolves, keptLocalFor: readStoredString(keptLocalKey(userId)) });
+  // A name is only known for an owner recorded by claimLocalData.
+  const ownerName = stored && stored === ownerId ? readStoredString(DATA_OWNER_NAME_KEY) : null;
+  return { decision, ownerName, localSolves };
+}
+
+/** Records this device's data as `userId`'s — done just before every sync it's allowed, since the pull merges that account's data in. */
+export function claimLocalData(userId: string, username: string): void {
+  try {
+    window.localStorage.setItem(DATA_OWNER_KEY, userId);
+    window.localStorage.setItem(DATA_OWNER_NAME_KEY, username);
+    window.localStorage.removeItem(keptLocalKey(userId));
+  } catch {
+    // Without storage the owner can't be remembered; every account then counts as the first.
+  }
+}
+
+/** `userId` chose to keep `ownerId`'s data on this device without syncing it: not asked again until they change their mind. */
+export function keepLocalDataOffAccount(userId: string, ownerId: string): void {
+  try {
+    window.localStorage.setItem(keptLocalKey(userId), ownerId);
+  } catch {
+    // Not remembered: they're simply asked again next time.
+  }
+}
+
 /**
  * Where an incremental pull starts: rows the server stamped (`synced_at`) after this, in epoch ms.
  * Null means a full pull — the first sync, a missing mark (or push mark, which would make the push
@@ -441,8 +553,17 @@ async function fetchAllRows<T extends { id: string }>(
   }
 }
 
-/** One cloud sync: pull and merge first, then push the merged result. */
+/** Thrown by syncWithCloud when this device's data belongs to another account and the user hasn't said what to do with it. */
+export class DataOwnerMismatchError extends Error {}
+
+/**
+ * One cloud sync: pull and merge first, then push the merged result. Refuses outright while the
+ * device holds another account's solves (the caller asks the user first; see checkDataOwnership).
+ */
 export async function syncWithCloud(userId: string): Promise<MergeResult> {
+  if ((await checkDataOwnership(userId)).decision.kind !== "sync") {
+    throw new DataOwnerMismatchError("This device's solves belong to another account. Choose what to do with them before syncing.");
+  }
   const { result, cloudRevisions, complete } = await pullAll(userId);
   await pushAll(userId, cloudRevisions, complete);
   return result;

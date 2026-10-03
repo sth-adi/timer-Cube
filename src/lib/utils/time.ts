@@ -42,3 +42,38 @@ export function parseTimeInput(input: string): number | null {
 
   return null;
 }
+
+const POSITIVE_ONLY = "The time must be more than zero";
+
+export type ManualTimeResult = { ok: true; ms: number } | { ok: false; error: string };
+
+/**
+ * Parses a time typed into manual entry. Digits alone are read csTimer-style,
+ * the last two as hundredths — "934" → 9.34, "1234" → 12.34, "10234" →
+ * 1:02.34 — so a phone's number pad (no ":" key) can enter any time.
+ * Anything with a "." (or "," from a decimal pad in a comma locale) or ":"
+ * goes through parseTimeInput: "12.34", "1:02.34". Zero is rejected: it can
+ * only be a typo, and it would sit at the top of every best-of list.
+ */
+export function parseManualTime(input: string): ManualTimeResult {
+  const trimmed = input.trim().replace(",", ".");
+  if (trimmed.length === 0) return { ok: false, error: "Enter a time" };
+  if (trimmed.startsWith("-")) return { ok: false, error: POSITIVE_ONLY };
+
+  let ms: number | null;
+  const digits = /^\d+$/.exec(trimmed);
+  if (digits) {
+    const padded = trimmed.padStart(3, "0");
+    const cs = Number(padded.slice(-2));
+    const seconds = Number(padded.slice(-4, -2));
+    const minutes = Number(padded.slice(0, -4) || "0");
+    // Past four digits the seconds sit in front of minutes, so they're a clock field: 0–59.
+    ms = minutes > 0 && seconds > 59 ? null : minutes * 60000 + seconds * 1000 + cs * 10;
+  } else {
+    ms = parseTimeInput(trimmed);
+  }
+
+  if (ms === null) return { ok: false, error: "Not a time — try 12.34, 1:02.34 or 1234" };
+  if (ms <= 0) return { ok: false, error: POSITIVE_ONLY };
+  return { ok: true, ms };
+}

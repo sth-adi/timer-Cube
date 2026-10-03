@@ -7,6 +7,7 @@ import { SmartCubeSettings } from "./SmartCubeSettings";
 import { BACKGROUND_STYLES, FX_LEVELS, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
+import { describeImport } from "@/lib/utils/sessionExport";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { looksLikeCsTimerExport, parseCsTimerExport, type CsTimerParsed } from "@/lib/utils/csTimerImport";
 import { DeviceSyncPanel } from "./DeviceSyncPanel";
@@ -88,15 +89,13 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       if (looksLikeCsTimerExport(raw)) {
         const parsed = parseCsTimerExport(raw);
         if (parsed.sessions.length === 1) {
-          const count = await importRowsIntoActiveSession(parsed.solvesByKey[parsed.sessions[0].key]);
-          setImportMsg(`Imported ${count} solve${count === 1 ? "" : "s"} from csTimer.`);
+          setImportMsg(describeImport(await importRowsIntoActiveSession(parsed.solvesByKey[parsed.sessions[0].key]), "from csTimer"));
         } else {
           setCsTimerPending(parsed);
         }
         return;
       }
-      const count = await importIntoActiveSession(text);
-      setImportMsg(`Imported ${count} solve${count === 1 ? "" : "s"}.`);
+      setImportMsg(describeImport(await importIntoActiveSession(text)));
     } catch (err) {
       setImportMsg(err instanceof Error ? err.message : "Import failed.");
     }
@@ -105,8 +104,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const onPickCsTimerSession = async (key: string) => {
     if (!csTimerPending) return;
     const rows = csTimerPending.solvesByKey[key];
-    const count = await importRowsIntoActiveSession(rows);
-    setImportMsg(`Imported ${count} solve${count === 1 ? "" : "s"} from csTimer.`);
+    setImportMsg(describeImport(await importRowsIntoActiveSession(rows), "from csTimer"));
     setCsTimerPending(null);
   };
 
@@ -150,7 +148,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   className="h-5 w-5 rounded-full border border-border-strong"
                   style={{ background: t.swatch }}
                 />
-                <span className="text-[10px] leading-none text-muted">{t.name}</span>
+                <span className="text-[11px] leading-none text-muted">{t.name}</span>
               </button>
             ))}
           </div>
@@ -166,7 +164,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setBackgroundStyle(b.id)}
                 aria-pressed={backgroundStyle === b.id}
                 className={cn(
-                  "rounded-lg border px-1 py-2 text-center text-[10px] font-medium leading-none transition-colors",
+                  "min-h-10 rounded-lg border px-1 py-2 text-center text-[11px] font-medium leading-none transition-colors",
                   backgroundStyle === b.id ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:bg-bg-panel-2",
                 )}
               >
@@ -186,7 +184,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setFxLevel(f.id)}
                 aria-pressed={fxLevel === f.id}
                 className={cn(
-                  "rounded-lg border px-1 py-2 text-center text-[10px] font-medium leading-none transition-colors",
+                  "min-h-10 rounded-lg border px-1 py-2 text-center text-[11px] font-medium leading-none transition-colors",
                   fxLevel === f.id ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:bg-bg-panel-2",
                 )}
               >
@@ -194,7 +192,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
-          <p className="mt-1.5 text-[10px] leading-snug text-muted-2">
+          <p className="mt-1.5 text-[11px] leading-snug text-muted-2">
             Insane adds cursor spotlight, card tilt, click sparks and solve shockwaves. Reduced-motion systems always get the calm version.
           </p>
         </div>
@@ -209,7 +207,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setTimerStyle(t.id)}
                 aria-pressed={timerStyle === t.id}
                 className={cn(
-                  "rounded-lg border px-1 py-2 text-center text-[10px] font-medium leading-none transition-colors",
+                  "min-h-10 rounded-lg border px-1 py-2 text-center text-[11px] font-medium leading-none transition-colors",
                   timerStyle === t.id ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:bg-bg-panel-2",
                 )}
               >
@@ -243,7 +241,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 onClick={() => setPhaseCount(count)}
                 aria-pressed={phaseCount === count}
                 className={cn(
-                  "flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors",
+                  "min-h-10 flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors",
                   phaseCount === count
                     ? "bg-accent-soft text-accent"
                     : "bg-bg-panel-2 text-muted hover:text-foreground",
@@ -271,7 +269,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   onClick={() => setPracticeLength(len)}
                   aria-pressed={practiceLength === len}
                   className={cn(
-                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    "min-h-10 min-w-10 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
                     practiceLength === len
                       ? "bg-accent-soft text-accent"
                       : "bg-bg-panel-2 text-muted hover:text-foreground",
@@ -327,14 +325,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={() => exportActiveSession()}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
             >
               <Download size={13} /> Export JSON
             </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
             >
               <Upload size={13} /> Import JSON
             </button>
@@ -365,7 +363,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                     key={s.key}
                     type="button"
                     onClick={() => void onPickCsTimerSession(s.key)}
-                    className="rounded-lg bg-bg-elevated px-2.5 py-1.5 text-xs font-medium text-foreground/90 hover:brightness-110"
+                    className="min-h-10 rounded-lg bg-bg-elevated px-2.5 py-1.5 text-xs font-medium text-foreground/90 hover:brightness-110"
                   >
                     {s.name} <span className="text-muted-2">({s.count})</span>
                   </button>

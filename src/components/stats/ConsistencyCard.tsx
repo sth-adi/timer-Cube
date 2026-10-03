@@ -20,15 +20,15 @@ export function ConsistencyCard({ solves }: { solves: Solve[] }) {
   return (
     <div className="grid grid-cols-3 gap-1.5">
       <div className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-2">Std dev</span>
+        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-2">Std dev</span>
         <span className="tabular-timer text-base font-semibold">{stats.stdDev !== null ? formatTime(stats.stdDev) : "—"}</span>
       </div>
       <div className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-2">DNF rate</span>
+        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-2">DNF rate</span>
         <span className="tabular-timer text-base font-semibold">{pct(stats.dnfCount, stats.count)}</span>
       </div>
       <div className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-2">+2 rate</span>
+        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-2">+2 rate</span>
         <span className="tabular-timer text-base font-semibold">{pct(plus2Count, stats.count)}</span>
       </div>
     </div>

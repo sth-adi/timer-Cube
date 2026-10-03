@@ -55,7 +55,7 @@ export function AchievementsPanel() {
               )}
             >
               <span className="text-xl leading-none">{a.icon}</span>
-              <span className="text-[10px] leading-tight text-muted line-clamp-2">{a.label}</span>
+              <span className="text-[11px] leading-tight text-muted line-clamp-2">{a.label}</span>
               {!a.unlocked && a.formatCurrent && a.formatCurrent(0) !== "" && (
                 <div className="h-1 w-full overflow-hidden rounded-full bg-border">
                   <div className="h-full rounded-full bg-accent" style={{ width: `${pct * 100}%` }} />

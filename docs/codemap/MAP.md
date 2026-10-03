@@ -254,3 +254,13 @@ Appended (not regenerated). 4 new files, 11 new import edges; all are in graph.j
 - src/lib/storage/persist.ts [1] {Other} — requestPersistentStorage: Asks the browser not to evict this site's IndexedDB under storage pressure — without it a device that runs low… (PersistOutcome, readPersistOutcome, requestPersistentStorage, resetPersistRequestForTests)
 - Sync change: `db/cloudSync.ts` pulls incrementally by server `synced_at` (keyset paging by id; full pull every 7 days or without a mark) — needs supabase/migrations/20261004000000_solve_cube_repaired.sql (solves.cube/repaired + `synced_at` columns, `set_synced_at` triggers), applied 2026-10-03.
 - Save path: `sessionStore.recordSolve` appends in memory (no re-read) and sets `saveError` instead of throwing; `SaveErrorBanner` shows it.
+
+## Additions — 2026-10-03 (round 2)
+Appended (not regenerated). 6 new files, 18 new import edges; all are in graph.json too.
+- src/components/chrome/AccountDataPrompt.tsx [1] {Shared UI / FX} — Asked when someone signs in on a device that holds another account's solves (see checkDataOwnership in lib/db/cloudSync.ts). (AccountDataPrompt)
+- src/lib/prediction/client.ts [1] {Other} — Subscribe to "a model finished training" — for useSyncExternalStore. (requestPredictionModel, subscribePredictionModels)
+- src/lib/prediction/useSolvePrediction.ts [2] {Other} — predictSolveTime for components, without the main-thread training: the model for trainingSolves is trained in the prediction worker and… (useSolvePrediction)
+- src/lib/prediction/worker.ts [1] {Other} — (no summary) (PredictionWorkerRequest, PredictionWorkerResponse)
+- src/lib/smartcube/autoReconnect.ts [1] {Smart cube} — When to try getting a smart cube back after the Bluetooth link drops out from under you (out of range, the cube napped, an OS hiccup) —… (EARLY_ATTEMPT_MIN_GAP_MS, RECONNECT_BACKOFF_MS, RECONNECT_HIDDEN_LIMIT_MS, RECONNECT_STEADY_MS, RECONNECT_WINDOW_MS, hiddenTooLong, +3)
+- src/lib/smartcube/knownDevice.ts [1] {Smart cube} — Runs run (a connectSmartCube call) and records which device the user picked in the chooser it opens. (captureChosenDevice, connectKnownDevice, findPermittedDevice, pickProtocol)
+- Behaviour notes: `stats.averageOfN` trims ceil(5%) per end (ao50 → 3, ao100 → 5); PB toasts use `sessionStore.detectPB` over the Stats scope and never fire on a scope's first single/ao5/ao12; undo is `sessionStore.undoStack` (10 batches); imports dedupe via `db/solves.importSolvesWithReport` + `utils/sessionExport.describeImport`; `cloudSync.checkDataOwnership` gates sync when another account's data is on the device (`AccountDataPrompt`); timer mode persists in `settingsStore.timerMode`.

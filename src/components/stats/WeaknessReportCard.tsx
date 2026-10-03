@@ -63,7 +63,7 @@ export function WeaknessReportCard() {
           type="button"
           onClick={() => void build(solves)}
           disabled={loading}
-          className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground disabled:opacity-50"
+          className="hit-y flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground disabled:opacity-50"
         >
           {loading ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
           {report ? "Refresh" : "Build"}

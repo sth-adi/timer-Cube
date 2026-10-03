@@ -8,28 +8,29 @@ export interface AverageResult {
 }
 
 /**
- * WCA-style average of N: drop the best and worst 1 result (for N>=5), mean
- * the rest. If more than 1 DNF is in the window, or N=1..2 has any DNF, the
- * average itself is DNF. For N<5 there's no trimming (plain mean), matching
- * how most community timers define ao3.
+ * How many results an average of N drops from each end: 5%, rounded up — the
+ * WCA/csTimer rule, so ao5 and ao12 trim 1, ao50 trims 3, ao100 trims 5.
+ */
+export function trimCount(n: number): number {
+  return n < 5 ? 0 : Math.ceil(n * 0.05);
+}
+
+/**
+ * WCA-style average of N: drop the best and worst trimCount(N) results (5%
+ * each side, rounded up, for N>=5), mean the rest. More DNFs than one end
+ * trims makes the average itself DNF. For N<5 there's no trimming (plain
+ * mean, any DNF makes it DNF), matching how most community timers define ao3.
  */
 export function averageOfN(times: number[]): AverageResult {
   const n = times.length;
   if (n === 0) return { value: null, isDnf: false };
 
-  if (n < 5) {
-    const dnfCount = times.filter((t) => t === Infinity).length;
-    if (dnfCount > 0) return { value: null, isDnf: true };
-    const mean = times.reduce((a, b) => a + b, 0) / n;
-    return { value: mean, isDnf: false };
-  }
-
+  const trim = trimCount(n);
   const dnfCount = times.filter((t) => t === Infinity).length;
-  if (dnfCount >= 2) return { value: null, isDnf: true };
+  if (dnfCount > trim) return { value: null, isDnf: true };
 
   const sorted = [...times].sort((a, b) => a - b);
-  const trimmed = sorted.slice(1, sorted.length - 1);
-  if (trimmed.some((t) => t === Infinity)) return { value: null, isDnf: true };
+  const trimmed = sorted.slice(trim, n - trim);
   const mean = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
   return { value: mean, isDnf: false };
 }

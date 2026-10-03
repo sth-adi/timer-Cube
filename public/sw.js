@@ -6,9 +6,10 @@
 //
 //  * Built assets (/_next/static/…) have hashed names and never change, so they're served from the
 //    cache first and only fetched once.
-//  * Pages and everything else are network-first, but with a short timeout: on a weak connection
-//    the saved copy is shown after a few seconds instead of the app hanging on a request that may
-//    never finish. A page that does finish loading after the timeout is still saved for next time.
+//  * Pages and everything else are network-first, but with a short timeout when there's a saved
+//    copy to fall back on: on a weak connection a saved page is shown after ~1.5s instead of the app
+//    hanging on a request that may never finish. The request still finishes in the background and
+//    is saved for next time. With nothing saved, it waits for the network as long as it takes.
 //  * A saved page names the exact scripts it needs, so trimming the static cache never evicts one
 //    that a saved page still refers to — and when a new worker takes over, open pages are told
 //    ({type:"updated"}) so they can offer a reload instead of running on a mix of old and new.
@@ -17,9 +18,12 @@
 //    work offline too.
 //
 // Bump VERSION on any change here; activate() drops caches from older versions.
-const VERSION = "v5";
+const VERSION = "v6";
 const STATIC = `cube-static-${VERSION}`;
 const PAGES = `cube-pages-${VERSION}`;
+/** How long a page load waits for the network before showing the saved copy (only when there is one). */
+const NAVIGATION_TIMEOUT_MS = 1500;
+/** The same for everything else that goes network-first (the manifest, icons, other same-origin files). */
 const NETWORK_TIMEOUT_MS = 4000;
 const MAX_STATIC_ENTRIES = 2500;
 const OFFLINE_PAGE = "/offline";
@@ -62,20 +66,24 @@ function withTimeout(promise, ms) {
   });
 }
 
-async function networkFirst(event, request, key) {
+async function networkFirst(event, request, key, timeoutMs) {
   const cache = await caches.open(PAGES);
   const network = fetch(request).then((res) => {
-    if (isCacheable(res)) cache.put(key, res.clone());
+    // Kept alive until saved, even when the saved copy was shown instead (still allowed here: the
+    // waitUntil below hasn't settled yet).
+    if (isCacheable(res)) event.waitUntil(cache.put(key, res.clone()).catch(() => {}));
     return res;
   });
   // Whatever happens, let a slow request finish in the background so it's saved for next time.
   event.waitUntil(network.catch(() => {}));
-  const fast = await withTimeout(network, NETWORK_TIMEOUT_MS);
-  if (fast) return fast;
+  // The clock starts with the request, not after the cache lookup.
+  const fast = withTimeout(network, timeoutMs);
   const saved = await cache.match(key);
-  if (saved) return saved;
-  // Nothing saved: wait for the network if it's still trying, else say so.
-  return network;
+  // Nothing saved: wait for the network however long it takes (a slow page beats no page), else say so.
+  if (!saved) return network;
+  // A saved page names only hashed scripts, and trim() never evicts one a saved page still needs —
+  // so falling back early is safe even when the saved copy is from an older build.
+  return (await fast) ?? saved;
 }
 
 /**
@@ -147,7 +155,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       (async () => {
         try {
-          return await networkFirst(event, request, pageKey(url));
+          return await networkFirst(event, request, pageKey(url), NAVIGATION_TIMEOUT_MS);
         } catch {
           const cache = await caches.open(PAGES);
           return (await cache.match(pageKey(url))) ?? (await cache.match(new Request(self.location.origin + OFFLINE_PAGE))) ?? Response.error();
@@ -160,7 +168,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     (async () => {
       try {
-        return await networkFirst(event, request, request);
+        return await networkFirst(event, request, request, NETWORK_TIMEOUT_MS);
       } catch {
         const saved = await (await caches.open(PAGES)).match(request);
         return saved ?? Response.error();
@@ -260,7 +268,7 @@ self.addEventListener("message", (event) => {
   if (!data || data.type !== "warm" || !Array.isArray(data.routes)) return;
   if (!warming) {
     warming = warm(data.routes, Array.isArray(data.extras) ? data.extras : [])
-      .then(() => announce({ type: "warmed", at: Date.now() }))
+      .then(() => announce({ type: "warmed", at: Date.now(), cache: PAGES }))
       .catch(() => {})
       .finally(() => {
         warming = null;

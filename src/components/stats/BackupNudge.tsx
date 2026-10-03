@@ -56,7 +56,7 @@ export function BackupNudge() {
               setVersion((v) => v + 1);
             }
           }}
-          className="rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-accent-fg disabled:opacity-50"
+          className="hit-y rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-accent-fg disabled:opacity-50"
         >
           Download backup
         </button>
@@ -66,7 +66,7 @@ export function BackupNudge() {
             writeBackupMeta({ ...readBackupMeta(), snoozedUntil: wallNow() + WEEK });
             setVersion((v) => v + 1);
           }}
-          className="px-1 text-[11px] text-muted-2 hover:text-muted"
+          className="hit-y px-1.5 text-[11px] text-muted-2 hover:text-muted"
         >
           Remind me next week
         </button>
