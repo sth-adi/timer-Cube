@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TimerMachine, type TimerPhase, type TimerResult } from "@/lib/timer/timerMachine";
+import { TimerMachine, resolveEventTime, type TimerPhase, type TimerResult } from "@/lib/timer/timerMachine";
 import type { Penalty } from "@/types";
 
 export type { TimerPhase, TimerResult } from "@/lib/timer/timerMachine";
@@ -33,10 +33,10 @@ export interface TimerEngine {
   splits: number[];
   /** Which phase is being timed right now, 0-based. */
   phaseIndex: number;
-  /** keydown(space) / touchstart. */
-  press: () => void;
-  /** keyup(space) / touchend. */
-  release: () => void;
+  /** keydown(space) / touchstart. `at` is the input event's own timeStamp (performance.now() clock); omitted, it's read now. */
+  press: (at?: number) => void;
+  /** keyup(space) / touchend. `at` as for press. */
+  release: (at?: number) => void;
   /** touchcancel / window blur: abandon a hold without starting the solve. */
   cancel: () => void;
   reset: () => void;
@@ -44,8 +44,8 @@ export interface TimerEngine {
 
 /**
  * React wrapper around TimerMachine (lib/timer/timerMachine.ts), which holds
- * all the rules — this hook only feeds it performance.now(), arms holds on
- * time, and re-renders on animation frames while something is changing.
+ * all the rules — this hook only feeds it the input's time (the event's own
+ * timestamp, else performance.now()), arms holds on time, and re-renders on animation frames while something is changing.
  */
 export function useTimer({ inspectionEnabled, holdToStartMs, phaseCount = 1, onStart, onComplete }: UseTimerOptions): TimerEngine {
   // One machine for the component's lifetime; it's mutated in place and the
@@ -88,17 +88,17 @@ export function useTimer({ inspectionEnabled, holdToStartMs, phaseCount = 1, onS
     }
   }, [machine, sync]);
 
-  const press = useCallback(() => {
+  const press = useCallback((at?: number) => {
     const before = machine.phase;
-    const result = machine.press(performance.now());
+    const result = machine.press(resolveEventTime(at, performance.now()));
     if ((before === "idle" || before === "stopped") && machine.phase !== before) onStartRef.current?.();
     sync();
     schedule();
     if (result) onCompleteRef.current(result);
   }, [machine, sync, schedule]);
 
-  const release = useCallback(() => {
-    machine.release(performance.now());
+  const release = useCallback((at?: number) => {
+    machine.release(resolveEventTime(at, performance.now()));
     sync();
     schedule();
   }, [machine, sync, schedule]);

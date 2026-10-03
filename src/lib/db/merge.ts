@@ -25,17 +25,21 @@ export interface SyncState {
 }
 
 /**
- * Solve fields the cloud has no column for. A row coming back from the cloud
- * can't carry them, so merging it as-is would either drop them or, when it
- * ties a local row on timestamp, lose a coin-flip on content and drop them
- * anyway — copy them over from the local row of the same id first.
+ * Solve fields a cloud row may lack: the columns come from a later migration,
+ * so a cloud that hasn't had it (or a row pushed before it) can't carry them.
+ * Merging such a row as-is would either drop them or, when it ties a local
+ * row on timestamp, lose a coin-flip on content and drop them anyway — copy
+ * them over from the local row of the same id first.
  */
 export function withLocalOnlyFields(remote: Solve[], local: readonly Solve[]): Solve[] {
   const byId = new Map(local.map((s) => [s.id, s]));
   return remote.map((r) => {
     const mine = byId.get(r.id);
-    if (!mine || (!mine.cube && !mine.repaired)) return r;
-    return { ...r, ...(mine.cube ? { cube: mine.cube } : {}), ...(mine.repaired ? { repaired: mine.repaired } : {}) };
+    // A cloud that has the columns sends its own copy, which wins; this only fills in what it lacks.
+    const cube = !r.cube && mine?.cube ? mine.cube : undefined;
+    const repaired = !r.repaired && mine?.repaired ? mine.repaired : undefined;
+    if (!cube && !repaired) return r;
+    return { ...r, ...(cube ? { cube } : {}), ...(repaired ? { repaired } : {}) };
   });
 }
 
@@ -60,22 +64,44 @@ export function contentKey(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
+/** contentKey memoized per object, for the duration of one merge — a row is keyed at most once however many comparisons need it. */
+type Keyer = (value: object) => string;
+function makeKeyer(): Keyer {
+  const cache = new WeakMap<object, string>();
+  return (value) => {
+    let key = cache.get(value);
+    if (key === undefined) {
+      key = contentKey(value);
+      cache.set(value, key);
+    }
+    return key;
+  };
+}
+
 function pick<T extends { id: string }>(
   id: string,
   rows: (T | undefined)[],
   deletions: (Deletion | undefined)[],
   rev: (row: T) => number,
+  keyOf: Keyer,
 ): Winner<T> {
-  type Event = { at: number; winner: Winner<T>; rank: string };
+  // At the same instant a deletion outranks any version of the row, and versions order by
+  // content — which is only worked out when two events actually tie on time.
+  type Event = { at: number; winner: Winner<T>; row?: T };
   const events: Event[] = [
-    // At the same instant a deletion outranks any version of the row
-    // ("~" sorts after every JSON string), and versions order by content.
-    ...deletions.filter((d): d is Deletion => !!d).map((d) => ({ at: d.deletedAt, winner: { deletion: d }, rank: "~" })),
-    ...rows.filter((r): r is T => !!r).map((r) => ({ at: rev(r), winner: { row: r }, rank: contentKey(r) })),
+    ...deletions.filter((d): d is Deletion => !!d).map((d) => ({ at: d.deletedAt, winner: { deletion: d } as Winner<T> })),
+    ...rows.filter((r): r is T => !!r).map((r) => ({ at: rev(r), winner: { row: r } as Winner<T>, row: r })),
   ];
   if (events.length === 0) throw new Error(`nothing to merge for ${id}`);
-  events.sort((x, y) => y.at - x.at || (y.rank > x.rank ? 1 : y.rank < x.rank ? -1 : 0));
-  return events[0].winner;
+  // True when x sorts ahead of y: newer first, then a deletion, then the greater content.
+  const ahead = (x: Event, y: Event): boolean => {
+    if (x.at !== y.at) return x.at > y.at;
+    if (!x.row || !y.row) return !x.row && !!y.row;
+    return keyOf(x.row) > keyOf(y.row);
+  };
+  let best = events[0];
+  for (let i = 1; i < events.length; i++) if (ahead(events[i], best)) best = events[i];
+  return best.winner;
 }
 
 function mergeKind<T extends { id: string }>(
@@ -85,6 +111,7 @@ function mergeKind<T extends { id: string }>(
   localDel: Deletion[],
   remoteDel: Deletion[],
   rev: (row: T) => number,
+  keyOf: Keyer,
 ): { rows: Map<string, T>; deletions: Map<string, Deletion> } {
   const byId = <X extends { id: string }>(xs: X[]) => new Map(xs.map((x) => [x.id, x]));
   const lr = byId(local);
@@ -95,17 +122,22 @@ function mergeKind<T extends { id: string }>(
   const rows = new Map<string, T>();
   const deletions = new Map<string, Deletion>();
   for (const id of ids) {
-    const w = pick(id, [lr.get(id), rr.get(id)], [ld.get(id), rd.get(id)], rev);
+    const w = pick(id, [lr.get(id), rr.get(id)], [ld.get(id), rd.get(id)], rev, keyOf);
     if ("row" in w) rows.set(id, w.row);
     else deletions.set(id, w.deletion);
   }
   return { rows, deletions };
 }
 
-/** The merged state of two snapshots — the same answer whichever side is "local". */
-export function mergeStates(local: SyncState, remote: SyncState): SyncState {
-  const sessions = mergeKind("session", local.sessions, remote.sessions, local.deletions, remote.deletions, sessionRevision);
-  const solves = mergeKind("solve", local.solves, remote.solves, local.deletions, remote.deletions, solveRevision);
+/**
+ * The merged state of two snapshots — the same answer whichever side is "local".
+ * `remote` may be a partial snapshot (only the rows that changed lately): an id
+ * missing from one side is "no information", never a deletion — only a
+ * deletion record removes a row.
+ */
+export function mergeStates(local: SyncState, remote: SyncState, keyOf: Keyer = makeKeyer()): SyncState {
+  const sessions = mergeKind("session", local.sessions, remote.sessions, local.deletions, remote.deletions, sessionRevision, keyOf);
+  const solves = mergeKind("solve", local.solves, remote.solves, local.deletions, remote.deletions, solveRevision, keyOf);
 
   // Cascade: a deleted session takes its solves with it. The solve's own
   // deletion is stamped no earlier than its latest edit, so every device
@@ -136,16 +168,21 @@ export interface MergePlan {
   removed: number;
 }
 
-/** What has to change in `local` to reach the merged state. */
+/** What has to change in `local` to reach the merged state. `remote` may be partial, as in mergeStates. */
 export function planMerge(local: SyncState, remote: SyncState): MergePlan {
-  const merged = mergeStates(local, remote);
+  const keyOf = makeKeyer();
+  const merged = mergeStates(local, remote, keyOf);
   const localSessions = new Map(local.sessions.map((s) => [s.id, s]));
   const localSolves = new Map(local.solves.map((s) => [s.id, s]));
   const localDel = new Map(local.deletions.map((d) => [d.id, d]));
-  const same = (a: object, b: object) => contentKey(a) === contentKey(b);
+  // The merged row is one of the two inputs. Unchanged if it is the local object itself; changed
+  // if the revisions differ (the revision is part of the content); only when they are equal is
+  // the content compared.
+  const changed = <T extends object>(mine: T | undefined, merged: T, rev: (row: T) => number) =>
+    !mine || (merged !== mine && (rev(merged) !== rev(mine) || keyOf(merged) !== keyOf(mine)));
 
-  const putSessions = merged.sessions.filter((s) => !localSessions.has(s.id) || !same(localSessions.get(s.id)!, s));
-  const putSolves = merged.solves.filter((s) => !localSolves.has(s.id) || !same(localSolves.get(s.id)!, s));
+  const putSessions = merged.sessions.filter((s) => changed(localSessions.get(s.id), s, sessionRevision));
+  const putSolves = merged.solves.filter((s) => changed(localSolves.get(s.id), s, solveRevision));
   const deleteSessionIds = merged.deletions.filter((d) => d.kind === "session" && localSessions.has(d.id)).map((d) => d.id);
   const deleteSolveIds = merged.deletions.filter((d) => d.kind === "solve" && localSolves.has(d.id)).map((d) => d.id);
   const putDeletions = merged.deletions.filter((d) => {

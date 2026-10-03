@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CheckCircle2, Cloud, Loader2, LogOut, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Cloud, Loader2, LogOut, TriangleAlert, WifiOff } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -140,6 +140,7 @@ export function AccountPanel() {
               )}
               {status === "synced" && <CheckCircle2 size={12} className="shrink-0 text-success" />}
               {status === "error" && <TriangleAlert size={12} className="shrink-0 text-danger" />}
+              {status === "offline" && <WifiOff size={12} className="shrink-0" />}
               {status !== "syncing" &&
                 (lastSyncedAt ? `Last synced ${formatRelativeTime(lastSyncedAt, now)}` : "Not synced yet")}
             </p>
@@ -152,6 +153,7 @@ export function AccountPanel() {
             </button>
           </div>
           {status === "error" && error && <p className="text-[11px] leading-relaxed text-danger">{error}</p>}
+          {status === "offline" && <p className="text-[11px] leading-relaxed text-muted-2">Offline — will sync once you&apos;re back online.</p>}
 
           <button
             type="button"

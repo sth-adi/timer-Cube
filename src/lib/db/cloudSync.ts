@@ -21,6 +21,8 @@ interface SessionRow {
   created_at: number;
   order: number;
   updated_at: number | null;
+  /** Server clock, set by a trigger on every write; absent until 20261004000000_solve_cube_repaired.sql is applied. */
+  synced_at?: string;
 }
 
 interface SolveRow {
@@ -41,7 +43,11 @@ interface SolveRow {
   rotations: { atMs: number; token: string }[] | null;
   oriented_reconstruction: string | null;
   gyro_stream: { atMs: number[]; qx: number[]; qy: number[]; qz: number[]; qw: number[] } | null;
+  /** Absent from a cloud that hasn't had 20261004000000_solve_cube_repaired.sql applied yet. */
+  cube?: NonNullable<Solve["cube"]> | null;
+  repaired?: NonNullable<Solve["repaired"]> | null;
   updated_at: number | null;
+  synced_at?: string;
 }
 
 interface DeletionRow {
@@ -49,6 +55,7 @@ interface DeletionRow {
   id: string;
   kind: "solve" | "session";
   deleted_at: number;
+  synced_at?: string;
 }
 
 /**
@@ -71,6 +78,14 @@ export const MIGRATION_NEEDED =
 export const GYRO_STREAM_MIGRATION_NEEDED =
   "Cloud sync needs one more database update, for the gyro stream: run supabase/migrations/20260925000000_gyro_stream.sql in your Supabase project's SQL editor, then sync again.";
 
+/**
+ * Same idea for the cube/repaired columns, the last optional migration. Both
+ * the Postgres ("column \"cube\" of relation…") and PostgREST ("Could not find
+ * the 'cube' column…") messages quote the column name.
+ */
+export const SOLVE_CUBE_MIGRATION_NEEDED =
+  "Cloud sync needs one more database update, for each solve's cube: run supabase/migrations/20261004000000_solve_cube_repaired.sql in your Supabase project's SQL editor, then sync again.";
+
 function isMissingSchema(err: { code?: string; message?: string } | null): boolean {
   if (!err) return false;
   return (
@@ -86,11 +101,16 @@ function isMissingGyroStream(err: { code?: string; message?: string } | null): b
   return !!err && /gyro_stream/.test(err.message ?? "");
 }
 
+function isMissingCubeColumns(err: { code?: string; message?: string } | null): boolean {
+  return !!err && /["'](cube|repaired)["']/.test(err.message ?? "");
+}
+
 function check(err: { code?: string; message?: string } | null): void {
   if (!err) return;
-  // More specific first: a gyro_stream-shaped error can also match the
-  // generic codes isMissingSchema looks at.
+  // More specific first: a gyro_stream- or cube-shaped error can also match
+  // the generic codes isMissingSchema looks at.
   if (isMissingGyroStream(err)) throw new Error(GYRO_STREAM_MIGRATION_NEEDED);
+  if (isMissingCubeColumns(err)) throw new Error(SOLVE_CUBE_MIGRATION_NEEDED);
   if (isMissingSchema(err)) throw new Error(MIGRATION_NEEDED);
   throw err;
 }
@@ -137,6 +157,8 @@ function solveToRow(s: Solve, userId: string): SolveRow {
     rotations: s.rotations ?? null,
     oriented_reconstruction: s.orientedReconstruction ?? null,
     gyro_stream: s.gyroStream ?? null,
+    cube: s.cube ?? null,
+    repaired: s.repaired ?? null,
     updated_at: s.updatedAt ?? null,
   };
 }
@@ -159,6 +181,8 @@ function rowToSolve(r: SolveRow): Solve {
     ...(r.rotations ? { rotations: r.rotations } : {}),
     ...(r.oriented_reconstruction ? { orientedReconstruction: r.oriented_reconstruction } : {}),
     ...(r.gyro_stream ? { gyroStream: r.gyro_stream } : {}),
+    ...(r.cube ? { cube: r.cube } : {}),
+    ...(r.repaired ? { repaired: r.repaired } : {}),
     ...(r.updated_at !== null && r.updated_at !== undefined ? { updatedAt: r.updated_at } : {}),
   };
 }
@@ -168,6 +192,14 @@ const CHUNK_BYTES = 400_000;
 const CHUNK_ROWS = 40;
 /** Re-send a little before the last push, so a clock that's slightly off never skips a change. */
 const PUSH_SLACK_MS = 60_000;
+/**
+ * A pull re-fetches from this long before the newest `synced_at` it has seen, not from it: the
+ * server stamps a row when its transaction starts, so one that commits late can land behind a row
+ * that committed earlier.
+ */
+const PULL_SLACK_MS = 2 * 60_000;
+/** A safety net only (a restored database backup, a dropped trigger): incremental pulls are exact in normal use. */
+const FULL_PULL_EVERY_MS = 7 * 86_400_000;
 
 export function chunkBySize<T>(rows: T[]): T[][] {
   const chunks: T[][] = [];
@@ -188,6 +220,8 @@ export function chunkBySize<T>(rows: T[]): T[][] {
 }
 
 const pushedAtKey = (userId: string) => `cube-timer-cloud-pushed-at:${userId}`;
+const pullMarkKey = (userId: string) => `cube-timer-cloud-synced-mark:${userId}`;
+const fullPullAtKey = (userId: string) => `cube-timer-cloud-full-pull-at:${userId}`;
 
 /** How many solves haven't been sent to the cloud yet (new or edited since the last complete push). */
 export function countUnpushed(userId: string, solves: readonly Solve[]): number {
@@ -195,21 +229,48 @@ export function countUnpushed(userId: string, solves: readonly Solve[]): number 
   return solves.reduce((n, s) => ((s.updatedAt ?? s.date) > since ? n + 1 : n), 0);
 }
 
-function readPushedAt(userId: string): number {
+function readStoredNumber(key: string): number {
   try {
-    const n = Number(window.localStorage.getItem(pushedAtKey(userId)));
+    const n = Number(window.localStorage.getItem(key));
     return Number.isFinite(n) ? n : 0;
   } catch {
     return 0;
   }
 }
 
-function writePushedAt(userId: string, at: number): void {
+function writeStoredNumber(key: string, value: number): void {
   try {
-    window.localStorage.setItem(pushedAtKey(userId), String(at));
+    window.localStorage.setItem(key, String(value));
   } catch {
-    // Without it every sync just re-sends everything (in chunks) — slower, still correct.
+    // Without them every sync just re-sends and re-downloads everything (in chunks) — slower, still correct.
   }
+}
+
+const readPushedAt = (userId: string) => readStoredNumber(pushedAtKey(userId));
+const writePushedAt = (userId: string, at: number) => writeStoredNumber(pushedAtKey(userId), at);
+
+/**
+ * Where an incremental pull starts: rows the server stamped (`synced_at`) after this, in epoch ms.
+ * Null means a full pull — the first sync, a missing mark (or push mark, which would make the push
+ * resend everything), or a full pull over a week ago or stamped in the future (the clock moved back).
+ * The mark itself is server time, so it is never compared with this device's clock.
+ */
+export function pullSince(mark: number, fullPullAt: number, pushedAt: number, now: number): number | null {
+  if (mark <= 0 || fullPullAt <= 0 || pushedAt <= 0) return null;
+  if (fullPullAt > now || now - fullPullAt > FULL_PULL_EVERY_MS) return null;
+  return mark - PULL_SLACK_MS;
+}
+
+/** The newest `synced_at` (epoch ms) among pulled rows; 0 when there are none or the cloud doesn't stamp rows yet. */
+export function newestSyncedAt(...tables: readonly (readonly { synced_at?: string }[])[]): number {
+  let max = 0;
+  for (const rows of tables) {
+    for (const r of rows) {
+      const at = r.synced_at ? Date.parse(r.synced_at) : NaN;
+      if (Number.isFinite(at) && at > max) max = at;
+    }
+  }
+  return max;
 }
 
 /**
@@ -220,8 +281,11 @@ function writePushedAt(userId: string, at: number): void {
  * older version overwrite a newer one or revive a deleted row (the
  * sync_guard trigger in the migration), so a stale device — even one on an
  * older version of this app — can't undo anything.
+ *
+ * `cloudRevisions` is what the pull just downloaded; `cloudComplete` says whether that was every
+ * row (a full pull) or only the recent ones.
  */
-export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<string, number>): Promise<void> {
+export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<string, number>, cloudComplete = true): Promise<void> {
   const startedAt = Date.now();
   const supabase = getSupabaseClient();
   if (!supabase) return;
@@ -233,12 +297,16 @@ export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<strin
   // Only what changed since the last complete push — a smart-cube solve carries a per-move (and
   // possibly gyro) stream, so the whole history is megabytes, and sending it as one request runs
   // past the database's statement timeout (HTTP 500) and sync never finishes.
-  // Straight after a pull, the cloud's own revision of each solve is known exactly: only what's new or
+  // Straight after a full pull, the cloud's own revision of each solve is known exactly: only what's new or
   // changed here needs sending (a new device would otherwise upload everything it just downloaded).
+  // After a partial pull that holds only for the rows it brought; the rest go by the push mark.
   const since = readPushedAt(userId);
-  const pending = cloudRevisions
-    ? solves.filter((s) => cloudRevisions.get(s.id) !== (s.updatedAt ?? s.date))
-    : solves.filter((s) => (s.updatedAt ?? s.date) > since - PUSH_SLACK_MS);
+  const sinceSlack = since - PUSH_SLACK_MS;
+  const pending = !cloudRevisions
+    ? solves.filter((s) => (s.updatedAt ?? s.date) > sinceSlack)
+    : cloudComplete
+      ? solves.filter((s) => cloudRevisions.get(s.id) !== (s.updatedAt ?? s.date))
+      : solves.filter((s) => (s.updatedAt ?? s.date) > sinceSlack && cloudRevisions.get(s.id) !== (s.updatedAt ?? s.date));
   const rows = pending.map((s) => solveToRow(s, userId));
   for (const chunk of chunkBySize(rows)) {
     const { error } = await withTimeout(supabase.from("solves").upsert(chunk), 30_000);
@@ -246,8 +314,10 @@ export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<strin
   }
   // Deletions go last. A session's deletion removes, in the cloud, every solve still filed under it —
   // so solves moved out of it (a merge) must arrive under their new session first.
-  if (deletions.length > 0) {
-    const rows: DeletionRow[] = deletions.map((d) => ({ user_id: userId, id: d.id, kind: d.kind, deleted_at: d.deletedAt }));
+  // Only the recent ones, same as solves: older records were sent by an earlier complete push.
+  const recentDeletions = deletions.filter((d) => d.deletedAt > sinceSlack);
+  if (recentDeletions.length > 0) {
+    const rows: DeletionRow[] = recentDeletions.map((d) => ({ user_id: userId, id: d.id, kind: d.kind, deleted_at: d.deletedAt }));
     const { error } = await withTimeout(supabase.from("deletions").upsert(rows, { onConflict: "user_id,id" }));
     check(error);
   }
@@ -287,58 +357,93 @@ export async function pushPublicStats(userId: string, username: string): Promise
   if (error) throw error;
 }
 
+/** Thrown by an incremental fetch when the cloud has no `synced_at` column (the migration isn't applied, or was rolled back). */
+class SyncedAtMissing extends Error {}
+
 /**
- * Pulls everything this account has in the cloud — rows and deletion
- * records — and merges it into local storage under the sync rule: the most
- * recent change to each id wins, deletions included (lib/db/merge.ts).
+ * Pulls what this account has in the cloud — rows and deletion records — and merges it into local
+ * storage under the sync rule: the most recent change to each id wins, deletions included
+ * (lib/db/merge.ts).
+ *
+ * Only the first pull, and one a week after that, takes everything. Between them a pull asks for
+ * what the server stamped (`synced_at`, set by a trigger on every write) after the newest stamp
+ * seen, less PULL_SLACK_MS. The stamp is the server's clock at the time a device uploaded, not the
+ * revision the device gave the row, so solves recorded offline hours ago and uploaded now are
+ * picked up too. That is safe because a row missing from the pull is "no information" to the
+ * merge, never a deletion (incrementalPull.test.ts). A cloud without the column falls back to a
+ * full pull every time.
  */
-export async function pullAll(userId: string): Promise<{ result: MergeResult; cloudRevisions: Map<string, number> }> {
+export async function pullAll(userId: string): Promise<{ result: MergeResult; cloudRevisions: Map<string, number>; complete: boolean }> {
   const supabase = getSupabaseClient();
-  if (!supabase) return { result: { addedSessions: 0, addedSolves: 0, updated: 0, removed: 0 }, cloudRevisions: new Map() };
-  const [sessionRows, solveRows, deletionRows] = await Promise.all([
-    fetchAllRows<SessionRow>(userId, "sessions", 500),
-    // Solves carry per-move (and sometimes gyro) streams — a few KB to a few hundred KB each — so they come in small pages.
-    fetchAllRows<SolveRow>(userId, "solves", 60),
-    fetchAllRows<DeletionRow>(userId, "deletions", 1000),
-  ]);
+  if (!supabase) return { result: { addedSessions: 0, addedSolves: 0, updated: 0, removed: 0 }, cloudRevisions: new Map(), complete: true };
+  const startedAt = Date.now();
+  const mark = readStoredNumber(pullMarkKey(userId));
+  let since = pullSince(mark, readStoredNumber(fullPullAtKey(userId)), readPushedAt(userId), startedAt);
+  const fetchAll = (from: number | null) =>
+    Promise.all([
+      fetchAllRows<SessionRow>(userId, "sessions", 500, from),
+      // Solves carry per-move (and sometimes gyro) streams — a few KB to a few hundred KB each — so they come in small pages.
+      fetchAllRows<SolveRow>(userId, "solves", 60, from),
+      fetchAllRows<DeletionRow>(userId, "deletions", 1000, from),
+    ]);
+  let pulled;
+  try {
+    pulled = await fetchAll(since);
+  } catch (err) {
+    if (!(err instanceof SyncedAtMissing)) throw err;
+    since = null;
+    pulled = await fetchAll(null);
+  }
+  const [sessionRows, solveRows, deletionRows] = pulled;
   const result = await mergeSyncPayload({
     sessions: sessionRows.map(rowToSession),
     solves: withLocalOnlyFields(solveRows.map(rowToSolve), await db.solves.toArray()),
     deletions: deletionRows.map((d) => ({ id: d.id, kind: d.kind, deletedAt: d.deleted_at }) satisfies Deletion),
   });
-  return { result, cloudRevisions: new Map(solveRows.map((r) => [r.id, r.updated_at ?? r.date])) };
+  // Stays 0 (so every pull is a full one) while the cloud sends no `synced_at`.
+  const newest = newestSyncedAt(sessionRows, solveRows, deletionRows);
+  writeStoredNumber(pullMarkKey(userId), since === null ? newest : Math.max(mark, newest));
+  if (since === null) writeStoredNumber(fullPullAtKey(userId), startedAt);
+  return { result, cloudRevisions: new Map(solveRows.map((r) => [r.id, r.updated_at ?? r.date])), complete: since === null };
 }
 
 /**
- * Every row this account has in `table`, fetched a page at a time. One request for everything hit
- * two limits: the server caps a response at 1000 rows (silently dropping the rest of a long
- * history), and a multi-megabyte body over a phone connection outran the request timeout — so a
- * new device never finished its first pull.
+ * The rows this account has in `table` (only those stamped after `since` ms, when given), fetched a
+ * page at a time. One request for everything hit two limits: the server caps a response at 1000
+ * rows (silently dropping the rest of a long history), and a multi-megabyte body over a phone
+ * connection outran the request timeout — so a new device never finished its first pull. Pages
+ * continue after the last id seen rather than at an offset, so a row written meanwhile can't shift
+ * the next page and skip or repeat one.
  */
-async function fetchAllRows<T>(userId: string, table: "sessions" | "solves" | "deletions", pageSize: number): Promise<T[]> {
+async function fetchAllRows<T extends { id: string }>(
+  userId: string,
+  table: "sessions" | "solves" | "deletions",
+  pageSize: number,
+  since: number | null,
+): Promise<T[]> {
   const supabase = getSupabaseClient();
   if (!supabase) return [];
+  const sinceIso = since === null ? null : new Date(since).toISOString();
   const out: T[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const res = await withTimeout(
-      supabase
-        .from(table)
-        .select("*")
-        .eq("user_id", userId)
-        .order("id")
-        .range(from, from + pageSize - 1),
-      30_000,
-    );
+  let lastId: string | null = null;
+  for (;;) {
+    let query = supabase.from(table).select("*").eq("user_id", userId);
+    if (sinceIso !== null) query = query.gt("synced_at", sinceIso);
+    if (lastId !== null) query = query.gt("id", lastId);
+    const res = await withTimeout(query.order("id").limit(pageSize), 30_000);
+    // Before check(): a missing column's error would otherwise be read as "run the sync-revisions migration".
+    if (sinceIso !== null && /synced_at/.test(res.error?.message ?? "")) throw new SyncedAtMissing();
     check(res.error);
     const rows = (res.data ?? []) as T[];
     out.push(...rows);
     if (rows.length < pageSize) return out;
+    lastId = rows[rows.length - 1].id;
   }
 }
 
-/** One full cloud sync: pull and merge first, then push the merged result. */
+/** One cloud sync: pull and merge first, then push the merged result. */
 export async function syncWithCloud(userId: string): Promise<MergeResult> {
-  const { result, cloudRevisions } = await pullAll(userId);
-  await pushAll(userId, cloudRevisions);
+  const { result, cloudRevisions, complete } = await pullAll(userId);
+  await pushAll(userId, cloudRevisions, complete);
   return result;
 }

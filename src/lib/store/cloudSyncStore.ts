@@ -7,7 +7,8 @@ import { pushPublicStats, syncWithCloud, SyncTimeoutError } from "@/lib/db/cloud
 import { displayUsername } from "@/lib/auth/username";
 import { suggestSession, type SessionSuggestion } from "@/lib/db/sessionSuggestion";
 
-export type CloudSyncStatus = "idle" | "syncing" | "synced" | "error";
+/** "offline" is not a failure: nothing was attempted, and reconnecting syncs again. "error" is a sync that was tried and failed. */
+export type CloudSyncStatus = "idle" | "syncing" | "synced" | "offline" | "error";
 
 interface CloudSyncState {
   /** Set after a sync when this device's open session is small but another holds the account's history. */
@@ -93,7 +94,7 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
     const user = useAuthStore.getState().user;
     if (!user) return;
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      set({ status: "error", error: "Offline — will sync once you're back online." });
+      set({ status: "offline", error: null });
       return;
     }
     // One at a time; a request that arrives mid-sync runs once more afterwards, so nothing is missed.
@@ -128,8 +129,13 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
       clearScheduledRetry();
       set({ status: "synced", lastSyncedAt: Date.now() });
     } catch (err) {
-      set({ status: "error", error: friendlyErrorMessage(err) });
-      scheduleRetry();
+      // Dropped off the network mid-sync: the "online" listener syncs again, so no retry timer.
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        set({ status: "offline", error: null });
+      } else {
+        set({ status: "error", error: friendlyErrorMessage(err) });
+        scheduleRetry();
+      }
     } finally {
       inFlight = false;
       lastFinishedAt = Date.now();
@@ -171,7 +177,7 @@ export function initCloudSync(): void {
   const retryIfStuck = () => {
     if (!useAuthStore.getState().user || typeof navigator === "undefined" || !navigator.onLine) return;
     const { status } = useCloudSyncStore.getState();
-    if (status === "error") void useCloudSyncStore.getState().syncNow();
+    if (status === "error" || status === "offline") void useCloudSyncStore.getState().syncNow();
   };
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") retryIfStuck();

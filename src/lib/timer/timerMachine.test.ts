@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INSPECTION_DNF_MS, INSPECTION_MS, TimerMachine, inspectionPenalty } from "./timerMachine";
+import { INSPECTION_DNF_MS, INSPECTION_MS, TimerMachine, inspectionPenalty, resolveEventTime } from "./timerMachine";
 import { keyAction } from "./timerInput";
 
 const HOLD = 300;
@@ -193,5 +193,61 @@ describe("phase splits", () => {
     const r = m.press(35_000)!;
     expect(r.penalty).toBe("none");
     expect(r.inspection!.elapsedMs).toBe(HOLD);
+  });
+});
+
+describe("event timestamps", () => {
+  it("stop time comes from the event time passed in, not from when the handler ran", () => {
+    const m = make();
+    m.press(1000);
+    m.release(1000 + HOLD); // the solve starts at the release event's time
+    // The stop keydown happened at 6300; the handler ran later but the caller passes the event's time.
+    const r = m.press(1000 + HOLD + 5000)!;
+    expect(r.timeMs).toBe(5000);
+    expect(m.displayMs(99_999)).toBe(5000);
+  });
+
+  it("an event time older than the start can't produce a negative or shrunken time", () => {
+    const m = make();
+    m.press(1000);
+    m.release(2000);
+    const r = m.press(1500)!; // stale stamp, before the start
+    expect(r.timeMs).toBe(0);
+  });
+
+  it("a stale release stamp can't start the solve before the hold began", () => {
+    const m = make();
+    m.press(5000);
+    m.release(4000); // earlier than the press: treated as no earlier than 5000
+    expect(m.phase).toBe("idle"); // not held long enough
+    m.press(6000);
+    m.release(6000 + HOLD);
+    expect(m.press(6000 + HOLD + 700)!.timeMs).toBe(700);
+  });
+
+  it("reset forgets the previous timeline", () => {
+    const m = make();
+    m.press(10_000);
+    m.reset();
+    m.press(0);
+    m.release(HOLD);
+    expect(m.press(HOLD + 1234)!.timeMs).toBe(1234);
+  });
+});
+
+describe("resolveEventTime", () => {
+  it("uses the event time when it's sane", () => {
+    expect(resolveEventTime(900, 1000)).toBe(900);
+    expect(resolveEventTime(1000, 1000)).toBe(1000);
+  });
+
+  it("falls back to now with no event time", () => {
+    expect(resolveEventTime(undefined, 1000)).toBe(1000);
+  });
+
+  it("falls back to now for a timestamp in the future or not a number", () => {
+    expect(resolveEventTime(1001, 1000)).toBe(1000);
+    expect(resolveEventTime(1.7e12, 1000)).toBe(1000); // epoch-ms stamp from a different clock
+    expect(resolveEventTime(Number.NaN, 1000)).toBe(1000);
   });
 });

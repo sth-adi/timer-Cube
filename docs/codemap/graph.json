@@ -479,7 +479,11 @@
     {"id":"src/lib/xray/solveXray.ts","kind":"lib","area":"Analysis / X-Ray","exports":["SolveXray","XrayRequest","xraySolve"],"summary":"Everything the X-Ray knows about one solve.","loc":38,"importedBy":6,"hasTest":false},
     {"id":"src/lib/xray/worker.ts","kind":"worker","area":"Analysis / X-Ray","exports":["XrayWorkerRequest","XrayWorkerResponse"],"summary":"","loc":21,"importedBy":1,"hasTest":false},
     {"id":"src/lib/xray/xrayCoach.ts","kind":"lib","area":"Analysis / X-Ray","exports":["XrayFinding","buildXrayFindings","mergeFindings"],"summary":"The X-Ray's four analyses, turned into Coach findings: each one priced in seconds per solve, in the same currency the Coach already ranks…","loc":174,"importedBy":2,"hasTest":true},
-    {"id":"src/types/index.ts","kind":"lib","area":"Sessions & solves","exports":["Deletion","EVENT_TAGS","EventTag","Penalty","Session","Solve","WCA_EVENTS","WcaEvent","solveFinalMs"],"summary":"WcaEvent: WCA puzzle event a session times.","loc":141,"importedBy":103,"hasTest":false}
+    {"id":"src/types/index.ts","kind":"lib","area":"Sessions & solves","exports":["Deletion","EVENT_TAGS","EventTag","Penalty","Session","Solve","WCA_EVENTS","WcaEvent","solveFinalMs"],"summary":"WcaEvent: WCA puzzle event a session times.","loc":141,"importedBy":103,"hasTest":false},
+    {"id":"src/components/chrome/SaveErrorBanner.tsx","kind":"component","area":"Shared UI / FX","exports":["SaveErrorBanner"],"summary":"Shown when a solve couldn't be written to this device (storage full or blocked) — otherwise the time would sit on screen looking saved…","loc":41,"importedBy":1,"hasTest":false},
+    {"id":"src/components/chrome/UpdateToast.tsx","kind":"component","area":"Shared UI / FX","exports":["UpdateToast"],"summary":"\"New version ready — Reload\", once the offline worker has been replaced by a newer build.","loc":30,"importedBy":1,"hasTest":false},
+    {"id":"src/hooks/useCoarsePointer.ts","kind":"hook","area":"Other","exports":["useCoarsePointer"],"summary":"True when the primary pointer is a finger (phones, tablets) — for hints like \"touch and hold\" vs \"hold space\".","loc":26,"importedBy":3,"hasTest":false},
+    {"id":"src/lib/storage/persist.ts","kind":"lib","area":"Other","exports":["PersistOutcome","readPersistOutcome","requestPersistentStorage","resetPersistRequestForTests"],"summary":"requestPersistentStorage: Asks the browser not to evict this site's IndexedDB under storage pressure — without it a device that runs low…","loc":47,"importedBy":1,"hasTest":true}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},
@@ -2400,7 +2404,18 @@
     {"from":"src/lib/xray/xrayCoach.ts","to":"src/lib/xray/algMicroscope.ts"},
     {"from":"src/lib/xray/xrayCoach.ts","to":"src/lib/xray/common.ts"},
     {"from":"src/lib/xray/xrayCoach.ts","to":"src/lib/xray/neutrality.ts"},
-    {"from":"src/lib/xray/xrayCoach.ts","to":"src/lib/xray/solveXray.ts"}
+    {"from":"src/lib/xray/xrayCoach.ts","to":"src/lib/xray/solveXray.ts"},
+    {"from":"src/app/layout.tsx","to":"src/components/chrome/UpdateToast.tsx"},
+    {"from":"src/app/page.tsx","to":"src/components/chrome/SaveErrorBanner.tsx"},
+    {"from":"src/components/chrome/SaveErrorBanner.tsx","to":"src/lib/backup/restore.ts"},
+    {"from":"src/components/chrome/SaveErrorBanner.tsx","to":"src/lib/store/sessionStore.ts"},
+    {"from":"src/components/chrome/UpdateToast.tsx","to":"src/lib/fx/fxBus.ts"},
+    {"from":"src/components/chrome/UpdateToast.tsx","to":"src/lib/store/offlineStore.ts"},
+    {"from":"src/components/stats/BackupNudge.tsx","to":"src/hooks/useNow.ts"},
+    {"from":"src/components/timer/TimerView.tsx","to":"src/hooks/useCoarsePointer.ts"},
+    {"from":"src/components/trainer/DailyChallengeView.tsx","to":"src/hooks/useCoarsePointer.ts"},
+    {"from":"src/components/trainer/TrainerView.tsx","to":"src/hooks/useCoarsePointer.ts"},
+    {"from":"src/lib/store/sessionStore.ts","to":"src/lib/storage/persist.ts"}
   ],
   "routes": {
     "/": "src/app/page.tsx",

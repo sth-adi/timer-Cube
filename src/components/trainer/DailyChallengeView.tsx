@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Flame, Trophy } from "lucide-react";
 import { useTimer } from "@/hooks/useTimer";
 import { useTimerInput } from "@/hooks/useTimerInput";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { displayUsername } from "@/lib/auth/username";
@@ -44,6 +45,7 @@ export function DailyChallengeView() {
   });
 
   const touch = useTimerInput({ press, release, cancel, enabled: !done });
+  const coarsePointer = useCoarsePointer();
 
   const ao5 = useMemo(() => {
     if (times.some((t) => t === null)) return null;
@@ -171,7 +173,7 @@ export function DailyChallengeView() {
         >
           {formatTime(displayMs)}
         </p>
-        {phase === "idle" && <p className="text-muted-2 text-sm">hold space to start</p>}
+        {phase === "idle" && <p className="text-muted-2 text-sm">{coarsePointer ? "touch and hold to start, tap to stop" : "hold space to start"}</p>}
       </div>
     </div>
   );

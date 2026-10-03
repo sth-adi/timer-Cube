@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -20,13 +20,20 @@ import { CROSS_FACE_COLOR, CROSS_FACE_HEX } from "@/lib/smartcube/crossFrame";
 import { PHASE_TINTS } from "@/components/stats/phaseTints";
 import { SolveRecapSheet } from "@/components/recap/SolveRecapSheet";
 
-function SolveRow({
+/** How many rows the full list draws at first, and each "Show more" adds — hundreds of live rows make every edit janky. */
+const PAGE_SIZE = 100;
+
+// Memoized: every prop is a primitive, the solve object (replaced only when that solve changes) or a
+// stable callback, so adding a solve or changing one penalty re-renders just the rows that changed.
+const SolveRow = memo(function SolveRow({
   solve,
   index,
   isBest,
   isWorst,
   detailed,
-  selecting,
+  selectMode,
+  ticked,
+  onToggle,
 }: {
   solve: Solve;
   index: number;
@@ -35,14 +42,14 @@ function SolveRow({
   /** Show the smart-cube step bar and cases under the time. */
   detailed: boolean;
   /** In select mode a tap ticks the row instead of opening it. */
-  selecting?: { ticked: boolean; toggle: () => void };
+  selectMode: boolean;
+  ticked: boolean;
+  onToggle?: (id: string) => void;
 }) {
   const setPenalty = useSessionStore((s) => s.setPenalty);
   const setComment = useSessionStore((s) => s.setComment);
   const removeSolve = useSessionStore((s) => s.removeSolve);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
-  const sessions = useSessionStore((s) => s.sessions);
-  const user = useAuthStore((s) => s.user);
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -66,7 +73,9 @@ function SolveRow({
     const finalMs = solveFinalMs(solve);
     if (!shareable || finalMs === null) return;
     setShareState("busy");
-    const puzzle = sessions.find((s) => s.id === solve.sessionId)?.event ?? "333";
+    // Read on demand: subscribing every row to these would re-render the whole list when they change.
+    const user = useAuthStore.getState().user;
+    const puzzle = useSessionStore.getState().sessions.find((s) => s.id === solve.sessionId)?.event ?? "333";
     const id = await createSharedSolve({
       scramble: solve.scramble,
       reconstruction: solve.reconstruction!,
@@ -99,16 +108,16 @@ function SolveRow({
       <div className="flex items-center">
         <button
           type="button"
-          onClick={() => (selecting ? selecting.toggle() : setOpen((o) => !o))}
-          aria-pressed={selecting ? selecting.ticked : undefined}
+          onClick={() => (selectMode ? onToggle?.(solve.id) : setOpen((o) => !o))}
+          aria-pressed={selectMode ? ticked : undefined}
           className={cn(
             "min-w-0 flex-1 flex items-center justify-between rounded-lg px-2.5 py-0.5 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
             isBest && "text-success",
             isWorst && "text-danger",
-            selecting?.ticked && "bg-accent-soft",
+            selectMode && ticked && "bg-accent-soft",
           )}
         >
-          {selecting && (selecting.ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
+          {selectMode && (ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
           <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
           <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
           {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
@@ -116,7 +125,7 @@ function SolveRow({
           {summary?.hasMistake && <TriangleAlert size={11} className="text-warning mr-1" aria-label="Mistake Radar flagged something in this solve" />}
           {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
         </button>
-        {detailed && !selecting && (
+        {detailed && !selectMode && (
           <button
             type="button"
             onClick={() => void removeSolve(solve.id)}
@@ -258,7 +267,7 @@ function SolveRow({
       {recapOpen && <SolveRecapSheet solve={solve} onClose={() => setRecapOpen(false)} />}
     </div>
   );
-}
+});
 
 /**
  * A smart-cube solve at a glance: its four steps as one bar (cross, F2L,
@@ -394,14 +403,25 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
   const solves = solvesProp ?? sessionSolves;
   const [manualOpen, setManualOpen] = useState(false);
 
-  const times = solves.map(comparableTime);
-  const finite = times.filter((t) => Number.isFinite(t));
-  const best = finite.length ? Math.min(...finite) : null;
-  const worst = finite.length ? Math.max(...finite) : null;
+  // The full list draws the newest `visible` rows; select-all and bulk actions live in the parent and
+  // work from its full filtered list (`view`), so rows that aren't drawn yet are still covered.
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const toggle = selection?.toggle;
+  const selected = selection?.selected;
+
+  const { best, worst, finiteCount } = useMemo(() => {
+    const finite = solves.map(comparableTime).filter((t) => Number.isFinite(t));
+    return {
+      best: finite.length ? Math.min(...finite) : null,
+      worst: finite.length ? Math.max(...finite) : null,
+      finiteCount: finite.length,
+    };
+  }, [solves]);
 
   const numberOf = useMemo(() => new Map(solves.map((s, i) => [s.id, i + 1])), [solves]);
-  const ordered = view ?? [...solves].reverse();
-  const shown = limit !== undefined ? ordered.slice(0, limit) : ordered;
+  const ordered = useMemo(() => view ?? [...solves].reverse(), [view, solves]);
+  const shown = ordered.slice(0, limit !== undefined ? limit : visible);
+  const hidden = limit === undefined ? ordered.length - shown.length : 0;
 
   return (
     <div className="flex flex-col gap-1">
@@ -436,12 +456,24 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
                 solve={solve}
                 index={numberOf.get(solve.id) ?? 0}
                 detailed={limit === undefined}
-                selecting={selection ? { ticked: selection.selected.has(solve.id), toggle: () => selection.toggle(solve.id) } : undefined}
+                selectMode={!!selection}
+                ticked={!!selected?.has(solve.id)}
+                onToggle={toggle}
                 isBest={best !== null && t === best}
-                isWorst={worst !== null && t === worst && finite.length > 2}
+                isWorst={worst !== null && t === worst && finiteCount > 2}
               />
             );
           })}
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={() => setVisible((v) => v + PAGE_SIZE)}
+              className="mx-auto my-1 rounded-full bg-bg-panel-2 px-3 py-1 text-xs font-medium text-muted hover:text-foreground"
+            >
+              Show {Math.min(PAGE_SIZE, hidden)} more
+              <span className="ml-1 text-muted-2">({hidden} hidden)</span>
+            </button>
+          )}
         </div>
       )}
     </div>

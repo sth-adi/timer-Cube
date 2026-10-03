@@ -18,9 +18,11 @@ interface OfflineState {
   warming: boolean;
   /** When the pages were last saved on this device (ms, epoch), if ever. */
   warmedAt: number | null;
+  /** A newer version of the app has taken over the worker; this page is still running the old one until it reloads. */
+  updateReady: boolean;
 }
 
-export const useOfflineStore = create<OfflineState>(() => ({ online: true, ready: false, available: false, warming: false, warmedAt: null }));
+export const useOfflineStore = create<OfflineState>(() => ({ online: true, ready: false, available: false, warming: false, warmedAt: null, updateReady: false }));
 
 /** A save that never reports back (worker killed, connection lost) stops showing as in progress after this. */
 const WARM_TIMEOUT_MS = 2 * 60_000;
@@ -83,7 +85,13 @@ export function initOffline(): void {
 
   const saved = readWarmedAt();
   useOfflineStore.setState({ ready: saved > 0, warmedAt: saved > 0 ? saved : null, available: true });
+  // A page opened with no worker at all is just being taken over for the first time, not updated.
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("message", (e: MessageEvent) => {
+    if (e.data?.type === "updated") {
+      if (hadController) useOfflineStore.setState({ updateReady: true });
+      return;
+    }
     if (e.data?.type !== "warmed") return;
     const at = typeof e.data.at === "number" ? e.data.at : Date.now();
     try {

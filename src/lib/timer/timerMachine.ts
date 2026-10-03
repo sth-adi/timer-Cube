@@ -32,6 +32,18 @@ export function inspectionPenalty(elapsedMs: number): Penalty {
   return "dnf";
 }
 
+/**
+ * The moment an input actually happened. Handlers can run late (the main
+ * thread was busy saving or syncing), so callers pass the input event's own
+ * timestamp — the same clock as performance.now() — and this falls back to
+ * `now` when there's none, or when it can't be trusted: not finite, or in
+ * the future (a different clock, e.g. epoch ms on old browsers).
+ */
+export function resolveEventTime(at: number | undefined, now: number): number {
+  if (at === undefined || !Number.isFinite(at) || at > now) return now;
+  return at;
+}
+
 export interface InspectionResult {
   /** From the start of inspection to the moment the solve started. */
   elapsedMs: number;
@@ -63,6 +75,8 @@ export class TimerMachine {
   private inspectionStartedAt: number | null = null;
   private inspection: InspectionResult | null = null;
   private stoppedMs = 0;
+  /** The latest press/release time seen, so a stale event timestamp can never move the timeline backwards. */
+  private lastAt = -Infinity;
 
   constructor(private opts: TimerOptions) {}
 
@@ -106,8 +120,15 @@ export class TimerMachine {
     if (armAt !== null && this.holdStartedAt !== null && now >= armAt) this.phase = "ready";
   }
 
+  /** An input time, held to never be earlier than the previous input (which also keeps a stop from landing before the start). */
+  private advance(at: number): number {
+    this.lastAt = Math.max(at, this.lastAt);
+    return this.lastAt;
+  }
+
   /** keydown(space) / touchstart. Returns the result when this press finishes a solve. */
-  press(now: number): TimerResult | null {
+  press(at: number): TimerResult | null {
+    const now = this.advance(at);
     switch (this.phase) {
       case "running": {
         const elapsed = Math.round(now - (this.runStartedAt ?? now));
@@ -146,7 +167,8 @@ export class TimerMachine {
   }
 
   /** keyup(space) / touchend. */
-  release(now: number): void {
+  release(at: number): void {
+    const now = this.advance(at);
     this.tick(now);
     switch (this.phase) {
       case "ready":
@@ -191,5 +213,6 @@ export class TimerMachine {
     this.inspection = null;
     this.lastResult = null;
     this.stoppedMs = 0;
+    this.lastAt = -Infinity;
   }
 }

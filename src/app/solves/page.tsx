@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Timer as TimerIcon, Music, FlaskConical, ScanLine, Clapperboard, ListChecks, Trash2 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
@@ -49,13 +49,17 @@ export default function SolvesPage() {
   const removeSolves = useSessionStore((s) => s.removeSolves);
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (id: string) =>
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  // Stable, so the memoized solve rows aren't all re-rendered by every tick of the checkbox.
+  const toggle = useCallback(
+    (id: string) =>
+      setPicked((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
   const view = useMemo(() => filterAndSort(solves, filter, sort), [solves, filter, sort]);
   const filtered = hasFilter(filter);
   const showView = smart && (filtered || sort !== "recent");

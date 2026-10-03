@@ -9,12 +9,15 @@
 //  * Pages and everything else are network-first, but with a short timeout: on a weak connection
 //    the saved copy is shown after a few seconds instead of the app hanging on a request that may
 //    never finish. A page that does finish loading after the timeout is still saved for next time.
+//  * A saved page names the exact scripts it needs, so trimming the static cache never evicts one
+//    that a saved page still refers to — and when a new worker takes over, open pages are told
+//    ({type:"updated"}) so they can offer a reload instead of running on a mix of old and new.
 //  * After the app has loaded, it asks this worker to "warm" the cache: save every page and every
 //    script/style they (and the scripts they load later) refer to, so pages never opened before
 //    work offline too.
 //
 // Bump VERSION on any change here; activate() drops caches from older versions.
-const VERSION = "v4";
+const VERSION = "v5";
 const STATIC = `cube-static-${VERSION}`;
 const PAGES = `cube-pages-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 4000;
@@ -31,6 +34,7 @@ self.addEventListener("activate", (event) => {
       const names = await caches.keys();
       await Promise.all(names.filter((n) => n !== STATIC && n !== PAGES).map((n) => caches.delete(n)));
       await self.clients.claim();
+      await announce({ type: "updated" });
     })(),
   );
 });
@@ -95,9 +99,32 @@ async function staticFirst(request) {
   return res;
 }
 
+/** Every built asset named by a saved page: evicting one would leave that page unable to start offline or on a slow connection. */
+async function referencedAssets() {
+  const keep = new Set();
+  try {
+    const pages = await caches.open(PAGES);
+    for (const req of await pages.keys()) {
+      const res = await pages.match(req);
+      if (!res || !(res.headers.get("content-type") || "").includes("text/html")) continue;
+      for (const u of assetsIn(await res.text())) keep.add(u);
+    }
+  } catch {
+    // Can't tell what's referenced: the caller then keeps everything rather than guess.
+    return null;
+  }
+  return keep;
+}
+
 async function trim(cache) {
   const keys = await cache.keys();
-  if (keys.length > MAX_STATIC_ENTRIES) await Promise.all(keys.slice(0, keys.length - MAX_STATIC_ENTRIES).map((k) => cache.delete(k)));
+  const excess = keys.length - MAX_STATIC_ENTRIES;
+  if (excess <= 0) return;
+  const keep = await referencedAssets();
+  if (!keep) return;
+  // Oldest first, skipping anything a saved page still needs (so the cache may stay a little over the cap).
+  const victims = keys.filter((k) => !keep.has(new URL(k.url).pathname)).slice(0, excess);
+  await Promise.all(victims.map((k) => cache.delete(k)));
 }
 
 self.addEventListener("fetch", (event) => {

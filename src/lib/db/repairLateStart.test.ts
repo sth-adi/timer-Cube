@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Solve } from "@/types";
-import { repairLateStart } from "./repairLateStart";
+import { lateStartRepairPending, markLateStartRepairDone, repairLateStart } from "./repairLateStart";
 
 const base: Solve = { id: "a", sessionId: "s", timeMs: 8_000, penalty: "none", scramble: "R U", date: 0 };
 
@@ -28,5 +28,30 @@ describe("repairLateStart", () => {
       rotations: [{ atMs: 2_300, token: "y" }],
       gyroStream: { atMs: [2_000, 2_020], qx: [0, 0], qy: [0, 0], qz: [0, 0], qw: [1, 1] },
     });
+  });
+});
+
+describe("late-start repair migration flag", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("is pending until marked done, then stays done", () => {
+    const data = new Map<string, string>();
+    vi.stubGlobal("localStorage", { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) });
+    expect(lateStartRepairPending()).toBe(true);
+    markLateStartRepairDone();
+    expect(lateStartRepairPending()).toBe(false);
+  });
+
+  it("stays pending (and doesn't throw) when storage is unavailable", () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {
+        throw new Error("blocked");
+      },
+    });
+    expect(lateStartRepairPending()).toBe(true);
+    expect(() => markLateStartRepairDone()).not.toThrow();
   });
 });

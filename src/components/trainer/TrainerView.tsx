@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { RotateCcw } from "lucide-react";
 import { useTimer, type TimerResult } from "@/hooks/useTimer";
 import { useTimerInput } from "@/hooks/useTimerInput";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useTrainerStore } from "@/lib/store/trainerStore";
 import { averageOfN } from "@/lib/stats/stats";
@@ -65,6 +66,7 @@ export function TrainerView() {
   });
 
   const touch = useTimerInput({ press, release, cancel, reset });
+  const coarsePointer = useCoarsePointer();
 
   const best = times.length > 0 ? Math.min(...times) : null;
   const mean = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : null;
@@ -109,7 +111,7 @@ export function TrainerView() {
         <p className={cn("tabular-timer text-[16vw] leading-none font-bold sm:text-7xl", PHASE_COLOR[phase])}>
           {formatTime(displayMs)}
         </p>
-        {phase === "idle" && <p className="text-muted-2 text-sm">hold space to start</p>}
+        {phase === "idle" && <p className="text-muted-2 text-sm">{coarsePointer ? "touch and hold to start, tap to stop" : "hold space to start"}</p>}
       </div>
 
       <div className="card grid w-full grid-cols-3 gap-3 rounded-xl p-3">

@@ -44,9 +44,23 @@ export async function addSolve(input: {
   return solve;
 }
 
-/** Every edit bumps updatedAt — the revision sync uses to decide which version of a solve wins. */
-export async function updateSolve(id: string, changes: Partial<Omit<Solve, "id">>): Promise<void> {
-  await db.solves.update(id, { ...changes, updatedAt: Date.now() });
+/**
+ * Every edit bumps updatedAt — the revision sync uses to decide which version of a solve wins.
+ * Returns the new updatedAt, so a caller can patch its in-memory copy without re-reading the row.
+ */
+export async function updateSolve(id: string, changes: Partial<Omit<Solve, "id">>): Promise<number> {
+  const updatedAt = Date.now();
+  await db.solves.update(id, { ...changes, updatedAt });
+  return updatedAt;
+}
+
+/** The same edit on several solves in one transaction, all-or-nothing. Returns the shared updatedAt. */
+export async function updateSolvesBulk(ids: string[], changes: Partial<Omit<Solve, "id">>): Promise<number> {
+  const updatedAt = Date.now();
+  await db.transaction("rw", db.solves, async () => {
+    for (const id of ids) await db.solves.update(id, { ...changes, updatedAt });
+  });
+  return updatedAt;
 }
 
 /**
@@ -54,13 +68,15 @@ export async function updateSolve(id: string, changes: Partial<Omit<Solve, "id">
  * with a fresh `updatedAt`, which is what makes the restore win over the
  * deletion on every other device too (the newest change wins — see merge.ts).
  */
-export async function restoreSolves(solves: Solve[]): Promise<void> {
-  if (solves.length === 0) return;
+export async function restoreSolves(solves: Solve[]): Promise<Solve[]> {
+  if (solves.length === 0) return [];
   const now = Date.now();
+  const rows = solves.map((s) => ({ ...s, updatedAt: Math.max(now, (s.updatedAt ?? 0) + 1) }));
   await db.transaction("rw", db.solves, db.deletions, async () => {
     await db.deletions.bulkDelete(solves.map((s) => s.id));
-    await db.solves.bulkPut(solves.map((s) => ({ ...s, updatedAt: Math.max(now, (s.updatedAt ?? 0) + 1) })));
+    await db.solves.bulkPut(rows);
   });
+  return rows;
 }
 
 /** Deletes a solve and records the deletion, so syncing can't bring it back from another device. */

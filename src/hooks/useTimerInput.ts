@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { isTextField, keyAction } from "@/lib/timer/timerInput";
 
 interface Handlers {
-  press: () => void;
-  release: () => void;
+  press: (at?: number) => void;
+  release: (at?: number) => void;
   cancel: () => void;
   reset?: () => void;
   /** False to ignore input entirely (e.g. a finished challenge). */
@@ -18,7 +18,9 @@ interface Handlers {
  * the window losing focus mid-hold, where the keyup never arrives. Returns
  * touch handlers for the timer surface, including touchcancel, so an
  * interrupted touch (a system gesture, an incoming call) abandons the hold
- * instead of leaving the timer stuck or starting a solve.
+ * instead of leaving the timer stuck or starting a solve. Press and release
+ * pass the event's own timeStamp, so a handler that runs late (busy main
+ * thread) doesn't inflate the time.
  */
 export function useTimerInput({ press, release, cancel, reset, enabled = true }: Handlers) {
   useEffect(() => {
@@ -31,8 +33,8 @@ export function useTimerInput({ press, release, cancel, reset, enabled = true }:
       if (!action) return;
       if (action === "reset" && !reset) return;
       e.preventDefault();
-      if (action === "press") press();
-      else if (action === "release") release();
+      if (action === "press") press(e.timeStamp);
+      else if (action === "release") release(e.timeStamp);
       else reset?.();
     };
     const onBlur = () => cancel();
@@ -52,13 +54,13 @@ export function useTimerInput({ press, release, cancel, reset, enabled = true }:
       e.preventDefault();
       // A second finger landing mid-hold is just another touchstart; the
       // machine ignores presses while holding/ready.
-      press();
+      press(e.nativeEvent.timeStamp);
     },
     onTouchEnd: (e: React.TouchEvent) => {
       if (!enabled) return;
       e.preventDefault();
       // Only the last finger lifting counts as a release.
-      if (e.touches.length === 0) release();
+      if (e.touches.length === 0) release(e.nativeEvent.timeStamp);
     },
     onTouchCancel: () => {
       if (enabled) cancel();

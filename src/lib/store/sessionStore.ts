@@ -3,8 +3,9 @@ import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession, moveSessionSolves } from "@/lib/db/sessions";
 import { forgetAutoSessionId, pickInitialSession, readAutoSessionId, readSavedSessionId, saveSessionId } from "@/lib/sessions/activeSession";
-import { addSolve, deleteSolve, restoreSolves, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
-import { repairLateStart } from "@/lib/db/repairLateStart";
+import { addSolve, deleteSolve, restoreSolves, updateSolve, updateSolvesBulk, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
+import { lateStartRepairPending, markLateStartRepairDone, repairLateStart } from "@/lib/db/repairLateStart";
+import { requestPersistentStorage } from "@/lib/storage/persist";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { computeAchievements, computeSessionStats, normalSolves, type AchievementState } from "@/lib/stats/stats";
@@ -31,6 +32,22 @@ function findNewlyUnlocked(before: AchievementState[], after: AchievementState[]
   return after.filter((a) => a.unlocked && !beforeUnlocked.has(a.id));
 }
 
+/** The row with `patch` applied wherever its id is listed; untouched rows keep their identity. */
+function patchRows(rows: Solve[], ids: Set<string>, patch: Partial<Solve>): Solve[] {
+  return rows.map((s) => (ids.has(s.id) ? { ...s, ...patch } : s));
+}
+
+/** Patches rows in both lists — `solves` (open session) and `allSolves` — so stats reading either never go stale. */
+function patchBoth(state: { solves: Solve[]; allSolves: Solve[] }, ids: string[], patch: Partial<Solve>) {
+  const set = new Set(ids);
+  return { solves: patchRows(state.solves, set, patch), allSolves: patchRows(state.allSolves, set, patch) };
+}
+
+function saveFailure(e: unknown): { message: string; at: number } {
+  console.error("Saving to local storage failed", e);
+  return { message: e instanceof Error ? e.message : String(e), at: Date.now() };
+}
+
 interface SessionState {
   sessions: Session[];
   activeSessionId: string | null;
@@ -40,6 +57,9 @@ interface SessionState {
   loaded: boolean;
   lastPB: PBEvent | null;
   achievementToast: AchievementToastEvent | null;
+  /** The last write to IndexedDB that failed (storage full or blocked), until dismissed — see SaveErrorBanner. */
+  saveError: { message: string; at: number } | null;
+  clearSaveError: () => void;
   init: () => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   addSession: (name: string, event?: WcaEvent) => Promise<void>;
@@ -69,7 +89,7 @@ interface SessionState {
     cube?: Solve["cube"],
     /** A turn put back (or removed) from the cube's own state report. */
     repaired?: Solve["repaired"],
-  ) => Promise<void>;
+  ) => Promise<string | undefined>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
   saveReconstruction: (solveId: string, reconstruction: string) => Promise<void>;
@@ -124,21 +144,38 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   loaded: false,
   lastPB: null,
   achievementToast: null,
+  saveError: null,
   pendingEvent: null,
 
   init: async () => {
-    // Solves saved while the smart-cube timer wrongly started at the cross: put their times right.
-    const broken = (await getAllSolves()).map((x) => [x.id, repairLateStart(x)] as const).filter(([, fix]) => fix);
-    for (const [id, fix] of broken) await updateSolve(id, fix!);
     await ensureDefaultSession();
     const sessions = await listSessions();
-    const allSolves = await getAllSolves();
+    let allSolves = await getAllSolves();
+    // Solves saved while the smart-cube timer wrongly started at the cross: put their times right.
+    // A one-off per device (the bug is fixed, so nothing new needs it), patched in memory so the
+    // list isn't loaded a second time.
+    if (lateStartRepairPending()) {
+      try {
+        const fixed = new Map<string, Solve>();
+        for (const x of allSolves) {
+          const fix = repairLateStart(x);
+          if (fix) fixed.set(x.id, { ...x, ...fix, updatedAt: await updateSolve(x.id, fix) });
+        }
+        if (fixed.size > 0) allSolves = allSolves.map((x) => fixed.get(x.id) ?? x);
+        markLateStartRepairDone();
+      } catch (e) {
+        // Left unflagged: tried again next start.
+        console.warn("Late-start repair failed", e);
+      }
+    }
     // Reopen what this device last had open — every page and every reload, not just the first.
     const first = pickInitialSession(sessions, allSolves, readSavedSessionId()) ?? (await ensureDefaultSession());
     saveSessionId(first.id);
-    const solves = await getSessionSolves(first.id);
+    // allSolves is date-ordered, so this is the same list getSessionSolves would return.
+    const solves = allSolves.filter((x) => x.sessionId === first.id);
     set({ sessions, activeSessionId: first.id, solves, allSolves, loaded: true });
     void useScrambleStore.getState().setEvent(first.event);
+    if (allSolves.length > 0) void requestPersistentStorage();
   },
 
   switchSession: async (id) => {
@@ -201,7 +238,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty, cube, repaired) => {
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
-    if (!activeSessionId) return;
+    if (!activeSessionId) return undefined;
     // PB detection and achievements only ever look at ordinary 2-handed
     // solves — see normalSolves() — so tagging a solve OH/feet/BLD never
     // triggers a PB toast or unlocks a milestone that assumes normal timing,
@@ -209,25 +246,32 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const prevStats = computeSessionStats(normalSolves(prevSolves));
     const prevAchievements = computeAchievements(normalSolves(prevAllSolves));
 
-    await addSolve({
-      sessionId: activeSessionId,
-      timeMs,
-      scramble,
-      penalty,
-      splits,
-      event: event ?? undefined,
-      reconstruction,
-      heartRate,
-      crossMs,
-      moveTimestamps,
-      rotations: gyro?.rotations,
-      orientedReconstruction: gyro?.orientedReconstruction,
-      gyroStream: gyro?.stream ?? undefined,
-      cube,
-      repaired,
-    });
-    const solves = await getSessionSolves(activeSessionId);
-    const allSolves = await getAllSolves();
+    let saved: Solve;
+    try {
+      saved = await addSolve({
+        sessionId: activeSessionId,
+        timeMs,
+        scramble,
+        penalty,
+        splits,
+        event: event ?? undefined,
+        reconstruction,
+        heartRate,
+        crossMs,
+        moveTimestamps,
+        rotations: gyro?.rotations,
+        orientedReconstruction: gyro?.orientedReconstruction,
+        gyroStream: gyro?.stream ?? undefined,
+        cube,
+        repaired,
+      });
+    } catch (e) {
+      set({ saveError: saveFailure(e) });
+      return undefined;
+    }
+    // The row addSolve saved is appended in memory — no re-read of the whole history.
+    const solves = [...prevSolves, saved];
+    const allSolves = [...prevAllSolves, saved];
     const newStats = computeSessionStats(normalSolves(solves));
     const newAchievements = computeAchievements(normalSolves(allSolves));
 
@@ -249,25 +293,39 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ? { id: newlyUnlocked[0].id, label: newlyUnlocked[0].label, icon: newlyUnlocked[0].icon, toastId: ++achievementToastId }
       : null;
 
-    set({ solves, allSolves, lastPB: pb, achievementToast });
+    // Appended to whatever is current now, not the snapshot above: edits made while the write was in flight stay.
+    set((state) => ({
+      solves: state.activeSessionId === activeSessionId && !state.solves.some((x) => x.id === saved.id) ? [...state.solves, saved] : state.solves,
+      allSolves: state.allSolves.some((x) => x.id === saved.id) ? state.allSolves : [...state.allSolves, saved],
+      lastPB: pb,
+      achievementToast,
+    }));
+    void requestPersistentStorage();
+    return saved.id;
   },
 
+  clearSaveError: () => set({ saveError: null }),
+
   setPenalty: async (solveId, penalty) => {
-    await updateSolve(solveId, { penalty });
-    const { activeSessionId } = get();
-    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
+    await get().updateSolves([solveId], { penalty });
   },
 
   setComment: async (solveId, comment) => {
-    await updateSolve(solveId, { comment });
-    const { activeSessionId } = get();
-    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId) });
+    try {
+      const updatedAt = await updateSolve(solveId, { comment });
+      set((state) => patchBoth(state, [solveId], { comment, updatedAt }));
+    } catch (e) {
+      set({ saveError: saveFailure(e) });
+    }
   },
 
   saveReconstruction: async (solveId, reconstruction) => {
-    await updateSolve(solveId, { reconstruction });
-    const { activeSessionId } = get();
-    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId) });
+    try {
+      const updatedAt = await updateSolve(solveId, { reconstruction });
+      set((state) => patchBoth(state, [solveId], { reconstruction, updatedAt }));
+    } catch (e) {
+      set({ saveError: saveFailure(e) });
+    }
   },
 
   setPendingEvent: (event) => set({ pendingEvent: event }),
@@ -280,27 +338,52 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const patch: Partial<Solve> = {};
     if (changes.penalty !== undefined) patch.penalty = changes.penalty;
     if (changes.event !== undefined) patch.event = changes.event ?? undefined;
-    for (const id of solveIds) await updateSolve(id, patch);
-    const { activeSessionId } = get();
-    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
+    try {
+      const updatedAt = await updateSolvesBulk(solveIds, patch);
+      set((state) => patchBoth(state, solveIds, { ...patch, updatedAt }));
+    } catch (e) {
+      set({ saveError: saveFailure(e) });
+    }
   },
 
   removeSolves: async (solveIds) => {
-    const { allSolves, solves, activeSessionId } = get();
+    const { allSolves, solves } = get();
     const known = new Map([...allSolves, ...solves].map((s) => [s.id, s]));
     const gone = solveIds.map((id) => known.get(id)).filter((s): s is Solve => !!s);
-    for (const id of solveIds) await deleteSolve(id);
-    set({ lastRemoved: gone.length ? { solves: gone, id: ++removedId } : get().lastRemoved });
-    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
+    try {
+      for (const id of solveIds) await deleteSolve(id);
+    } catch (e) {
+      set({ saveError: saveFailure(e) });
+      // Some may have gone before the failure: show what the database really holds.
+      await get().refreshFromDb().catch(() => {});
+      return;
+    }
+    const ids = new Set(solveIds);
+    set((state) => ({
+      lastRemoved: gone.length ? { solves: gone, id: ++removedId } : state.lastRemoved,
+      solves: state.solves.filter((x) => !ids.has(x.id)),
+      allSolves: state.allSolves.filter((x) => !ids.has(x.id)),
+    }));
   },
 
   undoRemove: async () => {
     const pending = get().lastRemoved;
     if (!pending) return;
     set({ lastRemoved: null });
-    await restoreSolves(pending.solves);
-    const { activeSessionId } = get();
-    if (activeSessionId) set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
+    let rows: Solve[];
+    try {
+      rows = await restoreSolves(pending.solves);
+    } catch (e) {
+      set({ saveError: saveFailure(e), lastRemoved: pending });
+      return;
+    }
+    // Back in date order, where a re-read would have put them.
+    const back = new Set(rows.map((r) => r.id));
+    const mergeInto = (list: Solve[], add: Solve[]) => [...list.filter((x) => !back.has(x.id)), ...add].sort((a, b) => a.date - b.date);
+    set((state) => ({
+      solves: mergeInto(state.solves, rows.filter((r) => r.sessionId === state.activeSessionId)),
+      allSolves: mergeInto(state.allSolves, rows),
+    }));
   },
 
   dismissUndo: () => set({ lastRemoved: null }),

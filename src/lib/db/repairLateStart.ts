@@ -24,3 +24,24 @@ export function repairLateStart(solve: Solve): Partial<Solve> | null {
   if (solve.gyroStream) out.gyroStream = { ...solve.gyroStream, atMs: solve.gyroStream.atMs.map(shift) };
   return out;
 }
+
+const MIGRATION_KEY = "cube-timer:late-start-repair";
+/** Bump to run the repair again on every device (e.g. if the bug it fixes ever comes back). */
+const MIGRATION_VERSION = "1";
+
+/** True until the one-off late-start repair has been run (and recorded) on this device. */
+export function lateStartRepairPending(): boolean {
+  try {
+    return localStorage.getItem(MIGRATION_KEY) !== MIGRATION_VERSION;
+  } catch {
+    return true;
+  }
+}
+
+export function markLateStartRepairDone(): void {
+  try {
+    localStorage.setItem(MIGRATION_KEY, MIGRATION_VERSION);
+  } catch {
+    // Not remembered — the (in-memory, cheap) scan just runs again next start.
+  }
+}

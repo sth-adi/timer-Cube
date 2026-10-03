@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { useSolveCompletion } from "@/hooks/useSolveCompletion";
 import { useTimerInput } from "@/hooks/useTimerInput";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { isTextField } from "@/lib/timer/timerInput";
 import { PHASE_LABELS, type PhaseCount, useSettingsStore } from "@/lib/store/settingsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -34,6 +35,13 @@ const PHASE_COLOR: Record<string, string> = {
   running: "text-foreground",
   stopped: "text-foreground",
 };
+
+/** The finished solve as a screen reader should say it: "12.34 seconds, plus 2 penalty". */
+function spokenResult(r: { timeMs: number; penalty: string }): string {
+  const seconds = `${(r.timeMs / 1000).toFixed(2)} seconds`;
+  if (r.penalty === "dnf") return `DNF, ${seconds}`;
+  return r.penalty === "plus2" ? `${seconds}, plus 2 penalty` : seconds;
+}
 
 /**
  * Live phase strip for a multiphase solve: each phase shows its own duration
@@ -184,6 +192,7 @@ export function TimerView() {
   useEffect(() => () => resetPerformanceAura(), []);
 
   const touch = useTimerInput({ press, release, cancel, reset });
+  const coarsePointer = useCoarsePointer();
 
   // Delete/Backspace removes the most recent solve — but only when not
   // typing anywhere and the timer isn't live, so it can't eat a real
@@ -245,8 +254,15 @@ export function TimerView() {
   return (
     <div
       className="flex flex-1 flex-col items-center justify-center gap-6 select-none touch-none"
+      role="button"
+      tabIndex={0}
+      aria-label={phase === "running" ? "Stop timer" : "Start timer"}
       {...touch}
     >
+      {/* Announced once per solve: lastResult only changes when an attempt finishes, never per frame. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {phase === "stopped" && lastResult ? spokenResult(lastResult) : ""}
+      </p>
       <InspectionRing remainingMs={inspectionRemainingMs} active={showInspection} />
 
       {showInspection && (
@@ -296,7 +312,8 @@ export function TimerView() {
       {phase === "idle" && (
         <>
           <p className="text-muted-2 text-sm">
-            hold space to start{inspectionEnabled ? " (inspection on)" : ""}
+            {coarsePointer ? "touch and hold to start, tap to stop" : "hold space to start"}
+            {inspectionEnabled ? " (inspection on)" : ""}
             {multiphase && ` · ${phaseCount} phases`}
           </p>
           <PredictionBadge />
@@ -317,7 +334,7 @@ export function TimerView() {
           }}
         />
       )}
-      {phase === "stopped" && <p className="text-muted-2 text-sm">space for next scramble</p>}
+      {phase === "stopped" && <p className="text-muted-2 text-sm">{coarsePointer ? "touch for next scramble" : "space for next scramble"}</p>}
       {(phase === "idle" || phase === "stopped") && <LiveSessionCoach />}
     </div>
   );

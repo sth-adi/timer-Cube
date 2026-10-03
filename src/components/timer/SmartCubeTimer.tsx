@@ -747,9 +747,12 @@ export function SmartCubeTimer() {
   const finishedGyro = recap?.gyro ?? null;
   const finishedGaze = recap?.gaze ?? null;
   // Honest about what's on disk: a recap whose solve you deleted says so.
+  // Found by the id recordSolve returned for this very solve (a repeated scramble could match another one);
+  // scramble + time only stands in until an id is known — a solve whose turns were corrected mid-way is saved without a reconstruction.
+  const [savedIdFor, setSavedIdFor] = useState<{ solvedAtMs: number; id: string } | null>(null);
+  const savedSolveId = savedIdFor && savedIdFor.solvedAtMs === solvedAtMs ? savedIdFor.id : null;
   const savedSolveExists = useSessionStore((s) =>
-    // Matched on scramble and time — a solve whose turns were corrected mid-way is saved without a reconstruction.
-    finishedScramble ? s.solves.some((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : false,
+    savedSolveId ? s.solves.some((x) => x.id === savedSolveId) : finishedScramble ? s.solves.some((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : false,
   );
   // The gyro's read on the solve that just finished (regrips, oriented
   // reconstruction) — computed once at save time from the module-level gyro
@@ -819,6 +822,7 @@ export function SmartCubeTimer() {
     const splits = boundaries && boundaries.f2l !== null && boundaries.oll !== null
       ? [boundaries.cross!, boundaries.f2l, boundaries.oll]
       : undefined;
+    const savedFor = solvedAtMs;
     void recordSolve(
       elapsedMs,
       scramble,
@@ -834,7 +838,9 @@ export function SmartCubeTimer() {
       flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs! - flow.inspectionStartedAtMs) : undefined,
       cube ? { ...cube, corrected: correctedDuringSolve } : undefined,
       repair?.change,
-    );
+    ).then((id) => {
+      if (id) setSavedIdFor({ solvedAtMs: savedFor, id });
+    });
     if (soundEnabled) playSolveChime();
     // Rolls the next target scramble right away, in the background — but
     // deliberately does NOT call cancel() here, so smartCubeStore's
@@ -913,7 +919,9 @@ export function SmartCubeTimer() {
   }, [allSolves]);
 
   // The just-saved solve, rebuilt the way any past solve is: where its time went, and the written reconstruction.
-  const savedSolve = useSessionStore((s) => (finishedScramble ? s.solves.find((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : undefined));
+  const savedSolve = useSessionStore((s) =>
+    savedSolveId ? s.solves.find((x) => x.id === savedSolveId) : finishedScramble ? s.solves.find((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : undefined,
+  );
   const savedBreakdown = useMemo(() => (savedSolve ? solveBreakdown(savedSolve) : null), [savedSolve]);
   const timeReport = useMemo(() => {
     if (!savedBreakdown || !savedSolve) return null;

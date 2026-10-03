@@ -5,6 +5,7 @@ import { UsageTracker } from "@/components/chrome/UsageTracker";
 import { FxLayer } from "@/components/chrome/FxLayer";
 import { UndoToast } from "@/components/chrome/UndoToast";
 import { ClientEnv } from "@/components/chrome/ClientEnv";
+import { UpdateToast } from "@/components/chrome/UpdateToast";
 import { MacPromptDialog } from "@/components/smartcube/MacPromptDialog";
 
 const geistSans = Geist({
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FxLayer />
         <MacPromptDialog />
         <UndoToast />
+        <UpdateToast />
         <ClientEnv />
       </body>
     </html>
