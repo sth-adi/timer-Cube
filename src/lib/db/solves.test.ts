@@ -1,31 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Deletion, Solve } from "@/types";
+import type { Deletion, FullSolve } from "@/types";
 import { buildSessionExport, parseSessionExport } from "@/lib/utils/sessionExport";
 import { buildCsTimerExport } from "@/lib/utils/csTimerExport";
 import { parseCsTimerExport } from "@/lib/utils/csTimerImport";
 
 /** An in-memory stand-in for the two Dexie tables importSolves touches. */
-const store = vi.hoisted(() => ({ solves: new Map<string, Solve>(), deletions: new Map<string, Deletion>(), ids: 0 }));
+const store = vi.hoisted(() => ({ solves: new Map<string, FullSolve>(), deletions: new Map<string, Deletion>(), ids: 0, transactions: 0 }));
 
 vi.mock("./db", () => ({
   newId: () => `new-${++store.ids}`,
   db: {
-    transaction: async (_mode: string, ...rest: unknown[]) => (rest[rest.length - 1] as () => Promise<unknown>)(),
+    transaction: async (_mode: string, ...rest: unknown[]) => {
+      store.transactions++;
+      return (rest[rest.length - 1] as () => Promise<unknown>)();
+    },
     solves: {
       bulkGet: async (ids: string[]) => ids.map((id) => store.solves.get(id)),
-      bulkPut: async (rows: Solve[]) => void rows.forEach((r) => store.solves.set(r.id, r)),
+      bulkPut: async (rows: FullSolve[]) => void rows.forEach((r) => store.solves.set(r.id, r)),
+      bulkDelete: async (ids: string[]) => void ids.forEach((id) => store.solves.delete(id)),
       where: () => ({ equals: (sessionId: string) => ({ toArray: async () => [...store.solves.values()].filter((s) => s.sessionId === sessionId) }) }),
     },
     deletions: {
       bulkGet: async (ids: string[]) => ids.map((id) => store.deletions.get(id)),
       bulkDelete: async (ids: string[]) => void ids.forEach((id) => store.deletions.delete(id)),
+      bulkPut: async (rows: Deletion[]) => void rows.forEach((r) => store.deletions.set(r.id, r)),
     },
   },
 }));
 
-import { importSolves, importSolvesWithReport, planImport, solveFingerprint, type ImportRow } from "./solves";
+import { bulkDeleteSolves, importSolves, importSolvesWithReport, planImport, solveFingerprint, type ImportRow } from "./solves";
 
-const solve = (id: string, over: Partial<Solve> = {}): Solve => ({
+const solve = (id: string, over: Partial<FullSolve> = {}): FullSolve => ({
   id,
   sessionId: "s1",
   timeMs: 10_000 + Number(id.replace(/\D/g, "") || 0),
@@ -37,9 +42,9 @@ const solve = (id: string, over: Partial<Solve> = {}): Solve => ({
 });
 
 /** A row as it comes out of an import file: this app's own export, through JSON and back. */
-const exported = (solves: Solve[]): ImportRow[] => parseSessionExport(JSON.parse(JSON.stringify(buildSessionExport("S", solves))));
+const exported = (solves: FullSolve[]): ImportRow[] => parseSessionExport(JSON.parse(JSON.stringify(buildSessionExport("S", solves))));
 
-const plan = (rows: ImportRow[], here: Solve[], opts: { sessionId?: string; deleted?: string[] } = {}) => {
+const plan = (rows: ImportRow[], here: FullSolve[], opts: { sessionId?: string; deleted?: string[] } = {}) => {
   let n = 0;
   return planImport({
     sessionId: opts.sessionId ?? "s1",
@@ -177,5 +182,46 @@ describe("importSolves", () => {
     expect(await importSolvesWithReport("s1", exported([solve("a1")]))).toEqual({ added: 1, updated: 0, skipped: 0 });
     expect(store.deletions.has("a1")).toBe(false);
     expect(store.solves.get("a1")?.sessionId).toBe("s1");
+  });
+});
+
+describe("bulkDeleteSolves", () => {
+  beforeEach(() => {
+    store.solves.clear();
+    store.deletions.clear();
+    store.transactions = 0;
+  });
+
+  it("removes the rows and records a deletion for each, in one transaction", async () => {
+    const [a, b, c] = [solve("a1"), solve("a2"), solve("a3")];
+    for (const s of [a, b, c]) store.solves.set(s.id, s);
+    const removed = await bulkDeleteSolves(["a1", "a3"]);
+    expect(removed).toEqual([a, c]);
+    expect([...store.solves.keys()]).toEqual(["a2"]);
+    expect([...store.deletions.values()].map((d) => [d.id, d.kind])).toEqual([["a1", "solve"], ["a3", "solve"]]);
+    const stamps = new Set([...store.deletions.values()].map((d) => d.deletedAt));
+    expect(stamps.size).toBe(1);
+    expect(store.transactions).toBe(1);
+  });
+
+  it("records a deletion even for an id with no row here, as deleteSolve does, and returns only real rows", async () => {
+    const a = solve("a1");
+    store.solves.set(a.id, a);
+    const removed = await bulkDeleteSolves(["ghost", "a1", "a1"]);
+    expect(removed).toEqual([a]);
+    expect([...store.deletions.keys()].sort()).toEqual(["a1", "ghost"]);
+  });
+
+  it("does nothing, not even a transaction, for no ids", async () => {
+    expect(await bulkDeleteSolves([])).toEqual([]);
+    expect(store.transactions).toBe(0);
+  });
+
+  it("leaves rows that restoreSolves can bring back", async () => {
+    const a = solve("a1");
+    store.solves.set(a.id, a);
+    const [removed] = await bulkDeleteSolves(["a1"]);
+    expect(removed).toEqual(a);
+    expect(store.deletions.has("a1")).toBe(true);
   });
 });

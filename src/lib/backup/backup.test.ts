@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { Solve } from "@/types";
+import type { FullSolve } from "@/types";
 import { mergeStates, planMerge } from "@/lib/db/merge";
 import { BACKUP_APP, NUDGE_MIN_SOLVES, backupNudge, backupSummary, buildBackup, collectStorage, decodeBackupBytes, encodeBackup, isBackupKey, isGzip, parseBackup, serializeBackup } from "./backup";
 
-const solve = (id: string, over: Partial<Solve> = {}): Solve => ({ id, sessionId: "s1", timeMs: 12000, penalty: "none", scramble: "R U", date: 1000, updatedAt: 1000, ...over });
+const solve = (id: string, over: Partial<FullSolve> = {}): FullSolve => ({ id, sessionId: "s1", timeMs: 12000, penalty: "none", scramble: "R U", date: 1000, updatedAt: 1000, ...over });
 const session = { id: "s1", name: "Session 1", event: "333" as const, createdAt: 1, order: 0, updatedAt: 1 };
 
 describe("isBackupKey", () => {

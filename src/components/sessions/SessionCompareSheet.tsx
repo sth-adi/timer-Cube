@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeftRight, X } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -8,6 +8,7 @@ import { getSessionSolves } from "@/lib/db/solves";
 import { computeSessionStats, normalSolves, type SessionStats } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import { useModalLayer } from "@/hooks/useModalLayer";
 
 const ROWS: { key: keyof SessionStats; label: string; lowerIsBetter: boolean }[] = [
   { key: "ao5", label: "ao5", lowerIsBetter: true },
@@ -19,8 +20,8 @@ const ROWS: { key: keyof SessionStats; label: string; lowerIsBetter: boolean }[]
   { key: "count", label: "Solves", lowerIsBetter: false },
 ];
 
-function fmtStat(key: keyof SessionStats, value: number | null): string {
-  if (value === null) return "—";
+function fmtStat(key: keyof SessionStats, value: number | null, dnf = false): string {
+  if (value === null) return dnf ? "DNF" : "—";
   return key === "count" ? String(value) : formatTime(value);
 }
 
@@ -55,6 +56,9 @@ function SessionPicker({
  * can't answer, since it only ever shows one session at a time.
  */
 export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useModalLayer(dialogRef, onClose);
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
 
@@ -95,15 +99,20 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
+          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
           "sm:max-w-md sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 text-base font-semibold">
+          <h2 id={titleId} className="flex items-center gap-1.5 text-base font-semibold">
             <ArrowLeftRight size={16} className="text-accent" />
             Compare sessions
           </h2>
@@ -136,6 +145,9 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
             {ROWS.map((row) => {
               const l = leftStats[row.key] as number | null;
               const r = rightStats[row.key] as number | null;
+              const dnfFlag = `${row.key}Dnf` as keyof SessionStats;
+              const lDnf = leftStats[dnfFlag] === true;
+              const rDnf = rightStats[dnfFlag] === true;
               const rightBetter = l !== null && r !== null && l !== r && (row.lowerIsBetter ? r < l : r > l);
               const leftBetter = l !== null && r !== null && l !== r && (row.lowerIsBetter ? l < r : l > r);
               return (
@@ -143,13 +155,13 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
                   <span
                     className={cn("tabular-timer text-left font-medium", leftBetter ? "text-success" : "text-foreground/90")}
                   >
-                    {fmtStat(row.key, l)}
+                    {fmtStat(row.key, l, lDnf)}
                   </span>
                   <span className="text-[11px] text-muted-2">{row.label}</span>
                   <span
                     className={cn("tabular-timer text-right font-medium", rightBetter ? "text-success" : "text-foreground/90")}
                   >
-                    {fmtStat(row.key, r)}
+                    {fmtStat(row.key, r, rDnf)}
                   </span>
                 </div>
               );

@@ -14,6 +14,7 @@ import type { Penalty } from "@/types";
  *   holding ─early release or cancel→ inspecting (inspection on) or idle
  *   ready ─cancel→ inspecting (inspection keeps counting) or idle
  *   running ─press→ (split marks, then) stopped
+ *   running ─Escape→ nothing (a live solve is only ever ended by a press)
  */
 
 export type TimerPhase = "idle" | "inspecting" | "holding" | "ready" | "running" | "stopped";
@@ -204,6 +205,18 @@ export class TimerMachine {
       this.holdStartedAt = null;
       this.phase = this.inspectionStartedAt !== null ? "inspecting" : "idle";
     }
+  }
+
+  /**
+   * Escape: clears an attempt that hasn't started the clock (inspection, a
+   * hold, an armed hold) or the finished time on screen. Never a running
+   * solve — a stray key must not throw away a solve that can't be undone.
+   * Returns whether anything was cleared.
+   */
+  escape(): boolean {
+    if (this.phase === "running") return false;
+    this.reset();
+    return true;
   }
 
   reset(): void {

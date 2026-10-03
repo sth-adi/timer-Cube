@@ -5,7 +5,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { useGymStore } from "@/lib/store/gymStore";
 import { useCompStore } from "@/lib/store/compStore";
 import { useQuestStore } from "@/lib/store/questStore";
-import { computeAchievements, computeActivity } from "@/lib/stats/stats";
+import { achievementSolves, computeAchievements, computeActivity } from "@/lib/stats/stats";
 import { metricsFor } from "@/lib/analytics/solveMetrics";
 import { analyzeCoach } from "@/lib/analysis/labCoach";
 import { computeXp, levelInfo, weeklyQuests } from "@/lib/quests/quests";
@@ -13,12 +13,13 @@ import { computeXp, levelInfo, weeklyQuests } from "@/lib/quests/quests";
 /** Everything the progression layer shows, derived from the stores in one place. */
 export function useProgression(withQuests = true) {
   const allSolves = useSessionStore((s) => s.allSolves);
+  const sessions = useSessionStore((s) => s.sessions);
   const gymLog = useGymStore((s) => s.log);
   const rounds = useCompStore((s) => s.rounds);
   const claimed = useQuestStore((s) => s.claimed);
   const [now] = useState(() => Date.now());
 
-  const achievements = useMemo(() => computeAchievements(allSolves), [allSolves]);
+  const achievements = useMemo(() => computeAchievements(achievementSolves(allSolves, sessions)), [allSolves, sessions]);
   const activity = useMemo(() => computeActivity(allSolves), [allSolves]);
   const xp = useMemo(
     () =>

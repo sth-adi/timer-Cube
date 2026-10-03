@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { X } from "lucide-react";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import { computeReplayGaps } from "@/lib/analysis/replayGaps";
+import { useModalLayer } from "@/hooks/useModalLayer";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
@@ -29,6 +30,9 @@ interface InstantReplaySheetProps {
  * Cubeast's own post-solve screen offers, not a second copy of the analyzer.
  */
 export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimestamps, onClose }: InstantReplaySheetProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useModalLayer(dialogRef, onClose);
   const moves = useMemo(() => reconstruction.trim().split(/\s+/).filter(Boolean), [reconstruction]);
 
   const { gaps, hasRealTiming } = useMemo(() => computeReplayGaps(moves, moveTimestamps), [moveTimestamps, moves]);
@@ -36,15 +40,20 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimes
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
+          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
           "sm:max-w-sm sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Reconstruction</h2>
+          <h2 id={titleId} className="text-base font-semibold">Reconstruction</h2>
           <button
             type="button"
             onClick={onClose}

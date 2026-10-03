@@ -1,10 +1,11 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { Deletion, Session, Solve } from "@/types";
+import type { Deletion, FullSolve, Session } from "@/types";
 import { rememberAutoSessionId } from "@/lib/sessions/activeSession";
 
 export class CubeTimerDB extends Dexie {
   sessions!: EntityTable<Session, "id">;
-  solves!: EntityTable<Solve, "id">;
+  /** Rows are FullSolve — with the gyro stream. The in-memory `Solve` is slimmer and must never be written here (see types/index.ts). */
+  solves!: EntityTable<FullSolve, "id">;
   /** Records of deleted sessions/solves, so sync can propagate deletions (see lib/db/merge.ts). */
   deletions!: EntityTable<Deletion, "id">;
 

@@ -310,6 +310,55 @@ describe("event timestamps", () => {
   });
 });
 
+describe("escape", () => {
+  it("never discards a running solve", () => {
+    const m = make();
+    m.press(0);
+    m.release(HOLD);
+    expect(m.phase).toBe("running");
+    expect(m.escape()).toBe(false);
+    expect(m.phase).toBe("running");
+    // The solve is intact: it still stops with the right time.
+    expect(m.press(HOLD + 4321)!.timeMs).toBe(4321);
+  });
+
+  it("keeps a running solve's splits too", () => {
+    const m = make({ phaseCount: 2 });
+    m.press(0);
+    m.release(HOLD);
+    m.press(HOLD + 1000);
+    expect(m.escape()).toBe(false);
+    expect(m.splits).toEqual([1000]);
+  });
+
+  it.each(["holding", "ready"] as const)("still cancels back to idle from %s", (phase) => {
+    const m = make();
+    m.press(0);
+    if (phase === "ready") m.tick(HOLD);
+    expect(m.phase).toBe(phase);
+    expect(m.escape()).toBe(true);
+    expect(m.phase).toBe("idle");
+  });
+
+  it("clears inspection, and the finished time once stopped", () => {
+    const m = make({ inspectionEnabled: true });
+    m.press(0);
+    expect(m.phase).toBe("inspecting");
+    expect(m.escape()).toBe(true);
+    expect(m.phase).toBe("idle");
+    expect(m.inspecting).toBe(false);
+
+    const n = make();
+    n.press(0);
+    n.release(HOLD);
+    n.press(HOLD + 900);
+    expect(n.phase).toBe("stopped");
+    expect(n.escape()).toBe(true);
+    expect(n.phase).toBe("idle");
+    expect(n.lastResult).toBeNull();
+  });
+});
+
 describe("resolveEventTime", () => {
   it("uses the event time when it's sane", () => {
     expect(resolveEventTime(900, 1000)).toBe(900);

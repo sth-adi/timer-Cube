@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Pause, Play, RotateCcw, X } from "lucide-react";
 import type { AlgCase } from "@/lib/algorithms/types";
@@ -13,6 +13,7 @@ import { deriveStatus } from "@/lib/algorithms/srs";
 import { mapToLibraryFrame, relabelAlg } from "@/lib/analysis/frames";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import { useModalLayer } from "@/hooks/useModalLayer";
 import type { CubeViewerHandle } from "@/components/scramble/CubeViewer";
 
 const CubeViewer = dynamic(() => import("@/components/scramble/CubeViewer").then((m) => m.CubeViewer), { ssr: false });
@@ -29,6 +30,9 @@ function now(): number {
 }
 
 export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useModalLayer(dialogRef, onClose);
   const progress = useAlgorithmStore((s) => s.progress[algCase.id]);
   const status = deriveStatus(progress);
   // Published OLL/PLL algs are written last-layer-on-U ("library frame"),
@@ -66,8 +70,13 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
+          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
           "sm:max-w-sm sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
@@ -75,7 +84,7 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold">{algCase.name}</h2>
+            <h2 id={titleId} className="text-base font-semibold">{algCase.name}</h2>
             {algCase.shape && <p className="text-muted-2 text-xs">{algCase.shape}</p>}
           </div>
           <button

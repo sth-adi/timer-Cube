@@ -1,4 +1,4 @@
-import type { EventTag, Penalty, Solve } from "@/types";
+import type { EventTag, FullSolve, GyroStream, Penalty, Solve } from "@/types";
 
 const VALID_EVENT_TAGS: EventTag[] = ["oh", "feet", "bld"];
 
@@ -37,13 +37,14 @@ export interface SessionExport {
     moveTimestamps?: number[];
     rotations?: { atMs: number; token: string }[];
     orientedReconstruction?: string;
-    gyroStream?: Solve["gyroStream"];
+    gyroStream?: GyroStream;
     cube?: Solve["cube"];
     repaired?: Solve["repaired"];
   }>;
 }
 
-export function buildSessionExport(sessionName: string, solves: Solve[]): SessionExport {
+/** Takes stored rows (FullSolve): the in-memory ones carry no gyro stream, and an export made from them would silently lack it. */
+export function buildSessionExport(sessionName: string, solves: FullSolve[]): SessionExport {
   return {
     version: 1,
     exportedAt: Date.now(),
@@ -116,7 +117,7 @@ function isRotationList(v: unknown): v is { atMs: number; token: string }[] {
 
 const isFiniteNumberList = (v: unknown): v is number[] => Array.isArray(v) && v.every((n) => typeof n === "number" && Number.isFinite(n));
 
-function isGyroStream(v: unknown): v is NonNullable<Solve["gyroStream"]> {
+function isGyroStream(v: unknown): v is GyroStream {
   if (typeof v !== "object" || v === null) return false;
   const g = v as Record<string, unknown>;
   const cols = [g.atMs, g.qx, g.qy, g.qz, g.qw];

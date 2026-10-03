@@ -489,7 +489,11 @@
     {"id":"src/lib/prediction/useSolvePrediction.ts","kind":"hook","area":"Other","exports":["useSolvePrediction"],"summary":"predictSolveTime for components, without the main-thread training: the model for trainingSolves is trained in the prediction worker and…","loc":38,"importedBy":2,"hasTest":false},
     {"id":"src/lib/prediction/worker.ts","kind":"worker","area":"Other","exports":["PredictionWorkerRequest","PredictionWorkerResponse"],"summary":"","loc":30,"importedBy":1,"hasTest":false},
     {"id":"src/lib/smartcube/autoReconnect.ts","kind":"lib","area":"Smart cube","exports":["EARLY_ATTEMPT_MIN_GAP_MS","RECONNECT_BACKOFF_MS","RECONNECT_HIDDEN_LIMIT_MS","RECONNECT_STEADY_MS","RECONNECT_WINDOW_MS","hiddenTooLong","reconnectDelay","reconnectTimeline","tryEarly"],"summary":"When to try getting a smart cube back after the Bluetooth link drops out from under you (out of range, the cube napped, an OS hiccup) —…","loc":66,"importedBy":1,"hasTest":true},
-    {"id":"src/lib/smartcube/knownDevice.ts","kind":"lib","area":"Smart cube","exports":["captureChosenDevice","connectKnownDevice","findPermittedDevice","pickProtocol"],"summary":"Runs run (a connectSmartCube call) and records which device the user picked in the chooser it opens.","loc":160,"importedBy":1,"hasTest":false}
+    {"id":"src/lib/smartcube/knownDevice.ts","kind":"lib","area":"Smart cube","exports":["captureChosenDevice","connectKnownDevice","findPermittedDevice","pickProtocol"],"summary":"Runs run (a connectSmartCube call) and records which device the user picked in the chooser it opens.","loc":160,"importedBy":1,"hasTest":false},
+    {"id":"src/components/sessions/manualEntry.ts","kind":"component","area":"Sessions & solves","exports":["AddedTime","ManualSubmit","RECENT_LIMIT","submitManualTime","withAdded"],"summary":"A time added by hand: the id recordSolve returned for it, and the time that was typed.","loc":36,"importedBy":1,"hasTest":true},
+    {"id":"src/hooks/useFullSolve.ts","kind":"hook","area":"Other","exports":["FullSolves","resetFullSolveCacheForTests","useFullSolve","useFullSolves"],"summary":"useFullSolves: The stored rows (gyro streams included) for a few solves, read asynchronously.","loc":84,"importedBy":1,"hasTest":false},
+    {"id":"src/hooks/useModalLayer.ts","kind":"hook","area":"Other","exports":["useModalLayer"],"summary":"Everything a modal dialog or sheet needs, for as long as it's mounted: the shared \"modal open\" flag (timer keys and global shortcuts stand…","loc":74,"importedBy":8,"hasTest":false},
+    {"id":"src/lib/store/modalBus.ts","kind":"store","area":"Other","exports":["isModalOpen","isTopModalLayer","onModalOpen","openModalLayer","resetModalLayersForTests"],"summary":"\"A modal or sheet is open\" — an imperative flag, same deliberately-not-Zustand pattern as fxBus.ts: the timer's key handlers read it at…","loc":53,"importedBy":4,"hasTest":false}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},
@@ -2439,7 +2443,26 @@
     {"from":"src/lib/store/sessionStore.ts","to":"src/lib/stats/scope.ts"},
     {"from":"src/lib/store/sessionStore.ts","to":"src/lib/store/settingsStore.ts"},
     {"from":"src/lib/store/smartCubeStore.ts","to":"src/lib/smartcube/autoReconnect.ts"},
-    {"from":"src/lib/store/smartCubeStore.ts","to":"src/lib/smartcube/knownDevice.ts"}
+    {"from":"src/lib/store/smartCubeStore.ts","to":"src/lib/smartcube/knownDevice.ts"},
+    {"from":"src/app/page.tsx","to":"src/lib/fx/fxBus.ts"},
+    {"from":"src/app/page.tsx","to":"src/lib/store/modalBus.ts"},
+    {"from":"src/app/reel/page.tsx","to":"src/hooks/useFullSolve.ts"},
+    {"from":"src/components/algorithms/CaseDetailSheet.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/analysis/InstantReplaySheet.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/chrome/AccountDataPrompt.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/recap/SolveRecapSheet.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/sessions/SessionCompareSheet.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/sessions/SolveList.tsx","to":"src/components/sessions/manualEntry.ts"},
+    {"from":"src/components/sessions/SolveList.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/sessions/manualEntry.ts","to":"src/lib/utils/time.ts"},
+    {"from":"src/components/settings/SettingsPanel.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/smartcube/MacPromptDialog.tsx","to":"src/hooks/useModalLayer.ts"},
+    {"from":"src/components/timer/TimerView.tsx","to":"src/lib/store/modalBus.ts"},
+    {"from":"src/components/timer/TimerView.tsx","to":"src/lib/utils/haptics.ts"},
+    {"from":"src/hooks/useFullSolve.ts","to":"src/lib/db/solves.ts"},
+    {"from":"src/hooks/useFullSolve.ts","to":"src/types/index.ts"},
+    {"from":"src/hooks/useModalLayer.ts","to":"src/lib/store/modalBus.ts"},
+    {"from":"src/hooks/useTimerInput.ts","to":"src/lib/store/modalBus.ts"}
   ],
   "routes": {
     "/": "src/app/page.tsx",

@@ -5,12 +5,13 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { useProgression } from "@/components/quests/useProgression";
 import { useSessionStore } from "@/lib/store/sessionStore";
-import { computeAchievements } from "@/lib/stats/stats";
+import { achievementSolves, computeAchievements } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
 
 export function AchievementsPanel() {
   const allSolves = useSessionStore((s) => s.allSolves);
-  const achievements = useMemo(() => computeAchievements(allSolves), [allSolves]);
+  const sessions = useSessionStore((s) => s.sessions);
+  const achievements = useMemo(() => computeAchievements(achievementSolves(allSolves, sessions)), [allSolves, sessions]);
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const { level, xp } = useProgression(false);
 

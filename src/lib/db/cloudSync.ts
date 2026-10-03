@@ -1,10 +1,10 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { withTimeout, SupabaseTimeoutError } from "@/lib/supabase/withTimeout";
 import { db } from "./db";
-import { mergeSyncPayload, readLocalState, type MergeResult } from "./sync";
-import { withLocalOnlyFields } from "./merge";
-import { computeSessionStats } from "@/lib/stats/stats";
-import type { Deletion, Session, Solve } from "@/types";
+import { applySyncPayload, type MergeResult } from "./sync";
+import type { SyncState } from "./merge";
+import { computeSessionStats, normalSolves, type SessionStats } from "@/lib/stats/stats";
+import type { Deletion, FullSolve, Session, Solve } from "@/types";
 
 // Kept as a re-export so existing imports of SyncTimeoutError from here (cloudSyncStore.ts) don't need to change.
 export { SupabaseTimeoutError as SyncTimeoutError };
@@ -130,7 +130,7 @@ function rowToSession(r: SessionRow): Session {
   };
 }
 
-function solveToRow(s: Solve, userId: string): SolveRow {
+function solveToRow(s: FullSolve, userId: string): SolveRow {
   return {
     id: s.id,
     user_id: userId,
@@ -163,7 +163,7 @@ function solveToRow(s: Solve, userId: string): SolveRow {
   };
 }
 
-function rowToSolve(r: SolveRow): Solve {
+function rowToSolve(r: SolveRow): FullSolve {
   return {
     id: r.id,
     sessionId: r.session_id,
@@ -395,13 +395,21 @@ export function newestSyncedAt(...tables: readonly (readonly { synced_at?: strin
  * older version of this app — can't undo anything.
  *
  * `cloudRevisions` is what the pull just downloaded; `cloudComplete` says whether that was every
- * row (a full pull) or only the recent ones.
+ * row (a full pull) or only the recent ones. `knownSolves`, when the pull's merge already read
+ * the whole solves table, is that read — so a sync reads the table once. Returns the state it
+ * pushed from, for the caller's own use of the same read (the public stats); null when signed out.
  */
-export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<string, number>, cloudComplete = true): Promise<void> {
+export async function pushAll(
+  userId: string,
+  cloudRevisions?: ReadonlyMap<string, number>,
+  cloudComplete = true,
+  knownSolves?: readonly FullSolve[] | null,
+): Promise<SyncState | null> {
   const startedAt = Date.now();
   const supabase = getSupabaseClient();
-  if (!supabase) return;
-  const { sessions, solves, deletions } = await readLocalState();
+  if (!supabase) return null;
+  // The one full read of the solves table in a sync (the merge before it only reads what it touches).
+  const [sessions, deletions, solves] = await Promise.all([db.sessions.toArray(), db.deletions.toArray(), knownSolves ?? db.solves.toArray()]);
   if (sessions.length > 0) {
     const { error } = await withTimeout(supabase.from("sessions").upsert(sessions.map((s) => sessionToRow(s, userId))));
     check(error);
@@ -434,6 +442,21 @@ export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<strin
     check(error);
   }
   writePushedAt(userId, startedAt);
+  return { sessions, solves: [...solves], deletions };
+}
+
+/**
+ * The numbers published to rivals. Only ordinary 3x3 solves count — the 2x2/4x4/5x5 sessions' and
+ * the one-handed/feet/blindfolded solves are different results, and mixing them in would put a 2x2
+ * single next to someone's 3x3 one (the app's own stats exclude them the same way: normalSolves,
+ * and a scope of one event, see lib/stats/scope.ts) — in date order, as a rolling ao5/ao12 only
+ * means anything over the solves as they happened (the table itself comes back in id order).
+ */
+export function publicStatsFor(sessions: readonly Session[], solves: readonly Solve[]): SessionStats {
+  const threeByThree = new Set(sessions.filter((s) => s.event === "333").map((s) => s.id));
+  const mine = normalSolves(solves.filter((s) => threeByThree.has(s.sessionId)));
+  mine.sort((a, b) => a.date - b.date || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return computeSessionStats(mine);
 }
 
 /**
@@ -444,12 +467,14 @@ export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<strin
  * policy that opened up the real `solves`/`sessions` tables for cross-user
  * reads would leak everything, whereas this one row per user is the only
  * thing anyone else's client can ever see.
+ *
+ * `state` is the sync's own read of the tables (see pushAll); without it they are read here.
  */
-export async function pushPublicStats(userId: string, username: string): Promise<void> {
+export async function pushPublicStats(userId: string, username: string, state?: Pick<SyncState, "sessions" | "solves">): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
-  const solves = await db.solves.toArray();
-  const stats = computeSessionStats(solves);
+  const { sessions, solves } = state ?? { sessions: await db.sessions.toArray(), solves: await db.solves.toArray() };
+  const stats = publicStatsFor(sessions, solves);
   // best_ao5_ms/best_ao12_ms are averages — genuinely fractional by
   // construction even when every underlying solve is a clean integer
   // (e.g. an odd sum divided by 3) — and best_single_ms inherits whatever
@@ -485,9 +510,11 @@ class SyncedAtMissing extends Error {}
  * merge, never a deletion (incrementalPull.test.ts). A cloud without the column falls back to a
  * full pull every time.
  */
-export async function pullAll(userId: string): Promise<{ result: MergeResult; cloudRevisions: Map<string, number>; complete: boolean }> {
+export async function pullAll(
+  userId: string,
+): Promise<{ result: MergeResult; cloudRevisions: Map<string, number>; complete: boolean; solves: FullSolve[] | null }> {
   const supabase = getSupabaseClient();
-  if (!supabase) return { result: { addedSessions: 0, addedSolves: 0, updated: 0, removed: 0 }, cloudRevisions: new Map(), complete: true };
+  if (!supabase) return { result: { addedSessions: 0, addedSolves: 0, updated: 0, removed: 0 }, cloudRevisions: new Map(), complete: true, solves: null };
   const startedAt = Date.now();
   const mark = readStoredNumber(pullMarkKey(userId));
   let since = pullSince(mark, readStoredNumber(fullPullAtKey(userId)), readPushedAt(userId), startedAt);
@@ -507,16 +534,20 @@ export async function pullAll(userId: string): Promise<{ result: MergeResult; cl
     pulled = await fetchAll(null);
   }
   const [sessionRows, solveRows, deletionRows] = pulled;
-  const result = await mergeSyncPayload({
-    sessions: sessionRows.map(rowToSession),
-    solves: withLocalOnlyFields(solveRows.map(rowToSolve), await db.solves.toArray()),
-    deletions: deletionRows.map((d) => ({ id: d.id, kind: d.kind, deletedAt: d.deleted_at }) satisfies Deletion),
-  });
+  // The merge reads only the local solves the pulled rows touch (and fills in the fields the cloud lacks from them).
+  const { result, solves } = await applySyncPayload(
+    {
+      sessions: sessionRows.map(rowToSession),
+      solves: solveRows.map(rowToSolve),
+      deletions: deletionRows.map((d) => ({ id: d.id, kind: d.kind, deletedAt: d.deleted_at }) satisfies Deletion),
+    },
+    { carryLocalOnlyFields: true },
+  );
   // Stays 0 (so every pull is a full one) while the cloud sends no `synced_at`.
   const newest = newestSyncedAt(sessionRows, solveRows, deletionRows);
   writeStoredNumber(pullMarkKey(userId), since === null ? newest : Math.max(mark, newest));
   if (since === null) writeStoredNumber(fullPullAtKey(userId), startedAt);
-  return { result, cloudRevisions: new Map(solveRows.map((r) => [r.id, r.updated_at ?? r.date])), complete: since === null };
+  return { result, cloudRevisions: new Map(solveRows.map((r) => [r.id, r.updated_at ?? r.date])), complete: since === null, solves };
 }
 
 /**
@@ -559,12 +590,18 @@ export class DataOwnerMismatchError extends Error {}
 /**
  * One cloud sync: pull and merge first, then push the merged result. Refuses outright while the
  * device holds another account's solves (the caller asks the user first; see checkDataOwnership).
+ *
+ * The solves table is read in full once, by the push, and the public stats (when `publishStatsAs`
+ * names the account) are computed from that same read; the merge before it reads only what it touches.
+ * Publishing the stats is best-effort — rivals and the leaderboard are optional, so a failure there
+ * never turns a sync of the account's own history into an error.
  */
-export async function syncWithCloud(userId: string): Promise<MergeResult> {
+export async function syncWithCloud(userId: string, options: { publishStatsAs?: string } = {}): Promise<MergeResult> {
   if ((await checkDataOwnership(userId)).decision.kind !== "sync") {
     throw new DataOwnerMismatchError("This device's solves belong to another account. Choose what to do with them before syncing.");
   }
-  const { result, cloudRevisions, complete } = await pullAll(userId);
-  await pushAll(userId, cloudRevisions, complete);
+  const { result, cloudRevisions, complete, solves } = await pullAll(userId);
+  const pushed = await pushAll(userId, cloudRevisions, complete, solves);
+  if (pushed && options.publishStatsAs !== undefined) await pushPublicStats(userId, options.publishStatsAs, pushed).catch(() => {});
   return result;
 }

@@ -39,6 +39,7 @@ export interface TimerEngine {
   release: (at?: number) => void;
   /** touchcancel / window blur: abandon a hold without starting the solve. */
   cancel: () => void;
+  /** Escape: back to idle from inspection/hold/stopped. A running solve is left alone — it can only be ended by a stop press. */
   reset: () => void;
 }
 
@@ -110,7 +111,7 @@ export function useTimer({ inspectionEnabled, holdToStartMs, phaseCount = 1, onS
   }, [machine, sync, schedule]);
 
   const reset = useCallback(() => {
-    machine.reset();
+    if (!machine.escape()) return;
     sync();
     schedule();
   }, [machine, sync, schedule]);

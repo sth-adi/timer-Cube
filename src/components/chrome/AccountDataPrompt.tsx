@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { CloudUpload, HardDrive, Loader2, LogOut, Users } from "lucide-react";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
+import { useModalLayer } from "@/hooks/useModalLayer";
 
 /**
  * Asked when someone signs in on a device that holds another account's solves (see
@@ -13,24 +14,25 @@ import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
 export function AccountDataPrompt() {
   const conflict = useCloudSyncStore((s) => s.ownerConflict);
   const open = useCloudSyncStore((s) => s.ownerPromptOpen);
+  if (!conflict || !open) return null;
+  return <AccountDataDialog />;
+}
+
+function AccountDataDialog() {
+  const conflict = useCloudSyncStore((s) => s.ownerConflict);
   const addToAccount = useCloudSyncStore((s) => s.addLocalDataToAccount);
   const keepOnDevice = useCloudSyncStore((s) => s.keepLocalDataOnDevice);
   const cancelSignIn = useCloudSyncStore((s) => s.cancelSignIn);
   const dismiss = useCloudSyncStore((s) => s.dismissOwnerPrompt);
   const [busy, setBusy] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Escape closes it without choosing — sync just stays paused, and it can be reopened from the
   // sync pill or Settings. Never "cancel sign-in": signing out shouldn't happen by accident.
-  useEffect(() => {
-    if (!conflict || !open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") dismiss();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [conflict, open, dismiss]);
+  // The modal layer also stops the timer's keys while this is up and keeps focus inside.
+  useModalLayer(dialogRef, dismiss);
 
-  if (!conflict || !open) return null;
+  if (!conflict) return null;
 
   const owner = conflict.ownerName ? `@${conflict.ownerName}` : "another account";
   const me = `@${conflict.userName}`;
@@ -47,12 +49,16 @@ export function AccountDataPrompt() {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="account-data-title"
       data-testid="account-data-prompt"
     >
-      <div className="card flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="account-data-title"
+        tabIndex={-1}
+        className="card flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4 outline-none"
+      >
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
             <Users size={16} />

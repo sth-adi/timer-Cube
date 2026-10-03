@@ -1,4 +1,4 @@
-import type { Solve } from "@/types";
+import type { FullSolve, GyroStream, Solve } from "@/types";
 
 /**
  * Repairs a smart-cube solve saved while the timer wrongly started at the
@@ -7,21 +7,23 @@ import type { Solve } from "@/types";
  * times, because they happened before the (late) start. Every time on the
  * solve is shifted back to the real first turn — the result, the splits,
  * the cross time, each turn, the gyro — and nothing else is touched.
- * Returns the changed fields, or null for a solve that's fine.
+ * Returns the changed fields, or null for a solve that's fine. An in-memory (slim) row has no
+ * gyro stream, so the caller passes the stored one for a row with `hasGyro`; a stored row carries its own.
  */
-export function repairLateStart(solve: Solve): Partial<Solve> | null {
+export function repairLateStart(solve: Solve | FullSolve, storedStream?: GyroStream): Partial<Omit<FullSolve, "id" | "hasGyro">> | null {
+  const gyroStream = storedStream ?? ("gyroStream" in solve ? solve.gyroStream : undefined);
   const ts = solve.moveTimestamps;
   if (!ts?.length || !(ts[0] < 0)) return null;
   const offset = -ts[0];
   const shift = (x: number) => x + offset;
-  const out: Partial<Solve> = {
+  const out: Partial<Omit<FullSolve, "id" | "hasGyro">> = {
     timeMs: solve.timeMs + offset,
     moveTimestamps: ts.map(shift),
   };
   if (solve.crossMs !== undefined) out.crossMs = solve.crossMs + offset;
   if (solve.splits) out.splits = solve.splits.map(shift);
   if (solve.rotations) out.rotations = solve.rotations.map((r) => ({ ...r, atMs: r.atMs + offset }));
-  if (solve.gyroStream) out.gyroStream = { ...solve.gyroStream, atMs: solve.gyroStream.atMs.map(shift) };
+  if (gyroStream) out.gyroStream = { ...gyroStream, atMs: gyroStream.atMs.map(shift) };
   return out;
 }
 

@@ -5,7 +5,7 @@ import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
-import { comparableTime, computeSessionStats, eventTagsPresent, normalSolves, rollingAverages, solvesForEvent } from "@/lib/stats/stats";
+import { averageTrend, comparableTime, computeSessionStats, eventTagsPresent, normalSolves, solvesForEvent } from "@/lib/stats/stats";
 import { scopedSolves, type StatsScope } from "@/lib/stats/scope";
 import { formatTime } from "@/lib/utils/time";
 import { EVENT_TAGS, type EventTag } from "@/types";
@@ -38,21 +38,32 @@ function Stat({ label, value, note, onClick }: { label: string; value: string; n
   return <div className={cls}>{body}</div>;
 }
 
-/** The last stretch of the ao5 line, drawn small beside the headline number. */
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 3) return null;
+/** The last stretch of the ao5 line, drawn small beside the headline number. A null is a DNF window: the line breaks there. */
+function Sparkline({ values }: { values: (number | null)[] }) {
+  const finite = values.filter((v): v is number => v !== null);
+  if (finite.length < 3) return null;
   const W = 120;
   const H = 36;
-  const lo = Math.min(...values);
-  const hi = Math.max(...values);
+  const lo = Math.min(...finite);
+  const hi = Math.max(...finite);
   const span = hi - lo || 1;
   const pt = (v: number, i: number) => `${((i / (values.length - 1)) * (W - 6) + 3).toFixed(1)},${(H - 5 - ((v - lo) / span) * (H - 10)).toFixed(1)}`;
-  const d = values.map((v, i) => `${i === 0 ? "M" : "L"}${pt(v, i)}`).join(" ");
-  const last = pt(values[values.length - 1], values.length - 1).split(",");
+  let d = "";
+  let pen = false;
+  values.forEach((v, i) => {
+    if (v === null) {
+      pen = false;
+      return;
+    }
+    d += `${pen ? "L" : "M"}${pt(v, i)}`;
+    pen = true;
+  });
+  const lastValue = values[values.length - 1];
+  const last = lastValue === null ? null : pt(lastValue, values.length - 1).split(",");
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-9 w-[7.5rem] shrink-0" aria-hidden>
       <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.9} />
-      <circle cx={last[0]} cy={last[1]} r={3} fill="var(--accent)" stroke="var(--bg-panel)" strokeWidth={1.5} />
+      {last && <circle cx={last[0]} cy={last[1]} r={3} fill="var(--accent)" stroke="var(--bg-panel)" strokeWidth={1.5} />}
     </svg>
   );
 }
@@ -62,7 +73,9 @@ const SCOPES: { id: StatsScope; label: string }[] = [
   { id: "all", label: "All sessions" },
 ];
 
-function fmt(ms: number | null): string {
+/** "—" means there aren't enough solves yet; "DNF" means the average exists but is a DNF. */
+function fmt(ms: number | null, dnf = false): string {
+  if (dnf) return "DNF";
   return ms === null ? "—" : formatTime(ms);
 }
 
@@ -106,11 +119,9 @@ export function StatsPanel() {
   }, [solves]);
 
   // The ao5 line's last stretch (for the sparkline) and how the latest solve moved it.
-  const { ao5Trail, ao5Delta } = useMemo(() => {
-    const rolling = rollingAverages(solves, 5).filter((v): v is number => v !== null && Number.isFinite(v));
-    const n = rolling.length;
-    return { ao5Trail: rolling.slice(-24), ao5Delta: n >= 2 ? rolling[n - 1] - rolling[n - 2] : null };
-  }, [solves]);
+  // A DNF window is a gap in the trail and is never compared against.
+  const { trail: ao5Trail, change: ao5Change } = useMemo(() => averageTrend(solves, 5), [solves]);
+  const ao5Delta = ao5Change?.kind === "delta" ? ao5Change.ms : null;
 
   const onJumpToBest = bestSolve
     ? () =>
@@ -178,7 +189,7 @@ export function StatsPanel() {
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-2">Current ao5</p>
           <p className="tabular-timer bg-gradient-to-b from-foreground to-accent bg-clip-text text-4xl font-bold leading-none text-transparent">
-            {fmt(stats.ao5)}
+            {fmt(stats.ao5, stats.ao5Dnf)}
           </p>
           {ao5Delta !== null && (
             <p
@@ -191,17 +202,19 @@ export function StatsPanel() {
               {Math.abs(ao5Delta) <= 5 ? "Level" : `${ao5Delta < 0 ? "−" : "+"}${(Math.abs(ao5Delta) / 1000).toFixed(2)}`} since the last solve
             </p>
           )}
+          {ao5Change?.kind === "dnf" && <p className="mt-1.5 text-[11px] font-medium text-warning">Too many DNFs in the last 5</p>}
+          {ao5Change?.kind === "after-dnf" && <p className="mt-1.5 text-[11px] font-medium text-muted-2">Back from a DNF ao5</p>}
         </div>
         <Sparkline values={ao5Trail} />
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-x-1.5 gap-y-0.5 lg:mt-3 lg:gap-1.5">
         <Stat label="best" value={fmt(stats.best)} onClick={onJumpToBest} />
-        <Stat label="ao12" value={fmt(stats.ao12)} />
-        <Stat label="ao100" value={fmt(stats.ao100)} />
+        <Stat label="ao12" value={fmt(stats.ao12, stats.ao12Dnf)} />
+        <Stat label="ao100" value={fmt(stats.ao100, stats.ao100Dnf)} />
         <Stat label="mean" value={fmt(stats.mean)} />
-        <Stat label="best ao5" value={fmt(stats.bestAo5)} />
-        <Stat label="best ao12" value={fmt(stats.bestAo12)} />
+        <Stat label="best ao5" value={fmt(stats.bestAo5, stats.bestAo5Dnf)} />
+        <Stat label="best ao12" value={fmt(stats.bestAo12, stats.bestAo12Dnf)} />
         <Stat label="worst" value={fmt(stats.worst)} />
         <Stat label="solves" value={String(stats.count)} note={scope === "all" ? "· all sessions" : undefined} />
       </div>

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Solve } from "@/types";
+import { HOME_ORIENTATION, matToQuat, mul, tokenMatrix } from "@/lib/gyro/orientation";
+import { viewAt } from "./timeline";
 import { CARD_MS, OPENER_MS, SEG_INTRO_MS, buildMontage, montageAt, montageSoundtrack, pickHighlights } from "./highlights";
 
 const DAY = 864e5;
@@ -86,5 +88,21 @@ describe("pickHighlights variety", () => {
     const kinds = pickHighlights(solves, { now: NOW, period: "week" }).map((h) => h.kind);
     expect(kinds.filter((k) => k === "pb").length).toBeLessThanOrEqual(3);
     expect(kinds).toHaveLength(5);
+  });
+});
+
+describe("montage camera work", () => {
+  const home = matToQuat(HOME_ORIENTATION);
+  const turned = matToQuat(mul(tokenMatrix("y"), HOME_ORIENTATION));
+  const stream = { atMs: [0, 4000], qx: [home.x, turned.x], qy: [home.y, turned.y], qz: [home.z, turned.z], qw: [home.w, turned.w] };
+  // Highlights are slim rows (no stream); the stored rows' streams are handed in beside them.
+  const picked = pickHighlights([solve("g", 4000, 1, { hasGyro: true })], { now: NOW, period: "week" });
+
+  it("is steered by the stored stream of each picked solve", () => {
+    const withStream = buildMontage(picked, new Map([["g", { gyroStream: stream }]]));
+    const without = buildMontage(picked);
+    const end = viewAt(withStream.segments[0].timeline, 4000).view;
+    const flat = viewAt(without.segments[0].timeline, 4000).view;
+    expect(end).not.toEqual(flat);
   });
 });

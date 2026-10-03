@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Solve } from "@/types";
+import type { FullSolve } from "@/types";
 import { lateStartRepairPending, markLateStartRepairDone, repairLateStart } from "./repairLateStart";
 
-const base: Solve = { id: "a", sessionId: "s", timeMs: 8_000, penalty: "none", scramble: "R U", date: 0 };
+const base: FullSolve = { id: "a", sessionId: "s", timeMs: 8_000, penalty: "none", scramble: "R U", date: 0 };
 
 describe("repairLateStart", () => {
   it("leaves a solve timed from its first turn alone", () => {

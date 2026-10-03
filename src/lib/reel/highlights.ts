@@ -1,4 +1,4 @@
-import { solveFinalMs, type Solve } from "@/types";
+import { solveFinalMs, type FullSolve, type Solve } from "@/types";
 import { buildReelTimeline, type ReelTimeline } from "./timeline";
 
 /**
@@ -109,12 +109,16 @@ export interface Montage {
   finaleStartMs: number;
 }
 
-export function buildMontage(highlights: readonly Highlight[]): Montage {
+/**
+ * `stored` holds the picked solves as stored (see useFullSolves) — the highlights' own rows are slim
+ * and carry no gyro stream, which is what steers the camera. A solve missing from it films without one.
+ */
+export function buildMontage(highlights: readonly Highlight[], stored: ReadonlyMap<string, Pick<FullSolve, "gyroStream">> = new Map()): Montage {
   const segments: MontageSegment[] = [];
   let t = OPENER_MS;
   for (const h of highlights) {
     const s = h.solve;
-    const timeline = buildReelTimeline(s.scramble, moveList(s), s.moveTimestamps!, s.timeMs, s.rotations ?? [], s.gyroStream ?? null);
+    const timeline = buildReelTimeline(s.scramble, moveList(s), s.moveTimestamps!, s.timeMs, s.rotations ?? [], stored.get(s.id)?.gyroStream ?? null);
     const startMs = t;
     const solveStartMs = startMs + CARD_MS + SEG_INTRO_MS;
     const endMs = solveStartMs + timeline.totalMs + SEG_HOLD_MS;

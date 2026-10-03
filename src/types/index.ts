@@ -93,15 +93,12 @@ export interface Solve {
    */
   orientedReconstruction?: string;
   /**
-   * The continuous gyro stream during this solve — not just the named
-   * regrips in `rotations`, every orientation sample the cube reported
-   * (thinned to ~20Hz), baked into body-frame quaternions at save time so
-   * it replays correctly even if the cube's calibration changes later.
-   * Parallel arrays, one entry per sample, ms from solve start. Only on a
-   * gyro-equipped connection; absent for solves recorded before this
-   * existed, or any solve without a gyro fix at save time.
+   * In-memory rows only: true when the stored row carries a `gyroStream`. The stream itself (~95% of a
+   * smart-cube row's bytes) is left out of every row the stores hold — read it on demand with
+   * getFullSolve / getSolveStreams (lib/db/solves.ts, useFullSolve). Never present on a stored row:
+   * see FullSolve, which is what the database holds and the only thing that may be written to it.
    */
-  gyroStream?: { atMs: number[]; qx: number[]; qy: number[]; qz: number[]; qw: number[] };
+  hasGyro?: boolean;
   /**
    * When this row last changed (ms, epoch) — set on create and on every edit
    * (penalty, comment, reconstruction). Sync resolves conflicts with it:
@@ -110,6 +107,33 @@ export interface Solve {
    * where `date` stands in for it.
    */
   updatedAt?: number;
+}
+
+/** One sample series per quaternion component, parallel to `atMs`. */
+export interface GyroStream {
+  atMs: number[];
+  qx: number[];
+  qy: number[];
+  qz: number[];
+  qw: number[];
+}
+
+/**
+ * A solve as the database stores it — the only shape that may be written to `db.solves`. It adds the
+ * heavy `gyroStream` the in-memory `Solve` leaves out:
+ *
+ * The continuous gyro stream during this solve — not just the named regrips in `rotations`, every
+ * orientation sample the cube reported (thinned to ~20Hz), baked into body-frame quaternions at save
+ * time so it replays correctly even if the cube's calibration changes later. Parallel arrays, one
+ * entry per sample, ms from solve start. Only on a gyro-equipped connection; absent for solves
+ * recorded before this existed, or any solve without a gyro fix at save time.
+ *
+ * `hasGyro?: never` is what keeps a slim in-memory row from type-checking as a stored one: handing a
+ * `Solve` to a `db.solves` write is a compile error, so a slim row cannot be put back over a full one.
+ */
+export interface FullSolve extends Omit<Solve, "hasGyro"> {
+  gyroStream?: GyroStream;
+  hasGyro?: never;
 }
 
 export interface Session {

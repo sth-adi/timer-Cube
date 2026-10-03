@@ -10,6 +10,7 @@ import { CanvasRecorder, themeAccent } from "@/components/reel/CanvasRecorder";
 import { PERIOD_LABEL, buildMontage, montageSoundtrack, pickHighlights, type HighlightPeriod } from "@/lib/reel/highlights";
 import { renderHighlightFrame } from "@/lib/reel/renderHighlights";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useFullSolve, useFullSolves } from "@/hooks/useFullSolve";
 import { buildReelTimeline } from "@/lib/reel/timeline";
 import { solveFinalMs } from "@/types";
 import { formatTime } from "@/lib/utils/time";
@@ -29,7 +30,10 @@ function HighlightReel() {
   const [period, setPeriod] = useState<HighlightPeriod>("week");
   const [now] = useState(() => Date.now());
   const highlights = useMemo(() => pickHighlights(allSolves, { now, period, max: 5 }), [allSolves, now, period]);
-  const montage = useMemo(() => (highlights.length ? buildMontage(highlights) : null), [highlights]);
+  // The store's rows carry no gyro stream: the few picked solves' streams are read from the database,
+  // and the montage waits for them so the camera work is the real thing, not a fallback.
+  const { rows: stored, status } = useFullSolves(useMemo(() => highlights.map((h) => h.solve).filter((s) => s.hasGyro), [highlights]));
+  const montage = useMemo(() => (highlights.length && status === "ready" ? buildMontage(highlights, stored) : null), [highlights, stored, status]);
   const soundtrack = useMemo(() => (montage ? montageSoundtrack(montage) : []), [montage]);
   const subtitle = PERIOD_LABEL[period];
   const draw = useCallback(
@@ -51,7 +55,11 @@ function HighlightReel() {
           </button>
         ))}
       </div>
-      {!montage ? (
+      {highlights.length > 0 && status !== "ready" ? (
+        <div className="card rounded-xl p-6 text-center text-sm text-muted">
+          {status === "loading" ? "Loading the solves\u2026" : "Couldn\u2019t read these solves from storage. Reload the page to try again."}
+        </div>
+      ) : !montage ? (
         <div className="card rounded-xl p-6 text-center text-sm text-muted">
           No smart-cube solves {subtitle === "all time" ? "yet" : subtitle} to film. Try a longer stretch, or solve on a connected cube.
         </div>
@@ -97,24 +105,26 @@ function SingleReel() {
   );
   const [pickedId, setPickedId] = useState<string | null>(null);
   const selected = candidates.find((s) => s.id === pickedId) ?? candidates[0] ?? null;
+  // The stream is read from the database (the store's rows carry none); the reel waits for it.
+  const { solve: stored, status } = useFullSolve(selected?.hasGyro ? selected : null);
   const timeline = useMemo(
     () =>
-      selected
+      selected && status === "ready"
         ? buildReelTimeline(
             selected.scramble,
             selected.reconstruction!.split(/\s+/).filter(Boolean),
             selected.moveTimestamps!,
             selected.timeMs,
             selected.rotations ?? [],
-            selected.gyroStream ?? null,
+            stored?.gyroStream ?? null,
           )
         : null,
-    [selected],
+    [selected, stored, status],
   );
 
   return (
     <>
-          {!selected || !timeline ? (
+          {!selected ? (
             <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on a connected smart cube and your solves show up here to film.</div>
           ) : (
             <>
@@ -139,12 +149,18 @@ function SingleReel() {
                   );
                 })}
               </div>
-              <ReelPlayer
-                timeline={timeline}
-                title="Solve Reel"
-                subtitle={new Date(selected.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                fileName={`solve-${formatTime(selected.timeMs).replace(/[:.]/g, "-")}`}
-              />
+              {!timeline ? (
+                <div className="card rounded-xl p-6 text-center text-sm text-muted">
+                  {status === "failed" ? "Couldn\u2019t read this solve from storage. Reload the page to try again." : "Loading the solve\u2026"}
+                </div>
+              ) : (
+                <ReelPlayer
+                  timeline={timeline}
+                  title="Solve Reel"
+                  subtitle={new Date(selected.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                  fileName={`solve-${formatTime(selected.timeMs).replace(/[:.]/g, "-")}`}
+                />
+              )}
             </>
           )}
     </>

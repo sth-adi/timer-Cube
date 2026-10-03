@@ -1,16 +1,16 @@
 import { create } from "zustand";
-import type { Session, Solve } from "@/types";
+import type { FullSolve, Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession, moveSessionSolves } from "@/lib/db/sessions";
 import { forgetAutoSessionId, pickInitialSession, readAutoSessionId, readSavedSessionId, saveSessionId } from "@/lib/sessions/activeSession";
-import { addSolve, deleteSolve, restoreSolves, updateSolve, updateSolvesBulk, getSessionSolves, getAllSolves, importSolvesWithReport, type ImportResult } from "@/lib/db/solves";
+import { addSolve, bulkDeleteSolves, restoreSolves, updateSolve, updateSolvesBulk, getSessionSolves, getAllSolves, getFullSessionSolves, getSolveStreams, importSolvesWithReport, type ImportResult } from "@/lib/db/solves";
 import { lateStartRepairPending, markLateStartRepairDone, repairLateStart } from "@/lib/db/repairLateStart";
 import { requestPersistentStorage } from "@/lib/storage/persist";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { scopedSolves } from "@/lib/stats/scope";
-import { computeAchievements, computeSessionStats, normalSolves, type AchievementState, type SessionStats } from "@/lib/stats/stats";
+import { achievementSolves, computeAchievements, computeSessionStats, normalSolves, type AchievementState, type SessionStats } from "@/lib/stats/stats";
 import { buildSessionExport, downloadJson, parseSessionExport, type SessionExport } from "@/lib/utils/sessionExport";
 
 const NOTHING_IMPORTED: ImportResult = { added: 0, updated: 0, skipped: 0 };
@@ -52,7 +52,8 @@ export function detectPB(prev: SessionStats, next: SessionStats): { kind: PBKind
 export const UNDO_DEPTH = 10;
 
 export interface RemovedBatch {
-  solves: Solve[];
+  /** The rows as stored — gyro streams included: once deleted, these are the only copy Undo has to put back. */
+  solves: FullSolve[];
   id: number;
 }
 
@@ -67,9 +68,66 @@ function patchBoth(state: { solves: Solve[]; allSolves: Solve[] }, ids: string[]
   return { solves: patchRows(state.solves, set, patch), allSolves: patchRows(state.allSolves, set, patch) };
 }
 
-function saveFailure(e: unknown): { message: string; at: number } {
-  console.error("Saving to local storage failed", e);
-  return { message: e instanceof Error ? e.message : String(e), at: Date.now() };
+/**
+ * What went wrong, for SaveErrorBanner's wording: "write" is a save the browser refused (storage
+ * full or blocked), "open" is the database never opening at all, "loading" is the history still
+ * loading when a solve finished.
+ */
+export type SaveErrorKind = "write" | "open" | "loading";
+
+function saveFailure(e: unknown, kind: SaveErrorKind = "write"): { message: string; at: number; kind: SaveErrorKind } {
+  console.error(kind === "open" ? "Opening local storage failed" : "Saving to local storage failed", e);
+  return { message: e instanceof Error ? e.message : String(e), at: Date.now(), kind };
+}
+
+/** How long recordSolve waits for the first load before giving up on a solve. */
+export const READY_WAIT_MS = 8_000;
+
+/** The first load: in flight or done, shared by every caller — AppBootstrap mounts on each page. Cleared when it fails, so the next call retries. */
+let initPromise: Promise<void> | null = null;
+let initFailure: unknown = null;
+
+/** Test-only: forget the first load so the next init() reads the database again. */
+export function resetSessionInitForTests() {
+  initPromise = null;
+  initFailure = null;
+  memoryWrites = 0;
+}
+
+/**
+ * Counts every in-memory change to the session list, the open session or either solve list (a
+ * subscription below bumps it, so no write path can forget). A read from the database that
+ * started before such a write is stale by the time it lands.
+ */
+let memoryWrites = 0;
+const MAX_REREADS = 5;
+
+/**
+ * Reads from the database and applies the result only if nothing was written in memory while
+ * reading — otherwise reads again, so a solve recorded mid-read is never overwritten by a list
+ * that predates it. `apply` runs right after the check, with no await between.
+ */
+async function applyFresh<T>(read: () => Promise<T>, apply: (result: T) => void): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    const before = memoryWrites;
+    const result = await read();
+    if (memoryWrites === before || attempt >= MAX_REREADS) {
+      apply(result);
+      return;
+    }
+  }
+}
+
+/** True if `promise` settled within `ms`. */
+function settledWithin(promise: Promise<unknown>, ms: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), ms);
+    const done = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    promise.then(done, done);
+  });
 }
 
 interface SessionState {
@@ -81,9 +139,10 @@ interface SessionState {
   loaded: boolean;
   lastPB: PBEvent | null;
   achievementToast: AchievementToastEvent | null;
-  /** The last write to IndexedDB that failed (storage full or blocked), until dismissed — see SaveErrorBanner. */
-  saveError: { message: string; at: number } | null;
+  /** The last write to IndexedDB that failed (storage full or blocked) or couldn't be attempted (storage won't open, history still loading), until dismissed — see SaveErrorBanner. */
+  saveError: { message: string; at: number; kind: SaveErrorKind } | null;
   clearSaveError: () => void;
+  /** Loads the history once; later calls return the same promise. Never rejects — a failure lands in `saveError`. */
   init: () => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   addSession: (name: string, event?: WcaEvent) => Promise<void>;
@@ -133,7 +192,8 @@ interface SessionState {
   dismissUndo: () => void;
   clearPB: () => void;
   clearAchievementToast: () => void;
-  exportActiveSession: () => void;
+  /** Downloads the open session as a JSON file, read from the database (full rows, gyro streams included). */
+  exportActiveSession: () => Promise<void>;
   importIntoActiveSession: (json: string) => Promise<ImportResult>;
   importRowsIntoActiveSession: (rows: SessionExport["solves"]) => Promise<ImportResult>;
   /** Re-reads sessions/solves straight from Dexie without touching which session is active — for when something outside this store's own actions wrote to the db directly (device sync). */
@@ -173,35 +233,56 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   saveError: null,
   pendingEvent: null,
 
-  init: async () => {
-    await ensureDefaultSession();
-    const sessions = await listSessions();
-    let allSolves = await getAllSolves();
-    // Solves saved while the smart-cube timer wrongly started at the cross: put their times right.
-    // A one-off per device (the bug is fixed, so nothing new needs it), patched in memory so the
-    // list isn't loaded a second time.
-    if (lateStartRepairPending()) {
-      try {
-        const fixed = new Map<string, Solve>();
-        for (const x of allSolves) {
-          const fix = repairLateStart(x);
-          if (fix) fixed.set(x.id, { ...x, ...fix, updatedAt: await updateSolve(x.id, fix) });
+  init: () => {
+    if (!initPromise) {
+      const run = (async () => {
+        await ensureDefaultSession();
+        const sessions = await listSessions();
+        let allSolves = await getAllSolves();
+        // Solves saved while the smart-cube timer wrongly started at the cross: put their times right.
+        // A one-off per device (the bug is fixed, so nothing new needs it), patched in memory so the
+        // list isn't loaded a second time.
+        if (lateStartRepairPending()) {
+          try {
+            const fixed = new Map<string, Solve>();
+            for (const x of allSolves) {
+              // The rows here are slim: a solve with a gyro stream gets its stored stream shifted
+              // along with the rest (read before anything is written, so a failed read repairs nothing).
+              const needsFix = repairLateStart(x);
+              if (!needsFix) continue;
+              const stream = x.hasGyro ? await getSolveStreams(x.id) : undefined;
+              const fix = repairLateStart(x, stream) ?? needsFix;
+              // Never into memory: the shifted stream is written to the row and left out of the slim copy.
+              const inMemory = { ...fix };
+              delete inMemory.gyroStream;
+              fixed.set(x.id, { ...x, ...inMemory, updatedAt: await updateSolve(x.id, fix) });
+            }
+            if (fixed.size > 0) allSolves = allSolves.map((x) => fixed.get(x.id) ?? x);
+            markLateStartRepairDone();
+          } catch (e) {
+            // Left unflagged: tried again next start.
+            console.warn("Late-start repair failed", e);
+          }
         }
-        if (fixed.size > 0) allSolves = allSolves.map((x) => fixed.get(x.id) ?? x);
-        markLateStartRepairDone();
-      } catch (e) {
-        // Left unflagged: tried again next start.
-        console.warn("Late-start repair failed", e);
-      }
+        // Reopen what this device last had open — every page and every reload, not just the first.
+        const first = pickInitialSession(sessions, allSolves, readSavedSessionId()) ?? (await ensureDefaultSession());
+        saveSessionId(first.id);
+        // allSolves is date-ordered, so this is the same list getSessionSolves would return.
+        const solves = allSolves.filter((x) => x.sessionId === first.id);
+        initFailure = null;
+        set({ sessions, activeSessionId: first.id, solves, allSolves, loaded: true });
+        void useScrambleStore.getState().setEvent(first.event);
+        if (allSolves.length > 0) void requestPersistentStorage();
+      })().catch((e) => {
+        // Private or locked-down browsers can refuse to open IndexedDB at all: say so instead of
+        // leaving a timer that shows times it can't keep. Cleared so the next call tries again.
+        initPromise = null;
+        initFailure = e;
+        set({ saveError: saveFailure(e, "open") });
+      });
+      initPromise = run;
     }
-    // Reopen what this device last had open — every page and every reload, not just the first.
-    const first = pickInitialSession(sessions, allSolves, readSavedSessionId()) ?? (await ensureDefaultSession());
-    saveSessionId(first.id);
-    // allSolves is date-ordered, so this is the same list getSessionSolves would return.
-    const solves = allSolves.filter((x) => x.sessionId === first.id);
-    set({ sessions, activeSessionId: first.id, solves, allSolves, loaded: true });
-    void useScrambleStore.getState().setEvent(first.event);
-    if (allSolves.length > 0) void requestPersistentStorage();
+    return initPromise;
   },
 
   switchSession: async (id) => {
@@ -241,8 +322,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // Land on the merged session if the one being folded away was open.
     if (activeSessionId === fromId) await get().switchSession(intoId);
     await get().removeSession(fromId);
-    const solves = await getSessionSolves(get().activeSessionId ?? intoId);
-    set({ solves, allSolves: await getAllSolves() });
+    await applyFresh(
+      async () => ({ solves: await getSessionSolves(get().activeSessionId ?? intoId), allSolves: await getAllSolves() }),
+      (fresh) => set(fresh),
+    );
   },
 
   removeSession: async (id) => {
@@ -263,6 +346,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty, cube, repaired) => {
+    // Not ready yet (history still loading, or the database never opened): wait for the load rather
+    // than drop the solve, and say so if it can't be saved.
+    if (!get().activeSessionId) {
+      const finished = await settledWithin(get().init(), READY_WAIT_MS);
+      if (!get().activeSessionId) {
+        set({
+          saveError: finished
+            ? saveFailure(initFailure ?? new Error("No session is open"), "open")
+            : { message: "Still loading your history", at: Date.now(), kind: "loading" },
+        });
+        return undefined;
+      }
+    }
     const { activeSessionId, solves: prevSolves, allSolves: prevAllSolves } = get();
     if (!activeSessionId) return undefined;
     // PB detection and achievements only ever look at ordinary 2-handed
@@ -273,9 +369,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // sessions" of this event — see scopedSolves), so "New best ao5!" always
     // agrees with the Best ao5 there.
     const scope = useSettingsStore.getState().statsScope;
-    const pbSolves = (session: Solve[], all: Solve[]) => normalSolves(scopedSolves(scope, activeSessionId, get().sessions, session, all));
+    const { sessions } = get();
+    const pbSolves = (session: Solve[], all: Solve[]) => normalSolves(scopedSolves(scope, activeSessionId, sessions, session, all));
     const prevStats = computeSessionStats(pbSolves(prevSolves, prevAllSolves));
-    const prevAchievements = computeAchievements(normalSolves(prevAllSolves));
+    // Lifetime achievements are earned on 3x3 only: a 2x2 or 4x4 time never unlocks "Sub-10".
+    const prevAchievements = computeAchievements(achievementSolves(prevAllSolves, sessions));
 
     let saved: Solve;
     try {
@@ -304,7 +402,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const solves = [...prevSolves, saved];
     const allSolves = [...prevAllSolves, saved];
     const newStats = computeSessionStats(pbSolves(solves, allSolves));
-    const newAchievements = computeAchievements(normalSolves(allSolves));
+    const newAchievements = computeAchievements(achievementSolves(allSolves, sessions));
 
     const record = detectPB(prevStats, newStats);
     const pb: PBEvent | null = record ? { ...record, id: ++pbEventId } : null;
@@ -368,11 +466,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   removeSolves: async (solveIds) => {
-    const { allSolves, solves } = get();
-    const known = new Map([...allSolves, ...solves].map((s) => [s.id, s]));
-    const gone = solveIds.map((id) => known.get(id)).filter((s): s is Solve => !!s);
+    // One transaction for the lot; what it removed (as stored, not as last shown) is what Undo puts back.
+    let gone: FullSolve[];
     try {
-      for (const id of solveIds) await deleteSolve(id);
+      gone = await bulkDeleteSolves(solveIds);
     } catch (e) {
       set({ saveError: saveFailure(e) });
       // Some may have gone before the failure: show what the database really holds.
@@ -417,11 +514,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   clearPB: () => set({ lastPB: null }),
   clearAchievementToast: () => set({ achievementToast: null }),
 
-  exportActiveSession: () => {
-    const { activeSessionId, sessions, solves } = get();
+  exportActiveSession: async () => {
+    const { activeSessionId, sessions } = get();
     const session = sessions.find((s) => s.id === activeSessionId);
     if (!session) return;
-    const data = buildSessionExport(session.name, solves);
+    // From the database, not the list on screen: that one is slim, and an export must carry the gyro streams.
+    let rows: FullSolve[];
+    try {
+      rows = await getFullSessionSolves(session.id);
+    } catch (e) {
+      set({ saveError: saveFailure(e) });
+      return;
+    }
+    const data = buildSessionExport(session.name, rows);
     const datePart = new Date().toISOString().slice(0, 10);
     downloadJson(`${session.name.replace(/[^a-z0-9]+/gi, "-")}-${datePart}.json`, data);
   },
@@ -436,16 +541,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const { activeSessionId } = get();
     if (!activeSessionId) return NOTHING_IMPORTED;
     const result = await importSolvesWithReport(activeSessionId, rows);
-    set({ solves: await getSessionSolves(activeSessionId), allSolves: await getAllSolves() });
+    await applyFresh(
+      async () => ({ solves: await getSessionSolves(get().activeSessionId ?? activeSessionId), allSolves: await getAllSolves() }),
+      (fresh) => set(fresh),
+    );
     return result;
   },
 
   refreshFromDb: async () => {
-    const { activeSessionId } = get();
-    const sessions = await listSessions();
-    const allSolves = await getAllSolves();
-    const solves = activeSessionId ? await getSessionSolves(activeSessionId) : [];
-    set({ sessions, solves, allSolves });
+    await applyFresh(
+      async () => {
+        const { activeSessionId } = get();
+        const sessions = await listSessions();
+        const allSolves = await getAllSolves();
+        const solves = activeSessionId ? await getSessionSolves(activeSessionId) : [];
+        return { sessions, solves, allSolves };
+      },
+      (fresh) => set(fresh),
+    );
   },
 
   adoptSyncedSessionIfLocalEmpty: async () => {
@@ -475,3 +588,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     forgetAutoSessionId();
   },
 }));
+
+// Every in-memory write to what a database read would replace — see memoryWrites.
+useSessionStore.subscribe((state, prev) => {
+  if (state.sessions !== prev.sessions || state.activeSessionId !== prev.activeSessionId || state.solves !== prev.solves || state.allSolves !== prev.allSolves) memoryWrites++;
+});

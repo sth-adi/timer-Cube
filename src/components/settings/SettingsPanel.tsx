@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
 import { BackupPanel } from "./BackupPanel";
 import { SmartCubeSettings } from "./SmartCubeSettings";
@@ -14,16 +14,20 @@ import { DeviceSyncPanel } from "./DeviceSyncPanel";
 import { AccountPanel } from "./AccountPanel";
 import { OfflinePanel } from "./OfflinePanel";
 import { cn } from "@/lib/utils/cn";
+import { useModalLayer } from "@/hooks/useModalLayer";
 
 export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
       onClick={() => onChange(!checked)}
       className="flex w-full items-center justify-between py-2.5"
     >
       <span className="text-sm text-foreground/90">{label}</span>
       <span
+        aria-hidden="true"
         className={cn(
           "relative h-6 w-10 rounded-full transition-colors",
           checked ? "bg-accent" : "bg-bg-panel-2 border border-border-strong",
@@ -41,6 +45,10 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
 }
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
+  // Dialog behaviour: timer keys stand down while open, Esc closes, focus moves in and is restored, Tab stays inside.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useModalLayer(dialogRef, onClose);
   const practiceMode = useScrambleStore((s) => s.practiceMode);
   const setPracticeMode = useScrambleStore((s) => s.setPracticeMode);
   const practiceLength = useScrambleStore((s) => s.practiceLength);
@@ -111,15 +119,20 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
+          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
           "sm:max-w-sm sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold">Settings</h2>
+          <h2 id={titleId} className="text-base font-semibold">Settings</h2>
           <button
             type="button"
             onClick={onClose}
@@ -324,7 +337,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => exportActiveSession()}
+              onClick={() => void exportActiveSession()}
               className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-medium text-foreground/90 hover:brightness-110"
             >
               <Download size={13} /> Export JSON
@@ -386,7 +399,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Space</kbd> hold to start, tap to stop
             </li>
             <li>
-              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Esc</kbd> cancel the current arm/hold
+              <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Esc</kbd> cancel the current arm/hold, or close a panel (never stops a running solve)
             </li>
             <li>
               <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Delete</kbd> remove the most recent solve

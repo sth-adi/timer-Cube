@@ -1,4 +1,4 @@
-import type { Deletion, Penalty, Session, Solve, WcaEvent } from "@/types";
+import type { Deletion, FullSolve, Penalty, Session, WcaEvent } from "@/types";
 import type { SyncState } from "@/lib/db/merge";
 
 /**
@@ -59,7 +59,7 @@ function validSession(v: unknown): v is Session {
   const s = v as Record<string, unknown> | null;
   return !!s && typeof s === "object" && isStr(s.id) && isStr(s.name) && isStr(s.event) && isNum(s.createdAt) && isNum(s.order);
 }
-function validSolve(v: unknown): v is Solve {
+function validSolve(v: unknown): v is FullSolve {
   const s = v as Record<string, unknown> | null;
   return !!s && typeof s === "object" && isStr(s.id) && isStr(s.sessionId) && isNum(s.timeMs) && PENALTIES.includes(s.penalty as Penalty) && isStr(s.scramble) && isNum(s.date);
 }

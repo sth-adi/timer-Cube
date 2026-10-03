@@ -42,8 +42,8 @@ export function drawShareCard(opts: { sessionName: string; stats: SessionStats }
   ctx.fillText("BEST SINGLE", marginX, 520);
 
   const cells: [string, string][] = [
-    ["ao5", opts.stats.ao5 !== null ? formatTime(opts.stats.ao5) : "—"],
-    ["ao12", opts.stats.ao12 !== null ? formatTime(opts.stats.ao12) : "—"],
+    ["ao5", opts.stats.ao5 !== null ? formatTime(opts.stats.ao5) : opts.stats.ao5Dnf ? "DNF" : "—"],
+    ["ao12", opts.stats.ao12 !== null ? formatTime(opts.stats.ao12) : opts.stats.ao12Dnf ? "DNF" : "—"],
     ["mean", opts.stats.mean !== null ? formatTime(opts.stats.mean) : "—"],
     ["solves", String(opts.stats.count)],
   ];

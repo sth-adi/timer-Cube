@@ -1,4 +1,4 @@
-import type { EventTag, Solve } from "@/types";
+import type { EventTag, Session, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
 
 export interface AverageResult {
@@ -43,20 +43,62 @@ export function comparableTime(solve: Solve): number {
 
 /**
  * Rolling average-of-N ending at each solve (chronological order in, same
- * length out). Entry i is null until at least N solves have occurred.
+ * length out). Entry i is null until at least N solves have occurred; after
+ * that it's the window's full AverageResult, so a DNF window (value null,
+ * isDnf true) stays distinguishable from "not enough solves yet".
  */
-export function rollingAverages(solves: Solve[], n: number): (number | null)[] {
+export function rollingAverageResults(solves: Solve[], n: number): (AverageResult | null)[] {
   const times = solves.map(comparableTime);
-  const result: (number | null)[] = [];
+  const result: (AverageResult | null)[] = [];
   for (let i = 0; i < times.length; i++) {
     if (i + 1 < n) {
       result.push(null);
       continue;
     }
-    const window = times.slice(i + 1 - n, i + 1);
-    result.push(averageOfN(window).value);
+    result.push(averageOfN(times.slice(i + 1 - n, i + 1)));
   }
   return result;
+}
+
+/**
+ * Rolling average-of-N as plain numbers: null before the window fills and for
+ * a DNF window alike. Use rollingAverageResults when the two must be told apart.
+ */
+export function rollingAverages(solves: Solve[], n: number): (number | null)[] {
+  return rollingAverageResults(solves, n).map((r) => (r === null ? null : r.value));
+}
+
+export type AverageChange =
+  /** Both of the last two windows are real averages: how many ms the newest moved it (negative = faster). */
+  | { kind: "delta"; ms: number }
+  /** The newest window is a DNF — nothing to compare. */
+  | { kind: "dnf" }
+  /** The newest window is fine but the one before it was a DNF — the difference would be meaningless. */
+  | { kind: "after-dnf" };
+
+export interface AverageTrend {
+  /** The last `limit` windows, oldest first. A DNF window is null (a gap in the line), never skipped. */
+  trail: (number | null)[];
+  /** How the latest solve moved the average, or null with fewer than two windows. */
+  change: AverageChange | null;
+}
+
+/**
+ * The tail of the rolling aoN line plus how the latest solve moved it. Windows
+ * that aren't full yet are dropped, but DNF windows are kept as gaps, so the
+ * sparkline breaks there and the change is never measured across one.
+ */
+export function averageTrend(solves: Solve[], n: number, limit = 24): AverageTrend {
+  const windows = rollingAverageResults(solves, n).filter((r): r is AverageResult => r !== null);
+  const trail = windows.slice(-limit).map((r) => (r.isDnf ? null : r.value));
+  const last = windows[windows.length - 1];
+  const prev = windows[windows.length - 2];
+  let change: AverageChange | null = null;
+  if (last?.isDnf) change = { kind: "dnf" };
+  else if (last && prev) {
+    change = prev.isDnf || prev.value === null || last.value === null ? { kind: "after-dnf" } : { kind: "delta", ms: last.value - prev.value };
+  }
+  return { trail, change };
 }
 
 /** Best rolling average-of-N across the whole session (the "best aoN" stat). */
@@ -65,6 +107,15 @@ export function bestAverageOfN(solves: Solve[], n: number): number | null {
   const valid = rolling.filter((v): v is number => v !== null);
   if (valid.length === 0) return null;
   return Math.min(...valid);
+}
+
+/**
+ * True when at least one full window of N exists but every one of them is a
+ * DNF — i.e. bestAverageOfN is null because of DNFs, not for lack of solves.
+ */
+function everyWindowDnf(solves: Solve[], n: number): boolean {
+  const results = rollingAverageResults(solves, n).filter((r): r is AverageResult => r !== null);
+  return results.length > 0 && results.every((r) => r.isDnf);
 }
 
 export interface SessionStats {
@@ -81,6 +132,17 @@ export interface SessionStats {
   bestAo5: number | null;
   bestAo12: number | null;
   stdDev: number | null;
+  /**
+   * The numeric fields above are null both for "not enough solves yet" and for
+   * a DNF average. These flags are true only for the DNF case, so a display can
+   * say "DNF" instead of "—". For bestAoN it means every window so far was a DNF.
+   */
+  ao5Dnf: boolean;
+  ao12Dnf: boolean;
+  ao50Dnf: boolean;
+  ao100Dnf: boolean;
+  bestAo5Dnf: boolean;
+  bestAo12Dnf: boolean;
 }
 
 export interface DayActivity {
@@ -423,6 +485,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
 ];
 
+/**
+ * The solves lifetime achievements are earned on: ordinary solves from 3x3 sessions, across all of
+ * them — a 2x2 or 4x4 time never unlocks "Sub-10". A session that isn't in `sessions` can't be
+ * placed, so its solves don't count (the same call scopedSolves makes).
+ */
+export function achievementSolves(allSolves: Solve[], sessions: readonly Pick<Session, "id" | "event">[]): Solve[] {
+  const threeByThree = new Set(sessions.filter((s) => s.event === "333").map((s) => s.id));
+  return normalSolves(allSolves).filter((s) => threeByThree.has(s.sessionId));
+}
+
 /** Evaluates every achievement definition against the given (typically lifetime, cross-session) solve history. */
 export function computeAchievements(solves: Solve[]): AchievementState[] {
   const finiteTimes = solves.map(comparableTime).filter((t) => Number.isFinite(t));
@@ -451,7 +523,11 @@ export function computeSessionStats(solves: Solve[]): SessionStats {
     stdDev = Math.sqrt(variance);
   }
 
-  const last = (n: number) => averageOfN(times.slice(-n)).value;
+  // The latest window of N, or null while there are fewer than N solves.
+  const last = (n: number): AverageResult | null => (times.length >= n ? averageOfN(times.slice(-n)) : null);
+  const [a5, a12, a50, a100] = [5, 12, 50, 100].map(last);
+  const bestAo5 = bestAverageOfN(solves, 5);
+  const bestAo12 = bestAverageOfN(solves, 12);
 
   return {
     count: solves.length,
@@ -460,13 +536,19 @@ export function computeSessionStats(solves: Solve[]): SessionStats {
     best,
     worst,
     mean,
-    ao5: times.length >= 5 ? last(5) : null,
-    ao12: times.length >= 12 ? last(12) : null,
-    ao50: times.length >= 50 ? last(50) : null,
-    ao100: times.length >= 100 ? last(100) : null,
-    bestAo5: bestAverageOfN(solves, 5),
-    bestAo12: bestAverageOfN(solves, 12),
+    ao5: a5?.value ?? null,
+    ao12: a12?.value ?? null,
+    ao50: a50?.value ?? null,
+    ao100: a100?.value ?? null,
+    bestAo5,
+    bestAo12,
     stdDev,
+    ao5Dnf: a5?.isDnf ?? false,
+    ao12Dnf: a12?.isDnf ?? false,
+    ao50Dnf: a50?.isDnf ?? false,
+    ao100Dnf: a100?.isDnf ?? false,
+    bestAo5Dnf: bestAo5 === null && everyWindowDnf(solves, 5),
+    bestAo12Dnf: bestAo12 === null && everyWindowDnf(solves, 12),
   };
 }
 

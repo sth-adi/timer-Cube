@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildSessionExport, describeImport, parseSessionExport } from "./sessionExport";
-import type { Solve } from "@/types";
+import type { FullSolve } from "@/types";
 
-function solve(over: Partial<Solve> = {}): Solve {
+function solve(over: Partial<FullSolve> = {}): FullSolve {
   return {
     id: "id1",
     sessionId: "s1",
@@ -46,7 +46,7 @@ describe("sessionExport round-trip", () => {
 
 describe("sessionExport is lossless", () => {
   /** A smart-cube solve with every field the app stores. */
-  const full: Solve = {
+  const full: FullSolve = {
     id: "full-1",
     sessionId: "s1",
     timeMs: 9876,

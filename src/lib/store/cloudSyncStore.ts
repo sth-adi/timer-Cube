@@ -7,7 +7,6 @@ import {
   checkDataOwnership,
   claimLocalData,
   keepLocalDataOffAccount,
-  pushPublicStats,
   syncWithCloud,
   SyncTimeoutError,
 } from "@/lib/db/cloudSync";
@@ -197,7 +196,10 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
       if (get().ownerConflict) set({ ownerConflict: null, ownerPromptOpen: false });
       // Pull-then-push: merging the cloud's state in first means what gets
       // pushed is already the most recent version of everything.
-      const result = await syncWithCloud(user.id);
+      // Also publishes the public stats (rival lookups and the daily leaderboard read them) from the
+      // same read of the solves the push made — best-effort, so a failure there is not a sync
+      // failure the way a failed push/pull of your own solve history is.
+      const result = await syncWithCloud(user.id, { publishStatsAs: displayUsername(user) });
       if (result.addedSessions > 0 || result.addedSolves > 0 || result.updated > 0 || result.removed > 0) {
         applyingSync = true;
         try {
@@ -211,11 +213,6 @@ export const useCloudSyncStore = create<CloudSyncState>((set, get) => ({
       await useSessionStore.getState().dropEmptyAutoSession().catch(() => {});
       const { sessions, allSolves, activeSessionId } = useSessionStore.getState();
       set({ suggestion: suggestSession(sessions, allSolves, activeSessionId) });
-      // Best-effort: rival lookups and the daily leaderboard read this, but
-      // neither of those exists for a signed-out user, so a failure here
-      // shouldn't flip the whole sync to "error" the way a failed
-      // push/pull of your own solve history should.
-      await pushPublicStats(user.id, displayUsername(user)).catch(() => {});
       clearScheduledRetry();
       set({ status: "synced", lastSyncedAt: Date.now() });
     } catch (err) {

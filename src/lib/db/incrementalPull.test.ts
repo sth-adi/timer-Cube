@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { Session, Solve } from "@/types";
+import type { Session, FullSolve } from "@/types";
 import { mergeStates, planMerge, withLocalOnlyFields, type SyncState } from "./merge";
 import { newestSyncedAt, pullSince } from "./cloudSync";
 
-const solve = (id: string, t: number, extra: Partial<Solve> = {}): Solve => ({
+const solve = (id: string, t: number, extra: Partial<FullSolve> = {}): FullSolve => ({
   id,
   sessionId: "S",
   timeMs: 10_000,
@@ -124,7 +124,7 @@ describe("what an incremental pull picks up", () => {
   // The cloud as rows with a server stamp; the pull filter is the one fetchAllRows applies.
   const HOUR = 3_600_000;
   const T = Date.parse("2026-10-04T12:00:00Z");
-  type Stamped = { solve: Solve; syncedAt: number };
+  type Stamped = { solve: FullSolve; syncedAt: number };
   const pulledSince = (cloud: Stamped[], since: number) => cloud.filter((r) => r.syncedAt > since).map((r) => r.solve);
 
   it("includes rows recorded offline long ago (old revision) but uploaded after the mark", () => {

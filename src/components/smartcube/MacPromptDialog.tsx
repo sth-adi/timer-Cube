@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bluetooth } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { normalizeMac } from "@/lib/smartcube/connectMemory";
+import { useModalLayer } from "@/hooks/useModalLayer";
 
 /**
  * The connection library needs the cube's Bluetooth address to talk to it,
@@ -23,19 +24,25 @@ function MacForm({ deviceName, onSubmit }: { deviceName: string | null; onSubmit
   const [text, setText] = useState("");
   const [touched, setTouched] = useState(false);
   const mac = normalizeMac(text);
-  // Escape gives up, like Cancel — a dialog you can't dismiss from the keyboard is a trap.
+  const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Escape gives up, like Cancel — a dialog you can't dismiss from the keyboard is a trap. The modal
+  // layer also stops the timer's keys while this is up and keeps Tab inside.
+  useModalLayer(formRef, () => onSubmit(null));
+  // Declared after the layer so it runs after the layer's own focus move: the address field, not the dialog, gets the cursor.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onSubmit(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onSubmit]);
+    inputRef.current?.focus();
+  }, []);
   const invalid = touched && text.trim() !== "" && !mac;
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Enter the cube's Bluetooth address" data-testid="mac-dialog">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center" data-testid="mac-dialog">
       <form
-        className="card flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4"
+        ref={formRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Enter the cube's Bluetooth address"
+        tabIndex={-1}
+        className="card flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4 outline-none"
         onSubmit={(e) => {
           e.preventDefault();
           setTouched(true);
@@ -54,7 +61,7 @@ function MacForm({ deviceName, onSubmit }: { deviceName: string | null; onSubmit
         <label className="flex flex-col gap-1">
           <span className="text-[11px] uppercase tracking-wide text-muted-2">Bluetooth address</span>
           <input
-            autoFocus
+            ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onBlur={() => setTouched(true)}

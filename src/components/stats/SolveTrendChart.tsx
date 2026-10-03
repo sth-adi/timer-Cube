@@ -77,8 +77,18 @@ export function SolveTrendChart({ solves }: { solves: Solve[] }) {
   const x = (i: number) => PAD_L + (i / Math.max(1, count - 1)) * plotW;
   const y = (ms: number) => PAD_TOP + (1 - (ms - domain.min) / (domain.max - domain.min)) * plotH;
   const line = (pts: Point[]) => pts.map((p, k) => `${k === 0 ? "M" : "L"}${x(p.i).toFixed(1)},${y(p.ms).toFixed(1)}`).join(" ");
-  const ao5Line = line(ao5);
-  const area = ao5.length > 1 ? `${ao5Line} L${x(ao5[ao5.length - 1].i).toFixed(1)},${HEIGHT - PAD_BOTTOM} L${x(ao5[0].i).toFixed(1)},${HEIGHT - PAD_BOTTOM} Z` : "";
+  // A DNF ao5 has no point, so the line breaks there rather than bridging the gap.
+  const ao5Runs = ao5.reduce<Point[][]>((runs, p) => {
+    const run = runs[runs.length - 1];
+    if (run && run[run.length - 1].i === p.i - 1) run.push(p);
+    else runs.push([p]);
+    return runs;
+  }, []);
+  const ao5Line = ao5Runs.map(line).join(" ");
+  const area = ao5Runs
+    .filter((run) => run.length > 1)
+    .map((run) => `${line(run)} L${x(run[run.length - 1].i).toFixed(1)},${HEIGHT - PAD_BOTTOM} L${x(run[0].i).toFixed(1)},${HEIGHT - PAD_BOTTOM} Z`)
+    .join(" ");
   const yTicks = ticks(domain.min, domain.max);
   const lastAo5 = ao5[ao5.length - 1];
   const showWindows = solves.length > 30;

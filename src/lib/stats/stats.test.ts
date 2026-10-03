@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  achievementSolves,
   averageOfN,
+  averageTrend,
   computeAchievements,
   computeActivity,
   computeHistogram,
@@ -11,6 +13,7 @@ import {
   solvesForEvent,
   eventTagsPresent,
   computeSessionStats,
+  rollingAverageResults,
   rollingAverages,
   trimCount,
 } from "./stats";
@@ -128,6 +131,102 @@ describe("computeSessionStats", () => {
   });
 });
 
+describe("DNF averages", () => {
+  const seq = (...times: (number | "dnf")[]) => times.map((t) => (t === "dnf" ? solve(1000, "dnf") : solve(t)));
+
+  it("flags a DNF ao5 instead of leaving it indistinguishable from 'not enough solves'", () => {
+    const stats = computeSessionStats(seq(1000, 2000, 3000, "dnf", "dnf"));
+    expect(stats.ao5).toBeNull();
+    expect(stats.ao5Dnf).toBe(true);
+    expect(stats.ao12).toBeNull();
+    expect(stats.ao12Dnf).toBe(false);
+  });
+
+  it("does not flag an average that is merely missing solves", () => {
+    const stats = computeSessionStats(seq(1000, "dnf", "dnf"));
+    expect(stats.ao5).toBeNull();
+    expect(stats.ao5Dnf).toBe(false);
+  });
+
+  it("keeps a trimmed single DNF as a normal ao5 value", () => {
+    const stats = computeSessionStats(seq(1000, 2000, 3000, 4000, "dnf"));
+    expect(stats.ao5).toBe(3000);
+    expect(stats.ao5Dnf).toBe(false);
+  });
+
+  it("ao12 DNF needs two DNFs (trim is 1), ao100 needs six (trim is 5)", () => {
+    const ok12 = computeSessionStats(seq(...Array.from({ length: 11 }, () => 1000), "dnf"));
+    expect(ok12.ao12Dnf).toBe(false);
+    expect(ok12.ao12).toBe(1000);
+    const dnf12 = computeSessionStats(seq(...Array.from({ length: 10 }, () => 1000), "dnf", "dnf"));
+    expect(dnf12.ao12Dnf).toBe(true);
+    expect(dnf12.ao12).toBeNull();
+
+    const ok100 = computeSessionStats(seq(...Array.from({ length: 95 }, () => 1000), ...Array.from({ length: 5 }, () => "dnf" as const)));
+    expect(ok100.ao100Dnf).toBe(false);
+    const dnf100 = computeSessionStats(seq(...Array.from({ length: 94 }, () => 1000), ...Array.from({ length: 6 }, () => "dnf" as const)));
+    expect(dnf100.ao100Dnf).toBe(true);
+    expect(dnf100.ao100).toBeNull();
+  });
+
+  it("an old DNF window does not make the best ao5 a DNF while a good window exists", () => {
+    const stats = computeSessionStats(seq("dnf", "dnf", 1000, 2000, 3000, 4000, 5000));
+    expect(stats.bestAo5).toBe(3000);
+    expect(stats.bestAo5Dnf).toBe(false);
+  });
+
+  it("flags best ao5 as DNF only when every window is a DNF", () => {
+    const stats = computeSessionStats(seq(1000, 2000, 3000, "dnf", "dnf", "dnf"));
+    expect(stats.bestAo5).toBeNull();
+    expect(stats.bestAo5Dnf).toBe(true);
+    expect(computeSessionStats(seq(1000, 2000)).bestAo5Dnf).toBe(false);
+  });
+
+  it("rollingAverageResults keeps DNF windows distinct from unfilled ones", () => {
+    const results = rollingAverageResults(seq(1000, 2000, 3000, 4000, 5000, "dnf", "dnf"), 5);
+    expect(results.slice(0, 4)).toEqual([null, null, null, null]);
+    expect(results[4]).toEqual({ value: 3000, isDnf: false });
+    expect(results[5]).toEqual({ value: 4000, isDnf: false });
+    expect(results[6]).toEqual({ value: null, isDnf: true });
+    // The number-only view still reports null for both.
+    expect(rollingAverages(seq(1000, 2000, 3000, 4000, 5000, "dnf", "dnf"), 5)[6]).toBeNull();
+  });
+});
+
+describe("averageTrend", () => {
+  const seq = (...times: (number | "dnf")[]) => times.map((t) => (t === "dnf" ? solve(1000, "dnf") : solve(t)));
+
+  it("reports the change between the last two windows", () => {
+    const trend = averageTrend(seq(1000, 2000, 3000, 4000, 5000, 9000), 5);
+    // [1,2,3,4,5] -> 3000; [2,3,4,5,9] -> mean(3,4,5) = 4000
+    expect(trend.trail).toEqual([3000, 4000]);
+    expect(trend.change).toEqual({ kind: "delta", ms: 1000 });
+  });
+
+  it("has no change with a single window", () => {
+    expect(averageTrend(seq(1000, 2000, 3000, 4000, 5000), 5).change).toBeNull();
+    expect(averageTrend(seq(1000, 2000), 5)).toEqual({ trail: [], change: null });
+  });
+
+  it("marks a DNF window as a gap and says so when the newest one is a DNF", () => {
+    const trend = averageTrend(seq(1000, 2000, 3000, 4000, 5000, "dnf", "dnf"), 5);
+    expect(trend.trail).toEqual([3000, 4000, null]);
+    expect(trend.change).toEqual({ kind: "dnf" });
+  });
+
+  it("never compares a recovered average against a DNF one", () => {
+    // Windows: [1,2,3,d,d] DNF, [2,3,d,d,4] DNF, [3,d,d,4,5] DNF, [d,d,4,5,6] DNF, [d,4,5,6,7] = 6000.
+    const trend = averageTrend(seq(1000, 2000, 3000, "dnf", "dnf", 4000, 5000, 6000, 7000), 5);
+    expect(trend.trail.slice(-2)).toEqual([null, 6000]);
+    expect(trend.change).toEqual({ kind: "after-dnf" });
+  });
+
+  it("limits the trail to the most recent windows", () => {
+    const trend = averageTrend(seq(...Array.from({ length: 40 }, (_, i) => 1000 + i)), 5, 10);
+    expect(trend.trail).toHaveLength(10);
+  });
+});
+
 describe("computeActivity", () => {
   const day = 24 * 60 * 60 * 1000;
 
@@ -227,6 +326,30 @@ describe("computeAchievements", () => {
     const byId = Object.fromEntries(achievements.map((a) => [a.id, a]));
     expect(byId["streak-3"].unlocked).toBe(true);
     expect(byId["streak-7"].unlocked).toBe(false);
+  });
+});
+
+describe("achievementSolves", () => {
+  const sessions = [
+    { id: "s333", event: "333" as const },
+    { id: "s222", event: "222" as const },
+    { id: "s444", event: "444" as const },
+  ];
+  const inSession = (sessionId: string, timeMs: number, extra: Partial<Solve> = {}): Solve => ({ ...solve(timeMs), sessionId, ...extra });
+
+  it("keeps ordinary solves from every 3x3 session, drops other puzzles, tagged practice and orphans", () => {
+    const mine = [inSession("s333", 12000), inSession("s333", 11000)];
+    const all = [...mine, inSession("s222", 2000), inSession("s444", 40000), inSession("gone", 1000), inSession("s333", 9000, { event: "oh" })];
+    expect(achievementSolves(all, sessions)).toEqual(mine);
+    expect(achievementSolves(all, [...sessions, { id: "gone", event: "333" }]).map((s) => s.timeMs)).toEqual([12000, 11000, 1000]);
+  });
+
+  it("keeps a 2x2 time from unlocking Sub-10", () => {
+    const all = [inSession("s333", 14000), inSession("s222", 2000)];
+    const byId = (solves: Solve[]) => Object.fromEntries(computeAchievements(solves).map((a) => [a.id, a]));
+    expect(byId(all)["sub-10"].unlocked).toBe(true);
+    expect(byId(achievementSolves(all, sessions))["sub-10"].unlocked).toBe(false);
+    expect(byId(achievementSolves(all, sessions))["sub-15"].unlocked).toBe(true);
   });
 });
 

@@ -34,6 +34,8 @@ import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useNavigationStore, type PendingTrainerNav } from "@/lib/store/navigationStore";
 import { useSettingsStore, type TimerMode } from "@/lib/store/settingsStore";
+import { isModalOpen } from "@/lib/store/modalBus";
+import { getFxPhase } from "@/lib/fx/fxBus";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -122,7 +124,8 @@ function HomeInner() {
   // Global nav shortcuts: 1-5 jump straight to a tab, "?" toggles the
   // shortcuts reference in Settings — on top of the timer's own Space/Esc/
   // Delete handling (TimerView) and the 3D cube viewer's own arrow-key
-  // rotation (CubeViewer), neither of which these keys touch.
+  // rotation (CubeViewer), neither of which these keys touch. Ignored while
+  // an attempt is in progress or another modal is open.
   useEffect(() => {
     const TAB_BY_DIGIT: Partial<Record<string, TabId>> = {
       "1": "timer",
@@ -135,6 +138,12 @@ function HomeInner() {
       const target = e.target as HTMLElement | null;
       const inField = !!target && (["INPUT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable);
       if (inField) return;
+      // A live attempt owns the keyboard: navigating away would unmount the
+      // timer (discarding a running solve) and "?" would open Settings over it.
+      const phase = getFxPhase();
+      if (phase === "holding" || phase === "ready" || phase === "inspecting" || phase === "running") return;
+      // Another sheet is open: these keys are its business, not ours. Settings itself may still toggle shut with "?".
+      if (isModalOpen() && !settingsOpen) return;
 
       if (e.key === "?") {
         e.preventDefault();

@@ -15,6 +15,8 @@ import type { PhaseAverage } from "@/lib/stats/stats";
 import { EVENT_TAGS } from "@/types";
 import { cn } from "@/lib/utils/cn";
 import { playInspectionBeep } from "@/lib/utils/sound";
+import { vibrate } from "@/lib/utils/haptics";
+import { isModalOpen } from "@/lib/store/modalBus";
 import { InspectionRing } from "./InspectionRing";
 import { PredictionBadge } from "./PredictionBadge";
 import { TimerStage } from "./TimerStage";
@@ -201,6 +203,8 @@ export function TimerView() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.code !== "Delete" && e.code !== "Backspace") || isTextField(e.target)) return;
+      // A modal is open: the key is for it, not for the solve list behind it.
+      if (isModalOpen()) return;
       if (phase !== "idle" && phase !== "stopped") return;
       const last = solves[solves.length - 1];
       if (last) {
@@ -226,6 +230,15 @@ export function TimerView() {
     }
     prevFxPhaseRef.current = phase;
   }, [phase, lastResult]);
+
+  // A text cue (and a short buzz where supported) for the moment the hold arms,
+  // so "ready" isn't carried by the red→green change alone. There's no haptics
+  // setting in the app today; vibrate() is already a no-op where unsupported.
+  const prevReadyPhaseRef = useRef(phase);
+  useEffect(() => {
+    if (phase === "ready" && prevReadyPhaseRef.current !== "ready") vibrate(10);
+    prevReadyPhaseRef.current = phase;
+  }, [phase]);
 
   const showInspection = (phase === "inspecting" || phase === "holding" || phase === "ready") && inspectionEnabled;
   const labels = PHASE_LABELS[phaseCount];
@@ -262,7 +275,7 @@ export function TimerView() {
     >
       {/* Announced once per solve: lastResult only changes when an attempt finishes, never per frame. */}
       <p className="sr-only" role="status" aria-live="polite">
-        {phase === "stopped" && lastResult ? spokenResult(lastResult) : ""}
+        {phase === "stopped" && lastResult ? spokenResult(lastResult) : phase === "ready" ? "Ready, release to start" : ""}
       </p>
       <InspectionRing remainingMs={inspectionRemainingMs} active={showInspection} />
 
@@ -310,6 +323,12 @@ export function TimerView() {
         />
       )}
 
+      {(phase === "inspecting" || phase === "holding" || phase === "ready" || phase === "running") && (
+        // Same height as the idle hint below, kept through the whole attempt, so the cue appearing (or the line going) never moves the digits.
+        <p className="h-5 text-sm text-success" aria-hidden="true">
+          {phase === "ready" ? "Release" : ""}
+        </p>
+      )}
       {phase === "idle" && (
         <>
           <p className="text-muted-2 text-sm">

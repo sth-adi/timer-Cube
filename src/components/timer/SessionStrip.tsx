@@ -59,14 +59,14 @@ export function SessionStrip({ className }: { className?: string }) {
       </div>
       <div className="flex items-center justify-center gap-3 text-[11px] text-muted-2">
         <span>{mine.length} solves</span>
-        {stats.ao5 !== null && (
+        {(stats.ao5 !== null || stats.ao5Dnf) && (
           <span>
-            ao5 <b className="tabular-timer font-semibold text-foreground">{formatTime(stats.ao5)}</b>
+            ao5 <b className="tabular-timer font-semibold text-foreground">{stats.ao5 !== null ? formatTime(stats.ao5) : "DNF"}</b>
           </span>
         )}
-        {stats.ao12 !== null && (
+        {(stats.ao12 !== null || stats.ao12Dnf) && (
           <span>
-            ao12 <b className="tabular-timer font-semibold text-foreground">{formatTime(stats.ao12)}</b>
+            ao12 <b className="tabular-timer font-semibold text-foreground">{stats.ao12 !== null ? formatTime(stats.ao12) : "DNF"}</b>
           </span>
         )}
         {stats.mean !== null && (

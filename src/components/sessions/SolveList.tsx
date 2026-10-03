@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useId, useMemo, useState } from "react";
+import { memo, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
@@ -9,11 +10,13 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { displayUsername } from "@/lib/auth/username";
 import { createSharedSolve } from "@/lib/social/shareSolve";
 import { formatResult, formatTime, parseManualTime } from "@/lib/utils/time";
+import { submitManualTime, withAdded, type AddedTime } from "./manualEntry";
 import { comparableTime } from "@/lib/stats/stats";
 import { cn } from "@/lib/utils/cn";
+import { useModalLayer } from "@/hooks/useModalLayer";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Check, CheckSquare, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Square, Trash2, TriangleAlert, Wand2 } from "lucide-react";
+import { Check, CheckSquare, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Square, Trash2, TriangleAlert, Wand2, X } from "lucide-react";
 import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveSummary, type SolveSummary } from "@/lib/analysis/solveFilter";
 import { CROSS_FACE_COLOR, CROSS_FACE_HEX } from "@/lib/smartcube/crossFrame";
@@ -22,6 +25,25 @@ import { SolveRecapSheet } from "@/components/recap/SolveRecapSheet";
 
 /** How many rows the full list draws at first, and each "Show more" adds — hundreds of live rows make every edit janky. */
 const PAGE_SIZE = 100;
+
+/** The row popup's dialog panel — its own component so the modal layer (timer keys stand down, Esc, focus, Tab) lives exactly as long as the popup is open. */
+function SolveSheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useModalLayer(ref, onClose);
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      tabIndex={-1}
+      onClick={(e) => e.stopPropagation()}
+      className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-bg-elevated p-3 pb-[calc(0.75rem+var(--safe-bottom))] shadow-lg outline-none animate-sheet-in sm:max-w-sm sm:rounded-xl sm:pb-3 sm:animate-fade-in-up"
+    >
+      {children}
+    </div>
+  );
+}
 
 // Memoized: every prop is a primitive, the solve object (replaced only when that solve changes) or a
 // stable callback, so adding a solve or changing one penalty re-renders just the rows that changed.
@@ -117,7 +139,8 @@ const SolveRow = memo(function SolveRow({
             selectMode && ticked && "bg-accent-soft",
           )}
         >
-          {selectMode && (ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
+          {selectMode &&
+            (ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
           <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
           <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
           {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
@@ -137,133 +160,133 @@ const SolveRow = memo(function SolveRow({
           </button>
         )}
       </div>
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-bg-elevated p-2.5 shadow-lg animate-fade-in-up">
-          {hasBreakdown(solve) && (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                setRecapOpen(true);
-              }}
-              className="mb-2 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2 py-1.5 text-xs font-semibold text-accent-fg"
-            >
-              <ListChecks size={12} /> Full recap
-            </button>
-          )}
-          <p className="text-muted-2 text-[11px] font-mono leading-snug mb-2 break-words">{solve.scramble}</p>
-          {solve.heartRate && (
-            <p className="mb-2 flex items-center gap-1 text-[11px] text-danger">
-              <Heart size={11} fill="currentColor" />
-              {solve.heartRate.avg} avg · {solve.heartRate.max} max bpm
-            </p>
-          )}
-          {solve.crossMs !== undefined && (
-            <p className="mb-2 text-[11px] text-muted">cross {formatTime(solve.crossMs)}</p>
-          )}
-          {solve.orientedReconstruction && (
-            <div className="mb-2">
-              <p className="text-[11px] font-medium text-accent">
-                Gyro reconstruction · {solve.rotations?.length ?? 0} regrip{solve.rotations?.length === 1 ? "" : "s"}
-              </p>
-              <p className="max-h-20 overflow-y-auto break-words font-mono text-[11px] leading-snug text-muted">
-                {solve.orientedReconstruction}
-              </p>
-            </div>
-          )}
-          <div className="mb-1 flex flex-wrap items-center gap-1">
-            <button
-              type="button"
-              onClick={() => cyclePenalty("plus2")}
-              className={cn(
-                "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
-                solve.penalty === "plus2" ? "bg-warning/20 text-warning" : "text-muted hover:text-foreground",
+      {/* Portalled to the body: the list scrolls (overflow clips an absolute popup under the last rows) and an
+          animated ancestor would trap a fixed overlay. A bottom sheet on phones, a centred card from sm up. */}
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
+            <SolveSheet label={`Solve ${index}`} onClose={() => setOpen(false)}>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="tabular-timer text-lg font-semibold text-foreground">
+                  #{index} · {formatResult(solveFinalMs(solve), solve.penalty)}
+                </p>
+                <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="tap-target -mr-2 text-muted hover:text-foreground">
+                  <X size={16} />
+                </button>
+              </div>
+              {hasBreakdown(solve) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    setRecapOpen(true);
+                  }}
+                  className="mb-2 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2 py-1.5 text-xs font-semibold text-accent-fg"
+                >
+                  <ListChecks size={12} /> Full recap
+                </button>
               )}
-            >
-              +2
-            </button>
-            <button
-              type="button"
-              onClick={() => cyclePenalty("dnf")}
-              className={cn(
-                "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
-                solve.penalty === "dnf" ? "bg-danger/20 text-danger" : "text-muted hover:text-foreground",
+              <p className="text-muted-2 text-[11px] font-mono leading-snug mb-2 break-words">{solve.scramble}</p>
+              {solve.heartRate && (
+                <p className="mb-2 flex items-center gap-1 text-[11px] text-danger">
+                  <Heart size={11} fill="currentColor" />
+                  {solve.heartRate.avg} avg · {solve.heartRate.max} max bpm
+                </p>
               )}
-            >
-              DNF
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                requestAnalysis(
-                  solve.scramble,
-                  solveFinalMs(solve),
-                  solve.id,
-                  solve.reconstruction,
-                  solve.moveTimestamps,
-                );
-                setOpen(false);
-                // The shell that owns the Analyze tab only lives on "/" — the
-                // solve list is also embedded on /solves, so a click there
-                // needs to actually navigate, not just bump the store (which
-                // nothing on this page is listening to switch tabs on).
-                if (pathname !== "/") router.push("/?jump=analyze");
-              }}
-              className="ml-auto flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"
-            >
-              <Wand2 size={12} /> Analyze
-            </button>
-            {shareable && (
-              <button
-                type="button"
-                onClick={() => void onShare()}
-                disabled={shareState === "busy"}
-                title="Copy a shareable link to this solve's reconstruction and stats"
-                className={cn(
-                  "flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium",
-                  shareState === "copied"
-                    ? "text-success"
-                    : shareState === "error"
-                      ? "text-danger"
-                      : "text-muted hover:text-accent",
+              {solve.crossMs !== undefined && <p className="mb-2 text-[11px] text-muted">cross {formatTime(solve.crossMs)}</p>}
+              {solve.orientedReconstruction && (
+                <div className="mb-2">
+                  <p className="text-[11px] font-medium text-accent">
+                    Gyro reconstruction · {solve.rotations?.length ?? 0} regrip{solve.rotations?.length === 1 ? "" : "s"}
+                  </p>
+                  <p className="max-h-20 overflow-y-auto break-words font-mono text-[11px] leading-snug text-muted">{solve.orientedReconstruction}</p>
+                </div>
+              )}
+              <div className="mb-1 flex flex-wrap items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => cyclePenalty("plus2")}
+                  className={cn(
+                    "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
+                    solve.penalty === "plus2" ? "bg-warning/20 text-warning" : "text-muted hover:text-foreground",
+                  )}
+                >
+                  +2
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cyclePenalty("dnf")}
+                  className={cn(
+                    "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
+                    solve.penalty === "dnf" ? "bg-danger/20 text-danger" : "text-muted hover:text-foreground",
+                  )}
+                >
+                  DNF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    requestAnalysis(solve.scramble, solveFinalMs(solve), solve.id, solve.reconstruction, solve.moveTimestamps);
+                    setOpen(false);
+                    // The shell that owns the Analyze tab only lives on "/" — the
+                    // solve list is also embedded on /solves, so a click there
+                    // needs to actually navigate, not just bump the store (which
+                    // nothing on this page is listening to switch tabs on).
+                    if (pathname !== "/") router.push("/?jump=analyze");
+                  }}
+                  className="ml-auto flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"
+                >
+                  <Wand2 size={12} /> Analyze
+                </button>
+                {shareable && (
+                  <button
+                    type="button"
+                    onClick={() => void onShare()}
+                    disabled={shareState === "busy"}
+                    title="Copy a shareable link to this solve's reconstruction and stats"
+                    className={cn(
+                      "flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium",
+                      shareState === "copied" ? "text-success" : shareState === "error" ? "text-danger" : "text-muted hover:text-accent",
+                    )}
+                  >
+                    {shareState === "busy" ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : shareState === "copied" ? (
+                      <Check size={12} />
+                    ) : (
+                      <Link2 size={12} />
+                    )}
+                    {shareState === "copied" ? "Copied" : shareState === "error" ? "Failed" : "Share"}
+                  </button>
                 )}
-              >
-                {shareState === "busy" ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : shareState === "copied" ? (
-                  <Check size={12} />
-                ) : (
-                  <Link2 size={12} />
-                )}
-                {shareState === "copied" ? "Copied" : shareState === "error" ? "Failed" : "Share"}
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <input
-              value={commentDraft}
-              onChange={(e) => setCommentDraft(e.target.value)}
-              onBlur={saveComment}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-              }}
-              placeholder="Add a note…"
-              className="min-h-10 min-w-0 flex-1 rounded-md bg-bg-panel-2 border border-border px-2 py-1 text-[16px] text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent sm:min-h-0 sm:text-xs"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                void removeSolve(solve.id);
-              }}
-              className="flex min-h-10 shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
-              aria-label="Delete solve"
-            >
-              <Trash2 size={12} /> Delete
-            </button>
-          </div>
-        </div>
-      )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  onBlur={saveComment}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  }}
+                  placeholder="Add a note…"
+                  className="min-h-10 min-w-0 flex-1 rounded-md bg-bg-panel-2 border border-border px-2 py-1 text-[16px] text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent sm:min-h-0 sm:text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    void removeSolve(solve.id);
+                  }}
+                  className="flex min-h-10 shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
+                  aria-label="Delete solve"
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
+              </div>
+            </SolveSheet>
+          </div>,
+          document.body,
+        )}
       {recapOpen && <SolveRecapSheet solve={solve} onClose={() => setRecapOpen(false)} />}
     </div>
   );
@@ -308,22 +331,32 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
   // Digits alone read csTimer-style ("1234" → 12.34); echo what that means so it's never a surprise.
   const preview = /^\d+$/.test(value.trim()) ? parseManualTime(value) : null;
   // The last few times added here, each one tap from deleted — for the typo you spot a second later.
-  const [added, setAdded] = useState<{ id: string; ms: number }[]>([]);
+  const [added, setAdded] = useState<AddedTime[]>([]);
   const stillThere = new Set(solves.map((x) => x.id));
   const recent = added.filter((x) => stillThere.has(x.id));
 
+  // Texts being saved right now: Enter pressed twice on the same text must not record it twice.
+  const inFlight = useRef(new Set<string>());
+
   const submit = async () => {
-    const parsed = parseManualTime(value);
-    if (!parsed.ok) {
-      setError(parsed.error);
-      return;
+    const typed = value;
+    const key = typed.trim();
+    if (inFlight.current.has(key)) return;
+    inFlight.current.add(key);
+    try {
+      const result = await submitManualTime(typed, scramble, recordSolve);
+      if (!result.ok) {
+        // A failed save keeps the text (the save-error banner explains); only a typo gets a message here.
+        if (result.error !== null) setError(result.error);
+        return;
+      }
+      setAdded((a) => withAdded(a, result.entry));
+      // Another time may already be typed in behind this one — only clear what was just saved.
+      setValue((v) => (v === typed ? "" : v));
+      void nextScramble();
+    } finally {
+      inFlight.current.delete(key);
     }
-    const { ms } = parsed;
-    await recordSolve(ms, scramble);
-    const latest = useSessionStore.getState().solves.at(-1);
-    if (latest) setAdded((a) => [...a.slice(-4), { id: latest.id, ms }]);
-    setValue("");
-    void nextScramble();
   };
 
   return (
@@ -445,10 +478,7 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
             type="button"
             onClick={() => setManualOpen((o) => !o)}
             aria-label="Add manual time"
-            className={cn(
-              "tap-target -mr-2 rounded-full transition-colors",
-              manualOpen ? "text-accent" : "text-muted hover:text-foreground",
-            )}
+            className={cn("tap-target -mr-2 rounded-full transition-colors", manualOpen ? "text-accent" : "text-muted hover:text-foreground")}
           >
             <Plus size={16} />
           </button>

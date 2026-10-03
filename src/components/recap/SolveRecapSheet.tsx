@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { Play, Wand2, X } from "lucide-react";
@@ -24,6 +24,7 @@ import { TimeWonLostCard } from "./TimeWonLostCard";
 import { formatResult, formatTime } from "@/lib/utils/time";
 import { solveFinalMs, type Solve } from "@/types";
 import { cn } from "@/lib/utils/cn";
+import { useModalLayer } from "@/hooks/useModalLayer";
 
 /**
  * The full recap of any past smart-cube solve — the same breakdown the
@@ -38,6 +39,8 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
   const router = useRouter();
   const pathname = usePathname();
   const [replay, setReplay] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalLayer(dialogRef, onClose);
 
   const b = useMemo(() => solveBreakdown(solve), [solve]);
   const others = useMemo(() => allSolves.filter((s) => s.id !== solve.id), [allSolves, solve.id]);
@@ -66,12 +69,15 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div
         className={cn(
-          "glass-panel flex max-h-[92vh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl p-4 pb-[calc(1rem+var(--safe-bottom))] animate-sheet-in",
+          "glass-panel flex max-h-[92vh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl outline-none p-4 pb-[calc(1rem+var(--safe-bottom))] animate-sheet-in",
           "sm:max-w-md sm:rounded-2xl sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Solve recap"
+        tabIndex={-1}
       >
         <div className="flex items-start justify-between gap-2">
           <div>
