@@ -26,6 +26,7 @@ import { PBToast } from "@/components/timer/PBToast";
 import { AchievementToast } from "@/components/timer/AchievementToast";
 import { BottomNav, type TabId } from "@/components/nav/BottomNav";
 import { AppBackground } from "@/components/chrome/AppBackground";
+import { SyncedSessionNotice } from "@/components/chrome/SyncedSessionNotice";
 import { ConnectionPill } from "@/components/chrome/ConnectionPill";
 import { OnlinePresenceBadge } from "@/components/chrome/OnlinePresenceBadge";
 import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
@@ -204,6 +205,7 @@ function HomeInner() {
         </header>
 
         <ChallengeLinkBanner onRace={() => setTab("timer")} />
+        <SyncedSessionNotice />
 
         <div className={cn("shrink-0", tab === "timer" ? "block" : "hidden", "lg:block")}>
           <ScrambleBar className="mt-1" />

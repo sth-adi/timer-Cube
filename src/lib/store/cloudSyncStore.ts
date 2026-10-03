@@ -5,10 +5,14 @@ import { useAuthStore } from "./authStore";
 import { useSessionStore } from "./sessionStore";
 import { pushPublicStats, syncWithCloud, SyncTimeoutError } from "@/lib/db/cloudSync";
 import { displayUsername } from "@/lib/auth/username";
+import { suggestSession, type SessionSuggestion } from "@/lib/db/sessionSuggestion";
 
 export type CloudSyncStatus = "idle" | "syncing" | "synced" | "error";
 
 interface CloudSyncState {
+  /** Set after a sync when this device's open session is small but another holds the account's history. */
+  suggestion: SessionSuggestion | null;
+  dismissSuggestion: () => void;
   status: CloudSyncStatus;
   lastSyncedAt: number | null;
   error: string | null;
@@ -66,7 +70,21 @@ function scheduleRetry(): void {
   }, delay);
 }
 
+/**
+ * Changes a sync itself makes to the local session store (refreshing it with what just arrived)
+ * must not count as "the user changed something" — that re-triggered another sync, which pulled
+ * the whole history again, which refreshed the store again…
+ */
+let applyingSync = false;
+let inFlight = false;
+let rerunRequested = false;
+let lastFinishedAt = 0;
+/** Automatic (change-triggered) syncs keep at least this much distance, however often the store changes. */
+const AUTO_SYNC_MIN_GAP_MS = 15_000;
+
 export const useCloudSyncStore = create<CloudSyncState>((set) => ({
+  suggestion: null,
+  dismissSuggestion: () => set({ suggestion: null }),
   status: "idle",
   lastSyncedAt: null,
   error: null,
@@ -78,15 +96,28 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
       set({ status: "error", error: "Offline — will sync once you're back online." });
       return;
     }
+    // One at a time; a request that arrives mid-sync runs once more afterwards, so nothing is missed.
+    if (inFlight) {
+      rerunRequested = true;
+      return;
+    }
+    inFlight = true;
     set({ status: "syncing", error: null });
     try {
       // Pull-then-push: merging the cloud's state in first means what gets
       // pushed is already the most recent version of everything.
       const result = await syncWithCloud(user.id);
       if (result.addedSessions > 0 || result.addedSolves > 0 || result.updated > 0 || result.removed > 0) {
-        await useSessionStore.getState().refreshFromDb();
-        await useSessionStore.getState().adoptSyncedSessionIfLocalEmpty();
+        applyingSync = true;
+        try {
+          await useSessionStore.getState().refreshFromDb();
+          await useSessionStore.getState().adoptSyncedSessionIfLocalEmpty();
+        } finally {
+          applyingSync = false;
+        }
       }
+      const { sessions, allSolves, activeSessionId } = useSessionStore.getState();
+      set({ suggestion: suggestSession(sessions, allSolves, activeSessionId) });
       // Best-effort: rival lookups and the daily leaderboard read this, but
       // neither of those exists for a signed-out user, so a failure here
       // shouldn't flip the whole sync to "error" the way a failed
@@ -97,6 +128,13 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
     } catch (err) {
       set({ status: "error", error: friendlyErrorMessage(err) });
       scheduleRetry();
+    } finally {
+      inFlight = false;
+      lastFinishedAt = Date.now();
+      if (rerunRequested) {
+        rerunRequested = false;
+        setTimeout(() => void useCloudSyncStore.getState().syncNow(), AUTO_SYNC_MIN_GAP_MS / 3);
+      }
     }
   },
 }));
@@ -141,8 +179,10 @@ export function initCloudSync(): void {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   useSessionStore.subscribe((state, prev) => {
     if (state.allSolves === prev.allSolves && state.sessions === prev.sessions) return;
-    if (!useAuthStore.getState().user) return;
+    if (applyingSync || !useAuthStore.getState().user) return;
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => void useCloudSyncStore.getState().syncNow(), 1500);
+    // Soon after a change, but never closer to the last sync than the minimum gap.
+    const wait = Math.max(1500, lastFinishedAt + AUTO_SYNC_MIN_GAP_MS - Date.now());
+    debounceTimer = setTimeout(() => void useCloudSyncStore.getState().syncNow(), wait);
   });
 }

@@ -221,7 +221,7 @@ function writePushedAt(userId: string, at: number): void {
  * sync_guard trigger in the migration), so a stale device — even one on an
  * older version of this app — can't undo anything.
  */
-export async function pushAll(userId: string): Promise<void> {
+export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<string, number>): Promise<void> {
   const startedAt = Date.now();
   const supabase = getSupabaseClient();
   if (!supabase) return;
@@ -238,8 +238,12 @@ export async function pushAll(userId: string): Promise<void> {
   // Only what changed since the last complete push — a smart-cube solve carries a per-move (and
   // possibly gyro) stream, so the whole history is megabytes, and sending it as one request runs
   // past the database's statement timeout (HTTP 500) and sync never finishes.
+  // Straight after a pull, the cloud's own revision of each solve is known exactly: only what's new or
+  // changed here needs sending (a new device would otherwise upload everything it just downloaded).
   const since = readPushedAt(userId);
-  const pending = solves.filter((s) => (s.updatedAt ?? s.date) > since - PUSH_SLACK_MS);
+  const pending = cloudRevisions
+    ? solves.filter((s) => cloudRevisions.get(s.id) !== (s.updatedAt ?? s.date))
+    : solves.filter((s) => (s.updatedAt ?? s.date) > since - PUSH_SLACK_MS);
   const rows = pending.map((s) => solveToRow(s, userId));
   for (const chunk of chunkBySize(rows)) {
     const { error } = await withTimeout(supabase.from("solves").upsert(chunk), 30_000);
@@ -286,30 +290,53 @@ export async function pushPublicStats(userId: string, username: string): Promise
  * records — and merges it into local storage under the sync rule: the most
  * recent change to each id wins, deletions included (lib/db/merge.ts).
  */
-export async function pullAll(userId: string): Promise<MergeResult> {
+export async function pullAll(userId: string): Promise<{ result: MergeResult; cloudRevisions: Map<string, number> }> {
   const supabase = getSupabaseClient();
-  if (!supabase) return { addedSessions: 0, addedSolves: 0, updated: 0, removed: 0 };
-  const [sessionRes, solveRes, deletionRes] = await Promise.all([
-    withTimeout(supabase.from("sessions").select("*").eq("user_id", userId)),
-    withTimeout(supabase.from("solves").select("*").eq("user_id", userId)),
-    withTimeout(supabase.from("deletions").select("*").eq("user_id", userId)),
+  if (!supabase) return { result: { addedSessions: 0, addedSolves: 0, updated: 0, removed: 0 }, cloudRevisions: new Map() };
+  const [sessionRows, solveRows, deletionRows] = await Promise.all([
+    fetchAllRows<SessionRow>(userId, "sessions", 500),
+    // Solves carry per-move (and sometimes gyro) streams — a few KB to a few hundred KB each — so they come in small pages.
+    fetchAllRows<SolveRow>(userId, "solves", 60),
+    fetchAllRows<DeletionRow>(userId, "deletions", 1000),
   ]);
-  check(sessionRes.error);
-  check(solveRes.error);
-  check(deletionRes.error);
-  return mergeSyncPayload({
-    sessions: (sessionRes.data ?? []).map((r) => rowToSession(r as SessionRow)),
-    solves: withLocalOnlyFields((solveRes.data ?? []).map((r) => rowToSolve(r as SolveRow)), await db.solves.toArray()),
-    deletions: (deletionRes.data ?? []).map((r) => {
-      const d = r as DeletionRow;
-      return { id: d.id, kind: d.kind, deletedAt: d.deleted_at } satisfies Deletion;
-    }),
+  const result = await mergeSyncPayload({
+    sessions: sessionRows.map(rowToSession),
+    solves: withLocalOnlyFields(solveRows.map(rowToSolve), await db.solves.toArray()),
+    deletions: deletionRows.map((d) => ({ id: d.id, kind: d.kind, deletedAt: d.deleted_at }) satisfies Deletion),
   });
+  return { result, cloudRevisions: new Map(solveRows.map((r) => [r.id, r.updated_at ?? r.date])) };
+}
+
+/**
+ * Every row this account has in `table`, fetched a page at a time. One request for everything hit
+ * two limits: the server caps a response at 1000 rows (silently dropping the rest of a long
+ * history), and a multi-megabyte body over a phone connection outran the request timeout — so a
+ * new device never finished its first pull.
+ */
+async function fetchAllRows<T>(userId: string, table: "sessions" | "solves" | "deletions", pageSize: number): Promise<T[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+  const out: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const res = await withTimeout(
+      supabase
+        .from(table)
+        .select("*")
+        .eq("user_id", userId)
+        .order("id")
+        .range(from, from + pageSize - 1),
+      30_000,
+    );
+    check(res.error);
+    const rows = (res.data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < pageSize) return out;
+  }
 }
 
 /** One full cloud sync: pull and merge first, then push the merged result. */
 export async function syncWithCloud(userId: string): Promise<MergeResult> {
-  const result = await pullAll(userId);
-  await pushAll(userId);
+  const { result, cloudRevisions } = await pullAll(userId);
+  await pushAll(userId, cloudRevisions);
   return result;
 }
