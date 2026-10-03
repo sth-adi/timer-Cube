@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTimer } from "@/hooks/useTimer";
 import { useSolveCompletion } from "@/hooks/useSolveCompletion";
 import { useTimerInput } from "@/hooks/useTimerInput";
@@ -21,6 +21,7 @@ import { useFxPhase } from "@/lib/fx/useFxPhase";
 import { fxImpact } from "@/lib/fx/fxBus";
 import { LiveSessionCoach } from "./LiveSessionCoach";
 import { GhostPaceBar } from "./GhostPaceBar";
+import { QuickDelete } from "./QuickDelete";
 import { predictSolveTime } from "@/lib/analysis/prediction";
 import { paceFromRatio, resetPerformanceAura, setPerformanceAura } from "@/lib/store/performanceAuraBus";
 
@@ -122,6 +123,8 @@ export function TimerView() {
 
   const removeSolve = useSessionStore((s) => s.removeSolve);
   const solves = useSessionStore((s) => s.solves);
+  // Which finished attempt the quick-delete button already removed (keyed by its result object, so the next attempt gets a fresh button).
+  const [deletedResult, setDeletedResult] = useState<unknown>(null);
 
   // Your rolling per-phase average, for the live pace dot — only meaningful
   // once there's a matching-phase-count history to compare against, and
@@ -294,6 +297,16 @@ export function TimerView() {
         <p className="rounded-full bg-danger/15 px-3 py-1 text-sm font-semibold text-danger">
           {lastResult.penalty === "dnf" ? "DNF" : "+2"} — started {((lastResult.inspection?.elapsedMs ?? 0) / 1000).toFixed(2)}s into inspection
         </p>
+      )}
+      {phase === "stopped" && (solves.length > 0 || deletedResult === lastResult) && (
+        <QuickDelete
+          deleted={deletedResult === lastResult}
+          onDelete={() => {
+            const last = solves[solves.length - 1];
+            if (last) void removeSolve(last.id);
+            setDeletedResult(lastResult);
+          }}
+        />
       )}
       {phase === "stopped" && <p className="text-muted-2 text-sm">space for next scramble</p>}
       {(phase === "idle" || phase === "stopped") && <LiveSessionCoach />}

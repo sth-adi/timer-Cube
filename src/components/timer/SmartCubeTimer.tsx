@@ -23,6 +23,7 @@ import {
   Volume2,
   VolumeX,
   Wand2,
+  X,
 } from "lucide-react";
 import { useSmartCubeStore, getGyroLog } from "@/lib/store/smartCubeStore";
 import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
@@ -76,6 +77,7 @@ import { LiveSessionCoach } from "./LiveSessionCoach";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { InspectionRing } from "@/components/timer/InspectionRing";
 import { GhostPaceBar } from "@/components/timer/GhostPaceBar";
+import { QuickDelete } from "@/components/timer/QuickDelete";
 import { TimerStage } from "@/components/timer/TimerStage";
 import { useFxPhase } from "@/lib/fx/useFxPhase";
 import { fxImpact, type FxPhase } from "@/lib/fx/fxBus";
@@ -1032,6 +1034,37 @@ export function SmartCubeTimer() {
     if (!freestyle) void nextScramble();
   };
 
+  // Phone Back button = abort the solve. Mid-solve nobody means "leave this page"; the press would
+  // otherwise navigate away with the clock still running. While a solve is recording, one extra
+  // history entry sits on top of the page, so Back lands on the page itself and is taken as "abort"
+  // (the time isn't saved, the timer resets, the next scramble comes up). When the solve ends any
+  // other way the spare entry is removed again, so Back keeps behaving normally afterwards.
+  const abortRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    abortRef.current = () => stopSolve("discard");
+  });
+  const [abortedByBack, setAbortedByBack] = useState(false);
+  useEffect(() => {
+    if (!recording) return;
+    window.history.pushState({ ...(window.history.state ?? {}), cubeSolveGuard: true }, "");
+    let consumed = false;
+    const onPop = () => {
+      consumed = true;
+      setAbortedByBack(true);
+      abortRef.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      if (!consumed && window.history.state?.cubeSolveGuard) window.history.back();
+    };
+  }, [recording]);
+  useEffect(() => {
+    if (!abortedByBack) return;
+    const t = window.setTimeout(() => setAbortedByBack(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [abortedByBack]);
+
   // Cube Gestures — hands-free control between solves, straight from the
   // cube (see lib/smartcube/gestures.ts). Each handler says what it did, or
   // null when there was nothing to act on.
@@ -1220,6 +1253,34 @@ export function SmartCubeTimer() {
         pbMs={eventPbMs}
         hideTimes={hideTimeWhileSolving && recording}
       />
+
+      {/* Right under the time once a solve is done — a mis-scramble or fumbled stop is one tap from gone. */}
+      {finished && finishedScramble && (
+        <QuickDelete
+          deleted={!savedSolveExists}
+          onDelete={() => {
+            if (savedSolve) void removeSolve(savedSolve.id);
+          }}
+        />
+      )}
+
+      {abortedByBack && !recording && (
+        <p className="rounded-full bg-warning/15 px-3 py-1 text-[11px] font-medium text-warning" role="status" data-testid="solve-aborted">
+          Solve aborted — nothing was saved
+        </p>
+      )}
+
+      {recording && (
+        <button
+          type="button"
+          onClick={() => stopSolve("discard")}
+          className="flex items-center gap-1.5 rounded-full bg-danger/15 px-3.5 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/25 active:bg-danger/25"
+          title="Throw this solve away: the time isn't saved and the next scramble comes up. The phone's Back button does the same."
+          data-testid="abort-solve"
+        >
+          <X size={13} /> Abort solve
+        </button>
+      )}
 
       {recording && (
         <PhaseRibbon
