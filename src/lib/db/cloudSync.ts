@@ -226,11 +226,6 @@ export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<strin
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { sessions, solves, deletions } = await readLocalState();
-  if (deletions.length > 0) {
-    const rows: DeletionRow[] = deletions.map((d) => ({ user_id: userId, id: d.id, kind: d.kind, deleted_at: d.deletedAt }));
-    const { error } = await withTimeout(supabase.from("deletions").upsert(rows, { onConflict: "user_id,id" }));
-    check(error);
-  }
   if (sessions.length > 0) {
     const { error } = await withTimeout(supabase.from("sessions").upsert(sessions.map((s) => sessionToRow(s, userId))));
     check(error);
@@ -247,6 +242,13 @@ export async function pushAll(userId: string, cloudRevisions?: ReadonlyMap<strin
   const rows = pending.map((s) => solveToRow(s, userId));
   for (const chunk of chunkBySize(rows)) {
     const { error } = await withTimeout(supabase.from("solves").upsert(chunk), 30_000);
+    check(error);
+  }
+  // Deletions go last. A session's deletion removes, in the cloud, every solve still filed under it —
+  // so solves moved out of it (a merge) must arrive under their new session first.
+  if (deletions.length > 0) {
+    const rows: DeletionRow[] = deletions.map((d) => ({ user_id: userId, id: d.id, kind: d.kind, deleted_at: d.deletedAt }));
+    const { error } = await withTimeout(supabase.from("deletions").upsert(rows, { onConflict: "user_id,id" }));
     check(error);
   }
   writePushedAt(userId, startedAt);

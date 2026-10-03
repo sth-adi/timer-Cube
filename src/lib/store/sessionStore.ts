@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
-import { createSession, listSessions, renameSession, deleteSession } from "@/lib/db/sessions";
+import { createSession, listSessions, renameSession, deleteSession, moveSessionSolves } from "@/lib/db/sessions";
+import { pickInitialSession, readSavedSessionId, saveSessionId } from "@/lib/sessions/activeSession";
 import { addSolve, deleteSolve, restoreSolves, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
 import { repairLateStart } from "@/lib/db/repairLateStart";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
@@ -44,6 +45,10 @@ interface SessionState {
   addSession: (name: string, event?: WcaEvent) => Promise<void>;
   renameActiveSession: (name: string) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
+  /** Renames any session, not just the open one. */
+  renameSessionById: (id: string, name: string) => Promise<void>;
+  /** Moves every solve from one session into another, then removes the emptied one. */
+  mergeSessions: (fromId: string, intoId: string) => Promise<void>;
   recordSolve: (
     timeMs: number,
     scramble: string,
@@ -117,16 +122,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // Solves saved while the smart-cube timer wrongly started at the cross: put their times right.
     const broken = (await getAllSolves()).map((x) => [x.id, repairLateStart(x)] as const).filter(([, fix]) => fix);
     for (const [id, fix] of broken) await updateSolve(id, fix!);
-    const first = await ensureDefaultSession();
+    await ensureDefaultSession();
     const sessions = await listSessions();
-    const solves = await getSessionSolves(first.id);
     const allSolves = await getAllSolves();
+    // Reopen what this device last had open — every page and every reload, not just the first.
+    const first = pickInitialSession(sessions, allSolves, readSavedSessionId()) ?? (await ensureDefaultSession());
+    saveSessionId(first.id);
+    const solves = await getSessionSolves(first.id);
     set({ sessions, activeSessionId: first.id, solves, allSolves, loaded: true });
     void useScrambleStore.getState().setEvent(first.event);
   },
 
   switchSession: async (id) => {
     const solves = await getSessionSolves(id);
+    saveSessionId(id);
     set({ activeSessionId: id, solves });
     const session = get().sessions.find((s) => s.id === id);
     if (session) void useScrambleStore.getState().setEvent(session.event);
@@ -135,6 +144,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   addSession: async (name, event) => {
     const session = await createSession(name, event);
     const sessions = await listSessions();
+    saveSessionId(session.id);
     set({ sessions, activeSessionId: session.id, solves: [] });
     void useScrambleStore.getState().setEvent(session.event);
   },
@@ -146,6 +156,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ sessions: await listSessions() });
   },
 
+  renameSessionById: async (id, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    await renameSession(id, trimmed.slice(0, 40));
+    set({ sessions: await listSessions() });
+  },
+
+  mergeSessions: async (fromId, intoId) => {
+    if (fromId === intoId) return;
+    await moveSessionSolves(fromId, intoId);
+    const { activeSessionId } = get();
+    // Land on the merged session if the one being folded away was open.
+    if (activeSessionId === fromId) await get().switchSession(intoId);
+    await get().removeSession(fromId);
+    const solves = await getSessionSolves(get().activeSessionId ?? intoId);
+    set({ solves, allSolves: await getAllSolves() });
+  },
+
   removeSession: async (id) => {
     // Recorded as a deletion locally; the next sync (triggered by this very
     // change) carries it to the cloud and every other device.
@@ -154,8 +182,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const active = get().activeSessionId;
     const allSolves = await getAllSolves();
     if (active === id) {
-      const fallback = sessions[0] ?? (await ensureDefaultSession());
+      const fallback = pickInitialSession(sessions, allSolves, null) ?? (await ensureDefaultSession());
       const solves = await getSessionSolves(fallback.id);
+      saveSessionId(fallback.id);
       set({ sessions: await listSessions(), activeSessionId: fallback.id, solves, allSolves });
     } else {
       set({ sessions, allSolves });

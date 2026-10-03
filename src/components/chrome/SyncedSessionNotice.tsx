@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { History } from "lucide-react";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { suggestSession } from "@/lib/db/sessionSuggestion";
 
 const DISMISSED_KEY = "cube-timer:dismissed-session-suggestion";
 
@@ -21,7 +22,13 @@ function wasDismissed(id: string): boolean {
  * the solves are and switches to them in one tap.
  */
 export function SyncedSessionNotice() {
-  const suggestion = useCloudSyncStore((s) => s.suggestion);
+  const flagged = useCloudSyncStore((s) => s.suggestion);
+  const sessions = useSessionStore((s) => s.sessions);
+  const allSolves = useSessionStore((s) => s.allSolves);
+  const activeId = useSessionStore((s) => s.activeSessionId);
+  // A sync raises the flag; whether it still applies is re-checked against what's open right now,
+  // so switching (or merging) away makes it disappear on its own.
+  const suggestion = useMemo(() => (flagged ? suggestSession(sessions, allSolves, activeId) : null), [flagged, sessions, allSolves, activeId]);
   const dismiss = useCloudSyncStore((s) => s.dismissSuggestion);
   const switchSession = useSessionStore((s) => s.switchSession);
   const [, bump] = useState(0);

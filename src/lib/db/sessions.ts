@@ -32,3 +32,16 @@ export async function deleteSession(id: string): Promise<void> {
     await db.deletions.put({ id, kind: "session", deletedAt: Date.now() });
   });
 }
+
+/**
+ * Moves every solve in `fromId` into `intoId`. Each moved solve gets a fresh `updatedAt`, so the
+ * move wins over the old version on every other device (the newest change wins — see merge.ts).
+ */
+export async function moveSessionSolves(fromId: string, intoId: string): Promise<number> {
+  const now = Date.now();
+  return db.transaction("rw", db.solves, async () => {
+    const solves = await db.solves.where("sessionId").equals(fromId).toArray();
+    await db.solves.bulkPut(solves.map((s) => ({ ...s, sessionId: intoId, updatedAt: Math.max(now, (s.updatedAt ?? 0) + 1) })));
+    return solves.length;
+  });
+}
