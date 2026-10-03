@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CheckCircle2, Cloud, Loader2, LogOut } from "lucide-react";
+import { CheckCircle2, Cloud, Loader2, LogOut, TriangleAlert } from "lucide-react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { displayUsername, isValidUsername } from "@/lib/auth/username";
+import { useNow } from "@/hooks/useNow";
+import { formatRelativeTime } from "@/lib/utils/relativeTime";
 import { RivalCompare } from "./RivalCompare";
 
 type Mode = "signin" | "signup";
@@ -26,6 +28,8 @@ export function AccountPanel() {
   const signIn = useAuthStore((s) => s.signIn);
   const signOut = useAuthStore((s) => s.signOut);
   const status = useCloudSyncStore((s) => s.status);
+  const lastSyncedAt = useCloudSyncStore((s) => s.lastSyncedAt);
+  const now = useNow();
   const error = useCloudSyncStore((s) => s.error);
   const syncNow = useCloudSyncStore((s) => s.syncNow);
 
@@ -134,13 +138,10 @@ export function AccountPanel() {
                   <Loader2 size={12} className="shrink-0 animate-spin" /> Syncing…
                 </>
               )}
-              {status === "synced" && (
-                <>
-                  <CheckCircle2 size={12} className="shrink-0 text-success" /> Synced
-                </>
-              )}
-              {status === "error" && <span className="truncate text-danger">{error}</span>}
-              {status === "idle" && "Not synced yet"}
+              {status === "synced" && <CheckCircle2 size={12} className="shrink-0 text-success" />}
+              {status === "error" && <TriangleAlert size={12} className="shrink-0 text-danger" />}
+              {status !== "syncing" &&
+                (lastSyncedAt ? `Last synced ${formatRelativeTime(lastSyncedAt, now)}` : "Not synced yet")}
             </p>
             <button
               type="button"
@@ -150,6 +151,7 @@ export function AccountPanel() {
               Sync now
             </button>
           </div>
+          {status === "error" && error && <p className="text-[11px] leading-relaxed text-danger">{error}</p>}
 
           <button
             type="button"

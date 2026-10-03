@@ -5,6 +5,7 @@ import { Download, Upload } from "lucide-react";
 import { downloadBackup, previewBackup, readBackupMeta, restoreBackup } from "@/lib/backup/restore";
 import type { BackupFile } from "@/lib/backup/backup";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { downloadCsTimerExport } from "@/lib/utils/csTimerExport";
 
 type Preview = { file: BackupFile; skipped: number; summary: { solves: number; sessions: number; settings: number } };
 
@@ -34,6 +35,16 @@ export function BackupPanel() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const onCsTimerExport = (all: boolean) => {
+    const { sessions, solves, allSolves, activeSessionId } = useSessionStore.getState();
+    const picked = all ? sessions : sessions.filter((x) => x.id === activeSessionId);
+    const data = picked.map((x) => ({ name: x.name, solves: x.id === activeSessionId ? solves : allSolves.filter((v) => v.sessionId === x.id) })).filter((x) => x.solves.length > 0);
+    if (data.length === 0) return setMessage({ tone: "bad", text: "No solves to export yet." });
+    downloadCsTimerExport(all ? "cstimer-all-sessions.json" : "cstimer-session.json", data);
+    const count = data.reduce((n, x) => n + x.solves.length, 0);
+    setMessage({ tone: "ok", text: `Saved ${count} solves in csTimer format.` });
   };
 
   const onPick = async (file: File | undefined) => {
@@ -83,6 +94,14 @@ export function BackupPanel() {
           <Upload size={13} /> Restore…
         </button>
         <input ref={input} type="file" accept="application/json,.json" className="hidden" onChange={(e) => void onPick(e.target.files?.[0])} data-testid="backup-file" />
+      </div>
+      <div className="mt-1.5 flex gap-1.5">
+        <button type="button" onClick={() => onCsTimerExport(false)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-2 py-2 text-xs font-medium text-muted hover:text-foreground" data-testid="cstimer-export">
+          <Download size={13} /> Export to csTimer
+        </button>
+        <button type="button" onClick={() => onCsTimerExport(true)} className="rounded-lg bg-bg-panel-2 px-2.5 py-2 text-xs font-medium text-muted hover:text-foreground" data-testid="cstimer-export-all">
+          All sessions
+        </button>
       </div>
 
       {preview && (

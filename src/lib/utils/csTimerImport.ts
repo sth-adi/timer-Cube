@@ -67,7 +67,10 @@ function readSessionNames(raw: Record<string, unknown>): Record<string, string> 
   try {
     const parsed = JSON.parse(sessionData) as Record<string, { name?: unknown }>;
     for (const [key, meta] of Object.entries(parsed)) {
-      if (meta && typeof meta.name === "string" && meta.name.trim()) names[key] = meta.name;
+      // csTimer itself keys this blob "1", "2", … while the solves are under "session1", "session2", ….
+      const sessionKey = /^\d+$/.test(key) ? `session${key}` : key;
+      if (meta && typeof meta.name === "string" && meta.name.trim()) names[sessionKey] = meta.name;
+      else if (meta && typeof meta.name === "number") names[sessionKey] = String(meta.name);
     }
   } catch {
     // Session names are cosmetic — a malformed metadata blob shouldn't block the import.

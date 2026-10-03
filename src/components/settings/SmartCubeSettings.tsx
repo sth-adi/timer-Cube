@@ -101,7 +101,7 @@ export function SmartCubeSettings() {
         <Toggle checked={voiceScramble} onChange={setVoiceScramble} label="Read the scramble aloud" />
         <Toggle checked={freestyle} onChange={setFreestyle} label="Freestyle scrambling (mix it yourself)" />
         <Toggle checked={gestures} onChange={setGestures} label="Cube gestures between solves" />
-        <Toggle checked={keepAwake} onChange={setKeepAwake} label="Keep the screen awake while connected" />
+        <Toggle checked={keepAwake} onChange={setKeepAwake} label="Keep the screen awake while the timer is open" />
       </div>
 
       <p className="mb-1 mt-3 text-xs text-muted">Your cubes</p>

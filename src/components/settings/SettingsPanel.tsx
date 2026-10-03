@@ -11,6 +11,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { looksLikeCsTimerExport, parseCsTimerExport, type CsTimerParsed } from "@/lib/utils/csTimerImport";
 import { DeviceSyncPanel } from "./DeviceSyncPanel";
 import { AccountPanel } from "./AccountPanel";
+import { OfflinePanel } from "./OfflinePanel";
 import { cn } from "@/lib/utils/cn";
 
 export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -378,6 +379,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <AccountPanel />
         <DeviceSyncPanel />
         <BackupPanel />
+        <OfflinePanel />
 
         <div className="mt-4 border-t border-border pt-3">
           <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Keyboard shortcuts</p>

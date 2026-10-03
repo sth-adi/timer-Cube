@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { comparableTime, computeSessionStats, eventTagsPresent, normalSolves, rollingAverages, solvesForEvent } from "@/lib/stats/stats";
+import { scopedSolves, type StatsScope } from "@/lib/stats/scope";
 import { formatTime } from "@/lib/utils/time";
 import { EVENT_TAGS, type EventTag } from "@/types";
 import { solveFinalMs } from "@/types";
@@ -12,14 +14,17 @@ import { cn } from "@/lib/utils/cn";
 import { SolveTrendChart } from "./SolveTrendChart";
 
 /** A small tile: label over value, with an optional "jump" action. */
-function Stat({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) {
+function Stat({ label, value, note, onClick }: { label: string; value: string; note?: string; onClick?: () => void }) {
   const body = (
     <>
       <span className="flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-2 group-hover:text-accent">
         {label}
         {onClick && <ArrowUpRight size={10} className="opacity-0 transition-opacity group-hover:opacity-100" />}
       </span>
-      <span className="tabular-timer text-base font-semibold text-foreground group-hover:text-accent">{value}</span>
+      <span className="flex flex-wrap items-baseline gap-x-1">
+        <span className="tabular-timer text-base font-semibold text-foreground group-hover:text-accent">{value}</span>
+        {note && <span className="text-[10px] font-normal text-muted-2">{note}</span>}
+      </span>
     </>
   );
   const cls = "group flex flex-col items-start gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2 text-left max-lg:bg-transparent max-lg:px-1 max-lg:py-1";
@@ -52,12 +57,26 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
+const SCOPES: { id: StatsScope; label: string }[] = [
+  { id: "session", label: "This session" },
+  { id: "all", label: "All sessions" },
+];
+
 function fmt(ms: number | null): string {
   return ms === null ? "—" : formatTime(ms);
 }
 
 export function StatsPanel() {
-  const rawSolves = useSessionStore((s) => s.solves);
+  const sessionSolves = useSessionStore((s) => s.solves);
+  const allSolves = useSessionStore((s) => s.allSolves);
+  const sessions = useSessionStore((s) => s.sessions);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const scope = useSettingsStore((s) => s.statsScope);
+  const setScope = useSettingsStore((s) => s.setStatsScope);
+  const rawSolves = useMemo(
+    () => scopedSolves(scope, activeSessionId, sessions, sessionSolves, allSolves),
+    [scope, activeSessionId, sessions, sessionSolves, allSolves],
+  );
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const [selected, setSelected] = useState<EventTag | null>(null);
   const presentTags = useMemo(() => eventTagsPresent(rawSolves), [rawSolves]);
@@ -106,6 +125,22 @@ export function StatsPanel() {
 
   return (
     <div className="card rounded-xl p-3 lg:p-4">
+      <div className="mb-3 flex flex-wrap gap-1.5 border-b border-border pb-3">
+        {SCOPES.map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => setScope(opt.id)}
+            aria-pressed={scope === opt.id}
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+              scope === opt.id ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
       {presentTags.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5 border-b border-border pb-3">
           <button
@@ -168,7 +203,7 @@ export function StatsPanel() {
         <Stat label="best ao5" value={fmt(stats.bestAo5)} />
         <Stat label="best ao12" value={fmt(stats.bestAo12)} />
         <Stat label="worst" value={fmt(stats.worst)} />
-        <Stat label="solves" value={String(stats.count)} />
+        <Stat label="solves" value={String(stats.count)} note={scope === "all" ? "· all sessions" : undefined} />
       </div>
       {solves.length >= 2 && (
         <div className="mt-2 border-t border-border/60 pt-2 lg:mt-4 lg:pt-3">

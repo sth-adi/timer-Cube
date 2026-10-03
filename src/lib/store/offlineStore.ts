@@ -12,9 +12,43 @@ interface OfflineState {
   online: boolean;
   /** Every page has been saved on this device at least once. */
   ready: boolean;
+  /** An offline worker is running here (production builds in browsers that support one). */
+  available: boolean;
+  /** A save requested with warmNow() is in progress. */
+  warming: boolean;
+  /** When the pages were last saved on this device (ms, epoch), if ever. */
+  warmedAt: number | null;
 }
 
-export const useOfflineStore = create<OfflineState>(() => ({ online: true, ready: false }));
+export const useOfflineStore = create<OfflineState>(() => ({ online: true, ready: false, available: false, warming: false, warmedAt: null }));
+
+/** A save that never reports back (worker killed, connection lost) stops showing as in progress after this. */
+const WARM_TIMEOUT_MS = 2 * 60_000;
+let warmTimer: number | undefined;
+
+function stopWarming(): void {
+  window.clearTimeout(warmTimer);
+  warmTimer = undefined;
+  useOfflineStore.setState({ warming: false });
+}
+
+/**
+ * Saves every page on this device right now, ignoring the usual "at most every few hours" pause.
+ * Does nothing (and returns false) where there is no offline worker — development builds, browsers
+ * without support — or no connection to download over.
+ */
+export function warmNow(): boolean {
+  const { available, warming } = useOfflineStore.getState();
+  if (!available || !navigator.onLine) return false;
+  if (warming) return true;
+  useOfflineStore.setState({ warming: true });
+  window.clearTimeout(warmTimer);
+  warmTimer = window.setTimeout(stopWarming, WARM_TIMEOUT_MS);
+  void navigator.serviceWorker.ready
+    .then((reg) => reg.active?.postMessage({ type: "warm", routes: OFFLINE_ROUTES, extras: OFFLINE_EXTRAS }))
+    .catch(stopWarming);
+  return true;
+}
 
 function readWarmedAt(): number {
   try {
@@ -47,15 +81,18 @@ export function initOffline(): void {
     return;
   }
 
-  useOfflineStore.setState({ ready: readWarmedAt() > 0 });
+  const saved = readWarmedAt();
+  useOfflineStore.setState({ ready: saved > 0, warmedAt: saved > 0 ? saved : null, available: true });
   navigator.serviceWorker.addEventListener("message", (e: MessageEvent) => {
     if (e.data?.type !== "warmed") return;
+    const at = typeof e.data.at === "number" ? e.data.at : Date.now();
     try {
-      localStorage.setItem(WARMED_AT_KEY, String(e.data.at ?? Date.now()));
+      localStorage.setItem(WARMED_AT_KEY, String(at));
     } catch {
       // Without it the worker is simply asked again next visit.
     }
-    useOfflineStore.setState({ ready: true });
+    stopWarming();
+    useOfflineStore.setState({ ready: true, warmedAt: at });
   });
 
   void navigator.serviceWorker

@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { Deletion, Session, Solve } from "@/types";
+import { rememberAutoSessionId } from "@/lib/sessions/activeSession";
 
 export class CubeTimerDB extends Dexie {
   sessions!: EntityTable<Session, "id">;
@@ -42,6 +43,8 @@ export async function ensureDefaultSession(): Promise<Session> {
       updatedAt: Date.now(),
     };
     await db.sessions.add(session);
+    // Remembered so the first cloud sync can drop it again if the account turns out to already have sessions.
+    rememberAutoSessionId(session.id);
     return session;
   });
 }

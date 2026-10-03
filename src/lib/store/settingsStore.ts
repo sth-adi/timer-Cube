@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { GyroCalibration } from "@/lib/gyro/orientation";
 import type { VoiceMode } from "@/lib/smartcube/voiceCoach";
+import type { StatsScope } from "@/lib/stats/scope";
 
 export type InputMethod = "spacebar" | "tap";
 
@@ -112,6 +113,8 @@ export interface SettingsState {
   gyroCalibrations: Record<string, GyroCalibration>;
   /** Whether identity-sequence gestures on a connected smart cube (e.g. U U U U) trigger app actions. */
   cubeGestures: boolean;
+  /** Whether the stats and insights panels read the open session or every session of its event. */
+  statsScope: StatsScope;
   setInspectionEnabled: (v: boolean) => void;
   setInputMethod: (v: InputMethod) => void;
   setHoldToStartMs: (v: number) => void;
@@ -132,6 +135,7 @@ export interface SettingsState {
   setVoiceScramble: (v: boolean) => void;
   setKeepAwake: (v: boolean) => void;
   setCubeNickname: (id: string, nickname: string) => void;
+  setStatsScope: (v: StatsScope) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -157,6 +161,7 @@ export const useSettingsStore = create<SettingsState>()(
       voiceScramble: false,
       keepAwake: true,
       cubeNicknames: {},
+      statsScope: "session",
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
@@ -189,6 +194,7 @@ export const useSettingsStore = create<SettingsState>()(
           else delete next[id];
           return { cubeNicknames: next };
         }),
+      setStatsScope: (v) => set({ statsScope: v }),
     }),
     {
       name: "cube-timer-settings",

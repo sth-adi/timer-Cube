@@ -1,6 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useSettingsStore } from "@/lib/store/settingsStore";
+import { scopedSolves } from "@/lib/stats/scope";
 import { normalSolves } from "@/lib/stats/stats";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 import { SolveHistogram } from "./SolveHistogram";
@@ -34,7 +37,16 @@ function Section({ title, action, children }: { title: string; action?: React.Re
 }
 
 export function InsightsPanel() {
-  const rawSolves = useSessionStore((s) => s.solves);
+  const sessionSolves = useSessionStore((s) => s.solves);
+  const allSolves = useSessionStore((s) => s.allSolves);
+  const sessions = useSessionStore((s) => s.sessions);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const scope = useSettingsStore((s) => s.statsScope);
+  // Follows the toggle in StatsPanel, so both panels always describe the same solves.
+  const rawSolves = useMemo(
+    () => scopedSolves(scope, activeSessionId, sessions, sessionSolves, allSolves),
+    [scope, activeSessionId, sessions, sessionSolves, allSolves],
+  );
   // Charts and achievements below assume 2-handed timing throughout, so an
   // OH/feet/BLD solve mixed into the same session doesn't show up as a
   // second cluster in the histogram or a weird streak in the heatmap.

@@ -116,6 +116,8 @@ export const useCloudSyncStore = create<CloudSyncState>((set) => ({
           applyingSync = false;
         }
       }
+      // Not inside applyingSync: removing the empty session is a real change the next sync must push as a tombstone.
+      await useSessionStore.getState().dropEmptyAutoSession().catch(() => {});
       const { sessions, allSolves, activeSessionId } = useSessionStore.getState();
       set({ suggestion: suggestSession(sessions, allSolves, activeSessionId) });
       // Best-effort: rival lookups and the daily leaderboard read this, but

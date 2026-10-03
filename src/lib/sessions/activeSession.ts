@@ -19,6 +19,33 @@ export function saveSessionId(id: string): void {
   }
 }
 
+const AUTO_KEY = "cube-timer:auto-session";
+
+/** The empty "Session 1" this device made for itself (see ensureDefaultSession), until a cloud sync settles whether it's needed. */
+export function readAutoSessionId(): string | null {
+  try {
+    return localStorage.getItem(AUTO_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function rememberAutoSessionId(id: string): void {
+  try {
+    localStorage.setItem(AUTO_KEY, id);
+  } catch {
+    // Not remembered: the empty session just stays, as it did before.
+  }
+}
+
+export function forgetAutoSessionId(): void {
+  try {
+    localStorage.removeItem(AUTO_KEY);
+  } catch {
+    // Nothing to forget.
+  }
+}
+
 /**
  * Which session to open on load: the one you last had open on this device; failing that, the one
  * with the most solves (on a device that's just synced, that's your history, not the empty session

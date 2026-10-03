@@ -21,7 +21,8 @@ import { useFxPhase } from "@/lib/fx/useFxPhase";
 import { fxImpact } from "@/lib/fx/fxBus";
 import { LiveSessionCoach } from "./LiveSessionCoach";
 import { GhostPaceBar } from "./GhostPaceBar";
-import { QuickDelete } from "./QuickDelete";
+import { PostSolveActions } from "./PostSolveActions";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import { predictSolveTime } from "@/lib/analysis/prediction";
 import { paceFromRatio, resetPerformanceAura, setPerformanceAura } from "@/lib/store/performanceAuraBus";
 
@@ -109,6 +110,9 @@ export function TimerView() {
   const hideTimeWhileSolving = useSettingsStore((s) => s.hideTimeWhileSolving);
   const phaseCount = useSettingsStore((s) => s.phaseCount);
   const timerStyle = useSettingsStore((s) => s.timerStyle);
+  const keepAwake = useSettingsStore((s) => s.keepAwake);
+  // Same "keep the screen awake" setting the smart-cube timer honours — a screen that sleeps mid-session is just annoying.
+  useWakeLock(keepAwake);
   const scramble = useScrambleStore((s) => s.scramble);
   const pendingEvent = useSessionStore((s) => s.pendingEvent);
   const { onStart, onComplete } = useSolveCompletion();
@@ -125,6 +129,11 @@ export function TimerView() {
   const solves = useSessionStore((s) => s.solves);
   // Which finished attempt the quick-delete button already removed (keyed by its result object, so the next attempt gets a fresh button).
   const [deletedResult, setDeletedResult] = useState<unknown>(null);
+  // The solve this finished attempt was saved as. Saving is async, so for a moment after the stop the
+  // last solve in the list is still the previous one — matching on the time keeps the buttons from
+  // acting on (or deleting) the wrong solve; they appear once the save lands.
+  const lastSolve = solves[solves.length - 1];
+  const justSaved = lastSolve && lastResult && Math.abs(lastSolve.timeMs - lastResult.timeMs) < 1 ? lastSolve : undefined;
 
   // Your rolling per-phase average, for the live pace dot — only meaningful
   // once there's a matching-phase-count history to compare against, and
@@ -298,12 +307,12 @@ export function TimerView() {
           {lastResult.penalty === "dnf" ? "DNF" : "+2"} — started {((lastResult.inspection?.elapsedMs ?? 0) / 1000).toFixed(2)}s into inspection
         </p>
       )}
-      {phase === "stopped" && (solves.length > 0 || deletedResult === lastResult) && (
-        <QuickDelete
+      {phase === "stopped" && (justSaved || deletedResult === lastResult) && (
+        <PostSolveActions
+          solve={justSaved}
           deleted={deletedResult === lastResult}
           onDelete={() => {
-            const last = solves[solves.length - 1];
-            if (last) void removeSolve(last.id);
+            if (justSaved) void removeSolve(justSaved.id);
             setDeletedResult(lastResult);
           }}
         />

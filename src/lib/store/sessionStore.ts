@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { Session, Solve } from "@/types";
 import { ensureDefaultSession } from "@/lib/db/db";
 import { createSession, listSessions, renameSession, deleteSession, moveSessionSolves } from "@/lib/db/sessions";
-import { pickInitialSession, readSavedSessionId, saveSessionId } from "@/lib/sessions/activeSession";
+import { forgetAutoSessionId, pickInitialSession, readAutoSessionId, readSavedSessionId, saveSessionId } from "@/lib/sessions/activeSession";
 import { addSolve, deleteSolve, restoreSolves, updateSolve, getSessionSolves, getAllSolves, importSolves } from "@/lib/db/solves";
 import { repairLateStart } from "@/lib/db/repairLateStart";
 import type { EventTag, Penalty, WcaEvent } from "@/types";
@@ -103,6 +103,14 @@ interface SessionState {
    * recorded here; picks whichever other session now has the most solves.
    */
   adoptSyncedSessionIfLocalEmpty: () => Promise<void>;
+  /**
+   * After a successful cloud sync: removes the empty "Session 1" this device
+   * auto-created for itself if the account turned out to have other sessions,
+   * so every new browser stops adding one to the pile. Only ever touches the
+   * session whose id ensureDefaultSession remembered — never one the user made
+   * — and never one with solves. Removing it syncs as an ordinary tombstone.
+   */
+  dropEmptyAutoSession: () => Promise<void>;
 }
 
 let pbEventId = 0;
@@ -340,5 +348,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       .filter((s) => s.id !== activeSessionId && (counts.get(s.id) ?? 0) > 0)
       .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0))[0];
     if (candidate) await get().switchSession(candidate.id);
+  },
+
+  dropEmptyAutoSession: async () => {
+    const autoId = readAutoSessionId();
+    if (!autoId) return;
+    const sessions = await listSessions();
+    // Gone already, or used since: it's an ordinary session now.
+    if (!sessions.some((s) => s.id === autoId) || (await getSessionSolves(autoId)).length > 0) {
+      forgetAutoSessionId();
+      return;
+    }
+    // Still the only session: keep it, and look again after a later sync.
+    if (sessions.length < 2) return;
+    // removeSession opens the session with the most solves if this one was open.
+    await get().removeSession(autoId);
+    forgetAutoSessionId();
   },
 }));
