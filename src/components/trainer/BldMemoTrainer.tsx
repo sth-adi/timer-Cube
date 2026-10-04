@@ -43,6 +43,9 @@ export function BldMemoTrainer() {
   const cursorRef = useRef(-1);
   const queueRef = useRef<SpeechItem[]>([]);
   const rateRef = useRef(rate);
+  // Bumped by every speakFrom/stop/cleanup. cancel() fires the in-flight
+  // utterance's onend/onerror, which would otherwise advance to the next item.
+  const generationRef = useRef(0);
   useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
@@ -50,20 +53,13 @@ export function BldMemoTrainer() {
     rateRef.current = rate;
   }, [rate]);
 
-  // Stop mid-playback the moment the scramble changes or the trainer is
-  // left — an utterance queued against a memo that no longer matches
-  // what's on screen would be actively misleading, not just stale.
-  useEffect(() => {
-    return () => {
-      if (speechSupported) window.speechSynthesis.cancel();
-    };
-  }, [scramble]);
-
   const speakFrom = useCallback((startIndex: number) => {
     if (!speechSupported) return;
+    const generation = ++generationRef.current;
     window.speechSynthesis.cancel();
 
     const step = (i: number) => {
+      if (generation !== generationRef.current) return;
       const list = queueRef.current;
       if (i >= list.length) {
         cursorRef.current = -1;
@@ -76,8 +72,12 @@ export function BldMemoTrainer() {
       const item = list[i];
       const utter = new SpeechSynthesisUtterance(item.text);
       utter.rate = rateRef.current;
-      utter.onend = () => step(i + 1);
-      utter.onerror = () => step(i + 1);
+      utter.onend = () => {
+        if (generation === generationRef.current) step(i + 1);
+      };
+      utter.onerror = () => {
+        if (generation === generationRef.current) step(i + 1);
+      };
       window.speechSynthesis.speak(utter);
     };
 
@@ -86,11 +86,17 @@ export function BldMemoTrainer() {
   }, []);
 
   const stop = useCallback(() => {
+    generationRef.current++;
     if (speechSupported) window.speechSynthesis.cancel();
     setPlaying(false);
     setCursor(-1);
     cursorRef.current = -1;
   }, []);
+
+  // Stop mid-playback the moment the scramble changes or the trainer is
+  // left — an utterance queued against a memo that no longer matches
+  // what's on screen would be actively misleading, not just stale.
+  useEffect(() => stop, [scramble, stop]);
 
   const nothingToMemo = memo !== null && memo.cornersSolved && memo.edgesSolved;
 

@@ -36,3 +36,17 @@ export function nextStreak(
   if (lastCompletedDateKey === yesterday) return prevStreak + 1;
   return 1;
 }
+
+/**
+ * The streak worth showing right now. The stored streak only resets when the
+ * next challenge is completed, so after a missed day it still reads as live;
+ * it's only alive if the last completion was today or yesterday.
+ */
+export function activeStreak(
+  lastCompletedDateKey: string | null,
+  streak: number,
+  today = todayDateKey(),
+  yesterday = yesterdayDateKey(),
+): number {
+  return lastCompletedDateKey === today || lastCompletedDateKey === yesterday ? streak : 0;
+}

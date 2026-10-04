@@ -51,8 +51,12 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
         return (
           <div
             key={b.label}
+            role="img"
+            aria-label={b.mean === null ? `${b.label}: no solves` : `${b.label}: ${formatTime(b.mean)} average over ${b.count} solve${b.count === 1 ? "" : "s"}`}
+            title={b.mean === null ? `${b.label}: no solves` : `${b.label}: ${formatTime(b.mean)} avg · ${b.count}`}
             className="flex flex-1 flex-col items-center gap-1"
-            onMouseEnter={() => setHover(i)}
+            onPointerEnter={() => setHover(i)}
+            onClick={() => setHover(i)}
             onMouseLeave={() => setHover((h) => (h === i ? null : h))}
           >
             <div className="relative flex h-16 w-full items-end">

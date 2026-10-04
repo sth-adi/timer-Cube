@@ -113,7 +113,7 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
           <button
             type="button"
             onClick={onPlayPause}
-            className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+            className="hit-y flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
           >
             {playing ? <Pause size={12} /> : <Play size={12} />}
             {playing ? "Pause" : "Play"}

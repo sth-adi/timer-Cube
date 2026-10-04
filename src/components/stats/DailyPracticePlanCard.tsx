@@ -37,6 +37,7 @@ export function DailyPracticePlanCard() {
 
   const dailyChallengeStreak = useDailyChallengeStore((s) => s.streak);
   const dailyChallengeDateKey = useDailyChallengeStore((s) => s.dateKey);
+  const dailyChallengeLastCompletedDateKey = useDailyChallengeStore((s) => s.lastCompletedDateKey);
   const dailyChallengeTimes = useDailyChallengeStore((s) => s.times);
   // dateKey only advances once DailyChallengeView (or anything else calling
   // ensureToday) has actually run today — a stale prior day's fully-timed
@@ -80,6 +81,7 @@ export function DailyPracticePlanCard() {
         dailyGoal,
         eventsPracticed,
         dailyChallengeStreak,
+        dailyChallengeLastCompletedDateKey,
         dailyChallengeDoneToday,
       }),
     [
@@ -90,6 +92,7 @@ export function DailyPracticePlanCard() {
       dailyGoal,
       eventsPracticed,
       dailyChallengeStreak,
+      dailyChallengeLastCompletedDateKey,
       dailyChallengeDoneToday,
     ],
   );

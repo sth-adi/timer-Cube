@@ -55,8 +55,15 @@ export const useMyAlgsStore = create<MyAlgsState>()(
         }),
       learn: (executions, through) =>
         set((s) => {
-          const { seen, fresh } = learnFromExecutions(s.seen, executions, bookAlg);
+          const { seen: learned, fresh } = learnFromExecutions(s.seen, executions, bookAlg);
           const touched = new Set(executions.map((e) => myAlgKey(e.step, e.caseName)));
+          // An algorithm you removed from a case must not come back just because you used it again.
+          const seen = { ...learned };
+          for (const key of touched) {
+            const gone = s.dismissed[key];
+            if (!gone?.length || !seen[key]) continue;
+            seen[key] = seen[key].filter((x) => !gone.includes(normalizedAlg(x.alg) ?? ""));
+          }
           const kept = fresh.filter((f) => !(s.dismissed[f.key] ?? []).includes(normalizedAlg(f.alg) ?? ""));
           return {
             seen,

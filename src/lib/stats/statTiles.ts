@@ -12,7 +12,7 @@ import type { EventTag, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
 import { formatTime } from "@/lib/utils/time";
 import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
-import { bestAverageOfN, comparableTime, computeActivity, computePBHistory, rollingAverages, solvesForEvent } from "./stats";
+import { averageOfN, bestAverageOfN, comparableTime, computeActivity, computePBHistory, solvesForEvent } from "./stats";
 
 export interface StatTileResult {
   value: string;
@@ -86,11 +86,10 @@ function dayKey(epochMs: number): string {
 function phaseDurationOf(s: Solve, phase: 0 | 1 | 2 | 3): number | undefined {
   if (phase === 0) return s.crossMs;
   if (!s.splits || s.splits.length < 3) return undefined;
-  const total = solveFinalMs(s);
-  if (total === null) return undefined;
+  if (solveFinalMs(s) === null) return undefined; // DNF
   if (phase === 1) return s.splits[1] - s.splits[0];
   if (phase === 2) return s.splits[2] - s.splits[1];
-  return total - s.splits[2];
+  return s.timeMs - s.splits[2];
 }
 
 /** Cross/F2L/OLL/PLL durations (ms) mined straight from stored crossMs/splits, per solve. */
@@ -161,7 +160,7 @@ tiles.push(
       const m = mean(times);
       const s = stdev(times);
       if (m === null || s === null || m === 0) return null;
-      return { value: fmtPct(1 - s / m), sub: "lower spread relative to mean" };
+      return { value: fmtPct(Math.max(0, 1 - s / m)), sub: "lower spread relative to mean" };
     },
   },
 );
@@ -173,9 +172,11 @@ for (const n of AO_NS) {
     category: "Speed",
     label: `Current ao${n}`,
     compute: (solves) => {
-      const rolling = rollingAverages(solves, n);
-      const last = [...rolling].reverse().find((v) => v !== null);
-      return last != null ? { value: formatTime(last) } : null;
+      // The newest window only (a DNF window shows DNF, never an older average).
+      if (solves.length < n) return null;
+      const avg = averageOfN(solves.slice(-n).map(comparableTime));
+      if (avg.isDnf) return { value: "DNF" };
+      return avg.value !== null ? { value: formatTime(avg.value) } : null;
     },
   });
   tiles.push({
@@ -183,6 +184,7 @@ for (const n of AO_NS) {
     category: "Speed",
     label: `Best ao${n}`,
     compute: (solves) => {
+      if (solves.length < n) return null;
       const best = bestAverageOfN(solves, n);
       return best != null ? { value: formatTime(best) } : null;
     },
@@ -510,9 +512,10 @@ const PHASE_NAMES = ["Cross", "F2L", "OLL", "PLL"] as const;
       // taken across every solve, and the four shares stop summing to ~100%.
       const ratios: number[] = [];
       for (const s of solves) {
-        const total = solveFinalMs(s);
+        // Raw timer time: phases are timed on the clock, so a +2 penalty isn't part of any phase.
+        const total = s.timeMs;
         const dur = phaseDurationOf(s, idx as 0 | 1 | 2 | 3);
-        if (total !== null && total > 0 && dur !== undefined) ratios.push(dur / total);
+        if (total > 0 && dur !== undefined) ratios.push(dur / total);
       }
       const m = mean(ratios);
       return m !== null ? { value: fmtPct(m) } : null;

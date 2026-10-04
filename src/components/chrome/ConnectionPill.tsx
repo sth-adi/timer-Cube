@@ -84,7 +84,7 @@ export function ConnectionPill() {
     <button
       type="button"
       onClick={() => void syncNow()}
-      className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
+      className="hit-y flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
       title={title}
       aria-label={`${label}. ${title}`}
     >
@@ -97,7 +97,7 @@ export function ConnectionPill() {
       <button
         type="button"
         onClick={openOwnerPrompt}
-        className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
+        className="hit-y flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
         title="This device has solves from another account, so sync is paused. Tap to choose what to do with them."
         aria-label="Sync paused. This device has solves from another account; tap to choose what to do with them."
       >

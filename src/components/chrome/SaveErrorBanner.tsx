@@ -37,12 +37,12 @@ export function SaveErrorBanner() {
             setExportFailed(false);
             downloadBackup().then(clear, () => setExportFailed(true));
           }}
-          className="shrink-0 rounded-full bg-accent px-3 py-1 font-semibold text-accent-fg"
+          className="hit-y shrink-0 rounded-full bg-accent px-3 py-1 font-semibold text-accent-fg"
         >
           Export backup
         </button>
       )}
-      <button type="button" onClick={clear} className="shrink-0 px-1 text-muted-2 hover:text-muted" aria-label="Dismiss">
+      <button type="button" onClick={clear} className="hit-y shrink-0 px-1 text-muted-2 hover:text-muted" aria-label="Dismiss">
         ✕
       </button>
     </div>

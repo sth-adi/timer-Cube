@@ -311,6 +311,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             max={800}
             step={50}
             value={holdToStartMs}
+            aria-label="Hold-to-start delay"
+            aria-valuetext={`${holdToStartMs} milliseconds`}
             onChange={(e) => setHoldToStartMs(Number(e.target.value))}
             className="w-full accent-[var(--accent)]"
           />
@@ -327,6 +329,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             max={100}
             step={5}
             value={dailyGoal}
+            aria-label="Daily practice goal"
+            aria-valuetext={`${dailyGoal} solves`}
             onChange={(e) => setDailyGoal(Number(e.target.value))}
             className="w-full accent-[var(--accent)]"
           />

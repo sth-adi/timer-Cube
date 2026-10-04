@@ -100,7 +100,7 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
     <div className="flex w-full max-w-md flex-1 flex-col items-center gap-4 py-2">
       <div className="flex w-full items-center justify-between">
         <span className="text-muted-2 text-xs">{queue.length} left</span>
-        <button type="button" onClick={onDone} className="tap-target -mr-2 text-muted hover:text-foreground">
+        <button type="button" onClick={onDone} aria-label="Close review" className="tap-target -mr-2 text-muted hover:text-foreground">
           <X size={18} />
         </button>
       </div>
@@ -119,7 +119,7 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
         <button
           type="button"
           onClick={onReveal}
-          className="flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm text-muted-2 hover:text-muted hover:bg-bg-panel-2"
+          className="flex min-h-11 items-center gap-1.5 rounded-full px-4 py-2.5 text-sm text-muted-2 hover:text-muted hover:bg-bg-panel-2"
         >
           <Eye size={14} /> Reveal algorithm
         </button>
@@ -149,7 +149,7 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
             key={b.rating}
             type="button"
             onClick={() => onRate(b.rating)}
-            className={cn("rounded-lg py-3 text-xs font-medium", b.className)}
+            className={cn("min-h-11 rounded-lg py-3 text-xs font-medium", b.className)}
           >
             {b.label}
           </button>

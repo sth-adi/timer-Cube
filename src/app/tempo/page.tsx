@@ -65,7 +65,16 @@ function useMetronome() {
     [stop],
   );
 
-  useEffect(() => stop, [stop]);
+  // Leaving the page stops the clicks and releases the audio device.
+  useEffect(
+    () => () => {
+      stop();
+      const ctx = ctxRef.current;
+      ctxRef.current = null;
+      void ctx?.close().catch(() => {});
+    },
+    [stop],
+  );
   return { start, stop };
 }
 

@@ -115,6 +115,7 @@ export function usePlayInput(onTurn: (t: PlayTurn) => void, { keyboard = true }:
       const turn = KEY_TURNS[e.key.toLowerCase()];
       if (!turn) return;
       e.preventDefault();
+      if (e.repeat) return; // holding a key is one turn, not a stream of them
       press(turn, "key");
     };
     window.addEventListener("keydown", onKey);

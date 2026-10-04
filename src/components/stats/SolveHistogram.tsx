@@ -29,7 +29,16 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
     <div>
       <div className="relative flex h-24 gap-[3px] border-b border-border">
         {buckets.map((b, i) => (
-          <div key={i} className="relative h-full flex-1" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover((h) => (h === i ? null : h))}>
+          <div
+            key={i}
+            role="img"
+            aria-label={`${formatTime(b.from)} to ${formatTime(b.to)}: ${b.count} solve${b.count === 1 ? "" : "s"}`}
+            title={`${formatTime(b.from)}–${formatTime(b.to)}: ${b.count} solve${b.count === 1 ? "" : "s"}`}
+            className="relative h-full flex-1"
+            onPointerEnter={() => setHover(i)}
+            onClick={() => setHover(i)}
+            onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+          >
             <div
               className="absolute bottom-0 left-0 w-full rounded-t-[4px] transition-[background,opacity]"
               style={{

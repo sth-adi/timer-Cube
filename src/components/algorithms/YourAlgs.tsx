@@ -47,13 +47,13 @@ export function YourAlgs({ algCase, onShow, showing }: { algCase: AlgCase; onSho
           <button
             type="button"
             onClick={() => (opts.book ? clear(key) : choose(key, alg))}
-            className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-fg"
+            className="hit-y shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-fg"
           >
             Make main
           </button>
         )}
         {!opts.book && (
-          <button type="button" onClick={() => dismiss(key, alg)} aria-label="Remove this algorithm" className="shrink-0 text-muted-2 hover:text-danger">
+          <button type="button" onClick={() => dismiss(key, alg)} aria-label="Remove this algorithm" className="hit-y -m-2 shrink-0 p-2 text-muted-2 hover:text-danger">
             <X size={12} />
           </button>
         )}

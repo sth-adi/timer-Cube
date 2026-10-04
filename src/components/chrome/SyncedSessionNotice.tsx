@@ -46,7 +46,7 @@ export function SyncedSessionNotice() {
           void switchSession(suggestion.id);
           dismiss();
         }}
-        className="shrink-0 rounded-full bg-accent px-3 py-1 font-semibold text-accent-fg"
+        className="hit-y shrink-0 rounded-full bg-accent px-3 py-1 font-semibold text-accent-fg"
       >
         Open it
       </button>
@@ -61,7 +61,7 @@ export function SyncedSessionNotice() {
           bump((n) => n + 1);
           dismiss();
         }}
-        className="shrink-0 px-1 text-muted-2 hover:text-muted"
+        className="hit-y shrink-0 px-1 text-muted-2 hover:text-muted"
         aria-label="Dismiss"
       >
         ✕

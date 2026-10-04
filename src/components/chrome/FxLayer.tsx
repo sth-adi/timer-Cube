@@ -389,6 +389,9 @@ export function FxLayer() {
       }
     };
     const onKey = (e: KeyboardEvent) => {
+      // Typing (a note, a username, a time) isn't the cheat code.
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (key === KONAMI[konamiAt]) {
         konamiAt += 1;

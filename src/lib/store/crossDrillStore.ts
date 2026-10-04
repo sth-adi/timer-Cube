@@ -54,7 +54,7 @@ export const useCrossDrillStore = create<CrossDrillState>((set, get) => ({
 
   submit: async () => {
     const { scramble, attempt, crossFace, history } = get();
-    if (!scramble) return;
+    if (!scramble || get().grading || get().loading) return;
     set({ grading: true, errors: [] });
     try {
       const client = getCubeEngineClient();

@@ -19,28 +19,31 @@ export function useProgression(withQuests = true) {
   const claimed = useQuestStore((s) => s.claimed);
   const [now] = useState(() => Date.now());
 
-  const achievements = useMemo(() => computeAchievements(achievementSolves(allSolves, sessions)), [allSolves, sessions]);
-  const activity = useMemo(() => computeActivity(allSolves), [allSolves]);
+  // XP, streak days and quests count 3x3 normal solves only — the same list the achievements use — so
+  // a 2x2 / OH / BLD solve doesn't earn XP or progress a 3x3 quest.
+  const solves = useMemo(() => achievementSolves(allSolves, sessions), [allSolves, sessions]);
+  const achievements = useMemo(() => computeAchievements(solves), [solves]);
+  const activity = useMemo(() => computeActivity(solves), [solves]);
   const xp = useMemo(
     () =>
       computeXp({
-        solves: allSolves,
+        solves,
         activeDays: activity.days.length,
         achievementsUnlocked: achievements.filter((a) => a.unlocked).length,
         gymReps: gymLog,
         compRounds: rounds.length,
         claimedQuestXp: Object.values(claimed).reduce((a, b) => a + b, 0),
       }),
-    [allSolves, activity, achievements, gymLog, rounds, claimed],
+    [solves, activity, achievements, gymLog, rounds, claimed],
   );
   const level = levelInfo(xp.total);
 
   const quests = useMemo(() => {
     if (!withQuests) return [];
-    const metrics = metricsFor(allSolves);
-    const coach = analyzeCoach(allSolves);
-    return weeklyQuests({ now, solves: allSolves, metrics, gymReps: gymLog, compRoundDates: rounds.map((r) => r.date), topFinding: coach?.findings[0]?.id ?? null });
-  }, [withQuests, allSolves, gymLog, rounds, now]);
+    const metrics = metricsFor(solves);
+    const coach = analyzeCoach(solves);
+    return weeklyQuests({ now, solves, metrics, gymReps: gymLog, compRoundDates: rounds.map((r) => r.date), topFinding: coach?.findings[0]?.id ?? null });
+  }, [withQuests, solves, gymLog, rounds, now]);
 
   return { xp, level, quests, claimed, achievements, now };
 }

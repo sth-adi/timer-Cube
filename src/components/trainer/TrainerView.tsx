@@ -81,7 +81,7 @@ export function TrainerView() {
             type="button"
             onClick={() => void setMode(m)}
             className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium uppercase transition-colors",
+              "hit-y rounded-full px-4 py-2 text-sm font-medium uppercase transition-colors",
               mode === m ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
             )}
           >

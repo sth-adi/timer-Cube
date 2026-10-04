@@ -25,6 +25,7 @@ export function BackupNudge() {
   const cloudCovered = signedIn && lastSyncedAt !== null && now - lastSyncedAt < CLOUD_COVERED_MS;
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const kind = useMemo(() => {
     void version; // re-read the meta after it's changed
     if (typeof window === "undefined") return null;
@@ -49,8 +50,11 @@ export function BackupNudge() {
           disabled={busy}
           onClick={async () => {
             setBusy(true);
+            setError(null);
             try {
               await downloadBackup();
+            } catch (e) {
+              setError(e instanceof Error && e.message ? `Backup failed: ${e.message}` : "Backup failed. Try again.");
             } finally {
               setBusy(false);
               setVersion((v) => v + 1);
@@ -71,6 +75,11 @@ export function BackupNudge() {
           Remind me next week
         </button>
       </div>
+      {error && (
+        <p role="alert" className="text-[11px] font-medium text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

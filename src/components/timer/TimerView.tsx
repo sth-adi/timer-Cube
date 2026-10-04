@@ -140,10 +140,18 @@ export function TimerView() {
   // Which finished attempt the quick-delete button already removed (keyed by its result object, so the next attempt gets a fresh button).
   const [deletedResult, setDeletedResult] = useState<unknown>(null);
   // The solve this finished attempt was saved as. Saving is async, so for a moment after the stop the
-  // last solve in the list is still the previous one — matching on the time keeps the buttons from
-  // acting on (or deleting) the wrong solve; they appear once the save lands.
+  // last solve in the list is still the previous one. That one is remembered when the run starts (the new
+  // solve can't exist yet), and the buttons wait for a different last solve — so two equal times in a row
+  // can never point the buttons at (or delete) the previous solve. They appear once the save lands.
   const lastSolve = solves[solves.length - 1];
-  const justSaved = lastSolve && lastResult && Math.abs(lastSolve.timeMs - lastResult.timeMs) < 1 ? lastSolve : undefined;
+  const [prevPhase, setPrevPhase] = useState(phase);
+  const [runStartLastId, setRunStartLastId] = useState<string | undefined>(undefined);
+  if (phase !== prevPhase) {
+    setPrevPhase(phase);
+    if (phase === "running") setRunStartLastId(lastSolve?.id);
+  }
+  const justSaved =
+    lastSolve && lastResult && lastSolve.id !== runStartLastId && Math.abs(lastSolve.timeMs - lastResult.timeMs) < 1 ? lastSolve : undefined;
 
   // Your rolling per-phase average, for the live pace dot — only meaningful
   // once there's a matching-phase-count history to compare against, and

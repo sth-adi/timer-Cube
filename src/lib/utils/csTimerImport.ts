@@ -32,7 +32,8 @@ export interface CsTimerParsed {
 
 type SolveRow = SessionExport["solves"][number];
 
-function parseCsTimerSolve(entry: unknown): SolveRow | null {
+/** `fallbackDate` stands in when the row has no timestamp; callers give each row its own so order and dedupe survive. */
+function parseCsTimerSolve(entry: unknown, fallbackDate: number): SolveRow | null {
   if (!Array.isArray(entry) || entry.length < 2) return null;
   const [timePair, scramble, comment, timestamp] = entry as unknown[];
   if (!Array.isArray(timePair) || typeof timePair[1] !== "number" || !Number.isFinite(timePair[1])) return null;
@@ -45,7 +46,7 @@ function parseCsTimerSolve(entry: unknown): SolveRow | null {
     timeMs: rawMs,
     penalty,
     scramble: typeof scramble === "string" ? scramble : "",
-    date: typeof timestamp === "number" && Number.isFinite(timestamp) ? timestamp * 1000 : Date.now(),
+    date: typeof timestamp === "number" && Number.isFinite(timestamp) ? timestamp * 1000 : fallbackDate,
     comment: typeof comment === "string" && comment.length > 0 ? comment : undefined,
   };
 }
@@ -88,7 +89,10 @@ export function parseCsTimerExport(raw: unknown): CsTimerParsed {
 
   for (const [key, value] of Object.entries(obj)) {
     if (!/^session\d+$/.test(key) || !Array.isArray(value)) continue;
-    const rows = value.map(parseCsTimerSolve).filter((r): r is SolveRow => r !== null);
+    // Rows without a timestamp get distinct, increasing dates (1 ms apart, ending
+    // at import time) instead of all sharing one, so their order is kept.
+    const base = Date.now();
+    const rows = value.map((entry, i) => parseCsTimerSolve(entry, base - (value.length - i))).filter((r): r is SolveRow => r !== null);
     if (rows.length === 0) continue;
     solvesByKey[key] = rows;
     sessions.push({ key, name: names[key] ?? key, count: rows.length });

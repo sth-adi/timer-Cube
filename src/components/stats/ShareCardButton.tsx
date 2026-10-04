@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Share2 } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useStatsSolves } from "@/hooks/useStatsSolves";
 import { computeSessionStats } from "@/lib/stats/stats";
 import { drawShareCard, canvasToBlob } from "@/lib/share/shareCard";
 
 export function ShareCardButton() {
-  const solves = useSessionStore((s) => s.solves);
+  // Same list the insights panel shows: Stats scope, 2-handed solves only.
+  const { solves } = useStatsSolves();
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const [busy, setBusy] = useState(false);

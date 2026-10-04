@@ -48,6 +48,18 @@ describe("parseCsTimerExport", () => {
     expect(rows[0].date).toBe(1_700_000_000_000);
   });
 
+  it("gives timestamp-less rows distinct, increasing dates that keep file order", () => {
+    const raw = { session1: [[[0, 1000], "R", ""], [[0, 2000], "U", ""], [[0, 3000], "F", ""]] };
+    const before = Date.now();
+    const rows = parseCsTimerExport(raw).solvesByKey.session1;
+    const after = Date.now();
+    const dates = rows.map((r) => r.date);
+    expect(new Set(dates).size).toBe(3);
+    expect(dates).toEqual([...dates].sort((a, b) => a - b));
+    expect(dates[0]).toBeGreaterThanOrEqual(before - 3);
+    expect(dates[2]).toBeLessThanOrEqual(after);
+  });
+
   it("falls back to the raw session key when no name metadata exists", () => {
     const raw = { session1: [[[0, 1000], "R", ""]] };
     expect(parseCsTimerExport(raw).sessions[0].name).toBe("session1");

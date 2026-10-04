@@ -87,6 +87,10 @@ export function AccountPanel() {
             <input
               type="text"
               autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
@@ -98,6 +102,7 @@ export function AccountPanel() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
+              aria-label="Password"
               className="rounded-lg bg-bg-panel-2 px-2.5 py-2 text-xs outline-none focus:ring-1 focus:ring-accent"
             />
             <button
@@ -116,7 +121,7 @@ export function AccountPanel() {
               setFormError(null);
               setNeedsConfirmNotice(false);
             }}
-            className="mt-1.5 text-[11px] text-muted-2 hover:text-accent"
+            className="hit-y mt-1.5 text-[11px] text-muted-2 hover:text-accent"
           >
             {mode === "signup" ? "Already have an account? Sign in" : "New here? Create an account"}
           </button>
@@ -153,7 +158,7 @@ export function AccountPanel() {
               <button
                 type="button"
                 onClick={openOwnerPrompt}
-                className="shrink-0 text-[11px] font-medium text-accent hover:underline"
+                className="hit-y shrink-0 text-[11px] font-medium text-accent hover:underline"
               >
                 Choose…
               </button>
@@ -161,7 +166,7 @@ export function AccountPanel() {
               <button
                 type="button"
                 onClick={() => void syncNow()}
-                className="shrink-0 text-[11px] font-medium text-accent hover:underline"
+                className="hit-y shrink-0 text-[11px] font-medium text-accent hover:underline"
               >
                 Sync now
               </button>
@@ -182,7 +187,7 @@ export function AccountPanel() {
           <button
             type="button"
             onClick={() => void signOut()}
-            className="flex items-center gap-1.5 self-start text-[11px] text-muted-2 hover:text-danger"
+            className="hit-y flex items-center gap-1.5 self-start text-[11px] text-muted-2 hover:text-danger"
           >
             <LogOut size={12} /> Sign out
           </button>

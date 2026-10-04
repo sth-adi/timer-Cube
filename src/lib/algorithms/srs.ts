@@ -58,7 +58,7 @@ export function applyReview(progress: CaseProgress, rating: ReviewRating, now = 
     ease = Math.max(MIN_EASE, ease - 0.15);
     intervalDays = Math.max(1, Math.round((intervalDays || 1) * 1.2));
   } else if (rating === "good") {
-    intervalDays = intervalDays === 0 ? 1 : Math.round(intervalDays * ease);
+    intervalDays = intervalDays === 0 ? 1 : Math.max(intervalDays + 1, Math.round(intervalDays * ease));
   } else {
     ease = ease + 0.15;
     intervalDays = intervalDays === 0 ? 3 : Math.round(intervalDays * ease * 1.3);

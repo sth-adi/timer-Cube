@@ -109,7 +109,7 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
               onClick={() => setMode(m.id)}
               aria-pressed={active}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
+                "hit-y flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
                 active ? "bg-accent-soft text-accent" : "text-muted hover:bg-bg-panel-2 hover:text-foreground",
               )}
             >

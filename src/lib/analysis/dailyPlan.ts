@@ -9,6 +9,7 @@
  */
 
 import { formatTime } from "@/lib/utils/time";
+import { activeStreak } from "@/lib/analysis/dailyChallenge";
 import type { PhaseAverage } from "@/lib/stats/stats";
 
 export type PlanTarget =
@@ -38,7 +39,10 @@ export interface DailyPlanInput {
   dailyGoal: number;
   /** Distinct WCA events with at least one session — used only for a low-priority "try something new" nudge. */
   eventsPracticed: readonly string[];
+  /** The stored streak. Pass `dailyChallengeLastCompletedDateKey` too so a streak broken by a missed day isn't presented as live. */
   dailyChallengeStreak: number;
+  /** When the stored streak was last extended; omit to trust `dailyChallengeStreak` as-is. */
+  dailyChallengeLastCompletedDateKey?: string | null;
   dailyChallengeDoneToday: boolean;
 }
 
@@ -68,9 +72,13 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
     solvesToday,
     dailyGoal,
     eventsPracticed,
-    dailyChallengeStreak,
+    dailyChallengeLastCompletedDateKey,
     dailyChallengeDoneToday,
   } = input;
+  const dailyChallengeStreak =
+    dailyChallengeLastCompletedDateKey === undefined
+      ? input.dailyChallengeStreak
+      : activeStreak(dailyChallengeLastCompletedDateKey, input.dailyChallengeStreak);
 
   const dailyChallengeItem = !dailyChallengeDoneToday
     ? {

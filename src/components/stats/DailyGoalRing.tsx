@@ -3,28 +3,31 @@
 import { useMemo } from "react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
+import { useNow } from "@/hooks/useNow";
 
 const SIZE = 72;
 const STROKE = 7;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-function todayKey(): string {
-  const d = new Date();
+function todayKey(now: number): string {
+  const d = new Date(now);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
 export function DailyGoalRing() {
   const allSolves = useSessionStore((s) => s.allSolves);
   const dailyGoal = useSettingsStore((s) => s.dailyGoal);
+  // Ticks, so the count rolls over to a new day without a reload.
+  const now = useNow(60_000);
 
   const todayCount = useMemo(() => {
-    const key = todayKey();
+    const key = todayKey(now);
     return allSolves.filter((s) => {
       const d = new Date(s.date);
       return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` === key;
     }).length;
-  }, [allSolves]);
+  }, [allSolves, now]);
 
   const pct = Math.min(1, dailyGoal > 0 ? todayCount / dailyGoal : 0);
   const dashoffset = CIRCUMFERENCE * (1 - pct);

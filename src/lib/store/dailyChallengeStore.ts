@@ -14,6 +14,8 @@ interface DailyChallengeState {
   streak: number;
   lastCompletedDateKey: string | null;
   loading: boolean;
+  /** The last ensureToday() failed (e.g. the scramble worker rejected); cleared when it is retried. */
+  error: boolean;
   /** Generates today's 5 scrambles if they haven't been already — a no-op once today is loaded. */
   ensureToday: () => Promise<void>;
   /** Records the next untimed solve's result, in order. Bumps the streak once all 5 are in. */
@@ -34,6 +36,7 @@ export const useDailyChallengeStore = create<DailyChallengeState>()(
       streak: 0,
       lastCompletedDateKey: null,
       loading: false,
+      error: false,
 
       ensureToday: () => {
         const today = todayDateKey();
@@ -42,21 +45,29 @@ export const useDailyChallengeStore = create<DailyChallengeState>()(
         }
         if (!ensurePromise) {
           ensurePromise = (async () => {
-            set({ loading: true });
-            const client = getCubeEngineClient();
-            await client.ready();
-            const scrambles: string[] = [];
-            for (let i = 0; i < DAILY_CHALLENGE_LENGTH; i++) {
-              scrambles.push(await client.generateScramble());
+            set({ loading: true, error: false });
+            try {
+              const client = getCubeEngineClient();
+              await client.ready();
+              const scrambles: string[] = [];
+              for (let i = 0; i < DAILY_CHALLENGE_LENGTH; i++) {
+                scrambles.push(await client.generateScramble());
+              }
+              set({
+                dateKey: today,
+                scrambles,
+                times: Array<null>(DAILY_CHALLENGE_LENGTH).fill(null),
+              });
+            } catch {
+              set({ error: true });
+            } finally {
+              set({ loading: false });
             }
-            set({
-              dateKey: today,
-              scrambles,
-              times: Array<null>(DAILY_CHALLENGE_LENGTH).fill(null),
-              loading: false,
-            });
+            // Cleared from a .then so it can't run before the assignment below
+            // (a synchronous throw above would otherwise leave a stale promise behind).
+          })().then(() => {
             ensurePromise = null;
-          })();
+          });
         }
         return ensurePromise;
       },
@@ -81,7 +92,7 @@ export const useDailyChallengeStore = create<DailyChallengeState>()(
     }),
     {
       name: "cube-timer-daily-challenge",
-      // `loading` is transient — always recomputed by the next ensureToday() call.
+      // `loading` and `error` are transient — always recomputed by the next ensureToday() call.
       partialize: (s) => ({
         dateKey: s.dateKey,
         scrambles: s.scrambles,

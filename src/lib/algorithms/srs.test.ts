@@ -37,6 +37,15 @@ describe("srs", () => {
     expect(deriveStatus(p)).toBe("known");
   });
 
+  it("'good' always lengthens the interval, even at a low ease", () => {
+    const now = Date.now();
+    const base = { ...initialProgress("x", now), ease: 1.3, intervalDays: 1, reps: 2 };
+    expect(applyReview(base, "good", now).intervalDays).toBe(2);
+    expect(applyReview({ ...base, intervalDays: 2 }, "good", now).intervalDays).toBe(3);
+    // A high ease still wins over the +1 floor.
+    expect(applyReview({ ...base, ease: 2.5, intervalDays: 10 }, "good", now).intervalDays).toBe(25);
+  });
+
   it("'hard' grows the interval more slowly than 'good'", () => {
     const now = Date.now();
     const base = { ...initialProgress("x", now), intervalDays: 10, reps: 3 };

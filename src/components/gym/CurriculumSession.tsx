@@ -83,8 +83,16 @@ export function CurriculumSession() {
   };
   const next = () => {
     if (!plan) return;
-    setResults((r) => r.map((x, i) => (i === index ? { ...x, ms: Date.now() - blockStart } : x)));
+    const ms = Math.max(0, Date.now() - blockStart);
+    setResults((r) => r.map((x, i) => (i === index ? { ...x, ms } : x)));
     begin(index + 1, plan);
+  };
+  const end = () => {
+    if (!plan) return;
+    // Same as next(): the block in progress counts toward the summary.
+    const ms = Math.max(0, Date.now() - blockStart);
+    setResults((r) => r.map((x, i) => (i === index ? { ...x, ms } : x)));
+    setIndex(plan.length);
   };
   const onAttempt = (ok: boolean) => setResults((r) => r.map((x, i) => (i === index ? { ...x, reps: x.reps + 1, hits: x.hits + (ok ? 1 : 0) } : x)));
 
@@ -120,7 +128,8 @@ export function CurriculumSession() {
   if (running && plan) {
     const block = plan[index];
     const res = results[index];
-    const elapsed = now - blockStart;
+    // `now` is the last tick, which can predate this block's start.
+    const elapsed = Math.max(0, now - blockStart);
     const timeUp = elapsed >= block.minutes * 60000;
     const repsDone = block.reps !== undefined && res.reps >= block.reps;
     const Icon = ICON[block.kind];
@@ -131,7 +140,7 @@ export function CurriculumSession() {
             <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
               <Icon size={14} className="text-accent" /> {index + 1}/{plan.length} · {block.title}
             </p>
-            <button type="button" onClick={() => setIndex(plan.length)} className="text-muted-2 hover:text-danger" aria-label="End session">
+            <button type="button" onClick={end} className="hit text-muted-2 hover:text-danger" aria-label="End session" title="End session">
               <Square size={13} />
             </button>
           </div>

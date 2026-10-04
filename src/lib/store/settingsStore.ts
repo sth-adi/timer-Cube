@@ -242,6 +242,15 @@ export const useSettingsStore = create<SettingsState>()(
   ),
 );
 
+// Another tab changed the settings: take its blob rather than keep ours, or the
+// next change here would write the whole stale state back over it. Browsers fire
+// `storage` only in the *other* tabs, so this never reacts to our own writes.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === SETTINGS_KEY) void useSettingsStore.persist.rehydrate();
+  });
+}
+
 /**
  * First-run FX level for low-power devices (see lib/utils/deviceTier.ts for the
  * heuristic). The store's default stays "insane" so the server render and the

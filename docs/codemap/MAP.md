@@ -328,3 +328,12 @@ Appended (not regenerated). 8 new files, 44 new import edges; all are in graph.j
 - Analysis caches: `analysis/idleWarm` + `useMistakeHabits` (per-solve mistake reports), `analysis/historyStats`; Mistake Radar costs use the union of spans; `analytics/sumOfBest` and `phaseBests` skip solves marked `estimated` (repaired or settle-corrected).
 - Sheets/modals: `components/recap/SolveActionBar` (+2/DNF/note/share/delete in the recap), `hooks/useShareSolve`, `xray/xraySelection` (`/xray?solve=<id>`); `lib/gyro/gyroLog` keeps solve-time gyro samples when thinning.
 - Tests: `analysis/realSolves.golden.test.ts` (+ `__fixtures__/realSmartSolves.json`, `__snapshots__`) locks recap rows, F2L cases and turn counts for 14 recorded smart solves. Browser smoke checks live in `e2e/` (`npm run e2e` against a dev server on :3110; `e2e/lib.mjs` has the helpers and the smart-cube simulator hook). `RecapActionBar` must stay the last child of the SmartCubeTimer root so it stays pinned.
+
+### Additions — 2026-10-04 (scanner round 4: trainer, stats, app shell)
+Appended (not regenerated).
+- src/app/error.tsx [0] {Other} — Route error boundary: renders ErrorScreen with retry. (default)
+- src/app/global-error.tsx [0] {Other} — Root error boundary with its own html/body, styles and saved-theme script. (default)
+- src/components/chrome/ErrorScreen.tsx [0] {Other} — Shared crash screen: Try again, back to timer, 'solves are safe' note, download backup. (ErrorScreen)
+- src/hooks/useStatsSolves.ts [0] {Stats} — The Stats-scope solves and the same list without event-tagged solves, memoized; shared by InsightsPanel and ShareCardButton. (useStatsSolves)
+- src/lib/theme/paintScript.ts [0] {Other} — Inline <head> script string that applies the saved theme and FX level before first paint. (PAINT_SCRIPT)
+- Streaks: `stats/stats.ts` `streaksFromDayKeys` numbers days from the YYYY-MM-DD key (not UTC-day indexes). Daily challenge: `analysis/dailyChallenge` `activeStreak` hides a broken streak. Theme/FX attributes are painted by the inline script before hydration; settings re-sync across tabs via a `storage` listener.

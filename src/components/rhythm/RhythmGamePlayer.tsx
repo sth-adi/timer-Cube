@@ -92,6 +92,8 @@ export function RhythmGamePlayer({ reconstruction, moveTimestamps }: RhythmGameP
     if (phase !== "playing") return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.repeat) return;
+      // Browser/OS shortcuts (Ctrl+R, F5, Tab, Escape…) are not notes: leave them alone.
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key === "Tab" || e.key === "Escape" || /^F\d{1,2}$/.test(e.key)) return;
       e.preventDefault();
       handleHit();
     }

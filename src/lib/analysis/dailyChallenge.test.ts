@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateKeyFor, nextStreak } from "./dailyChallenge";
+import { activeStreak, dateKeyFor, nextStreak } from "./dailyChallenge";
 
 describe("dailyChallenge", () => {
   describe("nextStreak", () => {
@@ -20,6 +20,21 @@ describe("dailyChallenge", () => {
 
     it("is a no-op if today was already completed (idempotent)", () => {
       expect(nextStreak(today, 5, today, yesterday)).toBe(5);
+    });
+  });
+
+  describe("activeStreak", () => {
+    const today = "2024-5-10";
+    const yesterday = "2024-5-9";
+
+    it("keeps the streak when completed today or yesterday", () => {
+      expect(activeStreak(today, 5, today, yesterday)).toBe(5);
+      expect(activeStreak(yesterday, 5, today, yesterday)).toBe(5);
+    });
+
+    it("is 0 once a day has been missed, or when never completed", () => {
+      expect(activeStreak("2024-5-1", 5, today, yesterday)).toBe(0);
+      expect(activeStreak(null, 0, today, yesterday)).toBe(0);
     });
   });
 

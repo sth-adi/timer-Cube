@@ -40,7 +40,7 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: T
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            aria-current={isActive}
+            aria-current={isActive ? "page" : undefined}
             data-active={isActive}
             className={cn(
               "fx-dock-item flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10.5px] font-medium transition-colors",

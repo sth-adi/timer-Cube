@@ -168,13 +168,44 @@ function dayKey(epochMs: number): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Calendar-day number of a YYYY-MM-DD key — timezone- and DST-proof (a pure date, never a local midnight instant). */
+function dayNumber(key: string): number {
+  const [y, m, d] = key.split("-").map(Number);
+  return Math.round(Date.UTC(y, m - 1, d) / 86400000);
+}
+
+/**
+ * Streaks over local-calendar day keys (YYYY-MM-DD, any order, may repeat).
+ * The current streak counts back from today or yesterday (todayKey); a longer
+ * gap means 0.
+ */
+export function streaksFromDayKeys(dayKeys: readonly string[], todayKey: string): { currentStreak: number; longestStreak: number } {
+  const nums = [...new Set(dayKeys)].map(dayNumber).sort((a, b) => a - b);
+  let longestStreak = 0;
+  let running = 0;
+  for (let i = 0; i < nums.length; i++) {
+    running = i > 0 && nums[i] === nums[i - 1] + 1 ? running + 1 : 1;
+    longestStreak = Math.max(longestStreak, running);
+  }
+  let currentStreak = 0;
+  if (nums.length > 0) {
+    const today = dayNumber(todayKey);
+    const last = nums[nums.length - 1];
+    if (last === today || last === today - 1) {
+      currentStreak = 1;
+      for (let i = nums.length - 1; i > 0 && nums[i] === nums[i - 1] + 1; i--) currentStreak += 1;
+    }
+  }
+  return { currentStreak, longestStreak };
+}
+
 /**
  * Groups solves by local calendar day and derives streak info (consecutive
  * days with at least one solve). "Current streak" counts backward from
  * today or yesterday — a day missed further back doesn't retroactively
  * break it, but a gap since yesterday does.
  */
-export function computeActivity(solves: Solve[]): ActivitySummary {
+export function computeActivity(solves: Solve[], now: number = Date.now()): ActivitySummary {
   const byDate = new Map<string, number>();
   for (const solve of solves) {
     const key = dayKey(solve.date);
@@ -185,35 +216,10 @@ export function computeActivity(solves: Solve[]): ActivitySummary {
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  let longestStreak = 0;
-  let running = 0;
-  let prevDayNum: number | null = null;
-  for (const { date } of days) {
-    const dayNum = Math.floor(new Date(`${date}T00:00:00`).getTime() / oneDayMs);
-    if (prevDayNum !== null && dayNum === prevDayNum + 1) {
-      running += 1;
-    } else {
-      running = 1;
-    }
-    longestStreak = Math.max(longestStreak, running);
-    prevDayNum = dayNum;
-  }
-
-  let currentStreak = 0;
-  if (days.length > 0) {
-    const todayNum = Math.floor(Date.now() / oneDayMs);
-    const lastDayNum = Math.floor(new Date(`${days[days.length - 1].date}T00:00:00`).getTime() / oneDayMs);
-    if (lastDayNum === todayNum || lastDayNum === todayNum - 1) {
-      currentStreak = 1;
-      for (let i = days.length - 1; i > 0; i--) {
-        const cur = Math.floor(new Date(`${days[i].date}T00:00:00`).getTime() / oneDayMs);
-        const prev = Math.floor(new Date(`${days[i - 1].date}T00:00:00`).getTime() / oneDayMs);
-        if (cur === prev + 1) currentStreak += 1;
-        else break;
-      }
-    }
-  }
+  const { currentStreak, longestStreak } = streaksFromDayKeys(
+    days.map((d) => d.date),
+    dayKey(now),
+  );
 
   return { days, byDate, currentStreak, longestStreak };
 }

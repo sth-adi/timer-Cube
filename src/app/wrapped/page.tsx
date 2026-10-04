@@ -7,6 +7,7 @@ import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { CanvasRecorder, themeAccent } from "@/components/reel/CanvasRecorder";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { achievementSolves } from "@/lib/stats/stats";
 import { SLIDE_MS, buildWrapped, wrappedSlides, type WrappedPeriod } from "@/lib/wrapped/wrapped";
 import { renderWrappedFrame } from "@/lib/wrapped/renderWrapped";
 import type { SoundCue } from "@/lib/reel/highlights";
@@ -17,7 +18,10 @@ import { cn } from "@/lib/utils/cn";
  * or record it as a video with a soundtrack, ready to share.
  */
 export default function WrappedPage() {
-  const allSolves = useSessionStore((s) => s.allSolves);
+  const everySolve = useSessionStore((s) => s.allSolves);
+  const sessions = useSessionStore((s) => s.sessions);
+  // The story is about your 3x3 cubing: leave out other puzzles and OH/feet/BLD-tagged solves.
+  const allSolves = useMemo(() => achievementSolves(everySolve, sessions), [everySolve, sessions]);
   const [period, setPeriod] = useState<WrappedPeriod>("month");
   const [nowTs] = useState(() => Date.now());
 

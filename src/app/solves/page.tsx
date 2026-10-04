@@ -282,10 +282,10 @@ export default function SolvesPage() {
               <span className="mr-1 text-xs font-medium text-foreground" data-testid="bulk-count">
                 {livePicked.length} selected
               </span>
-              <button type="button" onClick={() => setPicked(new Set(shownIds))} className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
+              <button type="button" onClick={() => setPicked(new Set(shownIds))} className="inline-flex items-center pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
                 All shown ({shownIds.length})
               </button>
-              <button type="button" onClick={() => setPicked(new Set())} className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
+              <button type="button" onClick={() => setPicked(new Set())} className="inline-flex items-center pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
                 None
               </button>
               <span className="mx-0.5 h-4 w-px bg-border" />
@@ -295,7 +295,7 @@ export default function SolvesPage() {
                   type="button"
                   disabled={livePicked.length === 0}
                   onClick={() => void updateSolves(livePicked, { penalty: p })}
-                  className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-bg-panel disabled:opacity-40"
+                  className="inline-flex items-center pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-bg-panel disabled:opacity-40"
                 >
                   {p === "plus2" ? "+2" : p === "dnf" ? "DNF" : "Clear penalty"}
                 </button>
@@ -308,7 +308,7 @@ export default function SolvesPage() {
                   const v = e.target.value;
                   if (v) void updateSolves(livePicked, { event: v === "normal" ? null : (v as EventTag) });
                 }}
-                className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground disabled:opacity-40"
+                className="pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[16px] font-medium text-foreground disabled:opacity-40 sm:text-[11px]"
               >
                 <option value="">Tag as…</option>
                 <option value="normal">Normal</option>
@@ -325,7 +325,7 @@ export default function SolvesPage() {
                   void removeSolves(livePicked);
                   setPicked(new Set());
                 }}
-                className="ml-auto flex items-center gap-1 rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-semibold text-danger disabled:opacity-40"
+                className="ml-auto flex items-center gap-1 pointer-coarse:min-h-10 rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-semibold text-danger disabled:opacity-40"
                 data-testid="bulk-delete"
               >
                 <Trash2 size={11} /> Delete
@@ -373,7 +373,7 @@ function PillSelect({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
-        "max-w-[11rem] appearance-none truncate rounded-full border-0 px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-accent",
+        "max-w-[11rem] appearance-none truncate rounded-full border-0 px-3 py-1.5 text-[16px] font-medium sm:text-xs pointer-coarse:min-h-10 transition-colors focus:outline-none focus:ring-1 focus:ring-accent",
         active ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
       )}
     >

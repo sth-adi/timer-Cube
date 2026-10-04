@@ -105,4 +105,28 @@ describe("representative tile correctness", () => {
     const total = shares.reduce((a, b) => a + b, 0);
     expect(total).toBeCloseTo(100, 0);
   });
+
+  it("current aoN is the newest window only: a DNF window shows DNF, not the previous average", () => {
+    const solves = [10000, 11000, 12000, 13000].map((t) => makeSolve({ timeMs: t }));
+    solves.push(makeSolve({ penalty: "dnf" }), makeSolve({ penalty: "dnf" }));
+    expect(find("ao-current-5").compute(solves, solves)?.value).toBe("DNF");
+    expect(find("ao-current-5").compute(solves.slice(0, 5), solves.slice(0, 5))?.value).not.toBe("DNF");
+  });
+
+  it("current/best aoN are null until a full window exists", () => {
+    const solves = [10000, 11000, 12000].map((t) => makeSolve({ timeMs: t }));
+    expect(find("ao-current-5").compute(solves, solves)).toBeNull();
+    expect(find("ao-best-5").compute(solves, solves)).toBeNull();
+    expect(find("ao-current-3").compute(solves, solves)?.value).toBe("11.00");
+  });
+
+  it("consistency never goes below 0%", () => {
+    const solves = [1000, 1000, 1000, 60000].map((t) => makeSolve({ timeMs: t }));
+    expect(find("consistency-index").compute(solves, solves)?.value).toBe("0.0%");
+  });
+
+  it("PLL phase duration ignores a +2 penalty", () => {
+    const solves = [makeSolve({ timeMs: 10000, penalty: "plus2", crossMs: 2000, splits: [2000, 5000, 8000] })];
+    expect(find("phase-avg-pll").compute(solves, solves)?.value).toBe("2.00");
+  });
 });

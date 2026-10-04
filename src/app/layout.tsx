@@ -7,6 +7,7 @@ import { UndoToast } from "@/components/chrome/UndoToast";
 import { ClientEnv } from "@/components/chrome/ClientEnv";
 import { UpdateToast } from "@/components/chrome/UpdateToast";
 import { MacPromptDialog } from "@/components/smartcube/MacPromptDialog";
+import { PAINT_SETTINGS_SCRIPT } from "@/lib/theme/paintScript";
 import { AccountDataPrompt } from "@/components/chrome/AccountDataPrompt";
 
 const geistSans = Geist({
@@ -38,7 +39,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PAINT_SETTINGS_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <UsageTracker />
         {children}

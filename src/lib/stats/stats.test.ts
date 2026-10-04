@@ -5,6 +5,7 @@ import {
   averageTrend,
   computeAchievements,
   computeActivity,
+  streaksFromDayKeys,
   computeHistogram,
   computeHourOfDay,
   computePBHistory,
@@ -252,6 +253,24 @@ describe("computeActivity", () => {
     const activity = computeActivity(solves);
     expect(activity.currentStreak).toBe(0);
     expect(activity.longestStreak).toBe(2);
+  });
+});
+
+describe("streaksFromDayKeys", () => {
+  it("counts consecutive calendar days across a DST change (29 Mar)", () => {
+    const keys = ["2026-03-26", "2026-03-27", "2026-03-28", "2026-03-29", "2026-03-30", "2026-03-31"];
+    expect(streaksFromDayKeys(keys, "2026-03-31")).toEqual({ currentStreak: 6, longestStreak: 6 });
+  });
+
+  it("keeps a streak alive when the last solve was yesterday, and drops it after a gap", () => {
+    expect(streaksFromDayKeys(["2026-10-02", "2026-10-03"], "2026-10-04").currentStreak).toBe(2);
+    expect(streaksFromDayKeys(["2026-10-01", "2026-10-02"], "2026-10-04").currentStreak).toBe(0);
+  });
+
+  it("handles month/year boundaries, duplicates and unordered input", () => {
+    const keys = ["2027-01-01", "2026-12-31", "2026-12-31", "2026-12-30", "2026-12-20"];
+    expect(streaksFromDayKeys(keys, "2027-01-01")).toEqual({ currentStreak: 3, longestStreak: 3 });
+    expect(streaksFromDayKeys([], "2027-01-01")).toEqual({ currentStreak: 0, longestStreak: 0 });
   });
 });
 

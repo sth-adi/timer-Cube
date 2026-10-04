@@ -8,7 +8,7 @@ import { YourAlgs } from "@/components/algorithms/YourAlgs";
 import { analyzableSolves } from "@/lib/analytics/solveMetrics";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
-import { effectiveAlg, myAlgKey, solvesCase } from "@/lib/algorithms/myAlgs";
+import { alignToCase, effectiveAlg, myAlgKey } from "@/lib/algorithms/myAlgs";
 import { PLL_CASES } from "@/lib/algorithms/pllData";
 import { OLL_CASES } from "@/lib/algorithms/ollData";
 import { invertAlg } from "@/lib/algorithms/algUtils";
@@ -22,12 +22,14 @@ function CaseRow({ c }: { c: AlgCase }) {
   const [bad, setBad] = useState(false);
 
   const applyAlg = (alg: string) => {
-    if (!solvesCase(c.group, c.alg, alg)) {
+    // Written from the book's angle: an algorithm that only solves the case after a pre-AUF gets that AUF added.
+    const aligned = alignToCase(c.group, c.alg, alg.trim());
+    if (!aligned) {
       setBad(true);
       return;
     }
     setBad(false);
-    choose(key, alg.trim());
+    choose(key, aligned);
     setTyped("");
   };
 

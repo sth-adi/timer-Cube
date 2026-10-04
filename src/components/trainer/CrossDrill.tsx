@@ -87,6 +87,16 @@ export function CrossDrill() {
           {loading && !scramble ? "Generating scramble…" : scramble}
         </p>
 
+        {!scramble && !loading && errors.length > 0 && (
+          <button
+            type="button"
+            onClick={onNext}
+            className="tap-target mx-auto mb-3 gap-1.5 rounded-lg bg-accent px-4 text-xs font-semibold text-accent-fg"
+          >
+            <RefreshCw size={13} /> Retry
+          </button>
+        )}
+
         {scramble && (
           <div className="mx-auto mb-3 w-full max-w-[13rem]">
             <ScrambleNet scramble={scramble} className="w-full" />
@@ -101,7 +111,7 @@ export function CrossDrill() {
             onKeyDown={(e) => {
               if (e.key !== "Enter") return;
               if (last) onNext();
-              else void submit();
+              else if (!grading && !loading && scramble && attempt.trim()) void submit();
             }}
             placeholder="D R' F D2 …"
             className="min-w-0 flex-1 rounded-lg bg-bg-panel-2 px-2.5 py-2 font-mono text-sm outline-none focus:ring-1 focus:ring-accent"
@@ -118,7 +128,7 @@ export function CrossDrill() {
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={grading || loading || !scramble}
+              disabled={grading || loading || !scramble || !attempt.trim()}
               className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-fg disabled:opacity-40"
             >
               {grading && <Loader2 size={13} className="animate-spin" />}

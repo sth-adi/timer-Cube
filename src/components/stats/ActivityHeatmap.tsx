@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import { Flame } from "lucide-react";
 import type { Solve } from "@/types";
 import { computeActivity } from "@/lib/stats/stats";
+import { useNow } from "@/hooks/useNow";
 
 const WEEKS = 18;
 const CELL = 11;
 const GAP = 3;
 
-function isoDateDaysAgo(days: number): string {
-  const d = new Date();
+function isoDateDaysAgo(days: number, now: number): string {
+  const d = new Date(now);
   d.setDate(d.getDate() - days);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -28,19 +29,25 @@ function levelFor(count: number): number {
 
 const LEVEL_COLOR = ["var(--bg-panel-2)", "color-mix(in srgb, var(--accent) 30%, var(--bg-panel-2))", "color-mix(in srgb, var(--accent) 55%, var(--bg-panel-2))", "color-mix(in srgb, var(--accent) 78%, var(--bg-panel-2))", "var(--accent)"];
 
+function cellText(cell: { date: string; count: number }): string {
+  return `${cell.count} solve${cell.count === 1 ? "" : "s"} on ${cell.date}`;
+}
+
 export function ActivityHeatmap({ solves }: { solves: Solve[] }) {
   const [hover, setHover] = useState<{ date: string; count: number } | null>(null);
-  const activity = useMemo(() => computeActivity(solves), [solves]);
+  // Ticks, so the streak and the grid roll over at midnight without a reload.
+  const now = useNow(60_000);
+  const activity = useMemo(() => computeActivity(solves, now), [solves, now]);
 
   const totalDays = WEEKS * 7;
   const cells = useMemo(() => {
     const list: { date: string; count: number }[] = [];
     for (let i = totalDays - 1; i >= 0; i--) {
-      const date = isoDateDaysAgo(i);
+      const date = isoDateDaysAgo(i, now);
       list.push({ date, count: activity.byDate.get(date) ?? 0 });
     }
     return list;
-  }, [activity, totalDays]);
+  }, [activity, totalDays, now]);
 
   const columns = Math.ceil(cells.length / 7);
 
@@ -71,11 +78,16 @@ export function ActivityHeatmap({ solves }: { solves: Solve[] }) {
           }}
           onMouseLeave={() => setHover(null)}
         >
-          {cells.map((cell) => (
+          {cells.map((cell) => {
+            const text = cellText(cell);
+            return (
             <div
               key={cell.date}
-              role="presentation"
-              onMouseEnter={() => setHover(cell)}
+              role="img"
+              aria-label={text}
+              title={text}
+              onPointerEnter={() => setHover(cell)}
+              onClick={() => setHover(cell)}
               style={{
                 width: CELL,
                 height: CELL,
@@ -83,12 +95,13 @@ export function ActivityHeatmap({ solves }: { solves: Solve[] }) {
                 background: LEVEL_COLOR[levelFor(cell.count)],
               }}
             />
-          ))}
+            );
+          })}
         </div>
       </div>
 
       <p className="mt-2 h-4 text-[11px] text-muted-2">
-        {hover ? `${hover.count} solve${hover.count === 1 ? "" : "s"} on ${hover.date}` : ""}
+        {hover ? cellText(hover) : ""}
       </p>
     </div>
   );

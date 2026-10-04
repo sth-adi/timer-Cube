@@ -68,14 +68,17 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
   const [rightId, setRightId] = useState(
     () => sessions.find((s) => s.id !== activeSessionId)?.id ?? sessions[0]?.id ?? "",
   );
-  const [leftStats, setLeftStats] = useState<SessionStats | null>(null);
-  const [rightStats, setRightStats] = useState<SessionStats | null>(null);
+  // Each result remembers which session it was computed for, so a stale one never sits under a newly picked name.
+  const [leftResult, setLeftResult] = useState<{ id: string; stats: SessionStats } | null>(null);
+  const [rightResult, setRightResult] = useState<{ id: string; stats: SessionStats } | null>(null);
+  const leftStats = leftResult?.id === leftId ? leftResult.stats : null;
+  const rightStats = rightResult?.id === rightId ? rightResult.stats : null;
 
   useEffect(() => {
     let cancelled = false;
     if (!leftId) return;
     void getSessionSolves(leftId).then((solves) => {
-      if (!cancelled) setLeftStats(computeSessionStats(normalSolves(solves)));
+      if (!cancelled) setLeftResult({ id: leftId, stats: computeSessionStats(normalSolves(solves)) });
     });
     return () => {
       cancelled = true;
@@ -86,7 +89,7 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
     let cancelled = false;
     if (!rightId) return;
     void getSessionSolves(rightId).then((solves) => {
-      if (!cancelled) setRightStats(computeSessionStats(normalSolves(solves)));
+      if (!cancelled) setRightResult({ id: rightId, stats: computeSessionStats(normalSolves(solves)) });
     });
     return () => {
       cancelled = true;
@@ -95,6 +98,8 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
 
   const leftName = useMemo(() => sessions.find((s) => s.id === leftId)?.name ?? "", [sessions, leftId]);
   const rightName = useMemo(() => sessions.find((s) => s.id === rightId)?.name ?? "", [sessions, rightId]);
+  // A 2x2 session next to a 3x3 one isn't a fair race, so say so and don't crown a winner.
+  const sameEvent = sessions.find((s) => s.id === leftId)?.event === sessions.find((s) => s.id === rightId)?.event;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
@@ -137,6 +142,9 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
           <p className="py-6 text-center text-xs text-muted">Loading…</p>
         ) : (
           <div className="space-y-1">
+            {!sameEvent && (
+              <p className="pb-1 text-[11px] leading-snug text-muted">These sessions are different events, so the times aren&apos;t directly comparable.</p>
+            )}
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 pb-1 text-[11px] uppercase tracking-wide text-muted-2">
               <span className="truncate text-left">{leftName}</span>
               <span />
@@ -148,8 +156,8 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
               const dnfFlag = `${row.key}Dnf` as keyof SessionStats;
               const lDnf = leftStats[dnfFlag] === true;
               const rDnf = rightStats[dnfFlag] === true;
-              const rightBetter = l !== null && r !== null && l !== r && (row.lowerIsBetter ? r < l : r > l);
-              const leftBetter = l !== null && r !== null && l !== r && (row.lowerIsBetter ? l < r : l > r);
+              const rightBetter = sameEvent && l !== null && r !== null && l !== r && (row.lowerIsBetter ? r < l : r > l);
+              const leftBetter = sameEvent && l !== null && r !== null && l !== r && (row.lowerIsBetter ? l < r : l > r);
               return (
                 <div key={row.key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 py-1.5 text-sm">
                   <span

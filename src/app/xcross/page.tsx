@@ -110,6 +110,14 @@ function Hunter() {
   const optionsRef = useRef<XCrossSolution[]>([]);
   const movesRef = useRef<string[]>([]);
   const firstMoveRef = useRef(0);
+  // False once the page is left, so an in-flight hunt stops instead of generating scrambles forever.
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
   const setP = (p: Phase) => {
     phaseRef.current = p;
     setPhase(p);
@@ -142,6 +150,7 @@ function Hunter() {
       setTries(i);
       const s = await getCubeEngineClient().generateScramble();
       await new Promise((r) => window.setTimeout(r, 0));
+      if (!aliveRef.current) return;
       const options = xcrossOptions(s, maxDepth);
       // Too short to be worth an inspection (or already done) — keep looking.
       if (options.length > 0 && options[0].moves.length >= 4) {

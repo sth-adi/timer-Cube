@@ -27,6 +27,17 @@ interface OfflineState {
 export const useOfflineStore = create<OfflineState>(() => ({ online: true, ready: false, available: false, warming: false, warmedAt: null, updateReady: false }));
 
 /** A save that never reports back (worker killed, connection lost) stops showing as in progress after this. */
+/** The bits of navigator.connection (Network Information API, not in lib.dom) used to decide on a background save. */
+type ConnectionInfo = { saveData?: boolean; type?: string };
+
+/**
+ * True when the automatic background save should be skipped: data-saver is on, or the device is on
+ * mobile data (the whole app is several MB). Only the automatic saves ask; "Save now" always runs.
+ */
+export function skipAutoWarm(conn: ConnectionInfo | undefined): boolean {
+  return !!conn?.saveData || conn?.type === "cellular";
+}
+
 const WARM_TIMEOUT_MS = 2 * 60_000;
 let warmTimer: number | undefined;
 
@@ -114,8 +125,7 @@ export function initOffline(): void {
       if (hadController) {
         useOfflineStore.setState({ updateReady: true });
         // The new worker started with empty caches: save the pages again rather than wait for a reload.
-        const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
-        if (!saveData) window.setTimeout(() => void warmNow(), 2000);
+        if (!skipAutoWarm((navigator as Navigator & { connection?: ConnectionInfo }).connection)) window.setTimeout(() => void warmNow(), 2000);
       }
       return;
     }
@@ -135,9 +145,9 @@ export function initOffline(): void {
     .register("/sw.js")
     .then(() => navigator.serviceWorker.ready)
     .then((reg) => {
-      const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+      const conn = (navigator as Navigator & { connection?: ConnectionInfo }).connection;
       const warmIfDue = async () => {
-        if (!navigator.onLine || conn?.saveData) return;
+        if (!navigator.onLine || skipAutoWarm(conn)) return;
         if (Date.now() - readWarmedAt() < REWARM_AFTER_MS && !(await savedCopiesGone())) return;
         reg.active?.postMessage({ type: "warm", routes: OFFLINE_ROUTES, extras: OFFLINE_EXTRAS });
       };

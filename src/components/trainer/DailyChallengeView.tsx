@@ -9,7 +9,7 @@ import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { displayUsername } from "@/lib/auth/username";
 import { DAILY_CHALLENGE_LENGTH, useDailyChallengeStore } from "@/lib/store/dailyChallengeStore";
-import { todayDateKey } from "@/lib/analysis/dailyChallenge";
+import { activeStreak, todayDateKey } from "@/lib/analysis/dailyChallenge";
 import { fetchDailyLeaderboard, submitDailyChallengeResult, type DailyLeaderboard } from "@/lib/social/leaderboard";
 import { averageOfN } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
@@ -25,7 +25,10 @@ export function DailyChallengeView() {
   const holdToStartMs = useSettingsStore((s) => s.holdToStartMs);
   const scrambles = useDailyChallengeStore((s) => s.scrambles);
   const times = useDailyChallengeStore((s) => s.times);
-  const streak = useDailyChallengeStore((s) => s.streak);
+  const storedStreak = useDailyChallengeStore((s) => s.streak);
+  const lastCompletedDateKey = useDailyChallengeStore((s) => s.lastCompletedDateKey);
+  const dateKey = useDailyChallengeStore((s) => s.dateKey);
+  const error = useDailyChallengeStore((s) => s.error);
   const loading = useDailyChallengeStore((s) => s.loading);
   const ensureToday = useDailyChallengeStore((s) => s.ensureToday);
   const recordTime = useDailyChallengeStore((s) => s.recordTime);
@@ -33,6 +36,10 @@ export function DailyChallengeView() {
   useEffect(() => {
     void ensureToday();
   }, [ensureToday]);
+
+  // The stored streak only resets when the next challenge is completed, so a
+  // missed day must not still read as a live streak.
+  const streak = activeStreak(lastCompletedDateKey, storedStreak);
 
   const currentIndex = times.findIndex((t) => t === null);
   const done = scrambles.length === DAILY_CHALLENGE_LENGTH && currentIndex === -1;
@@ -61,14 +68,31 @@ export function DailyChallengeView() {
   const [leaderboard, setLeaderboard] = useState<DailyLeaderboard | null>(null);
   useEffect(() => {
     if (ao5 === null || !user) return;
-    const today = todayDateKey();
-    if (submittedRef.current === today) return;
-    submittedRef.current = today;
+    // On the first render of a new day the store still holds yesterday's
+    // finished `times`; only submit once it holds today's.
+    if (dateKey !== todayDateKey()) return;
+    if (submittedRef.current === dateKey) return;
+    submittedRef.current = dateKey;
     void (async () => {
-      await submitDailyChallengeResult(user.id, displayUsername(user), today, ao5);
-      setLeaderboard(await fetchDailyLeaderboard(today, user.id));
+      await submitDailyChallengeResult(user.id, displayUsername(user), dateKey, ao5);
+      setLeaderboard(await fetchDailyLeaderboard(dateKey, user.id));
     })();
-  }, [ao5, user]);
+  }, [ao5, user, dateKey]);
+
+  if (error && !loading) {
+    return (
+      <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
+        <p className="text-sm text-danger">Couldn&apos;t prepare today&apos;s challenge.</p>
+        <button
+          type="button"
+          onClick={() => void ensureToday()}
+          className="tap-target rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (loading || scrambles.length < DAILY_CHALLENGE_LENGTH) {
     return (

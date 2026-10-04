@@ -81,6 +81,11 @@ const SolveRow = memo(function SolveRow({
   const saveComment = () => {
     if (commentDraft !== (solve.comment ?? "")) setComment(solve.id, commentDraft);
   };
+  // Every way out of the popup (Esc, backdrop, X, buttons) goes through here so a note typed but not yet blurred isn't lost.
+  const closeSheet = () => {
+    saveComment();
+    setOpen(false);
+  };
 
   const { shareable, state: shareState, share: onShare } = useShareSolve(solve);
   // A solve with a saved smart-cube breakdown opens its recap on one tap; the generic popup is for the rest (and "More").
@@ -115,7 +120,7 @@ const SolveRow = memo(function SolveRow({
             onClick={() => void removeSolve(solve.id)}
             aria-label={`Delete solve ${index}`}
             title="Delete (undo from the toast)"
-            className="ml-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-2 transition-colors hover:text-danger active:text-danger"
+            className="hit-y ml-0.5 grid h-9 w-11 shrink-0 place-items-center rounded-full text-muted-2 transition-colors hover:text-danger active:text-danger"
           >
             <Trash2 size={14} />
           </button>
@@ -125,13 +130,13 @@ const SolveRow = memo(function SolveRow({
           animated ancestor would trap a fixed overlay. A bottom sheet on phones, a centred card from sm up. */}
       {open &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
-            <SolveSheet label={`Solve ${index}`} onClose={() => setOpen(false)}>
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={closeSheet}>
+            <SolveSheet label={`Solve ${index}`} onClose={closeSheet}>
               <div className="mb-1.5 flex items-center justify-between">
                 <p className="tabular-timer text-lg font-semibold text-foreground">
                   #{index} · {formatResult(solveFinalMs(solve), solve.penalty)}
                 </p>
-                <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="tap-target -mr-2 text-muted hover:text-foreground">
+                <button type="button" onClick={closeSheet} aria-label="Close" className="tap-target -mr-2 text-muted hover:text-foreground">
                   <X size={16} />
                 </button>
               </div>
@@ -139,7 +144,7 @@ const SolveRow = memo(function SolveRow({
                 <button
                   type="button"
                   onClick={() => {
-                    setOpen(false);
+                    closeSheet();
                     setRecapOpen(true);
                   }}
                   className="mb-2 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2 py-1.5 text-xs font-semibold text-accent-fg"
@@ -188,7 +193,7 @@ const SolveRow = memo(function SolveRow({
                   type="button"
                   onClick={() => {
                     requestAnalysis(solve.scramble, solveFinalMs(solve), solve.id, solve.reconstruction, solve.moveTimestamps);
-                    setOpen(false);
+                    closeSheet();
                     // The shell that owns the Analyze tab only lives on "/" — the
                     // solve list is also embedded on /solves, so a click there
                     // needs to actually navigate, not just bump the store (which
@@ -351,19 +356,19 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
           }}
           placeholder="1234, 12.34 or 1:02.34"
           className={cn(
-            "flex-1 rounded-md bg-bg-panel-2 border px-2 py-1 text-xs tabular-timer text-foreground placeholder:text-muted-2 focus:outline-none",
+            "min-h-10 min-w-0 flex-1 rounded-md bg-bg-panel-2 border px-2 py-1 text-[16px] tabular-timer sm:min-h-0 sm:text-xs text-foreground placeholder:text-muted-2 focus:outline-none",
             error !== null ? "border-danger" : "border-border focus:border-accent",
           )}
         />
         <button
           type="button"
           onClick={() => void submit()}
-          className="rounded-md bg-accent-soft px-2 py-1 text-xs font-medium text-accent hover:brightness-110"
+          className="min-h-10 rounded-md bg-accent-soft px-3 py-1 text-xs font-medium text-accent hover:brightness-110 sm:min-h-0 sm:px-2"
         >
           Add
         </button>
         {recent.length > 0 && (
-          <button type="button" onClick={onDone} className="px-1 text-xs text-muted-2 hover:text-muted">
+          <button type="button" onClick={onDone} className="min-h-10 px-2 text-xs text-muted-2 hover:text-muted sm:min-h-0 sm:px-1">
             Done
           </button>
         )}

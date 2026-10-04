@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Undo2 } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { isModalOpen } from "@/lib/store/modalBus";
 
 const SHOW_MS = 8000;
 
@@ -30,6 +31,8 @@ export function UndoToast() {
     const timer = setTimeout(dismiss, SHOW_MS);
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !inField(e.target)) {
+        // With a dialog open, Ctrl+Z isn't about the deletion behind it.
+        if (isModalOpen()) return;
         e.preventDefault();
         void undo();
       }
@@ -49,7 +52,7 @@ export function UndoToast() {
     <div className="pointer-events-none fixed inset-x-0 z-[70] flex justify-center px-4" style={{ bottom: "calc(var(--nav-height) + var(--safe-bottom) + 64px)" }}>
       <div role="status" className="card pointer-events-auto flex items-center gap-3 rounded-full px-4 py-2 text-sm shadow-lg" data-testid="undo-toast">
         <span className="text-foreground">{n === 1 ? "Solve deleted" : `${n} solves deleted`}</span>
-        <button type="button" onClick={() => void undo()} className="flex items-center gap-1 font-semibold text-accent hover:underline" data-testid="undo-button">
+        <button type="button" onClick={() => void undo()} className="hit-y flex items-center gap-1 font-semibold text-accent hover:underline" data-testid="undo-button">
           <Undo2 size={14} /> Undo{depth > 1 ? ` (${depth})` : ""}
         </button>
       </div>

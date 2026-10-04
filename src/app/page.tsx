@@ -246,7 +246,7 @@ function HomeInner() {
                 onClick={() => setTimerMode(m)}
                 aria-pressed={timerMode === m}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  "inline-flex items-center pointer-coarse:min-h-10 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
                   timerMode === m ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-muted",
                 )}
               >
