@@ -1,6 +1,7 @@
 "use client";
 
-const INSPECTION_MS = 15_000;
+import { INSPECTION_MS } from "@/lib/timer/timerMachine";
+import { INSPECTION_DANGER_AT_MS, INSPECTION_WARN_AT_MS } from "./inspectionTone";
 
 /**
  * A ring around the edge of the viewport that drains as WCA inspection runs
@@ -13,7 +14,7 @@ export function InspectionRing({ remainingMs, active }: { remainingMs: number; a
 
   const progress = Math.max(0, Math.min(1, remainingMs / INSPECTION_MS));
   const elapsed = INSPECTION_MS - remainingMs;
-  const color = elapsed >= 12_000 ? "var(--danger)" : elapsed >= 8_000 ? "var(--warning)" : "var(--accent)";
+  const color = elapsed >= INSPECTION_DANGER_AT_MS ? "var(--danger)" : elapsed >= INSPECTION_WARN_AT_MS ? "var(--warning)" : "var(--accent)";
 
   return (
     <svg

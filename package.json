@@ -12,7 +12,8 @@
     "gen:cross-table": "node scripts/gen-cross-table.cjs",
     "gen:piece-tables": "node scripts/gen-piece-tables.cjs",
     "gen:ll-cases": "node scripts/gen-ll-cases.cjs",
-    "codemap": "node scripts/codemap.mjs"
+    "codemap": "node scripts/codemap.mjs",
+    "e2e": "node e2e/smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "playwright-core": "^1.56.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.0"

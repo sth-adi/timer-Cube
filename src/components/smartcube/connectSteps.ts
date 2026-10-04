@@ -62,5 +62,5 @@ export function gyroStatus(gyroActive: boolean, protocolName: string | null, cal
 export const GYRO_STATUS_LABEL: Record<GyroStatus, string> = {
   calibrated: "Calibrated",
   uncalibrated: "Not calibrated",
-  none: "No gyro on this cube",
+  none: "No gyro signal",
 };

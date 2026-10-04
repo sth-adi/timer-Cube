@@ -1487,8 +1487,6 @@ export function SmartCubeTimer() {
         </div>
       )}
 
-      {finished && <RecapActionBar className={RECAP_BAR} onReplay={() => setShowReplay(true)} onAnalyze={onAnalyze} onDone={onDismiss} />}
-
       <GestureToast toast={gestureToast} />
       {savedReplay && (
         <InstantReplaySheet
@@ -1574,6 +1572,8 @@ export function SmartCubeTimer() {
           <LiveSessionCoach />
         </div>
       )}
+      {/* Last in the page so it can stay pinned while anything above it, the next-scramble block included, scrolls by. */}
+      {finished && <RecapActionBar className={RECAP_BAR} onReplay={() => setShowReplay(true)} onAnalyze={onAnalyze} onDone={onDismiss} />}
     </div>
   );
 }

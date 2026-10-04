@@ -3,8 +3,7 @@ import type { Penalty } from "@/types";
 
 /**
  * How the inspection countdown is coloured, so the digits and the ring around the screen agree.
- * The thresholds are the ring's (see InspectionRing.tsx): amber from 8s into inspection, red from 12s.
- * Keep the two in step if either ever moves.
+ * Amber from 8s into inspection, red from 12s — the ring (InspectionRing.tsx) reads these same marks.
  */
 export const INSPECTION_WARN_AT_MS = 8_000;
 export const INSPECTION_DANGER_AT_MS = 12_000;

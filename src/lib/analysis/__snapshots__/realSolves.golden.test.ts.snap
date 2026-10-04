@@ -1,0 +1,159 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`recorded smart-cube solves > keeps each solve's F2L cases and turn counts 1`] = `
+"real-0: other-slot=4, DFR:D|UF:U=6, URF:U|UB:B=6, URF:U|UB:U=7
+real-1: other-slot=5, other-slot=6, other-slot=8, URF:R|UB:U=3
+real-2: other-slot=6, URF:R|UB:B=6, URF:R|UF:U=7, URF:R|UR:U=7
+real-3: URF:U|UF:U=7, DFR:D|UF:F=5, URF:U|UF:U=7, URF:R|UF:U=7
+real-4: DFR:F|UF:U=6, URF:F|UR:U=3, URF:R|UL:L=6, DFR:D|UF:U=7
+real-5: other-slot=7, other-slot=7, URF:R|UB:U=4, URF:R|FR:F=7
+real-6: URF:R|UF:F=1, other-slot=7, other-slot=7, URF:R|UF:F=4
+real-7: URF:U|UB:U=4, DFR:F|UF:F=9, URF:U|FR:R=6, URF:F|UR:R=8
+real-8: other-slot=4, other-slot=8, other-slot=7, URF:U|UF:F=8
+real-9: other-slot=6, URF:F|UL:L=4, DFR:R|UF:F=7, URF:R|UR:R=8
+real-10: other-slot=4, other-slot=5, URF:F|FR:R=7, URF:F|FR:R=4
+real-11: other-slot=5, other-slot=7, DFR:R|UF:F=6, URF:F|UL:L=3
+real-12: other-slot=7, other-slot=6, other-slot=7, URF:F|UR:R=7
+real-13: URF:F|UL:L=4, DFR:F|UF:U=6, DFR:R|UF:F=3, DFR:D|UF:F=11"
+`;
+
+exports[`recorded smart-cube solves > keeps every phase row 1`] = `
+"real-0 cross=U
+  Cross[0-682|0/682]
+  F2L 1#2[682-1511|385/444]
+  F2L 2#1[1511-2773|398/864]
+  F2L 3#3[2773-4394|774/847]
+  F2L 4#0[4394-5900|604/902]
+  OLL[5900-7600|1037/663] L Shape 6
+  PLL[7600-9970|546/1824] Gd Perm
+real-1 cross=U
+  Cross[0-699|0/699]
+  F2L 1#3[699-2003|689/615]
+  F2L 2#2[2003-3381|695/683]
+  F2L 3#0[3381-4993|178/1434]
+  F2L 4#1[4993-6232|930/309]
+  OLL[6232-10305|900/3173] U
+  PLL[10305-10305|-/-] PLL skip
+real-2 cross=U
+  Cross[0-616|0/616]
+  F2L 1#2[616-2156|840/700]
+  F2L 2#1[2156-3604|621/827]
+  F2L 3#0[3604-5422|830/988]
+  F2L 4#3[5422-6793|390/981]
+  OLL[6793-10658|943/2922] L Shape 12
+  PLL[10658-10658|-/-] PLL skip
+real-3 cross=U
+  Cross[0-716|0/716]
+  F2L 1#2[716-2624|1045/863]
+  F2L 2#1[2624-4032|823/585]
+  F2L 3#3[4032-5771|874/865]
+  F2L 4#0[5771-7622|942/909]
+  OLL[7622-11683|562/3499] Dot 5
+  PLL[11683-11683|-/-] PLL skip
+real-4 cross=U
+  Cross[0-730|0/730]
+  F2L 1#1[730-2401|1011/660]
+  F2L 2#2[2401-3571|827/343]
+  F2L 3#3[3571-4746|391/784]
+  F2L 4#0[4746-6276|552/978]
+  OLL[6276-7650|358/1016] L Shape 14
+  PLL[7650-9934|462/1822] Ub Perm
+real-5 cross=U
+  Cross[0-951|0/951]
+  F2L 1#0[951-2916|1032/933]
+  F2L 2#3[2916-4643|800/927]
+  F2L 3#1[4643-5773|623/507]
+  F2L 4#2[5773-7197|434/990]
+  OLL[7197-11340|884/3259] L Shape 17
+  PLL[11340-11340|-/-] PLL skip
+real-6 cross=U
+  Cross[0-708|0/708]
+  F2L 1#1[708-1341|633/0]
+  F2L 2#0[1341-3092|154/1597]
+  F2L 3#2[3092-4537|164/1281]
+  F2L 4#3[4537-5623|655/431]
+  OLL[5623-9873|945/3305] L Shape 25
+  PLL[9873-9873|-/-] PLL skip
+real-7 cross=U
+  Cross[0-614|0/614]
+  F2L 1#0[614-1857|769/474]
+  F2L 2#3[1857-3456|175/1424]
+  F2L 3#1[3456-5158|941/761]
+  F2L 4#2[5158-6769|533/1078]
+  OLL[6769-11045|625/3651] L Shape 26
+  PLL[11045-11045|-/-] PLL skip
+real-8 cross=U
+  Cross[0-644|0/644]
+  F2L 1#0[644-1553|430/479]
+  F2L 2#1[1553-3428|128/1747]
+  F2L 3#2[3428-5286|946/912]
+  F2L 4#3[5286-6759|436/1037]
+  OLL[6759-10736|704/3273] L Shape 2
+  PLL[10736-10736|-/-] PLL skip
+real-9 cross=U
+  Cross[0-778|0/778]
+  F2L 1#0[778-2003|434/791]
+  F2L 2#1[2003-3106|592/511]
+  F2L 3#3[3106-4997|819/1072]
+  F2L 4#2[4997-6707|641/1069]
+  OLL[6707-8565|978/880] L Shape 15
+  PLL[8565-9466|901/0] PLL skip
+real-10 cross=U
+  Cross[0-889|0/889]
+  F2L 1#3[889-2053|703/461]
+  F2L 2#2[2053-3291|565/673]
+  F2L 3#1[3291-4838|571/976]
+  F2L 4#0[4838-5899|622/439]
+  OLL[5899-10354|136/4319] L Shape 3
+  PLL[10354-10354|-/-] PLL skip
+real-11 cross=U
+  Cross[0-631|0/631]
+  F2L 1#0[631-1640|399/610]
+  F2L 2#3[1640-3409|149/1620]
+  F2L 3#2[3409-5228|1028/791]
+  F2L 4#1[5228-6453|954/271]
+  OLL[6453-10917|799/3665] L Shape 4
+  PLL[10917-10917|-/-] PLL skip
+real-12 cross=U
+  Cross[0-743|0/743]
+  F2L 1#3[743-2249|606/900]
+  F2L 2#0[2249-4141|1043/849]
+  F2L 3#1[4141-5955|966/848]
+  F2L 4#2[5955-7669|940/774]
+  OLL[7669-11614|555/3390] L Shape 15
+  PLL[11614-11614|-/-] PLL skip
+real-13 cross=U
+  Cross[0-631|0/631]
+  F2L 1#1[631-1584|513/440]
+  F2L 2#2[1584-3313|995/734]
+  F2L 3#0[3313-4101|495/293]
+  F2L 4#3[4101-6310|197/2012]
+  OLL[6310-9730|948/2472] L Shape 13
+  PLL[9730-9730|-/-] PLL skip"
+`;
+
+exports[`recorded smart-cube solves > keeps the aggregate F2L case stats 1`] = `
+"DFR:D|UF:F n=2 mean=8.00 best=5
+DFR:D|UF:U n=2 mean=6.50 best=6
+DFR:F|UF:F n=1 mean=9.00 best=9
+DFR:F|UF:U n=2 mean=6.00 best=6
+DFR:R|UF:F n=3 mean=5.33 best=3
+other-slot n=20 mean=6.15 best=4
+URF:F|FR:R n=2 mean=5.50 best=4
+URF:F|UL:L n=3 mean=3.67 best=3
+URF:F|UR:R n=2 mean=7.50 best=7
+URF:F|UR:U n=1 mean=3.00 best=3
+URF:R|FR:F n=1 mean=7.00 best=7
+URF:R|UB:B n=1 mean=6.00 best=6
+URF:R|UB:U n=2 mean=3.50 best=3
+URF:R|UF:F n=2 mean=2.50 best=1
+URF:R|UF:U n=2 mean=7.00 best=7
+URF:R|UL:L n=1 mean=6.00 best=6
+URF:R|UR:R n=1 mean=8.00 best=8
+URF:R|UR:U n=1 mean=7.00 best=7
+URF:U|FR:R n=1 mean=6.00 best=6
+URF:U|UB:B n=1 mean=6.00 best=6
+URF:U|UB:U n=2 mean=5.50 best=4
+URF:U|UF:F n=1 mean=8.00 best=8
+URF:U|UF:U n=2 mean=7.00 best=7"
+`;
