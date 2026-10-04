@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONNECT_STEPS, connectStep, reconnectLine } from "./connectSteps";
+import { CONNECT_STEPS, GYRO_STATUS_LABEL, HOLD_LINE, connectStep, gyroStatus, reconnectLine } from "./connectSteps";
 
 describe("connectStep", () => {
   it("is the pick step before any message and while the chooser is open", () => {
@@ -32,5 +32,28 @@ describe("reconnectLine", () => {
     expect(reconnectLine("GAN i3", true)).toBe("Lost the link to GAN i3 — getting it back…");
     expect(reconnectLine("GAN i3", true)).not.toMatch(/^Connecting/);
     expect(reconnectLine(null, false)).toBe("Your cube went quiet — will try again shortly");
+  });
+});
+
+describe("gyroStatus", () => {
+  it("reads none until the cube has streamed orientation, whatever is saved", () => {
+    expect(gyroStatus(false, "GAN", { GAN: {} })).toBe("none");
+  });
+  it("is calibrated only when this protocol has a saved calibration", () => {
+    expect(gyroStatus(true, "GAN", { GAN: {} })).toBe("calibrated");
+    expect(gyroStatus(true, "MoYu", { GAN: {} })).toBe("uncalibrated");
+    expect(gyroStatus(true, null, { GAN: {} })).toBe("uncalibrated");
+  });
+  it("has a label for each status", () => {
+    expect(GYRO_STATUS_LABEL.calibrated).toMatch(/^calibrated/i);
+    expect(GYRO_STATUS_LABEL.uncalibrated).toMatch(/not calibrated/i);
+    expect(GYRO_STATUS_LABEL.none).toMatch(/no gyro/i);
+  });
+});
+
+describe("HOLD_LINE", () => {
+  it("names the home grip", () => {
+    expect(HOLD_LINE).toMatch(/yellow on top/);
+    expect(HOLD_LINE).toMatch(/green facing you/);
   });
 });

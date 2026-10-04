@@ -8,6 +8,7 @@ import { CROSS_FACES, relabelFacelets, relabelMove, type CrossFace } from "@/lib
 import { distrust, newStateSync, onReport, onTurn, settle } from "@/lib/smartcube/stateSync";
 import { advanceMilestones, pickMilestones, type Milestones } from "@/lib/smartcube/milestones";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
+import { appendGyroSample } from "@/lib/gyro/gyroLog";
 import type { GyroSample, Quat } from "@/lib/gyro/orientation";
 import { decideGyroHome, StillnessDetector } from "@/lib/gyro/homePose";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
@@ -695,8 +696,10 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
         homeStill = null;
       }
       if (!get().gyroActive) set({ gyroActive: true });
-      // Capped (~10 min at 50Hz) so an armed-and-forgotten cube can't grow it without bound.
-      if ((get().armed || get().recording) && gyroLog.length < 30000) gyroLog.push(sample);
+      // Capped (~10 min at 50Hz) so an armed-and-forgotten cube can't grow it without bound — by
+      // thinning the old wait, never by dropping the solve (see appendGyroSample).
+      const st = get();
+      if (st.armed || st.recording) gyroLog = appendGyroSample(gyroLog, sample, st.recording ? st.startedAtMs : null);
       return;
     }
     if (event.type === "BATTERY") {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Solve } from "@/types";
-import { aggregateMistakes, analyzeMistakes, mistakeHabits } from "./mistakeRadar";
+import { LOOK_PAUSE_MAX_MS, LOOK_PAUSE_MS, aggregateMistakes, analyzeMistakes, lookPauseMs, mistakeHabits, unionCostMs } from "./mistakeRadar";
 
 /** Inverse of a move sequence — scrambling with inv(W) makes W an exact solution. */
 function inv(seq: string): string {
@@ -90,6 +90,81 @@ describe("analyzeMistakes", () => {
     const wasted = report.mistakes.filter((m) => m.kind === "wasted-turns");
     expect(wasted).toHaveLength(1);
     expect(wasted[0].detail).toMatch(/D D D is just D' done in 3/);
+  });
+});
+
+describe("what the mistakes cost in total", () => {
+  it("counts a stretch once however many mistakes overlap it", () => {
+    expect(unionCostMs([])).toBe(0);
+    expect(unionCostMs([{ atMs: 100, costMs: 0 }])).toBe(0);
+    // Disjoint: they add.
+    expect(unionCostMs([{ atMs: 0, costMs: 100 }, { atMs: 500, costMs: 200 }])).toBe(300);
+    // Overlapping and nested (given out of order): one stretch, 100 to 700.
+    expect(
+      unionCostMs([
+        { atMs: 400, costMs: 300 },
+        { atMs: 100, costMs: 400 },
+        { atMs: 200, costMs: 50 },
+      ]),
+    ).toBe(600);
+    // Touching spans neither gap nor double-count.
+    expect(unionCostMs([{ atMs: 0, costMs: 100 }, { atMs: 100, costMs: 100 }])).toBe(200);
+  });
+
+  it("prices a knocked pair and the wasted turns inside its rebuild as one stretch", () => {
+    // The knocked-pair solve, with a cancelling B B' while the pair is being rebuilt.
+    const input = solve(["R D R' D' L' D' L D R D2 R' B B' D B D' B' D' R D' R' D2 F D F'"]);
+    const report = analyzeMistakes(input);
+    const knocked = report.mistakes.find((m) => m.kind === "pair-knocked")!;
+    const wasted = report.mistakes.find((m) => m.kind === "wasted-turns")!;
+    expect(knocked).toBeDefined();
+    expect(wasted).toBeDefined();
+    expect(wasted.atMs).toBeGreaterThan(knocked.atMs);
+    expect(wasted.atMs + wasted.costMs).toBeLessThanOrEqual(knocked.atMs + knocked.costMs);
+    // Per-mistake costs are still shown as they are; the total is the knocked pair's span alone.
+    expect(wasted.costMs).toBeGreaterThan(0);
+    expect(report.totalCostMs).toBe(knocked.costMs);
+    expect(report.totalCostMs).toBeLessThan(report.mistakes.reduce((a, m) => a + m.costMs, 0));
+    expect(report.potentialMs).toBe(input.totalMs - knocked.costMs);
+  });
+
+  it("derives the clean score from the union, never below zero", () => {
+    const input = solve(["R D R' D' L' D' L D R D2 R' B B' D B D' B' D' R D' R' D2 F D F'"]);
+    const report = analyzeMistakes(input);
+    expect(report.cleanScore).toBe(Math.round(100 * (1 - report.totalCostMs / input.totalMs)));
+    expect(report.cleanScore).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("the look pause", () => {
+  const evenly = (n: number, gap: number) => Array.from({ length: n }, (_, i) => i * gap);
+
+  it("stays the flat 350 ms for a quick turner and for a solve with too little data", () => {
+    expect(lookPauseMs(evenly(60, 100))).toBe(LOOK_PAUSE_MS);
+    expect(lookPauseMs(evenly(60, 140))).toBe(LOOK_PAUSE_MS);
+    expect(lookPauseMs(evenly(8, 600))).toBe(LOOK_PAUSE_MS);
+    expect(lookPauseMs([])).toBe(LOOK_PAUSE_MS);
+  });
+
+  it("scales with a slower turner's own median gap, up to a ceiling", () => {
+    expect(lookPauseMs(evenly(60, 300))).toBe(750);
+    expect(lookPauseMs(evenly(60, 900))).toBe(LOOK_PAUSE_MAX_MS);
+  });
+
+  it("is not thrown off by the pauses themselves (it uses the median)", () => {
+    const times = evenly(60, 100);
+    for (let i = 20; i < 60; i += 5) for (let j = i; j < 60; j++) times[j] += 500;
+    expect(lookPauseMs(times)).toBe(LOOK_PAUSE_MS);
+  });
+
+  it("does not read a slow solver's ordinary pause between algorithms as an extra look", () => {
+    const phrases = ["R D R' D'", SUNE, `D ${SUNE}`];
+    // 300 ms between turns, 700 ms between phrases: a look for a fast turner, ordinary rhythm for this one.
+    const slow = analyzeMistakes(solve(phrases, 300, 400));
+    expect(slow.mistakes.filter((m) => m.kind === "extra-oll-look")).toEqual([]);
+    // The same solve at a quick pace still has the extra look; a long pause for a slow turner is still a look.
+    expect(analyzeMistakes(solve(phrases, 120, 700)).mistakes.filter((m) => m.kind === "extra-oll-look")).toHaveLength(1);
+    expect(analyzeMistakes(solve(phrases, 300, 900)).mistakes.filter((m) => m.kind === "extra-oll-look")).toHaveLength(1);
   });
 });
 

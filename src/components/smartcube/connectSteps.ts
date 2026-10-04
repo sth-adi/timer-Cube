@@ -42,3 +42,25 @@ export const RECONNECT_HINTS = [
 export function reconnectLine(name: string | null, trying: boolean): string {
   return trying ? `Lost the link to ${name ?? "your cube"} — getting it back…` : `${name ?? "Your cube"} went quiet — will try again shortly`;
 }
+
+/** Said on the connect screen before connecting: the gyro's home pose is the first sample, assumed to be this grip (see lib/gyro/homePose.ts). */
+export const HOLD_LINE = "Hold it with yellow on top and green facing you, then connect.";
+
+export type GyroStatus = "none" | "calibrated" | "uncalibrated";
+
+/**
+ * What the settings panel says about the connected cube's gyro: whether it
+ * streams orientation at all (detected from data, so a cube that has just
+ * connected reads "none" until its first sample), and whether this protocol
+ * has a saved axis calibration (otherwise the GAN default applies).
+ */
+export function gyroStatus(gyroActive: boolean, protocolName: string | null, calibrations: Readonly<Record<string, unknown>>): GyroStatus {
+  if (!gyroActive) return "none";
+  return protocolName && calibrations[protocolName] ? "calibrated" : "uncalibrated";
+}
+
+export const GYRO_STATUS_LABEL: Record<GyroStatus, string> = {
+  calibrated: "Calibrated",
+  uncalibrated: "Not calibrated",
+  none: "No gyro on this cube",
+};

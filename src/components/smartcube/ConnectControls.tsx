@@ -5,7 +5,7 @@ import { Loader2, RotateCw } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { preloadCubeViewer } from "@/components/timer/LiveCubeMimic";
 import { cn } from "@/lib/utils/cn";
-import { CONNECT_HINTS, CONNECT_STEPS, RECONNECT_HINTS, SLOW_CONNECT_MS, connectStep, reconnectLine } from "./connectSteps";
+import { CONNECT_HINTS, CONNECT_STEPS, HOLD_LINE, RECONNECT_HINTS, SLOW_CONNECT_MS, connectStep, reconnectLine } from "./connectSteps";
 
 /** Why the connect screen is asking for a tap when the cube dropped on its own (see smartCubeStore's reconnectStopped). */
 const STOPPED_COPY = {
@@ -110,10 +110,19 @@ export function ConnectControls({ label = "Connect smart cube", unsupportedLabel
         {connecting && <Loader2 size={14} className="animate-spin" />}
         {supported === false ? (unsupportedLabel ?? label) : connecting ? "Connecting…" : label}
       </button>
+      {!connecting && !reconnect && supported === true && (
+        <p className="max-w-xs text-center text-[11px] text-muted-2" data-testid="connect-hold-line">
+          {HOLD_LINE}
+        </p>
+      )}
       {connecting && (
         <div className="flex flex-col items-center gap-1.5" data-testid="connect-progress">
           <ConnectSteps step={step} />
-          {status && <p className="text-xs text-muted">{status}</p>}
+          {status && (
+            <p role="status" className="text-xs text-muted">
+              {status}
+            </p>
+          )}
           {/* Not while the browser's list is open (that wait is yours), nor while it's asking you for the address. */}
           {step >= 1 && !macRequest && <SlowHints hints={CONNECT_HINTS} testId="connect-hints" />}
           <button type="button" onClick={cancelConnect} className="text-[11px] text-muted-2 underline hover:text-muted" data-testid="connect-cancel">

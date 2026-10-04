@@ -57,6 +57,12 @@ export interface SolveMetrics {
   freePairs: number;
   ollSkip: boolean;
   pllSkip: boolean;
+  /**
+   * The timing is partly a guess: a lost turn was put back or the cube's state report corrected the
+   * solve (`Solve.repaired` / `cube.corrected`). Fine for counts and averages, but never a best-time
+   * baseline (gold splits, sum of bests), where one guessed split could pin an unbeatable bar.
+   */
+  estimated?: boolean;
 }
 
 /** The solves the analytics can use: smart-cube captures with a full reconstruction and timestamps, not DNF. */
@@ -124,6 +130,7 @@ export function solveMetrics(solve: Solve): SolveMetrics | null {
     freePairs: [0, 1, 2, 3].filter((i) => f2lPairSolved(start, i as 0 | 1 | 2 | 3)).length,
     ollSkip: onlyAuf(between(m[4], m[5])),
     pllSkip: onlyAuf(between(m[5], m[6])),
+    ...(solve.repaired || solve.cube?.corrected ? { estimated: true } : {}),
   };
 }
 

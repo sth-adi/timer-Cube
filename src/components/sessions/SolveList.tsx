@@ -6,9 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
-import { useAuthStore } from "@/lib/store/authStore";
-import { displayUsername } from "@/lib/auth/username";
-import { createSharedSolve } from "@/lib/social/shareSolve";
+import { useShareSolve } from "@/hooks/useShareSolve";
 import { formatResult, formatTime, parseManualTime } from "@/lib/utils/time";
 import { submitManualTime, withAdded, type AddedTime } from "./manualEntry";
 import { comparableTime } from "@/lib/stats/stats";
@@ -38,7 +36,7 @@ function SolveSheet({ label, onClose, children }: { label: string; onClose: () =
       aria-label={label}
       tabIndex={-1}
       onClick={(e) => e.stopPropagation()}
-      className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-bg-elevated p-3 pb-[calc(0.75rem+var(--safe-bottom))] shadow-lg outline-none animate-sheet-in sm:max-w-sm sm:rounded-xl sm:pb-3 sm:animate-fade-in-up"
+      className="max-h-[85vh] supports-[height:1dvh]:max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-bg-elevated p-3 pb-[calc(0.75rem+var(--safe-bottom))] shadow-lg outline-none animate-sheet-in sm:max-w-sm sm:rounded-xl sm:pb-3 sm:animate-fade-in-up"
     >
       {children}
     </div>
@@ -77,7 +75,6 @@ const SolveRow = memo(function SolveRow({
   const [open, setOpen] = useState(false);
   const [recapOpen, setRecapOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState(solve.comment ?? "");
-  const [shareState, setShareState] = useState<"idle" | "busy" | "copied" | "error">("idle");
   const summary = useMemo(() => (detailed ? solveSummary(solve) : null), [detailed, solve]);
 
   const cyclePenalty = (p: Penalty) => setPenalty(solve.id, p === solve.penalty ? "none" : p);
@@ -85,52 +82,16 @@ const SolveRow = memo(function SolveRow({
     if (commentDraft !== (solve.comment ?? "")) setComment(solve.id, commentDraft);
   };
 
-  // Real per-move timing only exists for a solve captured live off a smart
-  // cube — that's the whole point of a shared replay (it plays back at the
-  // cuber's actual pace, not a flat tempo), so sharing is only offered here.
-  // A DNF has no finish time worth showing on the other end either.
-  const shareable = !!solve.reconstruction && !!solve.moveTimestamps && solve.penalty !== "dnf";
-
-  const onShare = async () => {
-    const finalMs = solveFinalMs(solve);
-    if (!shareable || finalMs === null) return;
-    setShareState("busy");
-    // Read on demand: subscribing every row to these would re-render the whole list when they change.
-    const user = useAuthStore.getState().user;
-    const puzzle = useSessionStore.getState().sessions.find((s) => s.id === solve.sessionId)?.event ?? "333";
-    const id = await createSharedSolve({
-      scramble: solve.scramble,
-      reconstruction: solve.reconstruction!,
-      timeMs: finalMs,
-      moveTimestamps: solve.moveTimestamps ?? null,
-      puzzle,
-      event: solve.event ?? null,
-      username: user ? displayUsername(user) : null,
-    });
-    if (!id) {
-      setShareState("error");
-      setTimeout(() => setShareState("idle"), 2000);
-      return;
-    }
-    const url = `${window.location.origin}/solve/${id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareState("copied");
-    } catch {
-      // Clipboard access can be denied — the link still exists, just show it instead of a silent failure.
-      window.prompt("Copy this link:", url);
-      setShareState("idle");
-      return;
-    }
-    setTimeout(() => setShareState("idle"), 2000);
-  };
+  const { shareable, state: shareState, share: onShare } = useShareSolve(solve);
+  // A solve with a saved smart-cube breakdown opens its recap on one tap; the generic popup is for the rest (and "More").
+  const smart = useMemo(() => hasBreakdown(solve), [solve]);
 
   return (
     <div className="relative">
       <div className="flex items-center">
         <button
           type="button"
-          onClick={() => (selectMode ? onToggle?.(solve.id) : setOpen((o) => !o))}
+          onClick={() => (selectMode ? onToggle?.(solve.id) : smart ? setRecapOpen(true) : setOpen((o) => !o))}
           aria-pressed={selectMode ? ticked : undefined}
           className={cn(
             "min-w-0 flex-1 flex min-h-9 items-center justify-between rounded-lg px-2.5 py-0.5 lg:min-h-0 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
@@ -144,9 +105,9 @@ const SolveRow = memo(function SolveRow({
           <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
           <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
           {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
-          {solve.reconstruction && <Wand2 size={11} className="text-accent mr-1" aria-label="Analyzed" />}
-          {summary?.hasMistake && <TriangleAlert size={11} className="text-warning mr-1" aria-label="Mistake Radar flagged something in this solve" />}
-          {solve.comment && <MessageSquare size={11} className="text-muted-2 mr-1" />}
+          {solve.reconstruction && <Wand2 size={14} className="mr-1 shrink-0 text-accent" role="img" aria-label="Reconstruction saved" />}
+          {summary?.hasMistake && <TriangleAlert size={14} className="mr-1 shrink-0 text-warning" role="img" aria-label="Mistake flagged" />}
+          {solve.comment && <MessageSquare size={14} className="mr-1 shrink-0 text-muted-2" role="img" aria-label="Has a note" />}
         </button>
         {detailed && !selectMode && (
           <button
@@ -154,7 +115,7 @@ const SolveRow = memo(function SolveRow({
             onClick={() => void removeSolve(solve.id)}
             aria-label={`Delete solve ${index}`}
             title="Delete (undo from the toast)"
-            className="tap-target ml-0.5 shrink-0 rounded-full text-muted-2 transition-colors hover:text-danger active:text-danger"
+            className="ml-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-2 transition-colors hover:text-danger active:text-danger"
           >
             <Trash2 size={14} />
           </button>
@@ -174,7 +135,7 @@ const SolveRow = memo(function SolveRow({
                   <X size={16} />
                 </button>
               </div>
-              {hasBreakdown(solve) && (
+              {smart && (
                 <button
                   type="button"
                   onClick={() => {
@@ -287,7 +248,16 @@ const SolveRow = memo(function SolveRow({
           </div>,
           document.body,
         )}
-      {recapOpen && <SolveRecapSheet solve={solve} onClose={() => setRecapOpen(false)} />}
+      {recapOpen && (
+        <SolveRecapSheet
+          solve={solve}
+          onClose={() => setRecapOpen(false)}
+          onMore={() => {
+            setRecapOpen(false);
+            setOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 });

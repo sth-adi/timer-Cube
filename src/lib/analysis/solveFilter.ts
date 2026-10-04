@@ -1,7 +1,7 @@
 import { solveFinalMs, type Solve } from "@/types";
 import type { CrossFace } from "@/lib/smartcube/crossFrame";
 import { solveBreakdown } from "./solveBreakdown";
-import { analyzeMistakes } from "./mistakeRadar";
+import { solveMistakeReport } from "./mistakeRadar";
 
 /**
  * What the solve list shows about a smart-cube solve at a glance, and what
@@ -19,21 +19,28 @@ export interface SolveSummary {
   hasMistake: boolean;
 }
 
+const summaryCache = new WeakMap<Solve, SolveSummary | null>();
+
+/** What the list shows about a smart-cube solve (cached per solve object — the breakdown and the Mistake Radar replay each run once, however often a row, a filter or a sort asks). */
 export function solveSummary(solve: Solve): SolveSummary | null {
+  if (summaryCache.has(solve)) return summaryCache.get(solve)!;
+  const out = computeSummary(solve);
+  summaryCache.set(solve, out);
+  return out;
+}
+
+function computeSummary(solve: Solve): SolveSummary | null {
   const b = solveBreakdown(solve);
   if (!b) return null;
   const at = (label: string) => b.rows.find((r) => r.label === label)?.totalMs ?? 0;
   const f2l = b.rows.filter((r) => r.f2lPairIndex !== null).reduce((a, r) => a + (r.totalMs ?? 0), 0);
-  const frameTokens = b.frameMoves.map((m) => m.token);
-  const times = b.frameMoves.map((m) => m.timeStampMs);
-  const mistakes = analyzeMistakes({ scramble: b.frameScramble, moves: frameTokens, timesMs: times, totalMs: b.totalMs }).mistakes;
   return {
     crossFace: b.crossFace,
     steps: [at("Cross"), f2l, at("OLL"), at("PLL")],
     oll: b.rows.find((r) => r.label === "OLL")?.caseName ?? null,
     pll: b.rows.find((r) => r.label === "PLL")?.caseName ?? null,
     twoLook: b.executions.some((e) => !e.oneLook),
-    hasMistake: mistakes.length > 0,
+    hasMistake: (solveMistakeReport(solve)?.mistakes.length ?? 0) > 0,
   };
 }
 
@@ -85,15 +92,18 @@ export function filterAndSort(solves: readonly Solve[], filter: SolveFilter, sor
     });
   }
   const step = STEP_INDEX[sort];
+  if (sort === "recent") return out.sort((a, b) => b.date - a.date);
+  // Sort keys are read once per solve, not once per comparison.
+  const keyed = (key: (s: Solve) => number, dir: 1 | -1) =>
+    out
+      .map((solve) => ({ solve, key: key(solve) }))
+      .sort((a, b) => dir * (a.key - b.key))
+      .map((e) => e.solve);
   const final = (s: Solve) => solveFinalMs(s) ?? Infinity;
-  if (sort === "recent") out.sort((a, b) => b.date - a.date);
-  else if (sort === "fastest") out.sort((a, b) => final(a) - final(b));
-  else if (sort === "slowest") out.sort((a, b) => final(b) - final(a));
-  else if (step !== undefined) {
-    // Slowest at that step first — the ones worth looking at. Solves without a breakdown go last.
-    const v = (s: Solve) => solveSummary(s)?.steps[step] ?? -1;
-    out.sort((a, b) => v(b) - v(a));
-  }
+  if (sort === "fastest") return keyed(final, 1);
+  if (sort === "slowest") return keyed(final, -1);
+  // Slowest at that step first — the ones worth looking at. Solves without a breakdown go last.
+  if (step !== undefined) return keyed((s) => solveSummary(s)?.steps[step] ?? -1, -1);
   return out;
 }
 

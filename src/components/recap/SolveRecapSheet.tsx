@@ -11,7 +11,8 @@ import { reconstruction } from "@/lib/analysis/reconText";
 import { pbSolveRows, timeWonLost } from "@/lib/analysis/timeWonLost";
 import { buildPostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { metricsFor } from "@/lib/analytics/solveMetrics";
-import { analyzeMistakes, mistakeHabits, mistakesByRow } from "@/lib/analysis/mistakeRadar";
+import { analyzeMistakes, mistakesByRow } from "@/lib/analysis/mistakeRadar";
+import { useMistakeHabits } from "@/hooks/useMistakeHabits";
 import { inspectionReport } from "@/lib/inspection/report";
 import { CROSS_FACE_COLOR } from "@/lib/smartcube/crossFrame";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
@@ -20,6 +21,7 @@ import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
 import { ReconstructionCard } from "./ReconstructionCard";
+import { SolveActionBar } from "./SolveActionBar";
 import { TimeWonLostCard } from "./TimeWonLostCard";
 import { formatResult, formatTime } from "@/lib/utils/time";
 import { solveFinalMs, type Solve } from "@/types";
@@ -33,7 +35,7 @@ import { useModalLayer } from "@/hooks/useModalLayer";
  * where the time went, the written reconstruction, the Mistake Radar, the
  * inspection grade and the X-Ray — rebuilt from what the solve saved.
  */
-export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () => void }) {
+export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onClose: () => void; /** Hands over to the row's own popup (its scramble, gyro reconstruction and so on). */ onMore?: () => void }) {
   const allSolves = useSessionStore((s) => s.allSolves);
   const requestAnalysis = useAnalysisStore((s) => s.requestAnalysis);
   const router = useRouter();
@@ -51,7 +53,7 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
   const frameTokens = useMemo(() => b?.frameMoves.map((m) => m.token) ?? [], [b]);
   const times = useMemo(() => b?.frameMoves.map((m) => m.timeStampMs) ?? [], [b]);
   const mistakes = useMemo(() => (b ? analyzeMistakes({ scramble: b.frameScramble, moves: frameTokens, timesMs: times, totalMs: b.totalMs }) : null), [b, frameTokens, times]);
-  const habits = useMemo(() => mistakeHabits(others), [others]);
+  const habits = useMistakeHabits(others);
   const stepMistakes = useMemo(() => (b && mistakes ? mistakesByRow(b.rows, mistakes.mistakes) : null), [b, mistakes]);
   const inspection = useMemo(() => (b ? inspectionReport(b.frameScramble, frameTokens, times) : null), [b, frameTokens, times]);
 
@@ -69,7 +71,7 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div
         className={cn(
-          "glass-panel flex max-h-[92vh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl outline-none p-4 pb-[calc(1rem+var(--safe-bottom))] animate-sheet-in",
+          "glass-panel flex max-h-[92vh] supports-[height:1dvh]:max-h-[92dvh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl outline-none p-4 pb-[calc(1rem+var(--safe-bottom))] animate-sheet-in",
           "sm:max-w-md sm:rounded-2xl sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
@@ -92,6 +94,7 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
             <X size={18} />
           </button>
         </div>
+        <SolveActionBar solve={solve} onMore={onMore} onDeleted={onClose} />
         <p className="break-words font-mono text-[11px] text-muted-2">{solve.scramble}</p>
 
         {!b ? (
@@ -113,13 +116,13 @@ export function SolveRecapSheet({ solve, onClose }: { solve: Solve; onClose: () 
             {recon && <ReconstructionCard recon={recon} stepMistakes={stepMistakes} />}
             {mistakes && <MistakeRadarCard report={mistakes} totalMs={b.totalMs} habits={habits} />}
             {inspection && <InspectionGradeCard report={inspection} />}
-            <XrayTeaser scramble={b.frameScramble} moves={frameTokens} timesMs={times} />
+            <XrayTeaser scramble={b.frameScramble} moves={frameTokens} timesMs={times} solveId={solve.id} />
           </>
         )}
       </div>
       {replay && solve.reconstruction && (
         <div onClick={(e) => e.stopPropagation()}>
-          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} moveTimestamps={solve.moveTimestamps} onClose={() => setReplay(false)} />
+          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} penalty={solve.penalty} moveTimestamps={solve.moveTimestamps} onClose={() => setReplay(false)} />
         </div>
       )}
     </div>,

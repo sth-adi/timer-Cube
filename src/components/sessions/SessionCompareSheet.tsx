@@ -105,7 +105,7 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
+          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] supports-[height:1dvh]:max-h-[88dvh] overflow-y-auto",
           "sm:max-w-md sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}

@@ -177,8 +177,8 @@ function GhostPicker({ onPick }: { onPick: (g: Ghost) => void }) {
     setError(null);
     const sh = await fetchSharedSolve(id);
     setLoading(false);
-    if (!sh) return setError("Couldn't find that shared solve.");
-    const g = ghostFromShared(sh);
+    if (!sh.ok) return setError(sh.reason === "not-found" ? "Couldn't find that shared solve." : sh.reason === "offline" ? "You're offline — try again once you're connected." : "Couldn't reach the server — try again.");
+    const g = ghostFromShared(sh.solve);
     if ("error" in g) setError(g.error);
     else onPick(g);
   };
@@ -326,8 +326,8 @@ function Rematch() {
     if (!id) return;
     let cancelled = false;
     void fetchSharedSolve(id).then((sh) => {
-      if (cancelled || !sh) return;
-      const g = ghostFromShared(sh);
+      if (cancelled || !sh.ok) return;
+      const g = ghostFromShared(sh.solve);
       if (!("error" in g)) pick(g);
     });
     return () => {

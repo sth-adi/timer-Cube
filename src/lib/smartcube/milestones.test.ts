@@ -76,21 +76,24 @@ describe("an F2L pair solved early, then knocked out and put back", () => {
     return { scramble: solve.scramble, moves, pair, firstSolvedAt: Math.min(...times) };
   }
 
-  it("dates the pair from its re-insertion, so the pairs end exactly when the bottom layer does", () => {
+  it("keeps each pair's FIRST solved time, even when it is knocked out and put back", () => {
     const { scramble, moves, pair, firstSolvedAt } = reinsertedPairSolve();
     const m = run(moves, scramble, { finished: false });
     const times = m.f2lPairAtMs as number[];
     expect(times.every((t) => t !== null)).toBe(true);
-    // First-solved time would still read `firstSolvedAt` here.
-    expect(times[pair]).toBeGreaterThan(firstSolvedAt);
-    expect(m.f2lAtMs).toBe(Math.max(...times));
+    // The F2L case recognition reads each pair's case where the previous pair ended, so a pair's
+    // time has to stay where it was first solved; re-timing it at the re-insertion moved it later
+    // and collapsed several pairs onto one moment, which broke F2L case detection.
+    expect(times[pair]).toBe(firstSolvedAt);
+    expect(new Set(times).size).toBe(4);
+    // The end of F2L as a whole is still the first moment the bottom layer is solved.
+    expect(m.f2lAtMs).toBeGreaterThanOrEqual(Math.max(...times));
   }, 60_000);
 
-  it("forgets a pair the moment it's knocked out, until it's solved again", () => {
+  it("does not forget a pair when it is knocked out", () => {
     const { scramble, moves, pair, firstSolvedAt } = reinsertedPairSolve();
-    // Stop right after the knock-out: the pair has no time.
     const afterBreak = run(moves.slice(0, firstSolvedAt / 100 + 1), scramble, { finished: false });
-    expect(afterBreak.f2lPairAtMs[pair]).toBeNull();
+    expect(afterBreak.f2lPairAtMs[pair]).toBe(firstSolvedAt);
   }, 60_000);
 
   it("keeps the table's F2L rows and OLL start in step with the live F2L split", () => {

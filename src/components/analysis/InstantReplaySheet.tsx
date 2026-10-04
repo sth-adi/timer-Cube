@@ -3,13 +3,13 @@
 import { useId, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { X } from "lucide-react";
-import { formatTime } from "@/lib/utils/time";
+import { formatResult } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import { computeReplayGaps } from "@/lib/analysis/replayGaps";
 import { displayIndexForMove, displayMoves } from "@/lib/analysis/replayDisplay";
 import { phaseMarksFromMilestones } from "@/lib/analysis/replayTiming";
 import { hasBreakdown, solveBreakdown } from "@/lib/analysis/solveBreakdown";
-import type { Solve } from "@/types";
+import { solveFinalMs, type Penalty, type Solve } from "@/types";
 import { useModalLayer } from "@/hooks/useModalLayer";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
@@ -19,7 +19,10 @@ const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.
 interface InstantReplaySheetProps {
   scramble: string;
   reconstruction: string;
+  /** The raw clock time; a `penalty` is applied on top for the time shown. */
   timeMs: number;
+  /** A +2 or DNF on the solve, so the heading agrees with the recap's: defaults to none. */
+  penalty?: Penalty;
   /** Elapsed ms from solve start for each move, one-for-one with `reconstruction`'s tokens — real capture timing off a smart cube, not a retyped guess. */
   moveTimestamps?: number[];
   onClose: () => void;
@@ -33,7 +36,7 @@ interface InstantReplaySheetProps {
  * optimal-solution comparison): it's the fast "let me see that again" replay
  * Cubeast's own post-solve screen offers, not a second copy of the analyzer.
  */
-export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimestamps, onClose }: InstantReplaySheetProps) {
+export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty = "none", moveTimestamps, onClose }: InstantReplaySheetProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useModalLayer(dialogRef, onClose);
@@ -91,14 +94,16 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimes
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] overflow-y-auto",
-          "sm:max-w-sm sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
+          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] supports-[height:1dvh]:max-h-[88dvh] overflow-y-auto",
+          "sm:max-w-md sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up md:max-w-lg",
+          // A phone on its side is short: give the sheet the width so the cube can sit beside the text.
+          "[@media(orientation:landscape)_and_(max-height:32rem)]:max-w-3xl",
         )}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
         <div className="mb-3 flex items-center justify-between">
-          <h2 id={titleId} className="text-base font-semibold">Reconstruction</h2>
+          <h2 id={titleId} className="text-base font-semibold">Replay</h2>
           <button
             type="button"
             onClick={onClose}
@@ -109,24 +114,28 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimes
           </button>
         </div>
 
-        <p className="mb-2 flex items-baseline gap-2">
-          <span className="tabular-timer text-2xl font-bold text-foreground">{formatTime(timeMs)}</span>
-          <span className="text-xs text-muted-2">{display.length} moves</span>
-        </p>
+        <div className="[@media(orientation:landscape)_and_(max-height:32rem)]:grid [@media(orientation:landscape)_and_(max-height:32rem)]:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:32rem)]:items-start [@media(orientation:landscape)_and_(max-height:32rem)]:gap-x-5">
+          <div>
+            <p className="mb-2 flex items-baseline gap-2">
+              <span className="tabular-timer text-2xl font-bold text-foreground">{formatResult(solveFinalMs({ timeMs, penalty }), penalty)}</span>
+              <span className="text-xs text-muted-2">{display.length} moves</span>
+            </p>
 
-        <p className="mb-2 break-words rounded-lg bg-bg-panel-2 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-muted">
-          {scramble}
-        </p>
+            <p className="mb-2 break-words rounded-lg bg-bg-panel-2 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-muted">
+              {scramble}
+            </p>
+          </div>
 
-        <TimedCubePlayer
-          alg={reconstruction}
-          setupAlg={scramble}
-          gapsMs={gaps}
-          hasRealTiming={hasRealTiming}
-          marks={marks}
-          renderMoves={moveText}
-          className="mx-auto h-56 w-full max-w-xs"
-        />
+          <TimedCubePlayer
+            alg={reconstruction}
+            setupAlg={scramble}
+            gapsMs={gaps}
+            hasRealTiming={hasRealTiming}
+            marks={marks}
+            renderMoves={moveText}
+            className="mx-auto h-64 w-full max-w-md sm:h-72 [@media(orientation:landscape)_and_(max-height:32rem)]:h-44"
+          />
+        </div>
       </div>
     </div>
   );

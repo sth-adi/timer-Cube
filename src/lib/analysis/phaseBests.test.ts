@@ -33,6 +33,27 @@ describe("buildPhaseBests", () => {
   });
 });
 
+describe("buildPhaseBests with estimated solves", () => {
+  const normal = Array.from({ length: MIN_PHASE_SAMPLES }, (_, i) => m([2000 + i * 100, 5000 + i * 100, 1500 + i * 100, 1800 + i * 100]));
+
+  it("a repaired solve's impossibly fast guessed split never becomes the gold", () => {
+    const r = buildPhaseBests([...normal, m([50, 100, 40, 30], { estimated: true })]);
+    expect(r.bests).toEqual([2000, 5000, 1500, 1800]);
+    expect(r.sumOfBestMs).toBe(10300);
+  });
+
+  it("estimated solves don't count toward the minimum sample size", () => {
+    const few = normal.slice(0, MIN_PHASE_SAMPLES - 1);
+    const r = buildPhaseBests([...few, m([2000, 5000, 1500, 1800], { estimated: true })]);
+    expect(r.bests).toEqual([null, null, null, null]);
+    expect(r.sumOfBestMs).toBeNull();
+  });
+
+  it("solves with no estimated flag are unchanged", () => {
+    expect(buildPhaseBests([...normal, m([1900, 4900, 1400, 1700], { estimated: false })]).bests).toEqual([1900, 4900, 1400, 1700]);
+  });
+});
+
 describe("findGolds", () => {
   const bests = [2000, 5000, 1500, 1800];
   it("flags only phases that beat the best, by how much", () => {

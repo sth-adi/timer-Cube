@@ -60,8 +60,51 @@ export const KIND_LABEL: Record<MistakeKind, string> = {
 
 /** A solved group has to stay broken for this many moves to count — every ordinary insertion (R U R') briefly lifts a cross edge or a neighbouring pair out and puts it straight back. */
 export const BREAK_MIN_MOVES = 7;
-/** A pause at least this long (ms) is the cuber stopping to read the cube — a "look". */
+/** A pause at least this long (ms) is the cuber stopping to read the cube — a "look". Also the floor of `lookPauseMs`, the threshold a solve is actually judged by. */
 export const LOOK_PAUSE_MS = 350;
+/** The scaled threshold is this many times the solver's own median gap between turns... */
+const LOOK_PAUSE_GAP_FACTOR = 2.5;
+/** ...but never longer than this (ms): a look is never "nothing" even for a very slow turner. */
+export const LOOK_PAUSE_MAX_MS = 1000;
+/** Fewer gaps than this say too little about the solver's pace, so the flat `LOOK_PAUSE_MS` stands. */
+const LOOK_PAUSE_MIN_GAPS = 12;
+
+/**
+ * How long a pause has to be, in this solve, to count as a look: the flat
+ * `LOOK_PAUSE_MS` for anyone who turns fast, scaled up with the solver's own
+ * median gap between turns so that a slow turner's ordinary rhythm isn't
+ * read as stopping to look. Solves with too little data keep the flat value.
+ */
+export function lookPauseMs(timesMs: readonly number[]): number {
+  if (timesMs.length - 1 < LOOK_PAUSE_MIN_GAPS) return LOOK_PAUSE_MS;
+  const gaps: number[] = [];
+  for (let i = 1; i < timesMs.length; i++) gaps.push(timesMs[i] - timesMs[i - 1]);
+  const scaled = LOOK_PAUSE_GAP_FACTOR * median(gaps);
+  return Math.min(LOOK_PAUSE_MAX_MS, Math.max(LOOK_PAUSE_MS, scaled));
+}
+
+/**
+ * The time covered by the mistakes' cost spans, counting any stretch once
+ * however many mistakes overlap it — a knocked pair, the cross it broke and
+ * the wasted turns in the same rebuild are one lost stretch, not three.
+ */
+export function unionCostMs(mistakes: readonly Pick<Mistake, "atMs" | "costMs">[]): number {
+  const spans = mistakes
+    .filter((m) => m.costMs > 0)
+    .map((m) => [m.atMs, m.atMs + m.costMs] as const)
+    .sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let open: [number, number] | null = null;
+  for (const [start, end] of spans) {
+    if (open && start <= open[1]) {
+      open[1] = Math.max(open[1], end);
+    } else {
+      if (open) total += open[1] - open[0];
+      open = [start, end];
+    }
+  }
+  return open ? total + (open[1] - open[0]) : total;
+}
 
 /** F2L pairs named by their colors rather than a slot position, since "front-right" depends on how the cube is held. */
 export const PAIR_NAMES = ["green-red", "green-orange", "blue-orange", "blue-red"] as const;
@@ -160,7 +203,8 @@ export function analyzeMistakes(input: MistakeRadarInput): MistakeReport {
   const ollIdx = f2lIdx >= 0 ? snaps.findIndex((s, i) => i >= f2lIdx && s.oriented) : -1;
   const f2lLimit = f2lIdx >= 0 ? f2lIdx : snaps.length - 1;
   const gaps = timesMs.slice(1).map((v, i) => v - timesMs[i]);
-  const typicalGap = median(gaps.filter((g) => g < LOOK_PAUSE_MS)) || 150;
+  const lookPause = lookPauseMs(timesMs);
+  const typicalGap = median(gaps.filter((g) => g < lookPause)) || 150;
 
   const phaseAt = (i: number): MistakePhase =>
     crossIdx < 0 || i <= crossIdx ? "Cross" : f2lIdx < 0 || i <= f2lIdx ? "F2L" : ollIdx < 0 || i <= ollIdx ? "OLL" : "PLL";
@@ -222,7 +266,7 @@ export function analyzeMistakes(input: MistakeRadarInput): MistakeReport {
     for (let i = from + 1; i < to; i++) {
       if (!isLookState(snaps[i])) continue;
       const pauseAfter = i + 1 < timesMs.length ? t(i + 1) - t(i) : 0;
-      if (pauseAfter < LOOK_PAUSE_MS) continue;
+      if (pauseAfter < lookPause) continue;
       const sinceLast = moves.slice(lastLook + 1, i + 1);
       if (sinceLast.every((m) => m[0] === "D")) continue;
       looks.push(i);
@@ -296,10 +340,10 @@ export function analyzeMistakes(input: MistakeRadarInput): MistakeReport {
   }
 
   mistakes.sort((a, b) => a.atMs - b.atMs);
-  const totalCostMs = Math.min(
-    totalMs,
-    mistakes.reduce((sum, m) => sum + m.costMs, 0),
-  );
+  // Each mistake keeps its own cost for display, but the spans overlap (one
+  // bad rebuild can be a knocked pair, a broken cross and wasted turns at
+  // once), so the solve's total is the union of them, not the sum.
+  const totalCostMs = Math.min(totalMs, unionCostMs(mistakes));
   return {
     mistakes,
     totalCostMs,
@@ -348,12 +392,44 @@ export function aggregateMistakes(reports: readonly MistakeReport[]): MistakeHab
     .sort((a, b) => b.totalCostMs - a.totalCostMs);
 }
 
-/** `aggregateMistakes`, straight from a solve list — the replay-and-roll-up every other caller of `aggregateMistakes` repeats. */
+const reportCache = new WeakMap<Solve, MistakeReport | null>();
+
+/**
+ * The Mistake Radar's report on a saved solve, replayed once per solve
+ * object and remembered — so a list of thousands only ever costs the solves
+ * not yet seen. Null for a solve with nothing to replay (no scramble,
+ * reconstruction or turn times, or one that can't be replayed). DNFs are replayed like any other; callers
+ * that don't want them leave them out.
+ */
+export function solveMistakeReport(solve: Solve): MistakeReport | null {
+  if (reportCache.has(solve)) return reportCache.get(solve)!;
+  let out: MistakeReport | null = null;
+  if (solve.scramble && solve.reconstruction && solve.moveTimestamps) {
+    try {
+      const x = analysisFrame(solve);
+      out = analyzeMistakes({ scramble: x.scramble, moves: x.reconstruction!.split(/\s+/).filter(Boolean), timesMs: x.moveTimestamps!, totalMs: x.timeMs });
+    } catch {
+      // A solve that can't be replayed has no report — and isn't retried on every call.
+      out = null;
+    }
+  }
+  reportCache.set(solve, out);
+  return out;
+}
+
+/** Whether `mistakeHabits` counts this solve at all (a DNF's blunders aren't habits). */
+export function countsForHabits(solve: Solve): boolean {
+  return !!(solve.scramble && solve.reconstruction && solve.moveTimestamps && solve.penalty !== "dnf");
+}
+
+/** `aggregateMistakes`, straight from a solve list — folded from each solve's cached report, so only solves not seen before are replayed. */
 export function mistakeHabits(solves: readonly Solve[]): MistakeHabit[] {
-  const reports = solves
-    .filter((x) => x.scramble && x.reconstruction && x.moveTimestamps && x.penalty !== "dnf")
-    .map(analysisFrame)
-    .map((x) => analyzeMistakes({ scramble: x.scramble, moves: x.reconstruction!.split(/\s+/).filter(Boolean), timesMs: x.moveTimestamps!, totalMs: x.timeMs }));
+  const reports: MistakeReport[] = [];
+  for (const solve of solves) {
+    if (!countsForHabits(solve)) continue;
+    const report = solveMistakeReport(solve);
+    if (report) reports.push(report);
+  }
   return aggregateMistakes(reports);
 }
 

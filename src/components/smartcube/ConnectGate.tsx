@@ -16,7 +16,11 @@ export function ConnectGate({ children, blurb }: { children: React.ReactNode; bl
       </div>
       <p className="max-w-xs text-sm text-muted">{blurb}</p>
       <ConnectControls unsupportedLabel="Web Bluetooth unavailable in this browser" />
-      {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
+      {error && (
+        <p role="alert" className="max-w-xs text-xs text-danger" data-testid="connect-error">
+          {error}
+        </p>
+      )}
       <p className="max-w-xs text-[11px] text-muted-2">Any state is fine — most cubes report where every piece is. (A MoYu MHC can&apos;t: connect that one solved.)</p>
     </div>
   );

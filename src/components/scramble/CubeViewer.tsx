@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Compass } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { planLiveUpdate, tempoScaleFor } from "./liveTurns";
@@ -47,6 +47,12 @@ interface CubeViewerProps {
   liveMoves?: readonly string[];
   /** How long one quarter turn takes to play in live mode (default 80ms). */
   liveTurnMs?: number;
+  /**
+   * Shown in the viewer's box while cubing.js is still loading and, with a short note, if it fails to
+   * load (offline, a blocked chunk, no WebGL). Without it the box is empty while loading, and a
+   * failed load shows just the note. See LiveCubeMimic, which passes a flat net of the cube.
+   */
+  fallback?: ReactNode;
 }
 
 /**
@@ -142,11 +148,14 @@ async function nudgeOrbit(model: OrbitModel, deltaLatitude: number, deltaLongitu
  * real animated 3D cube. Client-only (WebGL + custom element), so this must
  * be dynamically imported with ssr:false wherever it's used.
  */
-export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveTurnMs = 80 }: CubeViewerProps) {
+export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveTurnMs = 80, fallback }: CubeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
   const [playerReady, setPlayerReady] = useState(false);
+  // The download (or the player itself) failed: say so quietly instead of leaving an empty box and an unhandled rejection. `loadAttempt` re-runs the load from the Retry button.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [gyroOn, setGyroOn] = useState(false);
   const [gyroDenied, setGyroDenied] = useState(false);
   const gyroBaselineRef = useRef<{ beta: number; gamma: number; latitude: number; longitude: number } | null>(null);
@@ -161,22 +170,29 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
     let cancelled = false;
     const container = containerRef.current;
     (async () => {
-      const { twisty, alg: algModule } = await loadCubing();
-      const { TwistyPlayer } = twisty;
-      if (cancelled || !container) return;
+      let player: InstanceType<(typeof import("cubing/twisty"))["TwistyPlayer"]>;
+      let algModule: typeof import("cubing/alg");
+      try {
+        const loaded = await loadCubing();
+        algModule = loaded.alg;
+        if (cancelled || !container) return;
+        player = new loaded.twisty.TwistyPlayer({
+          puzzle: "3x3x3",
+          alg,
+          experimentalSetupAlg: setupAlg,
+          background: "none",
+          controlPanel: "none",
+          hintFacelets: "none",
+          experimentalDragInput: "auto",
+          cameraLatitude: CAMERA_LATITUDE,
+          cameraLongitude: CAMERA_LONGITUDE,
+          ...(isLive ? { tempoScale: tempoScaleFor(liveTurnMs) } : {}),
+        });
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+        return;
+      }
       algCtorRef.current = algModule.Alg;
-      const player = new TwistyPlayer({
-        puzzle: "3x3x3",
-        alg,
-        experimentalSetupAlg: setupAlg,
-        background: "none",
-        controlPanel: "none",
-        hintFacelets: "none",
-        experimentalDragInput: "auto",
-        cameraLatitude: CAMERA_LATITUDE,
-        cameraLongitude: CAMERA_LONGITUDE,
-        ...(isLive ? { tempoScale: tempoScaleFor(liveTurnMs) } : {}),
-      });
       player.style.width = "100%";
       player.style.height = "100%";
       player.style.transform = "rotate(180deg)";
@@ -215,9 +231,9 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
       liveRef.current = null;
       setPlayerReady(false);
     };
-    // Only (re)create the player on mount/unmount; alg/setupAlg updates are handled below.
+    // Only (re)create the player on mount/unmount (or a Retry); alg/setupAlg updates are handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     // Set together (setup before alg) so there's never an intermediate
@@ -385,6 +401,26 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
         aria-label="3D cube view — use arrow keys to rotate"
         onKeyDown={onKeyDown}
       />
+      {!playerReady && (fallback || loadFailed) && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 p-2" data-testid="cube-viewer-fallback">
+          {fallback}
+          {loadFailed && (
+            <p className="pointer-events-auto text-center text-[11px] text-muted" role="status">
+              3D view unavailable.{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setLoadFailed(false);
+                  setLoadAttempt((n) => n + 1);
+                }}
+                className="font-medium underline underline-offset-2 hover:text-foreground"
+              >
+                Retry
+              </button>
+            </p>
+          )}
+        </div>
+      )}
       {playerReady && gyroSupported && (
         <button
           type="button"

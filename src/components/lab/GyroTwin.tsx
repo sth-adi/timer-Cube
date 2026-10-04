@@ -69,6 +69,11 @@ interface GyroTwinProps {
   camera?: string;
   /** Fires every time a whole-cube rotation settles — lets a caller (e.g. a live regrip tally) count them without duplicating the tracker. */
   onRotation?: (token: string) => void;
+  /**
+   * Hides every link that would navigate away. The live timer passes it while a solve is armed or
+   * recording: a stray tap on a 10px link must not unmount the timer with the clock running.
+   */
+  navLocked?: boolean;
 }
 
 /**
@@ -86,7 +91,7 @@ interface GyroTwinProps {
  * instant they settle ("y", "x'"…) — the same detector that writes them into
  * rotation-aware reconstructions after a solve.
  */
-export function GyroTwin({ size = 120, className, showControls = true, camera = CAMERA, onRotation }: GyroTwinProps) {
+export function GyroTwin({ size = 120, className, showControls = true, camera = CAMERA, onRotation, navLocked = false }: GyroTwinProps) {
   const cubeRef = useRef<HTMLDivElement | null>(null);
   const facelets = useSmartCubeStore((s) => s.liveFacelets);
   const gyroActive = useSmartCubeStore((s) => s.gyroActive);
@@ -232,7 +237,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
           row (no room, and no re-center gesture mid-solve) — but "the twin may
           not track your real cube's tilt" is worth a line even there, not
           just on the dedicated Lab page. */}
-      {!showControls && gyroActive && !calibrated && (
+      {!showControls && gyroActive && !calibrated && !navLocked && (
         <Link href="/lab" className="text-[10px] text-warning underline decoration-dotted underline-offset-2">
           Uncalibrated gyro — calibrate in Lab
         </Link>

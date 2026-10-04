@@ -313,3 +313,17 @@ Appended (not regenerated). 28 new files, 93 new import edges; all are in graph.
 - Replay: `analysis/replayTiming` (capped idle gaps, "Real pauses" toggle) and `analysis/replayDisplay` (slice-pair merged text) feed `TimedCubePlayer` and `InstantReplaySheet`.
 - Audio/voice: `utils/sound` resumes the context for every cue (`primeAudio()` on first gesture, `playInspectionBeep(8|12)`); `hooks/voiceCoachPhases` is the once-per-solve phase tracker.
 - FX/theme: running solves freeze the reactor rings and glow (`globals.css`, `[data-state="running"]`); `utils/deviceTier` picks a lighter default effects level on low-power phones; `--muted-2` raised to >= 4.5:1 in every theme.
+
+## Additions — 2026-10-04 (follow-up pass)
+Appended (not regenerated). 8 new files, 44 new import edges; all are in graph.json too.
+- src/components/lab/radarMarkers.ts [1] {Lab / Play} — Furthest right (in % of the track) a marker may start, so its minimum width still fits. (markerSpan)
+- src/components/recap/SolveActionBar.tsx [1] {Stats} — What you can do to the solve itself, from its recap: +2 / DNF, a note, a share link and delete — the same store actions the row popup uses… (SolveActionBar)
+- src/components/timer/LiveInspection.tsx [1] {Timer} — The inspection readouts that move every frame — the ring draining around the screen, the digit styling and the ticks — each on the shared… (LiveInspectionDigits, LiveInspectionRing, LiveInspectionTicks)
+- src/components/xray/xraySelection.ts [2] {Analysis / X-Ray} — The X-Ray page's address for a solve, so a recap opens the solve it summarised (bare /xray opens the newest). (pickXraySolve, xrayHref)
+- src/hooks/useMistakeHabits.ts [2] {Other} — mistakeHabits(solves) without freezing the screen: the solves not yet replayed are replayed in idle time (each is only ever replayed… (useMistakeHabits)
+- src/hooks/useShareSolve.ts [2] {Other} — useShareSolve: Copies a shareable link to a solve's reconstruction and stats — shared by the row popup and the recap sheet. (ShareState, useShareSolve)
+- src/lib/analysis/idleWarm.ts [2] {Analysis / X-Ray} — Runs warm over every solve, newest first, a slice per idle period (at least one solve each, so a starved browser still progresses), then… (scheduleMistakeHabits, schedulePresentCases, scheduleWarm)
+- src/lib/gyro/gyroLog.ts [1] {Smart cube} — Most samples the armed-to-solved log ever holds (~10 minutes at 50Hz) — memory stays bounded however long a cube sits armed. (GYRO_LOG_CAP, appendGyroSample)
+- **F2L pair times must stay "first solved"** (`smartcube/milestones.ts`, `f2lPairAtMs`): `solveBreakdown`'s per-pair rows, `f2lCaseStats`, `solveCases` and the post-solve table all read each pair's case where the previous pair ended. Re-timing a pair at every re-insertion collapses several pairs onto one moment and F2L case detection breaks (it dropped 23 → 12 recognised cases on 14 real solves). `f2lAtMs` is only the end of F2L as a whole.
+- Analysis caches: `analysis/idleWarm` + `useMistakeHabits` (per-solve mistake reports), `analysis/historyStats`; Mistake Radar costs use the union of spans; `analytics/sumOfBest` and `phaseBests` skip solves marked `estimated` (repaired or settle-corrected).
+- Sheets/modals: `components/recap/SolveActionBar` (+2/DNF/note/share/delete in the recap), `hooks/useShareSolve`, `xray/xraySelection` (`/xray?solve=<id>`); `lib/gyro/gyroLog` keeps solve-time gyro samples when thinning.

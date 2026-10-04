@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Timer as TimerIcon, Music, FlaskConical, ScanLine, Clapperboard, ListChecks, Trash2 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
@@ -18,6 +18,8 @@ import {
   type SolveFilter,
   type SolveSort,
 } from "@/lib/analysis/solveFilter";
+import { schedulePresentCases } from "@/lib/analysis/idleWarm";
+import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
 import { CROSS_FACE_COLOR, type CrossFace } from "@/lib/smartcube/crossFrame";
 import { formatTime } from "@/lib/utils/time";
 import { EVENT_TAGS, solveFinalMs, type EventTag } from "@/types";
@@ -41,10 +43,15 @@ export default function SolvesPage() {
   );
   const [filter, setFilter] = useState<SolveFilter>({});
   const [sort, setSort] = useState<SolveSort>("recent");
-  const cases = useMemo(() => presentCases(solves), [solves]);
+  // Every smart solve's summary is worked out in idle time (once per solve — a new solve only costs itself), so a long
+  // history doesn't freeze the page; the previous menus stay until the new ones land.
+  const [casesNow, setCases] = useState<ReturnType<typeof presentCases> | null>(null);
+  useEffect(() => schedulePresentCases(solves, setCases), [solves]);
+  const cases = casesNow ?? NO_CASES;
   const cubes = useMemo(() => presentCubes(solves), [solves]);
   const nicknames = useSettingsStore((s) => s.cubeNicknames);
-  const smart = cases.crosses.length > 0 || cubes.length > 0;
+  // Until the first pass lands, a solve that carries turns is enough to show the filter bar (no jump when the menus fill in).
+  const smart = cubes.length > 0 || (casesNow ? casesNow.crosses.length > 0 : solves.some(hasBreakdown));
   const updateSolves = useSessionStore((s) => s.updateSolves);
   const removeSolves = useSessionStore((s) => s.removeSolves);
   const [selecting, setSelecting] = useState(false);
@@ -67,10 +74,11 @@ export default function SolvesPage() {
   const shownIds = useMemo(() => (showView ? view : [...solves].reverse()).map((s) => s.id), [showView, view, solves]);
   // A tick on a solve that has since scrolled out of the list (a filter changed) must not be acted on blind.
   const livePicked = useMemo(() => shownIds.filter((id) => picked.has(id)), [shownIds, picked]);
+  const { pll: filterPll, oll: filterOll } = filter;
   const matchSummary = useMemo(() => {
     if (!filtered) return null;
     const finals = view.map(solveFinalMs).filter((x): x is number => x !== null);
-    const step = filter.pll ? 3 : filter.oll ? 2 : null;
+    const step = filterPll ? 3 : filterOll ? 2 : null;
     const stepTimes =
       step === null ? [] : view.map((s) => solveSummary(s)?.steps[step]).filter((x): x is number => x !== undefined);
     const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -79,7 +87,7 @@ export default function SolvesPage() {
       mean: mean(finals),
       step: step === null ? null : { label: step === 3 ? "PLL" : "OLL", mean: mean(stepTimes) },
     };
-  }, [filtered, view, filter]);
+  }, [filtered, view, filterPll, filterOll]);
 
   return (
     <>
@@ -333,6 +341,8 @@ export default function SolvesPage() {
     </>
   );
 }
+
+const NO_CASES: ReturnType<typeof presentCases> = { oll: [], pll: [], crosses: [] };
 
 const SORTS: { value: SolveSort; label: string }[] = [
   { value: "recent", label: "Newest first" },

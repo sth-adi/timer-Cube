@@ -23,8 +23,9 @@ export function RecapHero({ finalMs, priorBestMs, children }: { finalMs: number 
   return (
     <section className="flex w-full flex-col items-center gap-2.5" aria-label="Solve result" data-testid="recap-hero">
       <p
-        className={cn("min-h-4 text-center text-xs font-semibold tabular-nums", delta.tone === "best" ? "text-success" : delta.tone === "off" ? "text-muted" : "text-muted")}
+        className={cn("min-h-5 text-center text-[13px] font-semibold tabular-nums", delta.tone === "best" ? "text-success" : delta.tone === "off" ? "text-muted" : "text-muted")}
         data-testid="recap-delta"
+        aria-live="polite"
       >
         {delta.text}
       </p>

@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Radar, ShieldCheck } from "lucide-react";
-import type { MistakeHabit, MistakeKind, MistakeReport } from "@/lib/analysis/mistakeRadar";
+import type { Mistake, MistakeHabit, MistakeKind, MistakeReport } from "@/lib/analysis/mistakeRadar";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import { markerSpan } from "./radarMarkers";
 
 export const KIND_COLOR: Record<MistakeKind, string> = {
   "pair-knocked": "#ff6b6b",
@@ -57,6 +59,10 @@ export function MistakeRadarCard({
   className?: string;
 }) {
   const { mistakes } = report;
+  // The mistake a tap on the timeline picked (a touch screen has no hover): its reason is spelled out under the track and its row below is marked. Until one is picked, the first is read out.
+  const [picked, setPicked] = useState<Mistake | null>(null);
+  const pickedNow = picked && mistakes.includes(picked) ? picked : null;
+  const shown = pickedNow ?? mistakes[0];
   const habitFor = (kind: MistakeKind) => habits?.find((h) => h.kind === kind && h.solvesAffected >= 3);
   return (
     <div className={cn("card flex w-full flex-col gap-3 rounded-xl p-3", className)}>
@@ -79,26 +85,36 @@ export function MistakeRadarCard({
 
       {mistakes.length > 0 && (
         <>
-          <div className="relative h-3 w-full rounded-full bg-bg-panel-2">
-            {mistakes.map((m, i) => (
-              <span
-                key={i}
-                title={m.title}
-                className="absolute top-0 h-3 rounded-full opacity-90"
-                style={{
-                  left: `${Math.min(98, (m.atMs / Math.max(1, totalMs)) * 100)}%`,
-                  width: `${Math.max(2, (m.costMs / Math.max(1, totalMs)) * 100)}%`,
-                  background: KIND_COLOR[m.kind],
-                }}
-              />
-            ))}
+          <div className="relative h-3 w-full rounded-full bg-bg-panel-2" role="group" aria-label="Where the mistakes happened in the solve">
+            {mistakes.map((m, i) => {
+              const { left, width } = markerSpan(m.atMs, m.costMs, totalMs);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  title={m.title}
+                  aria-label={`${m.title}, at ${formatTime(m.atMs)}`}
+                  aria-pressed={pickedNow === m}
+                  onClick={() => setPicked(pickedNow === m ? null : m)}
+                  className={cn(
+                    "absolute top-0 h-3 rounded-full after:absolute after:-inset-x-1 after:-inset-y-2 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent",
+                    pickedNow === m ? "opacity-100 ring-1 ring-foreground/70" : "opacity-90",
+                  )}
+                  style={{ left: `${left}%`, width: `${width}%`, background: KIND_COLOR[m.kind] }}
+                />
+              );
+            })}
           </div>
+          <p className="h-4 truncate text-[11px] text-muted" aria-live="polite">
+            <span className="font-semibold text-foreground">{shown.title}</span> · {shown.phase} · {formatTime(shown.atMs)}
+            {mistakes.length > 1 && !pickedNow && <span className="text-muted-2"> · tap a marker for the others</span>}
+          </p>
 
           <ul className="flex flex-col gap-1.5">
             {mistakes.map((m, i) => {
               const habit = habitFor(m.kind);
               return (
-                <li key={i} className="flex items-start gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-2">
+                <li key={i} className={cn("flex items-start gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-2", pickedNow === m && "ring-1 ring-foreground/30")}>
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: KIND_COLOR[m.kind] }} />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <p className="text-[11px] font-semibold text-foreground">

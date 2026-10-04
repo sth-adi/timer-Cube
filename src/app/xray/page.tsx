@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { History, Loader2, Microscope, Palette, ScanLine, Target, Timer as TimerIcon, Waves, Wand } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { runXray, xrayRequestFor } from "@/lib/xray/client";
 import { useXrayHistory } from "@/components/xray/useXrayHistory";
+import { pickXraySolve } from "@/components/xray/xraySelection";
 import { buildXrayFindings } from "@/lib/xray/xrayCoach";
 import type { SolveXray } from "@/lib/xray/solveXray";
 import { summarizeFlowHistory } from "@/lib/xray/f2lFlow";
@@ -38,16 +40,30 @@ function SectionTitle({ icon, title, subtitle }: { icon: React.ReactNode; title:
   );
 }
 
+const PICKER_LIMIT = 40;
+
 function SolvePicker({ solves, selectedId, onPick }: { solves: Solve[]; selectedId: string | null; onPick: (id: string) => void }) {
+  const stripRef = useRef<HTMLDivElement>(null);
+  // A solve linked from a recap can be older than the strip's window: show it first rather than selecting something unseen.
+  const shown = useMemo(() => {
+    const recent = solves.slice(0, PICKER_LIMIT);
+    const linked = selectedId && !recent.some((s) => s.id === selectedId) ? solves.find((s) => s.id === selectedId) : undefined;
+    return linked ? [linked, ...recent] : recent;
+  }, [solves, selectedId]);
+  // On a phone the strip scrolls sideways: bring the selected solve into view when it changes.
+  useEffect(() => {
+    stripRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView?.({ block: "nearest", inline: "center" });
+  }, [selectedId]);
   return (
-    <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-      {solves.slice(0, 40).map((s) => {
+    <div ref={stripRef} className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+      {shown.map((s) => {
         const final = solveFinalMs(s);
         return (
           <button
             key={s.id}
             type="button"
             onClick={() => onPick(s.id)}
+            aria-pressed={s.id === selectedId}
             className={cn(
               "flex shrink-0 flex-col items-start rounded-lg px-2.5 py-1.5 text-left transition-colors",
               s.id === selectedId ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-foreground hover:bg-bg-panel-2/70",
@@ -79,10 +95,20 @@ function SolvePicker({ solves, selectedId, onPick }: { solves: Solve[]; selected
  *    solved, priced in seconds at your own cross speed.
  */
 export default function XrayPage() {
+  return (
+    <Suspense fallback={null}>
+      <XrayPageInner />
+    </Suspense>
+  );
+}
+
+function XrayPageInner() {
   const allSolves = useSessionStore((s) => s.allSolves);
   const { candidates, results: historyResults, done: historyDone, total: historyTotal, scanning } = useXrayHistory(allSolves);
+  // A deep link from a recap — /xray?solve=<id> — opens on that solve; without one, the newest.
+  const linkedId = useSearchParams().get("solve");
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const selected = candidates.find((s) => s.id === pickedId) ?? candidates[0] ?? null;
+  const { selected, linkMissing } = pickXraySolve(candidates, pickedId, linkedId);
 
   const [xray, setXray] = useState<{ id: string; result: SolveXray | null } | null>(null);
   useEffect(() => {
@@ -129,6 +155,7 @@ export default function XrayPage() {
             </Card>
           ) : (
             <>
+              {linkMissing && <p className="px-1 text-[11px] text-muted-2">That solve can&apos;t be X-Rayed (it may have been deleted), so here&apos;s your newest one.</p>}
               <SolvePicker solves={candidates} selectedId={selected?.id ?? null} onPick={setPickedId} />
 
               {!current ? (

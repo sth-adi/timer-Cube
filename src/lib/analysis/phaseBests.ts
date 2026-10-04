@@ -7,7 +7,9 @@ import type { SolveMetrics } from "@/lib/analytics/solveMetrics";
  * speedrunner's splits.
  *
  * Skipped OLLs and PLLs are the scramble's gift, not a time you earned, so
- * they're left out of both the bests and the gold check.
+ * they're left out of both the bests and the gold check. So are solves
+ * whose timing was repaired or corrected after a lost turn: their splits are
+ * a guess, and one lucky guess would set a best nobody can beat.
  */
 
 export const MIN_PHASE_SAMPLES = 5;
@@ -22,6 +24,7 @@ export interface PhaseBests {
 export function buildPhaseBests(metrics: readonly SolveMetrics[]): PhaseBests {
   const bests = [0, 1, 2, 3].map((i) => {
     const xs = metrics
+      .filter((m) => !m.estimated)
       .filter((m) => !(i === 2 && m.ollSkip) && !(i === 3 && m.pllSkip))
       .map((m) => m.phases[i])
       .filter((v) => Number.isFinite(v) && v > 0);

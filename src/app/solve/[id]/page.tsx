@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AlertTriangle, Ghost, Loader2, Timer as TimerIcon } from "lucide-react";
-import { fetchSharedSolve, type SharedSolve } from "@/lib/social/shareSolve";
+import { AlertTriangle, Ghost, Loader2, RefreshCw, Timer as TimerIcon, WifiOff } from "lucide-react";
+import { fetchSharedSolve, type SharedSolve, type SharedSolveFailure } from "@/lib/social/shareSolve";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import type { AnalyzeResult } from "@/lib/analysis/analyze";
 import { SolveReplay } from "@/components/analysis/SolveReplay";
@@ -13,7 +13,23 @@ import { FindingsList } from "@/components/analysis/FindingsList";
 import { formatTime } from "@/lib/utils/time";
 import { WCA_EVENTS, EVENT_TAGS } from "@/types";
 
-type LoadState = "loading" | "not-found" | "ready";
+type LoadState = "loading" | "ready" | SharedSolveFailure;
+
+/** What each failed lookup says — only "not-found" may blame the link. */
+const FAILURE_COPY: Record<SharedSolveFailure, { title: string; body: string }> = {
+  "not-found": { title: "This link doesn't match a solve", body: "It may have been mistyped, or the solve was removed." },
+  offline: { title: "You're offline", body: "Connect to the internet and try again." },
+  timeout: { title: "Couldn't reach the server", body: "The request took too long. Check your connection and try again." },
+  error: { title: "Couldn't reach the server", body: "Something went wrong loading this solve. Try again in a moment." },
+};
+
+/** Every iOS browser, and desktop Safari — the WebKit engines with the stale-scroll-extent bug the nudge below works around. */
+function isWebKitSafari(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return true;
+  return /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Android|Edg|OPR/.test(ua);
+}
 
 /**
  * A read-only view of one shared solve — no account, no app state, nothing
@@ -29,7 +45,15 @@ export default function SharedSolvePage() {
   const [state, setState] = useState<LoadState>("loading");
   const [solve, setSolve] = useState<SharedSolve | null>(null);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const retry = () => {
+    setState("loading");
+    setSolve(null);
+    setResult(null);
+    setAttempt((n) => n + 1);
+  };
 
   // This page's content grows in several async steps after the initial,
   // much-shorter "Loading solve…" paint — the fetch resolving, the analysis
@@ -40,12 +64,19 @@ export default function SharedSolvePage() {
   // genuinely there — pinch-zooming (which pans independently of the
   // page's own scroll state) is the giveaway. A tiny, real scroll nudge
   // (not a same-position no-op, which some engines short-circuit) forces a
-  // fresh recalculation every time the content's height actually changes.
+  // fresh recalculation. Only WebKit has the bug, and only growth can strand
+  // content, so other engines are left alone and each distinct height
+  // increase nudges once (shrinking or same-height resizes never do).
   useEffect(() => {
     const el = contentRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
+    if (!el || typeof ResizeObserver === "undefined" || !isWebKitSafari()) return;
     let raf = 0;
-    const observer = new ResizeObserver(() => {
+    let lastHeight = 0;
+    const observer = new ResizeObserver((entries) => {
+      const height = entries[entries.length - 1].contentRect.height;
+      const grew = height > lastHeight;
+      lastHeight = height;
+      if (!grew) return;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         window.dispatchEvent(new Event("resize"));
@@ -66,19 +97,19 @@ export default function SharedSolvePage() {
     void (async () => {
       const found = await fetchSharedSolve(params.id);
       if (cancelled) return;
-      if (!found) {
-        setState("not-found");
+      if (!found.ok) {
+        setState(found.reason);
         return;
       }
-      setSolve(found);
+      setSolve(found.solve);
       setState("ready");
       try {
         const client = getCubeEngineClient();
         await client.ready();
         const analyzed = await client.analyzeSolve({
-          scramble: found.scramble,
-          reconstruction: found.reconstruction,
-          timeMs: found.timeMs,
+          scramble: found.solve.scramble,
+          reconstruction: found.solve.reconstruction,
+          timeMs: found.solve.timeMs,
         });
         if (!cancelled) setResult(analyzed);
       } catch {
@@ -91,7 +122,7 @@ export default function SharedSolvePage() {
     return () => {
       cancelled = true;
     };
-  }, [params.id]);
+  }, [params.id, attempt]);
 
   const puzzleLabel = solve ? (WCA_EVENTS.find((e) => e.id === solve.puzzle)?.label ?? solve.puzzle) : null;
   const eventLabel = solve?.event ? EVENT_TAGS.find((e) => e.id === solve.event)?.label : null;
@@ -112,13 +143,20 @@ export default function SharedSolvePage() {
           </div>
         )}
 
-        {state === "not-found" && (
-          <div className="card flex flex-col items-center gap-2 rounded-xl p-8 text-center">
-            <AlertTriangle size={20} className="text-danger" />
-            <p className="text-sm font-medium">This solve link isn&apos;t available</p>
-            <p className="max-w-sm text-xs text-muted">
-              It may have been mistyped, or the link&apos;s host doesn&apos;t have cloud sharing configured.
-            </p>
+        {state !== "loading" && state !== "ready" && (
+          <div className="card flex flex-col items-center gap-2 rounded-xl p-8 text-center" role="alert">
+            {state === "offline" ? <WifiOff size={20} className="text-danger" /> : <AlertTriangle size={20} className="text-danger" />}
+            <p className="text-sm font-medium">{FAILURE_COPY[state].title}</p>
+            <p className="max-w-sm text-xs text-muted">{FAILURE_COPY[state].body}</p>
+            {state !== "not-found" && (
+              <button
+                type="button"
+                onClick={retry}
+                className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg"
+              >
+                <RefreshCw size={13} /> Retry
+              </button>
+            )}
           </div>
         )}
 

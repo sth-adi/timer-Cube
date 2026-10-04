@@ -53,6 +53,18 @@ describe("buildSumOfBest", () => {
   });
 });
 
+describe("buildSumOfBest with rebuilt solves", () => {
+  it("ignores a rebuilt solve's guessed stretches, so it can't pin a gold", () => {
+    const normal = Array.from({ length: 5 }, (_, i) => make(i, { segs: [1000, 1500, 1500, 1500, 1500, 2000, 1500] }));
+    const rebuilt = { ...make(9, { segs: [50, 50, 50, 50, 50, 50, 50] }), estimated: true };
+    const r = buildSumOfBest([...normal, rebuilt])!;
+    expect(r.segments.map((s) => s.bestMs)).toEqual([1000, 1500, 1500, 1500, 1500, 2000, 1500]);
+    expect(r.solves).toBe(5);
+    // Too few real solves: the rebuilt one doesn't make up the minimum.
+    expect(buildSumOfBest([...normal.slice(0, 4), rebuilt])).toBeNull();
+  });
+});
+
 describe("buildLuck", () => {
   it("prices each extra cross move and credits skips", () => {
     // Time = 10s + 400ms per cross move − 1.2s for a PLL skip, with a gentle learning trend.

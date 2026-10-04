@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { withTimeout } from "@/lib/supabase/withTimeout";
+import { SupabaseTimeoutError, withTimeout } from "@/lib/supabase/withTimeout";
 
 /**
  * Publishing one solve to a shareable /solve/[id] link — a friend with no
@@ -54,21 +54,57 @@ export async function createSharedSolve(input: SharedSolve): Promise<string | nu
   return null;
 }
 
-/** The recipient's lookup — null if the id doesn't exist or Supabase is unreachable. */
-export async function fetchSharedSolve(id: string): Promise<SharedSolve | null> {
-  const supabase = getSupabaseClient();
-  if (!supabase) return null;
-  const { data } = await withTimeout(
-    supabase.from("shared_solves").select("scramble, reconstruction, time_ms, move_timestamps, puzzle, event, username").eq("id", id).maybeSingle(),
-  ).catch(() => ({ data: null }));
-  if (!data) return null;
+/** Why a lookup produced no solve — the page words each one differently (only "not-found" blames the link). */
+export type SharedSolveFailure = "not-found" | "offline" | "timeout" | "error";
+
+export type SharedSolveResult = { ok: true; solve: SharedSolve } | { ok: false; reason: SharedSolveFailure };
+
+type SharedSolveRow = Record<string, unknown>;
+
+/** True when the browser reports no network at all (unknown, e.g. on the server, counts as online). */
+function browserOffline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+/**
+ * Turns what the query gave back into a result: a row is a solve, a clean
+ * "no row" is the only not-found, and a thrown error or a Supabase error is a
+ * failure of the trip, not of the link — offline when the browser says so,
+ * otherwise timeout (our own withTimeout fired) or a generic error.
+ */
+export function mapSharedSolveResponse(response: { data: SharedSolveRow | null; error?: unknown } | { thrown: unknown }, offline = browserOffline()): SharedSolveResult {
+  if ("thrown" in response || response.error) {
+    if (offline) return { ok: false, reason: "offline" };
+    const cause = "thrown" in response ? response.thrown : response.error;
+    return { ok: false, reason: cause instanceof SupabaseTimeoutError ? "timeout" : "error" };
+  }
+  const data = response.data;
+  if (!data) return { ok: false, reason: "not-found" };
   return {
-    scramble: data.scramble as string,
-    reconstruction: data.reconstruction as string,
-    timeMs: data.time_ms as number,
-    moveTimestamps: (data.move_timestamps as number[] | null) ?? null,
-    puzzle: data.puzzle as string,
-    event: (data.event as string | null) ?? null,
-    username: (data.username as string | null) ?? null,
+    ok: true,
+    solve: {
+      scramble: data.scramble as string,
+      reconstruction: data.reconstruction as string,
+      timeMs: data.time_ms as number,
+      moveTimestamps: (data.move_timestamps as number[] | null) ?? null,
+      puzzle: data.puzzle as string,
+      event: (data.event as string | null) ?? null,
+      username: (data.username as string | null) ?? null,
+    },
   };
+}
+
+/** The recipient's lookup — says why when there's no solve, so a dead connection isn't reported as a bad link. */
+export async function fetchSharedSolve(id: string): Promise<SharedSolveResult> {
+  const supabase = getSupabaseClient();
+  // No cloud sharing configured on this host: nothing to retry, but not the link's fault either.
+  if (!supabase) return { ok: false, reason: browserOffline() ? "offline" : "error" };
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from("shared_solves").select("scramble, reconstruction, time_ms, move_timestamps, puzzle, event, username").eq("id", id).maybeSingle(),
+    );
+    return mapSharedSolveResponse({ data: data as SharedSolveRow | null, error });
+  } catch (e) {
+    return mapSharedSolveResponse({ thrown: e });
+  }
 }

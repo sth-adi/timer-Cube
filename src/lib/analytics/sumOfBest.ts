@@ -38,8 +38,11 @@ export interface SumOfBestReport {
 export const MIN_SOLVES = 5;
 
 export function buildSumOfBest(metrics: readonly SolveMetrics[], countSkips = false): SumOfBestReport | null {
-  if (metrics.length < MIN_SOLVES) return null;
-  const ordered = [...metrics].sort((a, b) => a.date - b.date);
+  // A solve whose timing was rebuilt (a lost turn put back) or settled from the cube's own report has
+  // guessed stretch times, so it can't set a best, a gold, or count toward the minimum. Its recorded
+  // total is still a real result, so the PB below keeps considering it.
+  const ordered = metrics.filter((m) => !m.estimated).sort((a, b) => a.date - b.date);
+  if (ordered.length < MIN_SOLVES) return null;
   const eligible = (m: SolveMetrics, k: number) => countSkips || !((k === 5 && m.ollSkip) || (k === 6 && m.pllSkip));
 
   const best: { ms: number; date: number; golds: number; lastGold: number }[] = SEGMENTS.map(() => ({ ms: Infinity, date: 0, golds: 0, lastGold: 0 }));
@@ -81,7 +84,7 @@ export function buildSumOfBest(metrics: readonly SolveMetrics[], countSkips = fa
   });
 
   const sumOfBestMs = segments.reduce((a, s) => a + s.bestMs, 0);
-  const pbMs = Math.min(...ordered.map((m) => m.totalMs));
+  const pbMs = Math.min(...metrics.map((m) => m.totalMs));
   const top = [...segments].sort((a, b) => b.possibleSaveMs - a.possibleSaveMs)[0];
   const headline =
     `Your best-ever stretches add up to ${(sumOfBestMs / 1000).toFixed(2)}s — ${((pbMs - sumOfBestMs) / 1000).toFixed(2)}s under your ${(pbMs / 1000).toFixed(2)}s PB. ` +

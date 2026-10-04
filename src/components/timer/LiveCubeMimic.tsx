@@ -1,16 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSmartCubeStore, type SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
+import { FaceletNet } from "@/components/scramble/ScrambleNet";
 import { MIMIC_STABLE_MS, faceletsOf, fixAfter, mimicAlg, mimicSyncVerdict, mimicView, movesToReach, type MimicFix } from "@/lib/analysis/mimicSync";
 import { cn } from "@/lib/utils/cn";
 
 const loadCubeViewerModule = () => import("@/components/scramble/CubeViewer");
 
+/**
+ * What the box shows until the 3D viewer is ready — and instead of it if cubing.js can't load: a
+ * flat net of the cube, so the card is never empty. The mimic provides the facelets (what it is
+ * about to draw) through this context, since a `dynamic` loading component takes no props.
+ */
+const SkeletonFacelets = createContext<string | null>(null);
+
+function MimicNet() {
+  const facelets = useContext(SkeletonFacelets);
+  const live = useSmartCubeStore((s) => s.liveFacelets);
+  return (
+    <div className="flex w-full justify-center" aria-hidden="true">
+      <FaceletNet facelets={facelets ?? live} className="w-full max-w-[11rem]" />
+    </div>
+  );
+}
+
 const CubeViewer = dynamic(() => loadCubeViewerModule().then((m) => m.CubeViewer), {
   ssr: false,
+  loading: () => (
+    <div className="absolute inset-0 flex items-center justify-center p-2">
+      <MimicNet />
+    </div>
+  ),
 });
 
 /**
@@ -103,15 +126,24 @@ export function LiveCubeMimic({
   scramble,
   moves,
   className,
+  idle = false,
 }: {
   scramble: string;
   moves: readonly SmartCubeMove[];
   className?: string;
+  /**
+   * Keep the player mounted but at rest: it shows `scramble` as it is, and the sync with the cube's own
+   * state (below) is paused. The live timer holds the mimic this way between solves, so the next
+   * attempt starts with a ready player and only has to move the turns in — the same instance, never rebuilt.
+   */
+  idle?: boolean;
 }) {
   const tokens = useMemo(() => moves.map((m) => m.token), [moves]);
   const liveFacelets = useSmartCubeStore((s) => s.liveFacelets);
   const unreliable = useSmartCubeStore((s) => s.faceletsUnreliable);
   const [fix, setFix] = useState<MimicFix | null>(null);
+  // A correction belongs to one attempt; an idle mimic drops it so the next one starts from its scramble.
+  if (idle && fix) setFix(null);
   const { setupAlg, liveMoves } = useMemo(() => mimicView(scramble, tokens, fix), [scramble, tokens, fix]);
   const shownAlg = useMemo(() => mimicAlg(setupAlg, liveMoves), [setupAlg, liveMoves]);
   const expected = useMemo(() => {
@@ -122,7 +154,7 @@ export function LiveCubeMimic({
     }
   }, [shownAlg]);
   // "wait": the cube's state differs from the mimic's and can be believed — the timer below decides whether it stays that way.
-  const verdict = expected === null ? "agree" : mimicSyncVerdict({ expected, facelets: liveFacelets, unreliable, stableForMs: 0 });
+  const verdict = idle || expected === null ? "agree" : mimicSyncVerdict({ expected, facelets: liveFacelets, unreliable, stableForMs: 0 });
   useEffect(() => {
     if (verdict !== "wait" || expected === null) return;
     let cancelled = false;
@@ -147,7 +179,9 @@ export function LiveCubeMimic({
 
   return (
     <div className={cn("relative", className)}>
-      <CubeViewer alg="" setupAlg={setupAlg} liveMoves={liveMoves} className="h-full w-full" />
+      <SkeletonFacelets.Provider value={expected}>
+        <CubeViewer alg="" setupAlg={setupAlg} liveMoves={liveMoves} className="h-full w-full" fallback={<MimicNet />} />
+      </SkeletonFacelets.Provider>
       {tickFace && <TurnTick key={tokens.length} face={tickFace} />}
     </div>
   );

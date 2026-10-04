@@ -37,6 +37,28 @@ describe("solveMetrics", () => {
     expect(m.execTps).toBeCloseTo(1000 / 150, 5);
     expect(m.segments.reduce((a, b) => a + b, 0)).toBe(solve.timeMs);
     expect(m.pauses).toEqual([{ atMs: 7 * 150, ms: 1050 }]);
+    expect(m.estimated).toBeUndefined();
+  });
+
+  it("marks a repaired or settle-corrected solve as estimated, but still measures it", () => {
+    const moves = ["F2", ...SUNE, ...TPERM, "D'"];
+    const base: Solve = {
+      id: "a",
+      sessionId: "s",
+      timeMs: 3000,
+      penalty: "none",
+      scramble: invertMoves(moves).join(" "),
+      date: 1,
+      reconstruction: moves.join(" "),
+      moveTimestamps: moves.map((_, i) => i * 150),
+    };
+    const repaired = solveMetrics({ ...base, repaired: { kind: "inserted", index: 3, tokens: ["R"] } })!;
+    const corrected = solveMetrics({ ...base, cube: { id: "c", name: "Cube", corrected: true } })!;
+    const clean = solveMetrics({ ...base, cube: { id: "c", name: "Cube", corrected: false } })!;
+    expect(repaired.estimated).toBe(true);
+    expect(corrected.estimated).toBe(true);
+    expect(clean.estimated).toBeUndefined();
+    expect(repaired.phases).toEqual(clean.phases);
   });
 });
 

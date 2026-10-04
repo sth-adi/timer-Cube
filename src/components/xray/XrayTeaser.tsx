@@ -8,11 +8,14 @@ import type { SolveXray } from "@/lib/xray/solveXray";
 import { CROSS_COLORS, CROSS_COLOR_NAME } from "@/lib/xray/neutrality";
 import { PAIR_LABELS } from "@/lib/xray/common";
 import { outcomeLabel } from "./LastSlotOracleCard";
+import { xrayHref } from "./xraySelection";
 
 interface XrayTeaserProps {
   scramble: string;
   moves: string[];
   timesMs: number[];
+  /** The saved solve this is about — the X-Ray page opens on it instead of on the newest solve. */
+  solveId?: string;
 }
 
 /** The single most interesting line each X-Ray analysis has about a solve, or null when it has nothing to say. */
@@ -44,7 +47,7 @@ function highlights(x: SolveXray): string[] {
 }
 
 /** A post-solve peek at the X-Ray — runs in its worker, so the recap never waits on it. */
-export function XrayTeaser({ scramble, moves, timesMs }: XrayTeaserProps) {
+export function XrayTeaser({ scramble, moves, timesMs, solveId }: XrayTeaserProps) {
   const [result, setResult] = useState<{ key: string; x: SolveXray | null } | null>(null);
   const key = `${scramble}|${moves.length}`;
   useEffect(() => {
@@ -60,7 +63,7 @@ export function XrayTeaser({ scramble, moves, timesMs }: XrayTeaserProps) {
   const lines = x ? highlights(x) : [];
 
   return (
-    <Link href="/xray" className="card flex w-full flex-col gap-2 rounded-xl p-3 transition-colors hover:bg-bg-panel-2/40">
+    <Link href={xrayHref(solveId)} className="card flex w-full flex-col gap-2 rounded-xl p-3 transition-colors hover:bg-bg-panel-2/40">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
           <ScanLine size={13} className="text-accent" /> Solve X-Ray

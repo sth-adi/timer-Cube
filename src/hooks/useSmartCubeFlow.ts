@@ -5,6 +5,7 @@ import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { targetFacelets } from "@/lib/analysis/scrambleVerify";
 import { INSPECTION_DNF_MS, INSPECTION_MS, inspectionPenalty } from "@/lib/timer/timerMachine";
+import { inspectionSecondsLeft } from "@/components/timer/liveClockMath";
 import type { Penalty } from "@/types";
 
 /** Same WCA 15s window the keyboard timer's inspection uses (see lib/timer/timerMachine.ts). */
@@ -14,6 +15,13 @@ export type SmartCubeScramblePhase = "scrambling" | "inspecting" | "ready-to-sol
 
 export interface SmartCubeFlow {
   phase: SmartCubeScramblePhase;
+  /**
+   * Inspection time left, in whole seconds (a multiple of 1000, rounded up), so React state — and the
+   * screen that reads this hook — changes once a second, not once a frame. Every threshold in use (7000
+   * and 3000 for the beeps, the "N s" readouts) is a whole second, so comparisons behave exactly as
+   * with the exact value. Anything animating frame by frame (the ring, the ticks) reads
+   * `inspectionStartedAtMs` and the shared frame clock instead (see LiveInspection.tsx).
+   */
   inspectionRemainingMs: number;
   /** The penalty the first turn would earn right now: +2 past 15s of inspection, DNF past 17s. */
   pendingPenalty: Penalty;
@@ -75,7 +83,8 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
 
   const [phase, setPhase] = useState<SmartCubeScramblePhase>("scrambling");
-  const [inspectionRemainingMs, setInspectionRemainingMs] = useState(SMART_CUBE_INSPECTION_MS);
+  const [inspectionSecs, setInspectionSecs] = useState(SMART_CUBE_INSPECTION_MS / 1000);
+  const inspectionRemainingMs = inspectionSecs * 1000;
   const [pendingPenalty, setPendingPenalty] = useState<Penalty>("none");
   const [inspectionStartedAtMs, setInspectionStartedAtMs] = useState<number | null>(null);
   const [declined, setDeclined] = useState(false);
@@ -93,7 +102,7 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   if (connected && prevResetKey !== currentResetKey) {
     setPrevResetKey(currentResetKey);
     if (phase !== "scrambling") setPhase("scrambling");
-    if (inspectionRemainingMs !== SMART_CUBE_INSPECTION_MS) setInspectionRemainingMs(SMART_CUBE_INSPECTION_MS);
+    if (inspectionSecs !== SMART_CUBE_INSPECTION_MS / 1000) setInspectionSecs(SMART_CUBE_INSPECTION_MS / 1000);
     if (pendingPenalty !== "none") setPendingPenalty("none");
     if (inspectionStartedAtMs !== null) setInspectionStartedAtMs(null);
   }
@@ -109,7 +118,7 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   if (armedByFlow && !armed) setArmedByFlow(false);
   if (rules.resetToScrambling) {
     setPhase("scrambling");
-    if (inspectionRemainingMs !== SMART_CUBE_INSPECTION_MS) setInspectionRemainingMs(SMART_CUBE_INSPECTION_MS);
+    if (inspectionSecs !== SMART_CUBE_INSPECTION_MS / 1000) setInspectionSecs(SMART_CUBE_INSPECTION_MS / 1000);
     if (pendingPenalty !== "none") setPendingPenalty("none");
     if (inspectionStartedAtMs !== null) setInspectionStartedAtMs(null);
   }
@@ -161,14 +170,26 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   // WCA-style inspection countdown. The solve is already armed and records
   // moves regardless; past 15s the countdown shows the penalty the first
   // turn will earn (+2, then DNF past 17s), which the timer applies when it
-  // saves the solve — see inspectionPenalty.
+  // saves the solve — see inspectionPenalty. Runs a frame loop but only touches React
+  // state when the displayed second or the penalty actually changes (about 17 times in
+  // all), so the screen that reads this hook doesn't re-render every frame.
   useEffect(() => {
     if (phase !== "inspecting" || inspectionStartedAtMs === null) return undefined;
     let raf: number;
+    let lastSecs = -1;
+    let lastPenalty: Penalty | null = null;
     const tick = () => {
       const elapsed = performance.now() - inspectionStartedAtMs;
-      setInspectionRemainingMs(Math.max(0, SMART_CUBE_INSPECTION_MS - elapsed));
-      setPendingPenalty(inspectionPenalty(elapsed));
+      const secs = inspectionSecondsLeft(elapsed);
+      if (secs !== lastSecs) {
+        lastSecs = secs;
+        setInspectionSecs(secs);
+      }
+      const penalty = inspectionPenalty(elapsed);
+      if (penalty !== lastPenalty) {
+        lastPenalty = penalty;
+        setPendingPenalty(penalty);
+      }
       if (elapsed > INSPECTION_DNF_MS) {
         setPhase("ready-to-solve");
         return;
