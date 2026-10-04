@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Sparkles } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { normalSolves, solvesForEvent } from "@/lib/stats/stats";
 import { useSolvePrediction } from "@/lib/prediction/useSolvePrediction";
+import { warmMilestoneCache } from "@/lib/analysis/liveProjection";
 import { formatTime } from "@/lib/utils/time";
 
 /**
@@ -32,6 +33,10 @@ export function PredictionBadge() {
   // Trained off the main thread and cached by history; shows the last result until a new one lands.
   const prediction = useSolvePrediction(trainingSolves, scramble);
 
+  // This badge is up while you scramble, i.e. before a solve starts — idle time to work out the
+  // milestone times LiveProjection builds its model from, so its first mount mid-solve replays nothing.
+  useEffect(() => warmMilestoneCache(trainingSolves), [trainingSolves]);
+
   // Only shown once the model has beaten "your recent average" on your own
   // later solves — otherwise the number says nothing about this scramble.
   if (!prediction?.skill?.useful) return null;
@@ -41,7 +46,7 @@ export function PredictionBadge() {
 
   return (
     <p
-      className="flex items-center gap-1 text-xs text-muted-2"
+      className="flex items-center gap-1 text-xs text-muted"
       title={`A rough estimate from a model trained on your own solves for scrambles shaped like this one. Checked on your last ${skill.testSize} solves: off by ${(skill.modelMaeMs / 1000).toFixed(2)}s on average, versus ${(skill.baselineMaeMs / 1000).toFixed(2)}s for just guessing your recent average.`}
     >
       <Sparkles size={11} />

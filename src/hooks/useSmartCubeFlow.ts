@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
-import { isScrambleComplete } from "@/lib/analysis/scrambleVerify";
+import { targetFacelets } from "@/lib/analysis/scrambleVerify";
 import { INSPECTION_DNF_MS, INSPECTION_MS, inspectionPenalty } from "@/lib/timer/timerMachine";
 import type { Penalty } from "@/types";
 
@@ -21,6 +21,40 @@ export interface SmartCubeFlow {
   inspectionStartedAtMs: number | null;
 }
 
+/** What the flow owes the store's attempt right now — pure, so each rule is testable without a renderer. */
+export interface FlowRuleInputs {
+  phase: SmartCubeScramblePhase;
+  armed: boolean;
+  recording: boolean;
+  /** The store's solvedAtMs: non-null while a finished solve is still on screen. */
+  solvedAtMs: number | null;
+  /** The live cube is exactly the target scramble. */
+  matches: boolean;
+  /** A match that was dropped on purpose (cancelled while still matching) and mustn't re-arm until the cube leaves it. */
+  declined: boolean;
+  /** This flow, not something else, armed the store's current attempt. */
+  armedByFlow: boolean;
+}
+
+export interface FlowRuleOutcome {
+  /** Back to "scrambling": the armed attempt is gone (cancelled, dropped) and no solve is in flight or on screen. */
+  resetToScrambling: boolean;
+  declined: boolean;
+  /** Drop the armed attempt: the cube no longer shows the scramble it was armed against, and nothing has been solved yet. */
+  cancelAttempt: boolean;
+}
+
+export function flowRules(i: FlowRuleInputs): FlowRuleOutcome {
+  const resetToScrambling = i.phase !== "scrambling" && !i.armed && !i.recording && i.solvedAtMs === null;
+  return {
+    resetToScrambling,
+    // Cancelling while the cube still matches would re-arm on the spot; wait for it to leave and come back.
+    declined: (i.declined || resetToScrambling) && i.matches,
+    // Once the first turn lands (recording) the cube is supposed to stop matching, so only a not-yet-started attempt is dropped.
+    cancelAttempt: i.armedByFlow && i.armed && !i.recording && !i.matches,
+  };
+}
+
 /**
  * Drives the smart-cube scramble → inspection handoff: watches the cube's
  * live state against the target scramble (see lib/analysis/scrambleVerify.ts),
@@ -34,13 +68,19 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   const connected = useSmartCubeStore((s) => s.connected);
   const liveFacelets = useSmartCubeStore((s) => s.liveFacelets);
   const recording = useSmartCubeStore((s) => s.recording);
+  const armed = useSmartCubeStore((s) => s.armed);
+  const solvedAtMs = useSmartCubeStore((s) => s.solvedAtMs);
   const arm = useSmartCubeStore((s) => s.arm);
+  const cancel = useSmartCubeStore((s) => s.cancel);
   const inspectionEnabled = useSettingsStore((s) => s.inspectionEnabled);
 
   const [phase, setPhase] = useState<SmartCubeScramblePhase>("scrambling");
   const [inspectionRemainingMs, setInspectionRemainingMs] = useState(SMART_CUBE_INSPECTION_MS);
   const [pendingPenalty, setPendingPenalty] = useState<Penalty>("none");
   const [inspectionStartedAtMs, setInspectionStartedAtMs] = useState<number | null>(null);
+  const [declined, setDeclined] = useState(false);
+  // Whether this flow armed the store's current attempt (the Sat-Nav lesson and the Wake game arm it too, and aren't ours to cancel).
+  const [armedByFlow, setArmedByFlow] = useState(false);
 
   // A new target scramble (or a fresh connection) makes any prior
   // verification state meaningless — reset for it. This adjusts state
@@ -58,7 +98,24 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
     if (inspectionStartedAtMs !== null) setInspectionStartedAtMs(null);
   }
 
-  const matched = phase === "scrambling" && connected && scramble !== "" && isScrambleComplete(liveFacelets, scramble);
+  const target = useMemo(() => (scramble === "" ? null : targetFacelets(scramble)), [scramble]);
+  const matches = connected && target !== null && liveFacelets === target;
+
+  // The armed attempt ended without a solve (cancelled from the timer, the cube
+  // disconnected, ...): nothing is in flight or on screen, so go back to
+  // scrambling — otherwise nothing could re-arm and the screen sat stuck on
+  // "ready" until a reconnect. Same render-time adjustment as the reset above.
+  const rules = flowRules({ phase, armed, recording, solvedAtMs, matches, declined, armedByFlow });
+  if (armedByFlow && !armed) setArmedByFlow(false);
+  if (rules.resetToScrambling) {
+    setPhase("scrambling");
+    if (inspectionRemainingMs !== SMART_CUBE_INSPECTION_MS) setInspectionRemainingMs(SMART_CUBE_INSPECTION_MS);
+    if (pendingPenalty !== "none") setPendingPenalty("none");
+    if (inspectionStartedAtMs !== null) setInspectionStartedAtMs(null);
+  }
+  if (rules.declined !== declined) setDeclined(rules.declined);
+
+  const matched = phase === "scrambling" && matches && !declined;
 
   // The instant the live state matches the scramble, arm the solve-detector
   // right away — WCA rules let you start solving any time during (or
@@ -70,12 +127,23 @@ export function useSmartCubeFlow(scramble: string): SmartCubeFlow {
   useEffect(() => {
     if (matched && !prevMatchedRef.current) {
       arm();
+      setArmedByFlow(true);
       setInspectionStartedAtMs(inspectionEnabled ? performance.now() : null);
       setPendingPenalty("none");
       setPhase(inspectionEnabled ? "inspecting" : "ready-to-solve");
     }
     prevMatchedRef.current = matched;
   }, [matched, inspectionEnabled, arm]);
+
+  // While armed but before the first turn, the live cube has to keep matching
+  // the scramble it was armed against. It stops when a lost last scramble turn
+  // gave a false match and the cube's own state report then corrects the app
+  // (the store asks while armed, too): the attempt would otherwise be solved
+  // against the wrong scramble. Drop it — the reset above takes the phase
+  // back to "scrambling", where the match can happen for real.
+  useEffect(() => {
+    if (flowRules({ phase, armed, recording, solvedAtMs, matches, declined, armedByFlow }).cancelAttempt) cancel();
+  }, [phase, armed, recording, solvedAtMs, matches, declined, armedByFlow, cancel]);
 
   // A move made mid-countdown (perfectly legal — inspection is a maximum,
   // not a minimum) means the solve has already started recording; stop

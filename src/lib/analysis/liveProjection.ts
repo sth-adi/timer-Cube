@@ -34,19 +34,107 @@ export interface ProjectionModel {
  * Milestone times are a pure function of a solve's scramble, moves and move
  * timestamps, but working them out replays the whole solve (~1ms each), and
  * the projection model is rebuilt from every smart solve whenever the
- * session changes. Cached per saved solve — solves are immutable in the
- * store, and the inputs are re-checked anyway — so a new solve only
- * replays itself.
+ * session changes. Cached by solve id — a saved solve never changes, and the
+ * inputs are re-checked anyway — so a new solve only replays itself, and a
+ * row that's re-read from storage (same id, new object) still hits.
+ * Pre-filled during idle time by warmMilestoneCache so the first
+ * LiveProjection mount of a session finds everything already worked out.
  */
-const milestoneCache = new WeakMap<Solve, { scramble: string; reconstruction: string; timesMs: readonly number[]; result: (number | null)[] }>();
+interface MilestoneEntry {
+  scramble: string;
+  reconstruction: string;
+  moveCount: number;
+  firstMs: number;
+  lastMs: number;
+  result: (number | null)[];
+}
+const milestoneCache = new Map<string, MilestoneEntry>();
+
+const entryMatches = (e: MilestoneEntry | undefined, solve: Solve): e is MilestoneEntry => {
+  const ts = solve.moveTimestamps;
+  return (
+    !!e &&
+    !!ts &&
+    e.scramble === solve.scramble &&
+    e.reconstruction === solve.reconstruction &&
+    e.moveCount === ts.length &&
+    e.firstMs === ts[0] &&
+    e.lastMs === ts[ts.length - 1]
+  );
+};
+
+/** A saved smart-cube solve with everything milestoneTimes needs (and not a DNF, which the projection ignores). */
+export const isProjectableSolve = (s: Solve): boolean => !!(s.scramble && s.reconstruction && s.moveTimestamps?.length && s.penalty !== "dnf");
 
 /** milestoneTimes for a saved smart-cube solve (needs scramble, reconstruction and moveTimestamps). */
 export function solveMilestoneTimes(solve: Solve): (number | null)[] {
-  const hit = milestoneCache.get(solve);
-  if (hit && hit.scramble === solve.scramble && hit.reconstruction === solve.reconstruction && hit.timesMs === solve.moveTimestamps) return hit.result;
-  const result = milestoneTimes({ scramble: solve.scramble, moves: solve.reconstruction!.split(/\s+/).filter(Boolean), timesMs: solve.moveTimestamps! });
-  milestoneCache.set(solve, { scramble: solve.scramble, reconstruction: solve.reconstruction!, timesMs: solve.moveTimestamps!, result });
+  const hit = milestoneCache.get(solve.id);
+  if (entryMatches(hit, solve)) return hit.result;
+  const ts = solve.moveTimestamps!;
+  const result = milestoneTimes({ scramble: solve.scramble, moves: solve.reconstruction!.split(/\s+/).filter(Boolean), timesMs: ts });
+  milestoneCache.set(solve.id, {
+    scramble: solve.scramble,
+    reconstruction: solve.reconstruction!,
+    moveCount: ts.length,
+    firstMs: ts[0],
+    lastMs: ts[ts.length - 1],
+    result,
+  });
   return result;
+}
+
+/** True when this solve's milestones are already cached (so projecting from it costs nothing). */
+export const hasCachedMilestones = (solve: Solve): boolean => entryMatches(milestoneCache.get(solve.id), solve);
+
+/** Test hook: forget every cached milestone set. */
+export function resetMilestoneCacheForTests(): void {
+  milestoneCache.clear();
+}
+
+/** Runs `step` in idle time (requestIdleCallback, or a short timeout where that's missing); `step` gets a "ms of budget left" function. Returns a canceller. */
+function scheduleIdle(step: (budgetMs: () => number) => void): () => void {
+  if (typeof requestIdleCallback === "function") {
+    const h = requestIdleCallback((d) => step(() => d.timeRemaining()), { timeout: 2000 });
+    return () => cancelIdleCallback(h);
+  }
+  const h = setTimeout(() => {
+    const end = performance.now() + 8;
+    step(() => end - performance.now());
+  }, 50);
+  return () => clearTimeout(h);
+}
+
+/**
+ * Works out the milestone times for every projectable solve that isn't cached
+ * yet, a slice at a time while the browser is idle — so by the time a solve
+ * starts, LiveProjection's first mount replays nothing. Safe to call on every
+ * change to the solve list (cached solves are skipped; the newest are done
+ * first). Returns a canceller for an effect cleanup.
+ */
+export function warmMilestoneCache(solves: readonly Solve[]): () => void {
+  const todo: Solve[] = [];
+  for (let i = solves.length - 1; i >= 0; i--) if (isProjectableSolve(solves[i]) && !hasCachedMilestones(solves[i])) todo.push(solves[i]);
+  if (todo.length === 0) return () => {};
+  let next = 0;
+  let cancel = () => {};
+  let cancelled = false;
+  const run = (budgetMs: () => number) => {
+    // Always at least one per slice so a starved idle period still makes progress.
+    do {
+      try {
+        solveMilestoneTimes(todo[next]);
+      } catch {
+        // A solve that can't be replayed is skipped here; the projection itself decides what to do with it.
+      }
+      next++;
+    } while (next < todo.length && budgetMs() > 2);
+    if (!cancelled && next < todo.length) cancel = scheduleIdle(run);
+  };
+  cancel = scheduleIdle(run);
+  return () => {
+    cancelled = true;
+    cancel();
+  };
 }
 
 export const MIN_PROJECTION_SOLVES = 5;
@@ -106,6 +194,15 @@ export interface Projection {
 }
 
 const s2 = (ms: number) => (ms / 1000).toFixed(2);
+const s1 = (ms: number) => (ms / 1000).toFixed(1);
+
+/** A projected finish as shown on the live pill: rounded to 0.1s ("12.3", "1:05.4") so it doesn't flicker through hundredths. */
+export function formatProjectedMs(ms: number): string {
+  const tenths = Math.max(0, Math.round(ms / 100));
+  const minutes = Math.floor(tenths / 600);
+  const secs = (tenths % 600) / 10;
+  return minutes > 0 ? `${minutes}:${secs.toFixed(1).padStart(4, "0")}` : secs.toFixed(1);
+}
 
 /**
  * Before the cross is even done there's no milestone to project from, but
@@ -184,6 +281,6 @@ export function projectAtTime(model: ProjectionModel, p: Projection, elapsedMs: 
     projectedMs,
     pbPace,
     headline: pbPace ? "PB pace" : inReach ? "PB in reach" : model.meanMs !== null && projectedMs < model.meanMs ? "Better than average" : "On pace",
-    detail: overdue > 0 ? `${s2(overdue)}s longer than usual since ${p.milestone}` : p.detail,
+    detail: overdue > 0 ? `${s1(overdue)}s longer than usual since ${p.milestone}` : p.detail,
   };
 }

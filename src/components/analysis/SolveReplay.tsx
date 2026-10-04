@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { AlertTriangle, CheckCircle2, Clapperboard, Film, Info, Lightbulb, Mic, MicOff, Play } from "lucide-react";
 import { findingsForPhase, type Finding, type PhaseAnalysis, type Severity } from "@/lib/analysis/analyze";
 import { FALLBACK_GAP_MS, gapsFromTimestamps } from "@/lib/analysis/replayGaps";
+import { phaseMarksFromPhases } from "@/lib/analysis/replayTiming";
 import { cn } from "@/lib/utils/cn";
 import { buildDirectorsCut } from "@/lib/replay/directorsCut";
 
@@ -109,6 +110,9 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moveTimestamps, moves.length, movesBefore.length, viewMoves.length, alt]);
 
+  // Phase ticks on the scrubber, for the whole solve only (one phase alone has nothing to divide).
+  const marks = useMemo(() => (isWhole ? phaseMarksFromPhases(phases) : undefined), [isWhole, phases]);
+
   const cues = useMemo(() => (director ? buildDirectorsCut(phases, findings, moveTimestamps, totalMs) : undefined), [director, phases, findings, moveTimestamps, totalMs]);
 
   // Whole solve: lead with the top (already severity-sorted) findings that
@@ -199,6 +203,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         hasRealTiming={hasRealTiming}
         className="mx-auto h-64 w-full max-w-xs"
         cues={isWhole ? cues : undefined}
+        marks={marks}
         voice={voice}
       />
 

@@ -45,18 +45,53 @@ export function peakTps(buckets: readonly TpsBucket[]): number {
   return buckets.reduce((max, b) => Math.max(max, b.tps), 0);
 }
 
+/** Default effective window for the live readout: ~1.8s of recent turning, smoothed. */
+export const LIVE_TPS_WINDOW_MS = 1800;
+/** Below this the live readout is "at rest" — it would round to 0.0 anyway. */
+const LIVE_TPS_REST = 0.05;
+/** Early in a solve, don't divide by a sliver of history (the first move would read as a spike). */
+const LIVE_TPS_MIN_SPAN_MS = 600;
+
 /**
- * Turns per second in the `windowMs` immediately before `atMs` — a live
- * "how fast right now" speedometer, distinct from `computeTpsBuckets`'
- * fixed windows aligned to the very first move (right for a post-solve
- * graph of the whole solve, wrong for "what's my hand speed at this
- * instant" — that has to slide with the clock, not sit still at bucket
- * boundaries from a while ago). Naturally decays to 0 the moment turning
- * stops, since a window with nothing recent in it has nothing to count.
+ * Turns per second "right now" — a live speedometer, distinct from
+ * `computeTpsBuckets`' fixed windows aligned to the very first move (right for
+ * a post-solve graph, wrong for a hand-speed readout that has to slide with
+ * the clock).
+ *
+ * Counting integers in a 1s window made the readout hop 0, 1, 2 and show
+ * "3.0" at every other glance, so this is a smoothed rate instead: every move
+ * contributes a soft bump that rises over ~`windowMs/4`, peaks, and fades out
+ * over `windowMs` — the result of running the move stream through two
+ * cascaded exponential moving averages. It is evaluated in closed form from
+ * the timestamps, so it is stateless (a pure function of `atMs`, nothing to
+ * carry between frames) yet moves continuously: a move landing never steps the
+ * number, and stopping decays it smoothly to 0. A steady stream of N turns per
+ * second reads as N once the window has filled; the start of a solve is
+ * normalised against the history there actually is, so the ramp-up isn't
+ * artificially low-balled by a window that hasn't filled yet.
  */
-export function rollingTps(timestampsMs: readonly number[], atMs: number, windowMs = 1000): number {
-  const from = atMs - windowMs;
-  let count = 0;
-  for (const t of timestampsMs) if (t > from && t <= atMs) count++;
-  return count / (windowMs / 1000);
+export function rollingTps(timestampsMs: readonly number[], atMs: number, windowMs = LIVE_TPS_WINDOW_MS): number {
+  const n = timestampsMs.length;
+  if (n === 0 || windowMs <= 0) return 0;
+  const tau = windowMs / 4;
+  const reach = tau * 6; // beyond this a bump has faded to ~1% of its peak
+  let sum = 0;
+  // Timestamps ascend, so walk back from the newest and stop at the first one that's faded out.
+  for (let i = n - 1; i >= 0; i--) {
+    const age = atMs - timestampsMs[i];
+    if (age < 0) continue;
+    if (age > reach) break;
+    const x = age / tau;
+    sum += x * Math.exp(-x);
+  }
+  // What a steady stream would have accumulated over the history we actually have (<= reach).
+  const span = Math.min(reach, Math.max(LIVE_TPS_MIN_SPAN_MS, atMs - timestampsMs[0]));
+  const u = span / tau;
+  const norm = 1 - Math.exp(-u) * (1 + u);
+  return (1000 * sum) / tau / norm;
+}
+
+/** The live TPS as shown ("4.2"), or null at rest (nothing recent enough to read) — the caller renders its own placeholder. */
+export function formatLiveTps(tps: number | null): string | null {
+  return tps === null || !(tps >= LIVE_TPS_REST) ? null : tps.toFixed(1);
 }

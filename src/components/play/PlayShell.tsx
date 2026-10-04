@@ -71,12 +71,12 @@ export function CubeStatus() {
     <button
       type="button"
       onClick={() => void connect()}
-      disabled={connecting || !supported}
+      disabled={connecting || supported !== true}
       className="flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[var(--play-dim)] hover:text-white disabled:hover:text-[var(--play-dim)]"
-      title={supported ? "Connect a smart cube" : "No Web Bluetooth here — play with the keys and pad"}
+      title={supported === false ? "No Web Bluetooth here — play with the keys and pad" : "Connect a smart cube"}
     >
       <Keyboard size={12} />
-      {connecting ? "Connecting…" : supported ? "Keys & pad · connect cube" : "Keys & pad"}
+      {connecting ? "Connecting…" : supported === false ? "Keys & pad" : "Keys & pad · connect cube"}
     </button>
   );
 }

@@ -2,29 +2,8 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  BatteryFull,
-  BatteryLow,
-  BatteryMedium,
-  BatteryWarning,
-  Bluetooth,
-  BluetoothConnected,
-  BluetoothOff,
-  Check,
-  ChevronDown,
-  FlaskConical,
-  Play,
-  Radio,
-  RotateCcw,
-  Shuffle,
-  Sparkles,
-  Trash2,
-  TriangleAlert,
-  Volume2,
-  VolumeX,
-  Wand2,
-  X,
-} from "lucide-react";
+import { Bluetooth, BluetoothOff, Check, ChevronDown, Radio, RotateCcw, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useSmartCubeStore, getGyroLog } from "@/lib/store/smartCubeStore";
 import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
 import { summarizeSolveGyro } from "@/lib/gyro/solveGyro";
@@ -33,14 +12,12 @@ import { GyroReconstructionCard } from "@/components/lab/GyroReconstructionCard"
 import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
 import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
 import { analyzeMistakes, mistakeHabits, mistakesByRow } from "@/lib/analysis/mistakeRadar";
-import { caseStats, solveCases, type CaseGroup } from "@/lib/analysis/caseHistory";
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
 import { inspectionReport } from "@/lib/inspection/report";
 import { GazeCard } from "@/components/gaze/GazeCard";
 import { analyzeGaze } from "@/lib/gaze/gaze";
 import { scrambleToFacelets } from "@/lib/cube-engine/facelets";
-import { inspectionPenalty } from "@/lib/timer/timerMachine";
 import { PaceChip, PaceLadderCard } from "@/components/pacer/PaceCards";
 import { useSplitPacer } from "@/hooks/useSplitPacer";
 import { liveMilestones } from "@/lib/pacer/pacer";
@@ -68,9 +45,6 @@ import { useScrambleGuide } from "@/hooks/useScrambleGuide";
 import { ScrambleGuidePanel } from "@/components/smartcube/ScrambleGuidePanel";
 import { PredictionBadge } from "@/components/timer/PredictionBadge";
 import { PHASE_TINTS } from "@/components/stats/phaseTints";
-import { predictSolveTime } from "@/lib/analysis/prediction";
-import { paceFromRatio, resetPerformanceAura, setPerformanceAura } from "@/lib/store/performanceAuraBus";
-import { useNowTick } from "@/hooks/useNowTick";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import { LiveProjection } from "./LiveProjection";
 import { LiveSessionCoach } from "./LiveSessionCoach";
@@ -78,6 +52,10 @@ import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { InspectionRing } from "@/components/timer/InspectionRing";
 import { GhostPaceBar } from "@/components/timer/GhostPaceBar";
 import { QuickDelete } from "@/components/timer/QuickDelete";
+import { LiveAura, LiveElapsed, LiveMoveLine } from "@/components/timer/liveClock";
+import { liveElapsedMs } from "@/components/timer/liveClockMath";
+import { StatusBanners, StatusDot, LOW_BATTERY_PERCENT, type BannerState } from "@/components/timer/StatusBanners";
+import { inspectionPenaltyFor, solveSaveExtras, type PhaseBoundaries } from "@/components/timer/smartCubeSave";
 import { TimerStage } from "@/components/timer/TimerStage";
 import { useFxPhase } from "@/lib/fx/useFxPhase";
 import { fxImpact, type FxPhase } from "@/lib/fx/fxBus";
@@ -85,7 +63,7 @@ import { PostSolveTable } from "@/components/timer/PostSolveTable";
 import { PostSolveCoachCard } from "@/components/timer/PostSolveCoachCard";
 import { InstantReplaySheet } from "@/components/analysis/InstantReplaySheet";
 import { formatTime } from "@/lib/utils/time";
-import { averageTps, computeTpsBuckets, peakTps, rollingTps } from "@/lib/analysis/tps";
+import { averageTps, computeTpsBuckets, peakTps } from "@/lib/analysis/tps";
 import { consistencyScore } from "@/lib/analysis/cadence";
 import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
 import { computeSessionStats, normalSolves, solvesForEvent } from "@/lib/stats/stats";
@@ -93,15 +71,9 @@ import { avg, metricsFor, sd } from "@/lib/analytics/solveMetrics";
 import { PAUSE_MS } from "@/lib/analytics/pause";
 import { buildPostSolveBaseline, paceFor, type PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { buildPhaseBests, deltaToBest, findGolds } from "@/lib/analysis/phaseBests";
-import { playInspectionBeep, playSolveChime } from "@/lib/utils/sound";
-import { EVENT_TAGS } from "@/types";
+import { playInspectionBeep, playSolveChime, primeAudio } from "@/lib/utils/sound";
+import { EVENT_TAGS, solveFinalMs } from "@/types";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
-import { findCase } from "@/lib/algorithms/caseLookup";
-import { invertAlg } from "@/lib/algorithms/algUtils";
-import { CaseIcon } from "@/components/algorithms/CaseIcon";
-import { effectiveAlg } from "@/lib/algorithms/myAlgs";
-import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
-import { LearnedAlgNotice } from "@/components/algorithms/LearnedAlgNotice";
 import { CROSS_FACE_COLOR, toCrossFrame } from "@/lib/smartcube/crossFrame";
 import { extractAlgExecutions } from "@/lib/xray/algMicroscope";
 import { solveBreakdown } from "@/lib/analysis/solveBreakdown";
@@ -110,23 +82,42 @@ import { pbSolveRows, timeWonLost } from "@/lib/analysis/timeWonLost";
 import { ReconstructionCard } from "@/components/recap/ReconstructionCard";
 import { TimeWonLostCard } from "@/components/recap/TimeWonLostCard";
 import { cn } from "@/lib/utils/cn";
+import { PHASE_LABELS_4 } from "@/components/timer/phaseRibbonMath";
+import { PhaseRibbon } from "@/components/timer/PhaseRibbon";
+import { CaseBadges } from "@/components/timer/CaseBadges";
+import { SolveHeader } from "@/components/timer/SolveHeader";
+import { DroppedSolveView } from "@/components/timer/DisconnectBanner";
+import { InspectionDigits, InspectionTicks } from "@/components/timer/InspectionDigits";
+import { RecapHero } from "@/components/timer/RecapHero";
+import { RecapNotices } from "@/components/timer/RecapNotices";
+import { RecapActionBar } from "@/components/timer/RecapActionBar";
 
-const PHASE_LABELS_4 = ["Cross", "F2L", "OLL", "PLL"] as const;
+/**
+ * Layout variants. Portrait phone is the base layout and none of these touch it: the wrapper
+ * divs are `display: contents` there, so their children lay out exactly as direct children of the root.
+ *  - Landscape on a short screen (a phone on its side) while a solve is live: the 3D cube sits beside the digits.
+ *  - The recap at the lg breakpoint: time, ribbon and actions on the left, the table and cards on the right.
+ */
+const LIVE_ROOT = "[@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl";
+const LIVE_LEFT =
+  "[@media(orientation:landscape)_and_(max-height:500px)]:grid [@media(orientation:landscape)_and_(max-height:500px)]:w-full [@media(orientation:landscape)_and_(max-height:500px)]:grid-cols-[minmax(0,1fr)_12rem] [@media(orientation:landscape)_and_(max-height:500px)]:grid-rows-[auto_1fr] [@media(orientation:landscape)_and_(max-height:500px)]:items-start [@media(orientation:landscape)_and_(max-height:500px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:500px)]:gap-y-2.5";
+const LIVE_STAGE = "[@media(orientation:landscape)_and_(max-height:500px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:500px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:500px)]:flex [@media(orientation:landscape)_and_(max-height:500px)]:flex-col [@media(orientation:landscape)_and_(max-height:500px)]:items-center [@media(orientation:landscape)_and_(max-height:500px)]:gap-4";
+const LIVE_LINES = "[@media(orientation:landscape)_and_(max-height:500px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:500px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:500px)]:flex [@media(orientation:landscape)_and_(max-height:500px)]:flex-col [@media(orientation:landscape)_and_(max-height:500px)]:items-center [@media(orientation:landscape)_and_(max-height:500px)]:gap-4";
+const LIVE_CUBE = "[@media(orientation:landscape)_and_(max-height:500px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:500px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:500px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:500px)]:self-start";
+const RECAP_ROOT = "lg:max-w-4xl lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-5 lg:gap-y-4";
+const RECAP_TOP = "lg:col-span-2 lg:flex lg:flex-col lg:items-center lg:gap-4";
+const RECAP_LEFT = "lg:col-start-1 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:items-center lg:gap-4";
+const RECAP_RIGHT = "lg:col-start-2 lg:row-span-2 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-4";
+const RECAP_BAR = "lg:col-start-1 lg:row-start-3";
+const RECAP_DETAILS = "lg:col-span-2 lg:row-start-4 lg:flex lg:flex-col lg:gap-4";
 
-/** A case needs at least this many past occurrences before its average is trusted enough to flag as "weak". */
-const MIN_CASE_OCCURRENCES = 3;
-/** A case's own average total time (recognition + execution) needs to run at least this much over the group average to count as a weak case. */
-const WEAK_CASE_RATIO = 1.3;
 /** Below this many qualifying turning gaps, a solve's rhythm isn't a meaningful sample — matches cadence.ts's own MIN_GAPS. */
 const MIN_CADENCE_GAPS = 12;
 
-/** Cumulative phase-boundary ms (from solve start), null for a phase not yet reached. */
-interface PhaseBoundaries {
-  cross: number | null;
-  f2l: number | null;
-  oll: number | null;
-  pll: number | null;
-}
+/** Stable empties for the post-solve values, so a solve in progress doesn't rebuild them on every move. */
+const NO_NUMBERS: number[] = [];
+const NO_TOKENS: string[] = [];
+const NO_ROWS: ReturnType<typeof buildPostSolveRows> = [];
 
 /** Each phase's own duration in ms, or null while it's not yet finished (or not yet started). */
 function phaseDurations(b: PhaseBoundaries): (number | null)[] {
@@ -151,72 +142,6 @@ function phaseForMs(ms: number, boundaries: PhaseBoundaries | null): number {
   if (boundaries.f2l !== null && ms < boundaries.f2l) return 1;
   if (boundaries.oll !== null && ms < boundaries.oll) return 2;
   return 3;
-}
-
-/** Rough share of a solve each step takes, used to size the ribbon until your own history says otherwise. */
-const DEFAULT_PHASE_WEIGHT_MS = [1500, 6500, 3500, 1200] as const;
-const RIBBON_TINT = [
-  { solid: "bg-accent", soft: "bg-accent/20" },
-  { solid: "bg-cyan", soft: "bg-cyan/20" },
-  { solid: "bg-warning", soft: "bg-warning/20" },
-  { solid: "bg-success", soft: "bg-success/20" },
-] as const;
-
-/**
- * The solve as one strip: Cross, F2L, OLL, PLL sized by how long each usually
- * takes you, finished steps filled in their own colour, the current one filling as it
- * goes (F2L by pairs in, the rest against your usual time for the step). Glance
- * down mid-solve and you can see how far through you are without reading a number.
- */
-function PhaseRibbon({
-  durations,
-  currentPhaseIndex,
-  liveCurrentMs,
-  baseline,
-  f2lPairCount,
-  gold,
-}: {
-  durations: (number | null)[];
-  currentPhaseIndex: number;
-  liveCurrentMs: number | null;
-  baseline?: PostSolveBaseline | null;
-  f2lPairCount: number;
-  /** Steps that just set a new best — marked with a star. */
-  gold: readonly boolean[];
-}) {
-  const weights = PHASE_LABELS_4.map((_, i) => Math.max(500, baseline?.phases[i]?.medianMs ?? DEFAULT_PHASE_WEIGHT_MS[i]));
-  return (
-    <div className="flex w-full max-w-xs gap-[3px]" role="progressbar" aria-label="Solve progress" aria-valuemin={0} aria-valuemax={4} aria-valuenow={Math.min(4, currentPhaseIndex)}>
-      {PHASE_LABELS_4.map((label, i) => {
-        const done = durations[i] !== null;
-        const current = i === currentPhaseIndex && !done;
-        let fill = done ? 100 : 0;
-        if (current) {
-          if (i === 1 && f2lPairCount > 0) fill = Math.min(95, (Math.min(f2lPairCount, 4) / 4) * 100);
-          else fill = Math.min(95, ((liveCurrentMs ?? 0) / weights[i]) * 100);
-        }
-        const tint = RIBBON_TINT[i];
-        return (
-          <div key={label} className="flex flex-col gap-1" style={{ flexGrow: weights[i], flexBasis: 0 }}>
-            <div className={cn("relative h-2 overflow-hidden rounded-full", tint.soft, current && "ring-1 ring-foreground/15")}>
-              <div className={cn("h-full rounded-full transition-[width] duration-200 ease-out", tint.solid, !done && !current && "opacity-0")} style={{ width: `${fill}%` }} />
-              {i === 1 && (
-                <>
-                  {[25, 50, 75].map((p) => (
-                    <span key={p} aria-hidden className="absolute inset-y-0 w-px bg-bg-panel/80" style={{ left: `${p}%` }} />
-                  ))}
-                </>
-              )}
-            </div>
-            <span className={cn("truncate text-center text-[9px] font-semibold uppercase leading-none tracking-wider", gold[i] ? "text-warning" : current ? "text-foreground" : done ? "text-muted" : "text-muted-2")}>
-              {gold[i] ? "★ " : ""}
-              {label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 /** Cubeast-style running phase breakdown: finished phases show their time, the current one counts up live. */
@@ -276,7 +201,7 @@ function PhaseSplitsRow({
             {i === 1 && f2lPairCount ? ` ${Math.min(f2lPairCount, 4)}/4` : ""}{" "}
             {hideTimes ? "·" : done !== null ? formatTime(done) : isCurrent && liveCurrentMs !== null ? formatTime(liveCurrentMs) : "—"}
             {delta !== null && (
-              <span className={cn("ml-1 text-[10px] font-normal", gold ? "text-warning" : "text-muted-2")}>
+              <span className={cn("ml-1 text-[10px] font-normal", gold ? "text-warning" : "text-muted")}>
                 {delta < 0 ? "−" : "+"}
                 {(Math.abs(delta) / 1000).toFixed(2)}
               </span>
@@ -301,101 +226,11 @@ function GoldSummary({ golds, sumOfBestMs, totalMs }: { golds: { phase: 0 | 1 | 
         </span>
       ))}
       {sumOfBestMs !== null && (
-        <span className="text-muted-2" title="Your best-ever Cross, F2L, OLL and PLL added together — a solve you've proven you can do, just never all at once">
+        <span className="text-muted" title="Your best-ever Cross, F2L, OLL and PLL added together — a solve you've proven you can do, just never all at once">
           Sum of bests {formatTime(sumOfBestMs)} · this solve {totalMs <= sumOfBestMs ? "beat it" : `${((totalMs - sumOfBestMs) / 1000).toFixed(2)}s off`}
         </span>
       )}
     </div>
-  );
-}
-
-function CaseBadges({
-  ollCaseName,
-  pllCaseName,
-  weakOllCases,
-  weakPllCases,
-}: {
-  ollCaseName: string | null;
-  pllCaseName: string | null;
-  /** Case names running meaningfully slower than your own average for the group — see WEAK_CASE_RATIO below. */
-  weakOllCases: ReadonlySet<string>;
-  weakPllCases: ReadonlySet<string>;
-}) {
-  // Your main algorithm for the case (learned or picked), else the book's.
-  const chosen = useMyAlgsStore((s) => s.chosen);
-  if (!ollCaseName && !pllCaseName) return null;
-  const badge = (group: "OLL" | "PLL", name: string | null) => {
-    if (!name) return null;
-    const found = findCase(group, name);
-    const alg = found ? effectiveAlg(chosen, group, name, found.alg) : undefined;
-    return { icon: found ? <CaseIcon setupAlg={invertAlg(found.alg)} kind={group} className="h-9 w-9 shrink-0 overflow-hidden rounded-[4px]" /> : null, alg };
-  };
-  const oll = badge("OLL", ollCaseName);
-  const pll = badge("PLL", pllCaseName);
-  const ollWeak = ollCaseName !== null && weakOllCases.has(ollCaseName);
-  const pllWeak = pllCaseName !== null && weakPllCases.has(pllCaseName);
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5">
-      {ollCaseName && (
-        <span className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-          {oll?.icon}
-          <span className="flex flex-col items-start gap-0.5">
-            <span className="flex items-center gap-1">
-              <Sparkles size={11} /> OLL: {ollCaseName}
-              {ollWeak && (
-                <TriangleAlert size={11} className="text-warning" aria-label="One of your slower OLL cases — take your time recognizing it" />
-              )}
-            </span>
-            {oll?.alg && <span className="font-mono text-[10px] font-normal text-accent/70">{oll.alg}</span>}
-          </span>
-        </span>
-      )}
-      {pllCaseName && (
-        <span className="flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-          {pll?.icon}
-          <span className="flex flex-col items-start gap-0.5">
-            <span className="flex items-center gap-1">
-              <Sparkles size={11} /> PLL: {pllCaseName}
-              {pllWeak && (
-                <TriangleAlert size={11} className="text-warning" aria-label="One of your slower PLL cases — take your time recognizing it" />
-              )}
-            </span>
-            {pll?.alg && <span className="font-mono text-[10px] font-normal text-accent/70">{pll.alg}</span>}
-          </span>
-        </span>
-      )}
-    </div>
-  );
-}
-
-/**
- * A tappable battery readout for the connected cube — most Bluetooth cubes
- * (GAN, MoYu's AI models, QiYi) report this, but nothing in this app asked
- * for it before now. Tapping it re-requests a fresh reading rather than
- * waiting for the cube to push one on its own schedule (some protocols
- * don't push updates at all outside of an explicit request).
- */
-function BatteryBadge({ level, onRefresh }: { level: number | null; onRefresh: () => void }) {
-  if (level === null) {
-    return (
-      <button type="button" onClick={onRefresh} className="flex items-center gap-1 text-muted-2 hover:text-muted">
-        <BatteryWarning size={13} />
-        <span className="text-[11px]">…</span>
-      </button>
-    );
-  }
-  const Icon = level > 66 ? BatteryFull : level > 33 ? BatteryMedium : level > 12 ? BatteryLow : BatteryWarning;
-  const colorClass = level > 33 ? "text-muted" : level > 12 ? "text-warning" : "text-danger";
-  return (
-    <button
-      type="button"
-      onClick={onRefresh}
-      title="Tap to refresh"
-      className={cn("flex items-center gap-1 tabular-nums", colorClass)}
-    >
-      <Icon size={13} />
-      <span className="text-[11px] font-medium">{level}%</span>
-    </button>
   );
 }
 
@@ -416,6 +251,7 @@ function BatteryBadge({ level, onRefresh }: { level: number | null; onRefresh: (
  * no software fallback for the hardware half of this.
  */
 export function SmartCubeTimer() {
+  // One shallow selector rather than the whole store: only a change to one of these re-renders the screen.
   const {
     supported,
     connected,
@@ -452,7 +288,47 @@ export function SmartCubeTimer() {
     reconnect,
     reconnectNotice,
     dismissReconnectNotice,
-  } = useSmartCubeStore();
+  } = useSmartCubeStore(
+    useShallow((s) => ({
+      supported: s.supported,
+      connected: s.connected,
+      deviceName: s.deviceName,
+      error: s.error,
+      droppedMidSolve: s.droppedMidSolve,
+      droppedMidSolveMoves: s.droppedMidSolveMoves,
+      armed: s.armed,
+      recording: s.recording,
+      startedAtMs: s.startedAtMs,
+      solvedAtMs: s.solvedAtMs,
+      crossAtMs: s.crossAtMs,
+      f2lAtMs: s.f2lAtMs,
+      f2lPairAtMs: s.f2lPairAtMs,
+      ollAtMs: s.ollAtMs,
+      ollCaseName: s.ollCaseName,
+      pllCaseName: s.pllCaseName,
+      crossFace: s.crossFace,
+      moves: s.moves,
+      batterySupported: s.batterySupported,
+      batteryLevel: s.batteryLevel,
+      gyroActive: s.gyroActive,
+      protocolName: s.protocolName,
+      deviceMac: s.deviceMac,
+      disconnect: s.disconnect,
+      cancel: s.cancel,
+      refreshBattery: s.refreshBattery,
+      resyncSolved: s.resyncSolved,
+      stateSource: s.stateSource,
+      reportsState: s.reportsState,
+      faceletsUnreliable: s.faceletsUnreliable,
+      correctedDuringSolve: s.correctedDuringSolve,
+      hardwareInfo: s.hardwareInfo,
+      reconnect: s.reconnect,
+      reconnectNotice: s.reconnectNotice,
+      dismissReconnectNotice: s.dismissReconnectNotice,
+    })),
+  );
+  const cancelReconnect = useSmartCubeStore((s) => s.cancelReconnect);
+  const reconnectNow = useSmartCubeStore((s) => s.reconnectNow);
   const storeScramble = useScrambleStore((s) => s.scramble);
   const loadExternalScramble = useScrambleStore((s) => s.loadExternalScramble);
   // Freestyle: the scramble is whatever state you mix the cube into, read off
@@ -534,9 +410,21 @@ export function SmartCubeTimer() {
     }
     if (!beepedRef.current.twelve && flow.inspectionRemainingMs <= 3000) {
       beepedRef.current.twelve = true;
-      playInspectionBeep();
+      playInspectionBeep(12);
     }
   }, [showInspection, soundEnabled, flow.inspectionRemainingMs]);
+  // The first touch or key press is a user gesture: create and resume the audio context then, so
+  // the 8s and 12s beeps still sound after the phone slept or the tab was backgrounded.
+  useEffect(() => {
+    if (!soundEnabled) return;
+    const prime = () => primeAudio();
+    window.addEventListener("pointerdown", prime, { once: true, capture: true });
+    window.addEventListener("keydown", prime, { once: true, capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", prime, { capture: true });
+      window.removeEventListener("keydown", prime, { capture: true });
+    };
+  }, [soundEnabled]);
   useEffect(() => {
     if (!showInspection) beepedRef.current = { eight: false, twelve: false };
   }, [showInspection]);
@@ -556,25 +444,18 @@ export function SmartCubeTimer() {
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
   const lastMoveMs = moves[moves.length - 1]?.timeStampMs ?? startedAtMs ?? 0;
-  // Ticks every frame while actually recording, same as the keyboard timer's
-  // own display — without this the clock only advances when a MOVE event
-  // arrives, i.e. it sits frozen during every pause between turns instead of
-  // running. `nowMs` and the smart cube's own event timestamps share the
-  // same performance.now() clock (see SmartCubeMove), so they're directly
-  // comparable; the max() guards a single frame where rAF fires just before
-  // this render sees a move that already landed a hair later.
-  const nowMs = useNowTick(recording);
-  const elapsedMs = recording
-    ? nowMs > 0
-      ? Math.max(nowMs - (startedAtMs ?? 0), lastMoveMs - (startedAtMs ?? 0))
-      : lastMoveMs - (startedAtMs ?? 0)
-    : finished
-      ? solvedAtMs! - startedAtMs!
-      : 0;
+  // The final time, once there is one. While the solve runs its clock is NOT held here: the
+  // per-frame time lives in the small <LiveElapsed>/<LiveMoveLine>/<LiveAura> children
+  // (see liveClock.tsx), so a frame re-renders those and not this whole screen.
+  const elapsedMs = finished ? solvedAtMs! - startedAtMs! : 0;
 
-  const timestamps = useMemo(() => moves.map((m) => m.timeStampMs), [moves]);
-  const buckets = useMemo(() => computeTpsBuckets(timestamps), [timestamps]);
-  const avgTps = useMemo(() => averageTps(timestamps), [timestamps]);
+  // Everything below that reads the finished solve (turn speed, steadiness, reconstruction,
+  // analysis) is computed only once it IS finished, not rebuilt on every move of a solve in progress.
+  // (While recording, the move timestamps are built once per move for the live TPS in <LiveMoveLine>.)
+  const timestamps = useMemo(() => (finished || recording ? moves.map((m) => m.timeStampMs) : NO_NUMBERS), [moves, finished, recording]);
+  const solvedTimestamps = finished ? timestamps : NO_NUMBERS;
+  const buckets = useMemo(() => computeTpsBuckets(solvedTimestamps), [solvedTimestamps]);
+  const avgTps = useMemo(() => averageTps(solvedTimestamps), [solvedTimestamps]);
   const peakBucketTps = useMemo(() => peakTps(buckets), [buckets]);
   const maxBucket = Math.max(1, peakBucketTps);
   // How *steady* the turning was, independent of how fast — the same
@@ -583,18 +464,13 @@ export function SmartCubeTimer() {
   // instant the solve finishes rather than waiting on a saved-solve replay.
   const turnConsistency = useMemo(() => {
     const gaps: number[] = [];
-    for (let i = 1; i < timestamps.length; i++) {
-      const g = timestamps[i] - timestamps[i - 1];
+    for (let i = 1; i < solvedTimestamps.length; i++) {
+      const g = solvedTimestamps[i] - solvedTimestamps[i - 1];
       if (g > 0 && g < PAUSE_MS) gaps.push(g);
     }
     if (gaps.length < MIN_CADENCE_GAPS) return null;
     return consistencyScore(avg(gaps), sd(gaps));
-  }, [timestamps]);
-  // A live speedometer: how fast your hands are moving *right now*, not the
-  // whole-solve average — slides with the clock (nowMs) rather than sitting
-  // at fixed one-second buckets from the start, so it reads correctly
-  // whether you've been turning for 200ms or 20 seconds.
-  const liveTps = recording && nowMs > 0 ? rollingTps(timestamps, nowMs) : null;
+  }, [solvedTimestamps]);
 
   // Cross/F2L/OLL/PLL boundaries, detected live off the cube's own state as
   // it happens (see smartCubeStore) — always available the instant each
@@ -615,7 +491,7 @@ export function SmartCubeTimer() {
   const currentPhaseIndex = durations.findIndex((d) => d === null);
   const priorBoundaryMs =
     boundaries && currentPhaseIndex > 0 ? ([boundaries.cross, boundaries.f2l, boundaries.oll][currentPhaseIndex - 1] ?? 0) : 0;
-  const liveCurrentMs = recording && currentPhaseIndex >= 0 ? elapsedMs - priorBoundaryMs : null;
+  const f2lPairCount = f2lPairAtMs.filter((t) => t !== null).length;
 
   // The Cubeast-style post-solve table: one row per phase with its case,
   // total time, and the recognition/execution split within it — see
@@ -624,17 +500,20 @@ export function SmartCubeTimer() {
   // doesn't show a bogus in-progress total while still recording.
   const postSolveRows = useMemo(
     () =>
-      buildPostSolveRows({
-        moves,
-        startedAtMs,
-        crossAtMs,
-        f2lPairAtMs,
-        ollAtMs,
-        solvedAtMs: finished ? solvedAtMs : null,
-        ollCaseName,
-        pllCaseName,
-      }),
-    [moves, startedAtMs, crossAtMs, f2lPairAtMs, ollAtMs, finished, solvedAtMs, ollCaseName, pllCaseName],
+      finished
+        ? buildPostSolveRows({
+            moves,
+            startedAtMs,
+            crossAtMs,
+            f2lAtMs,
+            f2lPairAtMs,
+            ollAtMs,
+            solvedAtMs,
+            ollCaseName,
+            pllCaseName,
+          })
+        : NO_ROWS,
+    [moves, startedAtMs, crossAtMs, f2lAtMs, f2lPairAtMs, ollAtMs, finished, solvedAtMs, ollCaseName, pllCaseName],
   );
   const crossMs = crossAtMs !== null && startedAtMs !== null ? crossAtMs - startedAtMs : undefined;
 
@@ -662,37 +541,6 @@ export function SmartCubeTimer() {
     [effectivePendingEvent, sessionSolves],
   );
   const eventPbMs = eventSessionStats.best;
-
-  // Feeds the ambient background's live pace cue (see AuroraBackground.tsx) —
-  // the same signal TimerView's keyboard solves already drive, so a live
-  // smart-cube attempt gets the same running-ahead/behind atmosphere instead
-  // of a flat, unreactive background. Prefer the predictive model for this
-  // exact scramble, falling back to the plain PB; frozen the instant
-  // recording starts, same reasoning as GhostPaceBar's own target.
-  const auraTargetRef = useRef<number | null>(null);
-  const prevRecordingForAuraRef = useRef(recording);
-  useEffect(() => {
-    if (recording && !prevRecordingForAuraRef.current) {
-      // The predictive model is trained on ordinary 2-handed solves only, so
-      // it's only a fair target when this attempt is one too — for a
-      // tagged event, eventPbMs (that event's own best) is the right target
-      // outright, not a fallback behind an unrelated 2-handed estimate.
-      const prediction = pendingEventAtStart === null && scramble ? predictSolveTime(normalSolves(sessionSolves), scramble) : null;
-      auraTargetRef.current = (prediction?.skill?.useful ? prediction.predictedMs : null) ?? eventPbMs ?? null;
-    }
-    if (!recording) {
-      auraTargetRef.current = null;
-      resetPerformanceAura();
-    }
-    prevRecordingForAuraRef.current = recording;
-  }, [recording, scramble, sessionSolves, eventPbMs, pendingEventAtStart]);
-
-  useEffect(() => {
-    if (!recording || auraTargetRef.current === null) return;
-    setPerformanceAura(paceFromRatio(elapsedMs, auraTargetRef.current));
-  }, [elapsedMs, recording]);
-
-  useEffect(() => () => resetPerformanceAura(), []);
 
   // Live regrip tally: how many whole-cube rotations GyroTwin's own
   // RotationTracker has named so far this attempt — a real technique signal
@@ -723,19 +571,33 @@ export function SmartCubeTimer() {
   // Your best-ever time per phase (gold splits) — frozen when a solve starts so the solve being judged can't move the bar it's judged against.
   const liveBests = useMemo(() => buildPhaseBests(phaseMetrics), [phaseMetrics]);
   const [frozenBests, setFrozenBests] = useState(liveBests);
+  // The cube warnings (low battery, reconnected, corrupted state reports): full banners between
+  // solves, one small dot while recording. The banners that were up when the solve began keep their
+  // room (hidden) so the big time never moves when recording starts, and none can add room mid-solve.
+  const bannersNow: BannerState = {
+    lowBatteryLevel: batterySupported && batteryLevel !== null && batteryLevel <= LOW_BATTERY_PERCENT ? batteryLevel : null,
+    reconnectNotice,
+    faceletsUnreliable,
+  };
+  const [reservedBanners, setReservedBanners] = useState(bannersNow);
   const [wasRecording, setWasRecording] = useState(recording);
   if (recording !== wasRecording) {
     setWasRecording(recording);
-    if (recording) setFrozenBests(liveBests);
+    if (recording) {
+      setFrozenBests(liveBests);
+      setReservedBanners(bannersNow);
+    }
   }
-  const phaseSkips = [false, false, ollCaseName === "OLL skip", pllCaseName === "PLL skip"];
+  const phaseSkips = useMemo(() => [false, false, ollCaseName === "OLL skip", pllCaseName === "PLL skip"], [ollCaseName, pllCaseName]);
 
   // Shared by "Full 3D analysis", "View reconstruction", and the auto-save
   // effect below — computed once here rather than re-derived at each call site.
-  const reconstruction = useMemo(() => moves.map((m) => m.token).join(" "), [moves]);
+  // Only once finished: during a solve nothing reads them (a stop mid-solve builds its own), and
+  // they'd be rebuilt on every move.
+  const reconstruction = useMemo(() => (finished ? moves.map((m) => m.token).join(" ") : ""), [moves, finished]);
   const moveTimestampsRel = useMemo(
-    () => (startedAtMs !== null ? moves.map((m) => m.timeStampMs - startedAtMs) : []),
-    [moves, startedAtMs],
+    () => (finished && startedAtMs !== null ? moves.map((m) => m.timeStampMs - startedAtMs) : NO_NUMBERS),
+    [moves, startedAtMs, finished],
   );
 
   // The scramble the currently-shown recap belongs to. Captured the instant
@@ -823,14 +685,13 @@ export function SmartCubeTimer() {
     // start time straight from the cube's own event stream, so heart-rate
     // samples are matched against it directly rather than reconstructed.
     const heartRate = summarizeHeartRate(startedAtMs!) ?? undefined;
-    const splits = boundaries && boundaries.f2l !== null && boundaries.oll !== null
-      ? [boundaries.cross!, boundaries.f2l, boundaries.oll]
-      : undefined;
+    // Penalty and splits come from the same helper "It's solved" and "Save as DNF" use (see stopSolve).
+    const extras = solveSaveExtras({ startedAtMs, inspectionStartedAtMs: flow.inspectionStartedAtMs, boundaries });
     const savedFor = solvedAtMs;
     void recordSolve(
       elapsedMs,
       scramble,
-      repairedSplits ?? splits,
+      repairedSplits ?? extras.splits,
       pendingEventAtStart ?? undefined,
       saveReconstruction,
       heartRate,
@@ -839,7 +700,7 @@ export function SmartCubeTimer() {
       gyro ? { rotations: gyro.rotations, orientedReconstruction: gyro.orientedReconstruction, stream: gyro.stream } : undefined,
       // Inspection ran from the moment the scramble matched to the first
       // turn: +2 past 15s, DNF past 17s — same rule as the keyboard timer.
-      flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs! - flow.inspectionStartedAtMs) : undefined,
+      extras.penalty,
       cube ? { ...cube, corrected: correctedDuringSolve } : undefined,
       repair?.change,
     ).then((id) => {
@@ -878,14 +739,15 @@ export function SmartCubeTimer() {
     cube,
   ]);
 
-  const moveTokens = useMemo(() => moves.map((m) => m.token), [moves]);
+  // Post-solve only, like the reconstruction above: relabelling every turn on every move of a live solve is wasted work.
+  const moveTokens = useMemo(() => (finished ? moves.map((m) => m.token) : NO_TOKENS), [moves, finished]);
   // The solve as the analyses read it: relabelled so its cross is on white,
   // whatever colour you actually built it on (see crossFrame.ts). Replays
   // and the scramble shown keep the real colours.
   const frameFace = crossFace ?? "U";
   const analysisScramble = useMemo(() => toCrossFrame(finishedScramble.split(/\s+/).filter(Boolean), frameFace).join(" "), [finishedScramble, frameFace]);
-  const analysisTokens = useMemo(() => toCrossFrame(moveTokens, frameFace), [moveTokens, frameFace]);
-  const analysisMoves = useMemo(() => moves.map((m, i) => ({ ...m, token: analysisTokens[i] })), [moves, analysisTokens]);
+  const analysisTokens = useMemo(() => (finished ? toCrossFrame(moveTokens, frameFace) : NO_TOKENS), [finished, moveTokens, frameFace]);
+  const analysisMoves = useMemo(() => (finished ? moves.map((m, i) => ({ ...m, token: analysisTokens[i] })) : []), [finished, moves, analysisTokens]);
 
   // Mistake Radar: a full move-by-move replay of the finished solve against
   // its scramble — only once it's finished and its scramble is pinned.
@@ -904,28 +766,20 @@ export function SmartCubeTimer() {
         : null,
     [finishedLate, finishedScramble, analysisScramble, analysisTokens, moveTimestampsRel, elapsedMs],
   );
-  const mistakeHabitHistory = useMemo(() => mistakeHabits(allSolves), [allSolves]);
-
-  // Live "you're usually slow on this one" flags for the case badges — the
-  // same case-history data /cases already builds, just asked live: which
-  // OLL/PLL cases run meaningfully slower (recognition + execution) than
-  // your own average for that group, so a heads-up shows up the instant the
-  // badge names the case, not after the solve is already over.
-  const weakCases = useMemo(() => {
-    const occurrences = allSolves.flatMap(solveCases);
-    const weakSet = (group: CaseGroup) => {
-      const stats = caseStats(occurrences, group, occurrences.length).filter((s) => s.count >= MIN_CASE_OCCURRENCES);
-      if (stats.length === 0) return new Set<string>();
-      const avgMs = stats.reduce((sum, s) => sum + s.totalMs, 0) / stats.length;
-      return new Set(stats.filter((s) => s.totalMs > avgMs * WEAK_CASE_RATIO).map((s) => s.name));
-    };
-    return { oll: weakSet("OLL"), pll: weakSet("PLL") };
-  }, [allSolves]);
+  // All-time habit tally: only read inside "More details", so it is only worked out once that is open
+  // (not on mount, and not on every save, which is exactly when the recap should paint).
+  const mistakeHabitHistory = useMemo(() => (showDetails && finished ? mistakeHabits(allSolves) : undefined), [showDetails, finished, allSolves]);
 
   // The just-saved solve, rebuilt the way any past solve is: where its time went, and the written reconstruction.
   const savedSolve = useSessionStore((s) =>
     savedSolveId ? s.solves.find((x) => x.id === savedSolveId) : finishedScramble ? s.solves.find((x) => x.scramble === finishedScramble && Math.abs(x.timeMs - elapsedMs) < 1) : undefined,
   );
+  // Your session best before this solve, for the recap's delta: the saved solve itself is left out of it.
+  const priorBestMs = useMemo(() => {
+    if (!finished) return null;
+    const others = savedSolve ? sessionSolves.filter((x) => x.id !== savedSolve.id) : sessionSolves;
+    return computeSessionStats(effectivePendingEvent === null ? normalSolves(others) : solvesForEvent(others, effectivePendingEvent)).best;
+  }, [finished, savedSolve, sessionSolves, effectivePendingEvent]);
   const savedBreakdown = useMemo(() => (savedSolve ? solveBreakdown(savedSolve) : null), [savedSolve]);
   const timeReport = useMemo(() => {
     if (!savedBreakdown || !savedSolve) return null;
@@ -976,6 +830,20 @@ export function SmartCubeTimer() {
     cancel();
   };
 
+  // The way out of a false arm: once armed, any turn starts the clock, and every other control waits for recording.
+  // Hidden again the moment recording starts (it only renders inside the `armed && !recording` hints).
+  const cancelArmButton = (
+    <button
+      type="button"
+      onClick={() => cancel()}
+      className="rounded-full px-2 py-0.5 text-[11px] font-medium text-muted-2 underline-offset-2 hover:text-muted hover:underline"
+      title="Not ready after all? Disarm — nothing is recorded, and the next scramble check starts over."
+      data-testid="cancel-inspection"
+    >
+      Cancel
+    </button>
+  );
+
   const fxState: FxPhase = recording
     ? "running"
     : armed && flow.phase === "inspecting"
@@ -1000,7 +868,7 @@ export function SmartCubeTimer() {
     f2lAtMs,
     ollAtMs,
     solvedAtMs,
-    penalty: startedAtMs !== null && flow.inspectionStartedAtMs !== null ? inspectionPenalty(startedAtMs - flow.inspectionStartedAtMs) : "none",
+    penalty: inspectionPenaltyFor(startedAtMs, flow.inspectionStartedAtMs) ?? "none",
     baseline: postSolveBaseline,
     bestMs: voiceBestMs ?? null,
     inspecting: armed && !recording && flow.phase === "inspecting",
@@ -1021,16 +889,18 @@ export function SmartCubeTimer() {
     setStopOpen(false);
     if (how !== "discard" && startedAtMs !== null) {
       // The turns recorded don't solve the scramble, so the solve keeps its time but not a reconstruction the analyses would trip over.
-      const timeMs = how === "solved" ? lastMoveMs - startedAtMs : elapsedMs;
+      // (A DNF keeps the clock as it stands this instant; the per-frame time isn't held in this component's state.)
+      const timeMs = how === "solved" ? lastMoveMs - startedAtMs : liveElapsedMs(performance.now(), startedAtMs, lastMoveMs);
       // "It's solved" with the app's turns short of it: if a lost turn can be put back, the solve keeps its recap.
       let reconstructionOut: string | undefined;
       let timestampsOut: number[] | undefined;
       let fix: TurnRepair | null = null;
       if (how === "solved") {
+        const tokens = moves.map((m) => m.token);
         const rel = moves.map((m) => m.timeStampMs - startedAtMs);
-        const r = repairLostTurns(scramble, moves.map((m) => m.token), rel);
+        const r = repairLostTurns(scramble, tokens, rel);
         if (r === "intact") {
-          reconstructionOut = reconstruction;
+          reconstructionOut = tokens.join(" ");
           timestampsOut = rel;
         } else if (r) {
           fix = r;
@@ -1038,7 +908,9 @@ export function SmartCubeTimer() {
           timestampsOut = r.times;
         }
       }
-      void recordSolve(timeMs, scramble, undefined, pendingEventAtStart ?? undefined, reconstructionOut, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, timestampsOut, undefined, how === "dnf" ? "dnf" : undefined, cube ? { ...cube, corrected: correctedDuringSolve } : undefined, fix?.change);
+      // The same penalty and splits as the automatic save: an inspection +2 and the phase splits survive "It's solved", and a chosen DNF wins.
+      const extras = solveSaveExtras({ startedAtMs, inspectionStartedAtMs: flow.inspectionStartedAtMs, boundaries, forcePenalty: how === "dnf" ? "dnf" : undefined });
+      void recordSolve(timeMs, scramble, extras.splits, pendingEventAtStart ?? undefined, reconstructionOut, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, timestampsOut, undefined, extras.penalty, cube ? { ...cube, corrected: correctedDuringSolve } : undefined, fix?.change);
     }
     // "It's solved" means the real cube is solved whatever the app thought — put the two back in step.
     if (how === "solved") resyncSolved();
@@ -1130,7 +1002,20 @@ export function SmartCubeTimer() {
     recenterGyro: () => (useGyroStore.getState().recenter() ? "Gyro re-centered" : null),
   });
 
-  if (!supported) {
+  // Disconnecting on purpose mid-solve abandons it exactly as a lost link does, but the store only
+  // marks the lost-link case (droppedMidSolve), so the deliberate one is remembered here to say so.
+  // Cleared the moment a cube is connected again.
+  const [deliberateDrop, setDeliberateDrop] = useState<{ moves: number } | null>(null);
+  if (connected && deliberateDrop) setDeliberateDrop(null);
+  const handleDisconnect = (solveInFlight: boolean) => {
+    if (solveInFlight) setDeliberateDrop({ moves: moves.length });
+    disconnect();
+  };
+
+  // `supported` is null until the browser has been asked (after hydration): show nothing rather
+  // than flashing "isn't available" in a browser that does support it.
+  if (supported === null) return <div className="flex flex-1" aria-busy="true" />;
+  if (supported === false) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
         <Bluetooth size={28} className="text-muted-2" />
@@ -1141,26 +1026,55 @@ export function SmartCubeTimer() {
     );
   }
 
+  // The link dropped mid-solve and the store is getting it back: keep the (dimmed) clock and 3D cube
+  // in view under a slim banner. The full connect screen is for everything else — a drop between
+  // solves, a deliberate disconnect, or once the reconnect has given up or been cancelled.
+  if (!connected && droppedMidSolve && reconnect) {
+    return (
+      <DroppedSolveView
+        attempt={reconnect.attempt}
+        trying={reconnect.trying}
+        onTryNow={reconnectNow}
+        onCancel={cancelReconnect}
+        frozenMs={startedAtMs !== null ? lastMoveMs - startedAtMs : null}
+        scramble={mimicScramble}
+        moves={moves}
+        moveCount={droppedMidSolveMoves}
+      />
+    );
+  }
+
   if (!connected) {
+    const dropped = droppedMidSolve || deliberateDrop !== null;
+    const droppedMoves = droppedMidSolve ? droppedMidSolveMoves : (deliberateDrop?.moves ?? null);
+    const movesInto = droppedMoves ? ` ${droppedMoves} move${droppedMoves === 1 ? "" : "s"} into your solve` : "";
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-        <div className={cn("flex h-14 w-14 items-center justify-center rounded-full", droppedMidSolve ? "bg-danger/15" : "bg-accent-soft")}>
-          {droppedMidSolve ? <BluetoothOff size={26} className="text-danger" /> : <Bluetooth size={26} className="text-accent" />}
+        <div className={cn("flex h-14 w-14 items-center justify-center rounded-full", dropped ? "bg-danger/15" : "bg-accent-soft")}>
+          {dropped ? <BluetoothOff size={26} className="text-danger" /> : <Bluetooth size={26} className="text-accent" />}
         </div>
         <h1 className="text-lg font-semibold text-foreground">
-          {reconnect ? "Reconnecting your smart cube…" : droppedMidSolve ? "Your smart cube disconnected" : "Connect your smart cube"}
+          {reconnect
+            ? "Reconnecting your smart cube…"
+            : droppedMidSolve
+              ? "Your smart cube disconnected"
+              : deliberateDrop
+                ? "You disconnected mid-solve"
+                : "Connect your smart cube"}
         </h1>
-        <p className="max-w-xs text-sm text-muted">
+        <p className="max-w-xs text-sm text-muted" role={deliberateDrop ? "status" : undefined} data-testid={deliberateDrop ? "deliberate-drop-notice" : undefined}>
           {droppedMidSolve
-            ? `The Bluetooth link dropped${droppedMidSolveMoves ? ` ${droppedMidSolveMoves} move${droppedMidSolveMoves === 1 ? "" : "s"} into your solve` : ""} — not a step you missed, the connection itself. ${reconnect ? "That solve can't be saved; once the cube is back, start the scramble again." : "Reconnect and start the scramble again."}`
-            : reconnect
-              ? "The Bluetooth link dropped — keep the cube close and awake (turn a face) and it'll be picked straight back up."
-              : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case names and all."}
+            ? `The Bluetooth link dropped${movesInto} — not a step you missed, the connection itself. ${reconnect ? "That solve can't be saved; once the cube is back, start the scramble again." : "Reconnect and start the scramble again."}`
+            : deliberateDrop
+              ? `You disconnected${movesInto || " during your solve"} — that solve wasn't saved. Reconnect and start the scramble again.`
+              : reconnect
+                ? "The Bluetooth link dropped — keep the cube close and awake (turn a face) and it'll be picked straight back up."
+                : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case names and all."}
         </p>
-        <ConnectControls label={droppedMidSolve ? "Reconnect smart cube" : "Connect smart cube"} />
+        <ConnectControls label={dropped ? "Reconnect smart cube" : "Connect smart cube"} />
         {error && <p className="max-w-xs text-xs text-danger">{error}</p>}
-        {!droppedMidSolve && !reconnect && (
-          <p className="max-w-xs text-[11px] text-muted-2">
+        {!dropped && !reconnect && (
+          <p className="max-w-xs text-[11px] text-muted">
             Connect it in any state: GAN, Giiker, GoCube, QiYi and MoYu&apos;s AI cubes report where every piece is. (A
             MoYu MHC can&apos;t — connect that one solved.) Then just scramble: matching the target scramble starts
             inspection automatically.
@@ -1170,290 +1084,306 @@ export function SmartCubeTimer() {
     );
   }
 
+  const solveLive = armed || recording;
+  const cubeTitle =
+    [
+      protocolName && `protocol ${protocolName}`,
+      hardwareInfo?.name,
+      hardwareInfo?.hardwareVersion && `hw ${hardwareInfo.hardwareVersion}`,
+      hardwareInfo?.softwareVersion && `fw ${hardwareInfo.softwareVersion}`,
+      hardwareInfo?.productDate && `made ${hardwareInfo.productDate}`,
+      deviceMac && `MAC ${deviceMac}`,
+    ]
+      .filter(Boolean)
+      .join(" · ") || undefined;
+
   return (
-    <div className="flex w-full max-w-md flex-1 flex-col items-center gap-2.5 py-1 sm:gap-4 sm:py-2">
+    <div className={cn("flex w-full max-w-md flex-1 flex-col items-center gap-2.5 py-1 sm:gap-4 sm:py-2", solveLive && LIVE_ROOT, finished && RECAP_ROOT)}>
       <InspectionRing remainingMs={flow.inspectionRemainingMs} active={armed && !recording && flow.phase === "inspecting"} />
-      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-success [&>*]:whitespace-nowrap">
-        <BluetoothConnected size={14} />
-        <span
-          title={
-            [
-              protocolName && `protocol ${protocolName}`,
-              hardwareInfo?.name,
-              hardwareInfo?.hardwareVersion && `hw ${hardwareInfo.hardwareVersion}`,
-              hardwareInfo?.softwareVersion && `fw ${hardwareInfo.softwareVersion}`,
-              hardwareInfo?.productDate && `made ${hardwareInfo.productDate}`,
-              deviceMac && `MAC ${deviceMac}`,
-            ]
-              .filter(Boolean)
-              .join(" · ") || undefined
-          }
-        >
-          {nickname ?? deviceName}
-        </span>
-        {batterySupported && (
-          <>
-            <span className="text-border">·</span>
-            <BatteryBadge level={batteryLevel} onRefresh={refreshBattery} />
-          </>
+      <LiveAura
+        recording={recording}
+        startedAtMs={startedAtMs}
+        lastMoveMs={lastMoveMs}
+        scramble={scramble}
+        sessionSolves={sessionSolves}
+        eventPbMs={eventPbMs}
+        pendingEvent={pendingEventAtStart}
+      />
+      <div className={cn("contents", finished && RECAP_TOP)}>
+        <SolveHeader
+          name={nickname ?? deviceName}
+          nameTitle={cubeTitle}
+          batterySupported={batterySupported}
+          batteryLevel={batteryLevel}
+          onRefreshBattery={refreshBattery}
+          reportsState={reportsState}
+          stateSource={stateSource}
+          inFlight={solveLive}
+          freestyle={freestyle}
+          onToggleFreestyle={() => setFreestyle(!freestyle)}
+          voiceCoach={voiceCoach}
+          onCycleVoice={() => setVoiceCoach(VOICE_MODES[(VOICE_MODES.findIndex((m) => m.id === voiceCoach) + 1) % VOICE_MODES.length].id)}
+          onDisconnect={handleDisconnect}
+          statusDot={recording ? <StatusDot state={bannersNow} /> : undefined}
+        />
+
+        {recording ? (
+          // Hidden but still taking their room, so the big time doesn't shift when the solve starts; the live state is the dot above.
+          <div className="invisible contents" aria-hidden="true">
+            <StatusBanners state={reservedBanners} onDismissReconnect={dismissReconnectNotice} />
+          </div>
+        ) : (
+          <StatusBanners state={bannersNow} onDismissReconnect={dismissReconnectNotice} />
         )}
-        <span className="text-[10px] text-muted-2" title={reportsState ? "The cube reports its own state; the app checks against it whenever you pause" : "This cube can't report its state, so the app assumed it was solved when you connected"}>
-          {reportsState ? (stateSource === "cube" ? "· state read from cube" : "· reading state…") : "· assumed solved at connect"}
-        </span>
-        <Link href="/lab" className="flex items-center gap-1 text-accent hover:underline">
-          <FlaskConical size={12} /> Lab
-        </Link>
-        <button
-          type="button"
-          onClick={() => setVoiceCoach(VOICE_MODES[(VOICE_MODES.findIndex((m) => m.id === voiceCoach) + 1) % VOICE_MODES.length].id)}
-          className={cn("flex items-center gap-1 hover:underline", voiceCoach === "off" ? "text-muted-2" : "text-accent")}
-          title="Voice coach: calls your splits and time out loud. Tap to cycle Off / Splits / Full."
-        >
-          {voiceCoach === "off" ? <VolumeX size={12} /> : <Volume2 size={12} />} Voice: {VOICE_MODES.find((m) => m.id === voiceCoach)?.name}
-        </button>
-        {!armed && !recording && (
-          <button
-            type="button"
-            onClick={() => setFreestyle(!freestyle)}
-            aria-pressed={freestyle}
-            className={cn("flex items-center gap-1 hover:underline", freestyle ? "text-accent" : "text-muted-2")}
-            title="Freestyle: scramble the cube any way you like — its state becomes the scramble, instead of following a generated one."
-          >
-            <Shuffle size={12} /> Freestyle{freestyle ? ": on" : ""}
-          </button>
+
+        {pendingEvent && (
+          <p className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-medium text-accent">
+            {EVENT_TAGS.find((t) => t.id === pendingEvent)?.label}
+          </p>
         )}
-        <button type="button" onClick={disconnect} className="text-muted-2 underline hover:text-muted">
-          Disconnect
-        </button>
       </div>
 
-      {batterySupported && batteryLevel !== null && batteryLevel <= 12 && (
-        <p className="flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-medium text-danger">
-          <BatteryWarning size={12} /> Cube battery at {batteryLevel}% — a dying battery is a common cause of a mid-solve Bluetooth drop
-        </p>
-      )}
+      <div className={cn("contents", solveLive && LIVE_LEFT, finished && RECAP_LEFT)}>
+        <div className={cn("contents", solveLive && LIVE_STAGE)}>
+          <TimerStage state={fxState}>
+            {armed && !recording && flow.phase === "inspecting" ? (
+              <InspectionDigits
+                remainingMs={flow.inspectionRemainingMs}
+                penalty={flow.pendingPenalty}
+                styleClass={timerStyle !== "glow" ? `timer-digits--${timerStyle}` : undefined}
+              />
+            ) : (
+              recording ? (
+                // The clock child: only these digits re-render each frame.
+                <LiveElapsed active={!hideTimeWhileSolving} startedAtMs={startedAtMs} lastMoveMs={lastMoveMs}>
+                  {(liveMs) => (
+                    <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
+                      {hideTimeWhileSolving ? "solving" : formatTime(liveMs)}
+                    </p>
+                  )}
+                </LiveElapsed>
+              ) : (
+                (armed || finished) && (
+                  <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>{formatTime(elapsedMs)}</p>
+                )
+              )
+            )}
+          </TimerStage>
 
-      {reconnectNotice && (
-        <p className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning" role="status" data-testid="reconnect-notice">
-          <BluetoothConnected size={12} /> Reconnected — the solve the drop interrupted
-          {reconnectNotice.lostMoves ? ` (${reconnectNotice.lostMoves} move${reconnectNotice.lostMoves === 1 ? "" : "s"} in)` : ""} wasn&apos;t saved. Scramble again.
-          <button type="button" onClick={dismissReconnectNotice} aria-label="Dismiss" className="ml-0.5 rounded-full hover:text-foreground">
-            <X size={11} />
-          </button>
-        </p>
-      )}
+          {armed && !recording && flow.phase === "inspecting" && <InspectionTicks remainingMs={flow.inspectionRemainingMs} penalty={flow.pendingPenalty} />}
 
-      {faceletsUnreliable && (
-        <p
-          className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning"
-          title="Several state reports in a row came back garbled rather than just out of date — its position tracking may drift until one comes back clean. Solve it and tap 'Cube out of sync?' if a scramble or solve stops matching."
-        >
-          <TriangleAlert size={12} /> This cube&apos;s state reports look corrupted
-        </p>
-      )}
+          {/* Always mounted (not just while recording/finished) so its own idle→running transition detection — the same instant-of-liftoff logic the keyboard timer uses — actually fires; mounting it fresh already inside "running" would miss it. */}
+          <LiveElapsed active={recording} startedAtMs={startedAtMs} lastMoveMs={lastMoveMs}>
+            {(liveMs) => (
+              <GhostPaceBar
+                phase={recording ? "running" : finished ? "stopped" : "idle"}
+                elapsedMs={recording ? liveMs : elapsedMs}
+                pbMs={eventPbMs}
+                hideTimes={hideTimeWhileSolving && recording}
+              />
+            )}
+          </LiveElapsed>
 
-      {pendingEvent && (
-        <p className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-medium text-accent">
-          {EVENT_TAGS.find((t) => t.id === pendingEvent)?.label}
-        </p>
-      )}
+          {/* Right under the time once a solve is done — a mis-scramble or fumbled stop is one tap from gone. */}
+          {finished && finishedScramble && (
+            <QuickDelete
+              deleted={!savedSolveExists}
+              onDelete={() => {
+                if (savedSolve) void removeSolve(savedSolve.id);
+              }}
+            />
+          )}
 
-      <TimerStage state={fxState}>
-        {armed && !recording && flow.phase === "inspecting" ? (
-          <p className={cn("timer-digits text-center text-6xl font-bold text-danger", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
-            {flow.pendingPenalty === "plus2" ? "+2" : flow.pendingPenalty === "dnf" ? "DNF" : Math.ceil(flow.inspectionRemainingMs / 1000)}
-          </p>
-        ) : (
-          (armed || recording || finished) && (
-            <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
-              {hideTimeWhileSolving && recording ? "solving" : formatTime(elapsedMs)}
+          {abortedByBack && !recording && (
+            <p className="rounded-full bg-warning/15 px-3 py-1 text-[11px] font-medium text-warning" role="status" data-testid="solve-aborted">
+              Solve aborted — nothing was saved
             </p>
-          )
-        )}
-      </TimerStage>
+          )}
 
-      {/* Always mounted (not just while recording/finished) so its own idle→running transition detection — the same instant-of-liftoff logic the keyboard timer uses — actually fires; mounting it fresh already inside "running" would miss it. */}
-      <GhostPaceBar
-        phase={recording ? "running" : finished ? "stopped" : "idle"}
-        elapsedMs={elapsedMs}
-        pbMs={eventPbMs}
-        hideTimes={hideTimeWhileSolving && recording}
-      />
-
-      {/* Right under the time once a solve is done — a mis-scramble or fumbled stop is one tap from gone. */}
-      {finished && finishedScramble && (
-        <QuickDelete
-          deleted={!savedSolveExists}
-          onDelete={() => {
-            if (savedSolve) void removeSolve(savedSolve.id);
-          }}
-        />
-      )}
-
-      {abortedByBack && !recording && (
-        <p className="rounded-full bg-warning/15 px-3 py-1 text-[11px] font-medium text-warning" role="status" data-testid="solve-aborted">
-          Solve aborted — nothing was saved
-        </p>
-      )}
-
-      {recording && (
-        <button
-          type="button"
-          onClick={() => stopSolve("discard")}
-          className="flex items-center gap-1.5 rounded-full bg-danger/15 px-3.5 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/25 active:bg-danger/25"
-          title="Throw this solve away: the time isn't saved and the next scramble comes up. The phone's Back button does the same."
-          data-testid="abort-solve"
-        >
-          <X size={13} /> Abort solve
-        </button>
-      )}
-
-      {recording && (
-        <PhaseRibbon
-          durations={durations}
-          currentPhaseIndex={currentPhaseIndex}
-          liveCurrentMs={liveCurrentMs}
-          baseline={postSolveBaseline}
-          f2lPairCount={f2lPairAtMs.filter((t) => t !== null).length}
-          gold={PHASE_LABELS_4.map((_, i) => !(hideTimeWhileSolving && recording) && (deltaToBest(durations[i], frozenBests.bests?.[i], phaseSkips?.[i]) ?? 0) < 0)}
-        />
-      )}
-
-      {(armed || recording) && gyroActive ? (
-        // A gyro cube gets the live twin instead: same stickers, but it also
-        // tilts and turns with the cube in your hands, and names regrips live.
-        <div className="relative">
-          <GyroTwin size={84} showControls={false} onRotation={() => setRegripCount((c) => c + 1)} />
-          {regripCount > 0 && (
-            <span
-              className="absolute -right-1.5 -top-1.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-muted-2"
-              title="Whole-cube rotations so far this attempt — fewer usually means a smoother solve"
+          {recording && (
+            <button
+              type="button"
+              onClick={() => stopSolve("discard")}
+              className="flex items-center gap-1.5 rounded-full bg-danger/15 px-3.5 py-1.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/25 active:bg-danger/25"
+              title="Throw this solve away: the time isn't saved and the next scramble comes up. The phone's Back button does the same."
+              data-testid="abort-solve"
             >
-              {regripCount} regrip{regripCount === 1 ? "" : "s"}
-            </span>
-          )}
-        </div>
-      ) : (
-        (armed || recording) && (
-          <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl">
-            <LiveCubeMimic scramble={mimicScramble} moves={moves} className="h-full w-full" />
-          </div>
-        )
-      )}
-
-      {armed && !recording && flow.phase !== "inspecting" && (
-        <p className="flex items-center gap-1.5 text-sm text-accent">
-          <Radio size={14} className="animate-pulse" />{" "}
-          {flow.pendingPenalty === "dnf" ? "Inspection ran past 17s — this attempt will be saved as a DNF" : "Waiting for your first move…"}
-        </p>
-      )}
-      {armed && !recording && flow.phase === "inspecting" && (
-        <p className="text-xs text-muted-2">Scramble verified — start solving any time, inspection is just the max.</p>
-      )}
-      {recording && (
-        <div className="flex flex-col items-center gap-1.5">
-          <p className="text-sm text-muted">
-            {moves.length} moves so far
-            {liveTps !== null && liveTps > 0 && <span className="tabular-nums text-accent"> · {liveTps.toFixed(1)} TPS</span>}
-            {" — solve the cube to stop"}
-          </p>
-          {correctedDuringSolve && (
-            <p className="text-[11px] text-warning" title="A turn went unreported over Bluetooth and was corrected from the cube's own state report — the time still stands, and when you finish the app works out where the missing turn went so the recap can still be built">
-              A turn was lost over Bluetooth — the time stands; the recap is rebuilt when you finish
-            </p>
-          )}
-          {stopOpen ? (
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              <button type="button" onClick={() => stopSolve("solved")} className="rounded-full bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-fg" title="The cube is solved but the app missed a turn">
-                It&apos;s solved — save {formatTime(lastMoveMs - (startedAtMs ?? lastMoveMs))}
-              </button>
-              <button type="button" onClick={() => stopSolve("dnf")} className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-semibold text-foreground">
-                Save as DNF
-              </button>
-              <button type="button" onClick={() => stopSolve("discard")} className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-semibold text-muted">
-                Discard
-              </button>
-              <button type="button" onClick={() => setStopOpen(false)} className="px-1 text-[11px] text-muted-2">
-                Keep going
-              </button>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setStopOpen(true)} className="text-[11px] text-muted-2 underline-offset-2 hover:text-muted hover:underline">
-              Stop this solve…
+              <X size={13} /> Abort solve
             </button>
           )}
-          <PhaseSplitsRow
-            durations={durations}
-            currentPhaseIndex={currentPhaseIndex}
-            liveCurrentMs={liveCurrentMs}
-            baseline={postSolveBaseline}
-            f2lPairCount={f2lPairAtMs.filter((t) => t !== null).length}
-            hideTimes={hideTimeWhileSolving && recording}
-            bests={frozenBests.bests}
-            skips={phaseSkips}
-          />
-          <LiveProjection finished={false} finalMs={elapsedMs} scramble={scramble} pendingEvent={pendingEventAtStart} />
-          {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
-          <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} weakOllCases={weakCases.oll} weakPllCases={weakCases.pll} />
+
+          {recording && (
+            <LiveElapsed active startedAtMs={startedAtMs} lastMoveMs={lastMoveMs}>
+              {(liveMs) => (
+                <PhaseRibbon
+                  durations={durations}
+                  currentPhaseIndex={currentPhaseIndex}
+                  liveCurrentMs={currentPhaseIndex >= 0 ? liveMs - priorBoundaryMs : null}
+                  baseline={postSolveBaseline}
+                  bests={frozenBests.bests}
+                  f2lPairCount={f2lPairCount}
+                  gold={PHASE_LABELS_4.map((_, i) => !(hideTimeWhileSolving && recording) && (deltaToBest(durations[i], frozenBests.bests?.[i], phaseSkips?.[i]) ?? 0) < 0)}
+                />
+              )}
+            </LiveElapsed>
+          )}
         </div>
-      )}
+
+        {(armed || recording) && gyroActive ? (
+          // A gyro cube gets the live twin instead: same stickers, but it also
+          // tilts and turns with the cube in your hands, and names regrips live.
+          <div className={cn("relative", LIVE_CUBE)}>
+            <GyroTwin size={84} showControls={false} onRotation={() => setRegripCount((c) => c + 1)} />
+            {regripCount > 0 && (
+              <span
+                className="absolute -right-1.5 -top-1.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-muted"
+                title="Whole-cube rotations so far this attempt — fewer usually means a smoother solve"
+              >
+                {regripCount} regrip{regripCount === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+        ) : (
+          (armed || recording) && (
+            <div className={cn("card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl", LIVE_CUBE)}>
+              <LiveCubeMimic scramble={mimicScramble} moves={moves} className="h-full w-full" />
+            </div>
+          )
+        )}
+
+        <div className={cn("contents", solveLive && LIVE_LINES)}>
+          {armed && !recording && flow.phase !== "inspecting" && (
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+              <p className="flex items-center gap-1.5 text-sm text-accent">
+                <Radio size={14} className="animate-pulse" />{" "}
+                {flow.pendingPenalty === "dnf" ? "Inspection ran past 17s — this attempt will be saved as a DNF" : "Waiting for your first move…"}
+              </p>
+              {cancelArmButton}
+            </div>
+          )}
+          {armed && !recording && flow.phase === "inspecting" && (
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+              <p className="text-xs text-muted">Scramble verified — start solving any time, inspection is just the max.</p>
+              {cancelArmButton}
+            </div>
+          )}
+          {recording && (
+            <div className="flex flex-col items-center gap-1.5">
+              {/* The clock child: the move count and the live TPS (the delimited block inside it) re-render each frame on their own. */}
+              <LiveMoveLine timestamps={timestamps} />
+              {correctedDuringSolve && (
+                <p className="text-[11px] text-warning" title="A turn went unreported over Bluetooth and was corrected from the cube's own state report — the time still stands, and when you finish the app works out where the missing turn went so the recap can still be built">
+                  A turn was lost over Bluetooth — the time stands; the recap is rebuilt when you finish
+                </p>
+              )}
+              {stopOpen ? (
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  <button type="button" onClick={() => stopSolve("solved")} className="rounded-full bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-fg" title="The cube is solved but the app missed a turn">
+                    It&apos;s solved — save {formatTime(lastMoveMs - (startedAtMs ?? lastMoveMs))}
+                  </button>
+                  <button type="button" onClick={() => stopSolve("dnf")} className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-semibold text-foreground">
+                    Save as DNF
+                  </button>
+                  <button type="button" onClick={() => stopSolve("discard")} className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-semibold text-muted">
+                    Discard
+                  </button>
+                  <button type="button" onClick={() => setStopOpen(false)} className="px-1 text-[11px] text-muted-2">
+                    Keep going
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setStopOpen(true)} className="text-[11px] text-muted-2 underline-offset-2 hover:text-muted hover:underline">
+                  Stop this solve…
+                </button>
+              )}
+              <LiveElapsed active startedAtMs={startedAtMs} lastMoveMs={lastMoveMs}>
+                {(liveMs) => (
+                  <>
+                    <PhaseSplitsRow
+                      durations={durations}
+                      currentPhaseIndex={currentPhaseIndex}
+                      liveCurrentMs={currentPhaseIndex >= 0 ? liveMs - priorBoundaryMs : null}
+                      baseline={postSolveBaseline}
+                      f2lPairCount={f2lPairCount}
+                      hideTimes={hideTimeWhileSolving && recording}
+                      bests={frozenBests.bests}
+                      skips={phaseSkips}
+                    />
+                    <LiveProjection finished={false} finalMs={liveMs} scramble={scramble} pendingEvent={pendingEventAtStart} />
+                  </>
+                )}
+              </LiveElapsed>
+              {pacer.enabled && <PaceChip calls={pacer.calls} targets={pacer.targets} />}
+              <CaseBadges ollCaseName={ollCaseName} pllCaseName={pllCaseName} />
+            </div>
+          )}
+        </div>
+
+        {finished && (
+          <>
+            <RecapHero finalMs={savedSolve ? solveFinalMs(savedSolve) : elapsedMs} priorBestMs={priorBestMs}>
+              <PhaseRibbon
+                durations={durations}
+                currentPhaseIndex={currentPhaseIndex}
+                liveCurrentMs={null}
+                baseline={postSolveBaseline}
+                bests={frozenBests.bests}
+                f2lPairCount={f2lPairCount}
+                gold={PHASE_LABELS_4.map((_, i) => (deltaToBest(durations[i], frozenBests.bests?.[i], phaseSkips[i]) ?? 0) < 0)}
+              />
+              <PhaseSplitsRow
+                durations={durations}
+                currentPhaseIndex={currentPhaseIndex}
+                liveCurrentMs={null}
+                baseline={postSolveBaseline}
+                f2lPairCount={f2lPairCount}
+                bests={frozenBests.bests}
+                skips={phaseSkips}
+              />
+            </RecapHero>
+
+            <LiveProjection finished finalMs={elapsedMs} scramble={finishedScramble} pendingEvent={savedSolve?.event ?? pendingEventAtStart} />
+            <div className="flex items-center gap-3 text-xs text-muted">
+              {crossFace && crossFace !== "U" && <span>{CROSS_FACE_COLOR[crossFace]} cross</span>}
+              <span>{moves.length} moves</span>
+              {avgTps !== null && (
+                <span>
+                  {avgTps.toFixed(2)} TPS{peakBucketTps > avgTps && <span className="text-muted"> (peak {peakBucketTps.toFixed(1)})</span>}
+                </span>
+              )}
+              {turnConsistency !== null && (
+                <span title="How evenly spaced your turns were, independent of speed — a smooth stream scores higher than the same pace in bursts">
+                  {turnConsistency}% steady
+                </span>
+              )}
+              {finishedScramble &&
+                (savedSolveExists && savedSolve ? (
+                  <button
+                    type="button"
+                    onClick={() => void removeSolve(savedSolve.id)}
+                    className="group flex items-center gap-1 text-success hover:text-danger"
+                    title="Mis-scramble, false start, wrong penalty — discard this solve, same as Delete/Backspace on the keyboard timer"
+                  >
+                    <Check size={12} className="group-hover:hidden" />
+                    <Trash2 size={12} className="hidden group-hover:block" />
+                    <span className="group-hover:hidden">Saved</span>
+                    <span className="hidden group-hover:block">Discard</span>
+                  </button>
+                ) : (
+                  <span className="text-muted">Deleted</span>
+                ))}
+              {savedSolveExists && savedSolve && <PenaltyControls solve={savedSolve} onSet={(p) => void setPenalty(savedSolve.id, p)} />}
+            </div>
+
+            <GoldSummary golds={findGolds(durations, frozenBests.bests, phaseSkips)} sumOfBestMs={frozenBests.sumOfBestMs} totalMs={elapsedMs} />
+
+            <RecapNotices turnLoss={recap?.turnLoss} learnedSolveDate={savedSolveExists ? (lastSolve?.date ?? null) : null} />
+          </>
+        )}
+      </div>
 
       {finished && (
-        <>
-          <LiveProjection finished finalMs={elapsedMs} scramble={finishedScramble} pendingEvent={savedSolve?.event ?? pendingEventAtStart} />
-          <div className="flex items-center gap-3 text-xs text-muted">
-            {crossFace && crossFace !== "U" && <span>{CROSS_FACE_COLOR[crossFace]} cross</span>}
-            <span>{moves.length} moves</span>
-            {avgTps !== null && (
-              <span>
-                {avgTps.toFixed(2)} TPS{peakBucketTps > avgTps && <span className="text-muted-2"> (peak {peakBucketTps.toFixed(1)})</span>}
-              </span>
-            )}
-            {turnConsistency !== null && (
-              <span title="How evenly spaced your turns were, independent of speed — a smooth stream scores higher than the same pace in bursts">
-                {turnConsistency}% steady
-              </span>
-            )}
-            {finishedScramble &&
-              (savedSolveExists && savedSolve ? (
-                <button
-                  type="button"
-                  onClick={() => void removeSolve(savedSolve.id)}
-                  className="group flex items-center gap-1 text-success hover:text-danger"
-                  title="Mis-scramble, false start, wrong penalty — discard this solve, same as Delete/Backspace on the keyboard timer"
-                >
-                  <Check size={12} className="group-hover:hidden" />
-                  <Trash2 size={12} className="hidden group-hover:block" />
-                  <span className="group-hover:hidden">Saved</span>
-                  <span className="hidden group-hover:block">Discard</span>
-                </button>
-              ) : (
-                <span className="text-muted-2">Deleted</span>
-              ))}
-            {savedSolveExists && savedSolve && <PenaltyControls solve={savedSolve} onSet={(p) => void setPenalty(savedSolve.id, p)} />}
-          </div>
-
-          <GoldSummary golds={findGolds(durations, frozenBests.bests, phaseSkips)} sumOfBestMs={frozenBests.sumOfBestMs} totalMs={elapsedMs} />
-
-          {recap?.turnLoss?.kind === "repaired" && (
-            <p className="flex items-start gap-1.5 rounded-lg bg-warning/10 px-3 py-2 text-[11px] leading-snug text-warning" data-testid="turn-repair-notice">
-              <TriangleAlert size={12} className="mt-0.5 shrink-0" />
-              <span>
-                {recap.turnLoss.change.kind === "inserted"
-                  ? `The cube never reported ${recap.turnLoss.change.tokens.join(" ")} — it's put back where the cube's state says it happened, so this recap is rebuilt, not recorded.`
-                  : `The cube reported ${recap.turnLoss.change.tokens.join(" ")} twice — the echo is removed, so this recap is rebuilt, not recorded.`}
-              </span>
-            </p>
-          )}
-          {recap?.turnLoss?.kind === "time-only" && (
-            <p className="flex items-start gap-1.5 rounded-lg bg-warning/10 px-3 py-2 text-[11px] leading-snug text-warning" data-testid="turn-loss-notice">
-              <TriangleAlert size={12} className="mt-0.5 shrink-0" />
-              <span>Turns went missing over Bluetooth in more than one place, so they couldn&apos;t be put back — the time is saved, the move-by-move recap isn&apos;t.</span>
-            </p>
-          )}
-
-          {savedSolveExists && <LearnedAlgNotice solveDate={lastSolve?.date ?? null} />}
-
+        <div className={cn("contents", RECAP_RIGHT)}>
           <PostSolveTable rows={postSolveRows} scramble={analysisScramble} moves={analysisMoves} baseline={postSolveBaseline} crossFace={frameFace} executions={executions} />
 
           {timeReport && <TimeWonLostCard report={timeReport} />}
@@ -1465,31 +1395,11 @@ export function SmartCubeTimer() {
             sessionMeanMs={eventSessionStats.mean}
             isNewPB={eventSessionStats.best !== null && elapsedMs <= eventSessionStats.best}
           />
+        </div>
+      )}
 
-          <div className="flex w-full gap-2">
-            <button
-              type="button"
-              onClick={() => setShowReplay(true)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-accent px-3 py-2.5 text-sm font-semibold text-accent-fg"
-            >
-              <Play size={14} /> Replay
-            </button>
-            <button
-              type="button"
-              onClick={onAnalyze}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-bg-panel-2 px-3 py-2.5 text-sm font-medium text-muted hover:text-foreground"
-            >
-              <Wand2 size={14} /> Analyze
-            </button>
-            <button
-              type="button"
-              onClick={onDismiss}
-              className="flex-1 rounded-full bg-bg-panel-2 px-3 py-2.5 text-sm font-medium text-muted hover:text-foreground"
-            >
-              Done
-            </button>
-          </div>
-
+      {finished && (
+        <div className={cn("contents", RECAP_DETAILS)}>
           <div className="flex w-full items-center justify-between px-1">
             <button
               type="button"
@@ -1565,8 +1475,10 @@ export function SmartCubeTimer() {
               {finishedScramble && <XrayTeaser scramble={analysisScramble} moves={analysisTokens} timesMs={moveTimestampsRel} />}
             </div>
           )}
-        </>
+        </div>
       )}
+
+      {finished && <RecapActionBar className={RECAP_BAR} onReplay={() => setShowReplay(true)} onAnalyze={onAnalyze} onDone={onDismiss} />}
 
       <GestureToast toast={gestureToast} />
       {savedReplay && (
@@ -1590,9 +1502,9 @@ export function SmartCubeTimer() {
       )}
 
       {!armed && !recording && flow.phase === "scrambling" && (
-        <div className="flex w-full flex-col items-center gap-3">
+        <div className={cn("flex w-full flex-col items-center gap-3", finished && "lg:col-span-2")}>
           {finished && (
-            <p className="border-t border-border pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+            <p className="border-t border-border pt-3 text-[11px] font-medium uppercase tracking-wide text-muted">
               Next scramble — this recap stays up until you scramble it
             </p>
           )}
@@ -1619,7 +1531,7 @@ export function SmartCubeTimer() {
                   {adopting ? "Reading the cube…" : "Keep what's on the cube as the scramble"}
                 </button>
               )}
-              <div className="flex items-center gap-3 text-[11px] text-muted-2">
+              <div className="flex items-center gap-3 text-[11px] text-muted">
                 <span>Inspection starts automatically once it matches.</span>
                 <button
                   type="button"

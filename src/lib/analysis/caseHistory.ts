@@ -54,8 +54,23 @@ export interface CaseStat {
   f2l?: { facelets: string; pairFacelets: number[] };
 }
 
-/** One solve's cases, or [] when it lacks a usable reconstruction. */
+const casesCache = new WeakMap<Solve, CaseOccurrence[]>();
+
+/**
+ * One solve's cases, or [] when it lacks a usable reconstruction. Cached per
+ * solve object (like solveBreakdown) — replaying a solve is the expensive
+ * part, so a list of thousands is only ever replayed once and a new solve
+ * costs only itself. The returned array is shared: treat it as read-only.
+ */
 export function solveCases(raw: Solve): CaseOccurrence[] {
+  const hit = casesCache.get(raw);
+  if (hit) return hit;
+  const out = computeSolveCases(raw);
+  casesCache.set(raw, out);
+  return out;
+}
+
+function computeSolveCases(raw: Solve): CaseOccurrence[] {
   if (!raw.scramble || !raw.reconstruction || !raw.moveTimestamps || raw.penalty === "dnf") return [];
   const solve = analysisFrame(raw) as Solve & { reconstruction: string; moveTimestamps: number[] };
   const moves = solve.reconstruction.split(/\s+/).filter(Boolean);

@@ -14,7 +14,7 @@ import { computePhaseSplits, computeSessionStats, normalSolves } from "@/lib/sta
 import type { PhaseAverage } from "@/lib/stats/stats";
 import { EVENT_TAGS } from "@/types";
 import { cn } from "@/lib/utils/cn";
-import { playInspectionBeep } from "@/lib/utils/sound";
+import { playInspectionBeep, primeAudio } from "@/lib/utils/sound";
 import { vibrate } from "@/lib/utils/haptics";
 import { isModalOpen } from "@/lib/store/modalBus";
 import { InspectionRing } from "./InspectionRing";
@@ -248,6 +248,18 @@ export function TimerView() {
   // state) since these are one-shot side effects per inspection, not
   // something that should trigger a re-render; reset once the cycle ends.
   const beepedRef = useRef({ eight: false, twelve: false });
+  // The first touch or key press is a user gesture: create and resume the audio context then, so
+  // the 8s and 12s beeps still sound after the phone slept or the tab was backgrounded.
+  useEffect(() => {
+    if (!soundEnabled) return;
+    const prime = () => primeAudio();
+    window.addEventListener("pointerdown", prime, { once: true, capture: true });
+    window.addEventListener("keydown", prime, { once: true, capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", prime, { capture: true });
+      window.removeEventListener("keydown", prime, { capture: true });
+    };
+  }, [soundEnabled]);
   useEffect(() => {
     if (!showInspection || !soundEnabled) return;
     if (!beepedRef.current.eight && inspectionRemainingMs <= 7000) {
@@ -256,7 +268,7 @@ export function TimerView() {
     }
     if (!beepedRef.current.twelve && inspectionRemainingMs <= 3000) {
       beepedRef.current.twelve = true;
-      playInspectionBeep();
+      playInspectionBeep(12);
     }
   }, [showInspection, soundEnabled, inspectionRemainingMs]);
   // Re-arm once inspection is over — not on "idle", which back-to-back

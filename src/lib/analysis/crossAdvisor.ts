@@ -45,33 +45,49 @@ export interface CrossAdvisorReport {
 
 export const MIN_SCRAMBLES = 15;
 
+const lengthsCache = new WeakMap<Solve, number[]>();
+
+/**
+ * The exact optimal cross length for each orientation (in ORIENTATIONS order)
+ * of one solve's scramble — cached per solve object, so a new solve costs
+ * only itself. The returned array is shared: treat it as read-only.
+ */
+export function solveCrossLengths(solve: Solve): number[] {
+  const hit = lengthsCache.get(solve);
+  if (hit) return hit;
+  const cube = new Cube();
+  cube.move(solve.scramble);
+  const out = ORIENTATIONS.map((o) => {
+    const rotated = cube.clone();
+    if (o.move) rotated.move(o.move);
+    return crossHeuristic(rotated);
+  });
+  lengthsCache.set(solve, out);
+  return out;
+}
+
 export function analyzeCrossOrientations(solves: readonly Solve[]): CrossAdvisorReport | null {
-  const scrambles = solves.filter((s) => s.scramble && s.penalty !== "dnf").map((s) => s.scramble);
-  if (scrambles.length < MIN_SCRAMBLES) return null;
+  const usable = solves.filter((s) => s.scramble && s.penalty !== "dnf");
+  if (usable.length < MIN_SCRAMBLES) return null;
 
   const totals = ORIENTATIONS.map(() => 0);
-  for (const scramble of scrambles) {
-    const cube = new Cube();
-    cube.move(scramble);
-    ORIENTATIONS.forEach((o, i) => {
-      const rotated = cube.clone();
-      if (o.move) rotated.move(o.move);
-      totals[i] += crossHeuristic(rotated);
-    });
+  for (const solve of usable) {
+    const lengths = solveCrossLengths(solve);
+    for (let i = 0; i < totals.length; i++) totals[i] += lengths[i];
   }
 
   const stats: OrientationStat[] = ORIENTATIONS.map((o, i) => ({
     face: o.face,
     colorName: FACE_COLOR[o.face] ?? o.face,
-    avgLen: totals[i] / scrambles.length,
-    scrambles: scrambles.length,
+    avgLen: totals[i] / usable.length,
+    scrambles: usable.length,
   }));
   const all = [...stats].sort((a, b) => a.avgLen - b.avgLen);
   const current = stats.find((s) => s.face === "U")!;
   const best = all[0];
 
   const parts: string[] = [];
-  parts.push(`Over your last ${scrambles.length} scrambles, a white cross averages ${current.avgLen.toFixed(2)} moves.`);
+  parts.push(`Over your last ${usable.length} scrambles, a white cross averages ${current.avgLen.toFixed(2)} moves.`);
   if (best.face !== "U" && current.avgLen - best.avgLen >= 0.3) {
     parts.push(`A ${best.colorName} cross would have averaged ${best.avgLen.toFixed(2)} — ${(current.avgLen - best.avgLen).toFixed(2)} moves shorter, on these same scrambles.`);
   } else {

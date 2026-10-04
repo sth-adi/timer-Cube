@@ -22,11 +22,27 @@ export interface GyroReading {
 
 type Listener<T> = (value: T) => void;
 
+/** Listeners already reported, so a consumer that throws on every sample (50 a second) logs once, not endlessly. */
+const reportedListeners = new WeakSet<object>();
+
+function reportListenerError(listener: object, err: unknown): void {
+  if (process.env.NODE_ENV === "production" || reportedListeners.has(listener)) return;
+  reportedListeners.add(listener);
+  console.error("A smart-cube bus listener threw; it keeps receiving events, the rest are unaffected.", err);
+}
+
 function channel<T>() {
   const listeners = new Set<Listener<T>>();
   return {
     emit(value: T) {
-      for (const l of listeners) l(value);
+      // One consumer's bug must never stop the others (or the code that emitted — the store applies turns around this call).
+      for (const l of listeners) {
+        try {
+          l(value);
+        } catch (err) {
+          reportListenerError(l, err);
+        }
+      }
     },
     subscribe(listener: Listener<T>): () => void {
       listeners.add(listener);

@@ -15,8 +15,10 @@
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.16);
   --foreground: #ececf5;
+  /* --muted-2 carries real instructions, so every theme keeps it >= 4.5:1 on its
+     page and panel surfaces (WCAG AA) while staying dimmer than --muted. */
   --muted: #9a9ab4;
-  --muted-2: #5d5d78;
+  --muted-2: #8585a1;
 
   --accent: #7c5cff;
   --accent-strong: #6a48f5;
@@ -70,8 +72,8 @@
   --bg-panel: #16181d;
   --bg-panel-2: #1d2026;
   --foreground: #eef0f3;
-  --muted: #8b909d;
-  --muted-2: #5b606c;
+  --muted: #989da8;
+  --muted-2: #838997;
   --accent: #2dd4bf;
   --accent-strong: #14b8a6;
   --accent-soft: rgba(45, 212, 191, 0.14);
@@ -95,7 +97,7 @@
   --border-strong: rgba(255, 255, 255, 0.22);
   --foreground: #fafafa;
   --muted: #a1a1a1;
-  --muted-2: #6b6b6b;
+  --muted-2: #848484;
   --accent: #fafafa;
   --accent-strong: #d4d4d4;
   --accent-soft: rgba(250, 250, 250, 0.12);
@@ -119,7 +121,7 @@
   --border-strong: rgba(255, 220, 230, 0.18);
   --foreground: #ffeef4;
   --muted: #c39aad;
-  --muted-2: #8a6a7c;
+  --muted-2: #9e8191;
   --accent: #ff7a59;
   --accent-strong: #f2603c;
   --accent-soft: rgba(255, 122, 89, 0.16);
@@ -143,7 +145,7 @@
   --border-strong: rgba(61, 220, 132, 0.34);
   --foreground: #b9ffcd;
   --muted: #63b37c;
-  --muted-2: #3d7350;
+  --muted-2: #4c9064;
   --accent: #3ddc84;
   --accent-strong: #2bb96b;
   --accent-soft: rgba(61, 220, 132, 0.14);
@@ -167,8 +169,8 @@
   --border: rgba(255, 255, 255, 0.09);
   --border-strong: rgba(255, 255, 255, 0.2);
   --foreground: #f6f7fb;
-  --muted: #97a0b5;
-  --muted-2: #626b80;
+  --muted: #a1a9bc;
+  --muted-2: #868fa2;
   --accent: #ffd500;
   --accent-strong: #e6c000;
   --accent-soft: rgba(255, 213, 0, 0.15);
@@ -191,8 +193,8 @@
   --border: rgba(15, 17, 25, 0.09);
   --border-strong: rgba(15, 17, 25, 0.18);
   --foreground: #14151c;
-  --muted: #656b80;
-  --muted-2: #9498a8;
+  --muted: #4f5363;
+  --muted-2: #65697c;
   --accent: #5b3df5;
   --accent-strong: #4a2fdb;
   --accent-soft: rgba(91, 61, 245, 0.1);
@@ -1304,6 +1306,19 @@ body {
   --reactor-speed: 0.7;
   --reactor-o: 0.55;
 }
+/* While the clock runs the digits repaint every frame beside the WebGL cube, so every
+   decorative layer that would be re-rasterised with them is frozen or flattened: rings
+   stop turning, the blurred core goes, and the double/animated glow becomes one static,
+   tighter shadow. Idle, holding, ready and stopped keep the full look. */
+:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .reactor-a::before,
+:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .reactor-b::before {
+  animation-play-state: paused;
+  will-change: auto;
+}
+:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .reactor-core {
+  display: none;
+}
+
 .timer-stage.fx-shaking {
   animation: fx-shake var(--fx-shake-ms, 400ms) cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
@@ -1380,6 +1395,19 @@ body {
       5px 0 rgba(40, 225, 255, 0.6),
       0 0 calc(var(--timer-glow) * 1.4) color-mix(in srgb, currentColor 60%, transparent);
   }
+}
+
+/* Running: one static shadow per style (specificity beats the glow/aberration rules above). */
+:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .timer-digits:not(.timer-digits--flat):not(.timer-digits--gradient):not(.timer-digits--outline) {
+  animation: none;
+  text-shadow: 0 0 calc(var(--timer-glow) * 0.6) color-mix(in srgb, currentColor 45%, transparent);
+}
+:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .timer-digits--gradient {
+  animation-play-state: paused;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .timer-digits--outline {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent));
 }
 
 /* --- Whole-UI reactions to a live solve --- */
@@ -1647,6 +1675,8 @@ body {
   }
   .reactor-a,
   .reactor-b,
+  .reactor-a::before,
+  .reactor-b::before,
   .reactor-core,
   .aurora-beam,
   .aurora-blob-c,

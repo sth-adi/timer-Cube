@@ -20,6 +20,15 @@ interface RouteChipsProps {
    * so notation relative to a grip would be meaningless.
    */
   variant?: "notation" | "color";
+  /**
+   * Opt-in (notation variant): say done / now / next in more than colour —
+   * the current chip gets an outline and `aria-current`, upcoming ones a
+   * dashed edge, every chip a screen-reader state — and drop the transition
+   * for prefers-reduced-motion. Off by default, so other features look the same.
+   */
+  cues?: boolean;
+  /** Accessible name for the list (only with `cues`). */
+  ariaLabel?: string;
 }
 
 export function turnArrow(token: string): string {
@@ -32,24 +41,31 @@ export function turnArrow(token: string): string {
  * actually turns, so the notation can be sanity-checked against the cube
  * in your hands whichever way you're holding it.
  */
-export function RouteChips({ display, turns, position, partial, size = "md", variant = "notation" }: RouteChipsProps) {
+export function RouteChips({ display, turns, position, partial, size = "md", variant = "notation", cues, ariaLabel }: RouteChipsProps) {
   if (variant === "color") return <ColorChips turns={turns} position={position} partial={partial} />;
   return (
-    <div className="flex flex-wrap justify-center gap-1.5">
+    <div className="flex flex-wrap justify-center gap-1.5" role={cues ? "list" : undefined} aria-label={cues ? ariaLabel : undefined}>
       {display.map((token, i) => {
         const done = i < position;
         const current = i === position;
         return (
           <span
             key={i}
+            role={cues ? "listitem" : undefined}
+            aria-current={cues && current ? "step" : undefined}
+            data-state={cues ? (done ? "done" : current ? "now" : "next") : undefined}
             className={cn(
               "relative flex flex-col items-center gap-0.5 rounded-lg px-2 pb-1 pt-1.5 font-mono font-bold transition-all",
+              cues && "motion-reduce:transition-none",
               size === "lg" ? "min-w-[44px] text-xl" : "min-w-[34px] text-sm",
               done && "bg-bg-panel-2 text-muted-2 opacity-60",
               current && "scale-110 bg-accent text-accent-fg shadow-lg",
+              cues && current && "outline outline-2 outline-offset-2 outline-foreground",
               !done && !current && "bg-bg-panel-2 text-foreground",
+              cues && !done && !current && "border border-dashed border-muted-2",
             )}
           >
+            {cues && <span className="sr-only">{done ? `Done: ${token}` : current ? "Now: " : "Next: "}</span>}
             {done ? <Check size={size === "lg" ? 18 : 14} className="my-[3px]" /> : token}
             <span className="h-1.5 w-4 rounded-full ring-1 ring-black/20" style={{ background: FACELET_COLORS[turns[i]?.[0]] ?? "transparent" }} />
             {current && partial && <span className="absolute -right-1 -top-1 rounded-full bg-warning px-1 text-[8px] text-black">½</span>}

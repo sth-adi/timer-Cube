@@ -55,7 +55,7 @@ describe("projection between milestones", () => {
     expect(projectAtTime(model, p, 2000).projectedMs).toBeCloseTo(p.projectedMs);
     const late = projectAtTime(model, p, 4600);
     expect(late.projectedMs).toBeCloseTo(p.projectedMs + 2000);
-    expect(late.detail).toMatch(/2\.00s longer than usual since Cross/);
+    expect(late.detail).toMatch(/2\.0s longer than usual since Cross/);
     expect(late.pbPace).toBe(false);
     // Still the whole rest of the solve to go, however long you've stalled.
     expect(projectAtTime(model, p, 50000).projectedMs).toBe(57400);
@@ -87,6 +87,6 @@ describe("pre-solve projection (from the scramble alone)", () => {
     // At 3000ms with no cross yet, 1700ms overdue on top of the call.
     const late = projectAtTime(model, p, 3000);
     expect(late.projectedMs).toBeCloseTo(11700);
-    expect(late.detail).toMatch(/1\.70s longer than usual since scramble/);
+    expect(late.detail).toMatch(/1\.7s longer than usual since scramble/);
   });
 });

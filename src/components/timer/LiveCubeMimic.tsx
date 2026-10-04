@@ -1,26 +1,103 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import type { SmartCubeMove } from "@/lib/store/smartCubeStore";
+import { useSmartCubeStore, type SmartCubeMove } from "@/lib/store/smartCubeStore";
+import { getCubeEngineClient } from "@/lib/cube-engine/client";
+import { MIMIC_STABLE_MS, faceletsOf, fixAfter, mimicAlg, mimicSyncVerdict, mimicView, movesToReach, type MimicFix } from "@/lib/analysis/mimicSync";
 import { cn } from "@/lib/utils/cn";
 
-const CubeViewer = dynamic(() => import("@/components/scramble/CubeViewer").then((m) => m.CubeViewer), {
+const loadCubeViewerModule = () => import("@/components/scramble/CubeViewer");
+
+const CubeViewer = dynamic(() => loadCubeViewerModule().then((m) => m.CubeViewer), {
   ssr: false,
 });
 
 /**
- * Live 3D mirror of the physical smart cube: the scramble plus every move
- * reported so far gets fed into CubeViewer's `setupAlg`, which applies
- * silently/instantly rather than animating — so this always shows exactly
- * where the physical cube is *right now*, not a lagging replay of an
- * animation queue. Cheap to recompute on every move: CubeViewer reuses one
- * persistent player instance and just re-applies the setup, it never remounts.
+ * Starts downloading the 3D viewer (the wrapper and cubing.js itself) without
+ * rendering anything. Call it ahead of the first mimic render — the connect
+ * flow does, on the tap — so the module isn't fetched in the middle of
+ * inspection, which is exactly when the mimic first mounts. Safe to call
+ * repeatedly and on the server (a no-op there).
+ */
+export function preloadCubeViewer(): void {
+  if (typeof window === "undefined") return;
+  void loadCubeViewerModule()
+    .then((m) => m.loadCubing())
+    .catch(() => {});
+}
+
+/** Sticker colours (matches CubeViewer's stickers), keyed by face letter. */
+const FACE_COLOR: Record<string, string> = {
+  U: "#f5f5f0",
+  D: "#ffd42a",
+  R: "#e0332f",
+  L: "#ff8c1a",
+  F: "#1fa64c",
+  B: "#2f6bff",
+};
+
+/**
+ * Where the tick sits for each face: on the matching edge of the box (the
+ * view has yellow on top, so these are the sides you'd expect). F and B have
+ * no edge of their own in a three-quarter view, so they take a bottom-left
+ * and top-right corner.
+ */
+const TICK_POSITION: Record<string, string> = {
+  U: "left-1/4 right-1/4 top-0 h-[3px]",
+  D: "left-1/4 right-1/4 bottom-0 h-[3px]",
+  L: "left-0 top-1/4 bottom-1/4 w-[3px]",
+  R: "right-0 top-1/4 bottom-1/4 w-[3px]",
+  F: "bottom-0 left-0 h-[3px] w-1/5",
+  B: "right-0 top-0 h-[3px] w-1/5",
+};
+
+/**
+ * A short, face-coloured mark on the edge of the box that fades out — keyed
+ * by the move count so each landed turn mounts a fresh one. Decorative only
+ * (the cube itself turns; there is no information here a screen reader would
+ * need), and skipped entirely under prefers-reduced-motion.
+ */
+function TurnTick({ face }: { face: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof el.animate !== "function") return;
+    const anim = el.animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 320, easing: "ease-out", fill: "forwards" });
+    return () => anim.cancel();
+  }, []);
+  return (
+    <span
+      ref={ref}
+      aria-hidden
+      className={cn("pointer-events-none absolute rounded-full opacity-0 motion-reduce:hidden", TICK_POSITION[face])}
+      style={{ background: FACE_COLOR[face] }}
+    />
+  );
+}
+
+/**
+ * Live 3D mirror of the physical smart cube: the scramble is the viewer's
+ * setup and every move reported so far rides on top of it (`liveMoves`). The
+ * viewer folds the earlier moves into its setup incrementally and plays only
+ * the newest turn — a short quarter-turn animation, no re-parse of the whole
+ * move list — so each turn visibly rotates and the cube is never more than
+ * one ~80ms animation behind the physical one. When the list isn't simply
+ * appended to (a new scramble, a correction, a rewind) it rebuilds the
+ * position instantly instead, and under prefers-reduced-motion it always does.
+ * One persistent player instance is reused throughout; it never remounts.
  *
- * A brief ring pulse overlays each landed turn — pure CSS, keyed off the
- * move count so it retriggers every time without any JS animation-restart
- * logic — so a turn reads as *caught* the instant it happens, rather than
- * the cube silently changing under you with no acknowledgement at all.
+ * The turns alone can drift from the real cube: when one is lost over
+ * Bluetooth the store corrects its own state from the cube's report but the
+ * recorded turns stay as they were. So once the store's facelets have
+ * disagreed with what the mimic shows, unchanged, for a moment (and the
+ * reports aren't flagged unreliable), the corrective moves are worked out on
+ * the cube-engine worker and become the viewer's new setup — a snap, no
+ * animation — with later turns riding on top as before. See mimicSync.ts.
+ *
+ * Each landed turn also lights a small tick in that face's colour on the
+ * matching edge of the box, so a turn reads as *caught* the instant it
+ * happens even before the animation has visibly moved.
  */
 export function LiveCubeMimic({
   scramble,
@@ -31,15 +108,47 @@ export function LiveCubeMimic({
   moves: readonly SmartCubeMove[];
   className?: string;
 }) {
-  const setupAlg = useMemo(() => {
-    const done = moves.map((m) => m.token).join(" ");
-    return done ? `${scramble} ${done}` : scramble;
-  }, [scramble, moves]);
+  const tokens = useMemo(() => moves.map((m) => m.token), [moves]);
+  const liveFacelets = useSmartCubeStore((s) => s.liveFacelets);
+  const unreliable = useSmartCubeStore((s) => s.faceletsUnreliable);
+  const [fix, setFix] = useState<MimicFix | null>(null);
+  const { setupAlg, liveMoves } = useMemo(() => mimicView(scramble, tokens, fix), [scramble, tokens, fix]);
+  const shownAlg = useMemo(() => mimicAlg(setupAlg, liveMoves), [setupAlg, liveMoves]);
+  const expected = useMemo(() => {
+    try {
+      return faceletsOf(shownAlg);
+    } catch {
+      return null;
+    }
+  }, [shownAlg]);
+  // "wait": the cube's state differs from the mimic's and can be believed — the timer below decides whether it stays that way.
+  const verdict = expected === null ? "agree" : mimicSyncVerdict({ expected, facelets: liveFacelets, unreliable, stableForMs: 0 });
+  useEffect(() => {
+    if (verdict !== "wait" || expected === null) return;
+    let cancelled = false;
+    // Any change to the turns, the facelets or the reliability flag re-runs this effect, restarting the wait.
+    const timer = setTimeout(() => {
+      if (mimicSyncVerdict({ expected, facelets: liveFacelets, unreliable, stableForMs: MIMIC_STABLE_MS }) !== "correct") return;
+      const client = getCubeEngineClient();
+      movesToReach(shownAlg, liveFacelets, (target, actual) => client.computeCorrectiveMoves(target, actual))
+        .then((corrective) => {
+          if (!cancelled) setFix(fixAfter(scramble, tokens, shownAlg, corrective));
+        })
+        .catch(() => {});
+    }, MIMIC_STABLE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [verdict, expected, shownAlg, liveFacelets, unreliable, scramble, tokens]);
+  const lastFace = tokens.length > 0 ? tokens[tokens.length - 1][0] : null;
+  // Slice and whole-cube moves have no face colour to show, so they get no tick.
+  const tickFace = lastFace !== null && lastFace in TICK_POSITION ? lastFace : null;
 
   return (
     <div className={cn("relative", className)}>
-      <CubeViewer alg="" setupAlg={setupAlg} className="h-full w-full" />
-      {moves.length > 0 && <span key={moves.length} aria-hidden className="pointer-events-none absolute inset-0 rounded-xl animate-[turn-flash_220ms_ease-out]" />}
+      <CubeViewer alg="" setupAlg={setupAlg} liveMoves={liveMoves} className="h-full w-full" />
+      {tickFace && <TurnTick key={tokens.length} face={tickFace} />}
     </div>
   );
 }

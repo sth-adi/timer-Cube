@@ -8,7 +8,8 @@ import { subscribeGyro } from "@/lib/store/smartCubeBus";
 import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
-import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, orientationLabel, type Mat3 } from "@/lib/gyro/orientation";
+import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, matToQuat, orientationLabel, quatToMat, type Quat } from "@/lib/gyro/orientation";
+import { changedStickers, stepToward } from "@/lib/gyro/smooth";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -32,6 +33,14 @@ const FACES: { start: number; transform: (h: number) => string; shade: number }[
 /** A fixed camera slightly above and to the right, so at any orientation you see three faces — like looking down at the cube in your own hands. */
 const CAMERA = "rotateX(-24deg) rotateY(-32deg)";
 
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
 function CubeFaces({ facelets, size }: { facelets: string; size: number }) {
   const half = size / 2;
   return (
@@ -43,7 +52,7 @@ function CubeFaces({ facelets, size }: { facelets: string; size: number }) {
           style={{ width: size, height: size, gap: 3, transform: face.transform(half), backfaceVisibility: "hidden", filter: `brightness(${face.shade})` }}
         >
           {Array.from({ length: 9 }, (_, i) => (
-            <div key={i} className="rounded-[3px]" style={{ background: FACELET_COLORS[facelets[face.start + i]] ?? "#555" }} />
+            <div key={i} data-sticker={face.start + i} className="rounded-[3px]" style={{ background: FACELET_COLORS[facelets[face.start + i]] ?? "#555" }} />
           ))}
         </div>
       ))}
@@ -67,8 +76,11 @@ interface GyroTwinProps {
  * sticker from the move stream, and its real-world orientation from the
  * cube's own IMU, so tilting the cube tilts the twin. Built from plain CSS
  * 3D faces (like CubeLookaheadIcon) rather than a WebGL scene; orientation
- * updates go straight to the DOM via a ref, one rAF-coalesced write per
- * frame, never through React state.
+ * updates go straight to the DOM via a ref, never through React state. The
+ * cube streams its pose at ~20-30 Hz, so the drawn pose chases the latest
+ * sample each frame (see lib/gyro/smooth) instead of stepping to it, and the
+ * loop stops when it arrives. When a turn changes the stickers, the ones that
+ * changed colour get a quick brightness pulse so a turn reads as motion.
  *
  * Also runs a live RotationTracker so whole-cube rotations get named the
  * instant they settle ("y", "x'"…) — the same detector that writes them into
@@ -79,8 +91,9 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
   const facelets = useSmartCubeStore((s) => s.liveFacelets);
   const gyroActive = useSmartCubeStore((s) => s.gyroActive);
   const protocolName = useSmartCubeStore((s) => s.protocolName);
+  const gyroNeedsRecenter = useSmartCubeStore((s) => s.gyroNeedsRecenter);
+  const recenterGyro = useSmartCubeStore((s) => s.recenterGyro);
   const ref = useGyroStore((s) => s.ref);
-  const recenter = useGyroStore((s) => s.recenter);
   // Re-read on calibration changes so a freshly saved calibration applies immediately.
   const calibrations = useSettingsStore((s) => s.gyroCalibrations);
   const [label, setLabel] = useState(orientationLabel(HOME_ORIENTATION));
@@ -100,17 +113,29 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     if (!ref) return;
     const { calibration } = calibrationFor(protocolName);
     const tracker = new RotationTracker(ref, calibration);
-    let pending: Mat3 | null = null;
+    // The pose being drawn chases the latest sample; both are quaternions so
+    // the chase is a plain slerp. With reduced motion it just snaps.
+    let drawn: Quat | null = null;
+    let target: Quat | null = null;
     let raf = 0;
+    let lastFrameAt = 0;
     let rotationId = 0;
-    const flush = () => {
+    const reduceMotion = prefersReducedMotion();
+    const frame = (now: number) => {
       raf = 0;
-      if (pending) el.style.transform = `${camera} ${cssMatrix3d(pending)}`;
+      if (!target) return;
+      const dt = lastFrameAt ? Math.min(100, now - lastFrameAt) : 1000 / 60;
+      lastFrameAt = now;
+      const step = drawn && !reduceMotion ? stepToward(drawn, target, dt) : { q: target, settled: true };
+      drawn = step.q;
+      el.style.transform = `${camera} ${cssMatrix3d(quatToMat(drawn))}`;
+      if (step.settled) lastFrameAt = 0;
+      else raf = requestAnimationFrame(frame);
     };
     const unsubscribe = subscribeGyro((sample) => {
       const out = tracker.push(sample);
-      pending = out.orientation;
-      if (!raf) raf = requestAnimationFrame(flush);
+      target = matToQuat(out.orientation);
+      if (!raf) raf = requestAnimationFrame(frame);
       if (out.segment) setLabel(orientationLabel(out.segment.orientation));
       if (out.rotation) {
         setLastRotation({ token: out.rotation.token, id: ++rotationId });
@@ -123,10 +148,26 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     };
   }, [ref, protocolName, calibrations, camera]);
 
+  // A quick brightness pulse on the stickers a turn just changed. The first
+  // facelets seen, and re-syncs that change most of the cube, don't pulse.
+  const prevFaceletsRef = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = prevFaceletsRef.current;
+    prevFaceletsRef.current = facelets;
+    const el = cubeRef.current;
+    if (!el || prefersReducedMotion()) return;
+    for (const i of changedStickers(previous, facelets)) {
+      el.querySelector<HTMLElement>(`[data-sticker="${i}"]`)?.animate?.([{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }], {
+        duration: 280,
+        easing: "ease-out",
+      });
+    }
+  }, [facelets]);
+
   const { calibrated } = calibrationFor(protocolName);
 
   return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
+    <div className={cn("relative flex flex-col items-center gap-3", className)}>
       <div className="flex items-center justify-center" style={{ width: size * 1.9, height: size * 1.9, perspective: size * 7 }}>
         <div
           ref={cubeRef}
@@ -159,7 +200,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => recenter()}
+                onClick={() => recenterGyro()}
                 className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground"
                 title="Hold the cube yellow top, green front, then tap"
               >
@@ -169,6 +210,22 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
             </div>
           )}
         </div>
+      )}
+
+      {/* After a reconnect that couldn't keep the old home pose the twin may
+          sit at the wrong angle; the compact view has no controls row, so a
+          small corner tap target lets it fix itself (40px hit area, icon only,
+          out of the way until needed). */}
+      {!showControls && gyroActive && gyroNeedsRecenter && (
+        <button
+          type="button"
+          onClick={() => recenterGyro()}
+          aria-label="Re-center gyro"
+          title="Twin looks off? Hold the cube yellow top, green front, then tap"
+          className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full text-muted-2 opacity-70 hover:text-foreground hover:opacity-100"
+        >
+          <Crosshair size={14} />
+        </button>
       )}
 
       {/* The compact view used inline in the live timer skips the full controls

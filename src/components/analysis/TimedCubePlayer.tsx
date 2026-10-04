@@ -1,10 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Clapperboard, Clock, Gauge, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { CAMERA_LATITUDE, CAMERA_LONGITUDE } from "@/components/scramble/CubeViewer";
 import { cn } from "@/lib/utils/cn";
+import { formatTime } from "@/lib/utils/time";
 import { readingMs, type Cue } from "@/lib/replay/directorsCut";
+import {
+  SNAP_TURN_MS,
+  TURN_MS,
+  activeLeaf,
+  buildTimeline,
+  markSegments,
+  remapPosition,
+  type PhaseMark,
+  type ReplayTimeline,
+} from "@/lib/analysis/replayTiming";
 
 interface TimedCubePlayerProps {
   /** The alg that plays on the player's own timeline. */
@@ -30,6 +41,18 @@ interface TimedCubePlayerProps {
    */
   cues?: Cue[];
   voice?: boolean;
+  /**
+   * Where each CFOP phase ends, as a count of `alg`'s moves (see
+   * lib/analysis/replayTiming.ts) — drawn as ticks on the scrubber, with the
+   * phase names under it. Omit for no ticks.
+   */
+  marks?: PhaseMark[];
+  /**
+   * Draws the move text under the controls. Gets the index of the move that
+   * is playing (or last played) in `alg`, -1 before the first one starts, so
+   * the caller can light it up in whatever form it displays the moves.
+   */
+  renderMoves?: (activeMove: number) => ReactNode;
 }
 
 const CUE_TONE: Record<Cue["tone"], string> = { good: "text-success", bad: "text-danger", neutral: "text-accent" };
@@ -52,10 +75,41 @@ function speak(line: string): Promise<void> {
 }
 
 const SPEEDS = [0.5, 1, 2, 4] as const;
-/** Fixed visual duration for a single turn's animation — only the *pause* before each move varies with the real gap. */
-const TURN_MS = 150;
+/** Slider thumb width the tick marks are inset by, so they line up with where the thumb actually stops. */
+const THUMB_PX = 16;
+const REAL_PAUSES_KEY = "replay-real-pauses";
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
+function readRealPauses(): boolean {
+  try {
+    return localStorage.getItem(REAL_PAUSES_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeRealPauses(on: boolean) {
+  try {
+    localStorage.setItem(REAL_PAUSES_KEY, on ? "1" : "0");
+  } catch {
+    // Private mode / blocked storage: the choice just doesn't outlive this view.
+  }
+}
 /** How often to read the player's own timeline position while playing, to keep the scrubber in sync. */
 const POLL_MS = 80;
+
+/** One animation leaf per move, placed on `timeline` — the shape animationTimelineLeavesRequest wants. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function leavesFor(leafMoves: any[], timeline: ReplayTimeline) {
+  return leafMoves.map((move, i) => ({ animLeaf: move, start: timeline.starts[i], end: timeline.ends[i] }));
+}
 
 /**
  * A 3D cube whose playback timeline is authored move-by-move from real
@@ -65,19 +119,38 @@ const POLL_MS = 80;
  * (`play()`, `pause()`, the `timestamp` setter), not simulated by swapping
  * `alg` in and out — that doesn't animate anything on its own.
  */
-export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true }: TimedCubePlayerProps) {
+export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves }: TimedCubePlayerProps) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
-  const [durationMs, setDurationMs] = useState(0);
+  // Both timings are laid out once, from the gaps this player was mounted with
+  // (see the init effect): the default one with idle pauses capped, and the
+  // true one. Turns snap under prefers-reduced-motion.
+  const [timelines] = useState(() => {
+    const turnMs = prefersReducedMotion() ? SNAP_TURN_MS : TURN_MS;
+    return {
+      capped: buildTimeline(gapsMs, { realPauses: false, turnMs }),
+      real: buildTimeline(gapsMs, { realPauses: true, turnMs }),
+    };
+  });
+  const [realPauses, setRealPauses] = useState(() => hasRealTiming && readRealPauses());
+  const timeline: ReplayTimeline = realPauses ? timelines.real : timelines.capped;
+  // False when `alg` and `gapsMs` don't line up move for move: nothing plays then.
+  const [timelineOk, setTimelineOk] = useState(false);
+  const durationMs = timelineOk ? timeline.durationMs : 0;
+  // The toggle only means something when capping actually shortened the replay.
+  const canToggleRealPauses = hasRealTiming && timelineOk && timelines.real.durationMs - timelines.capped.durationMs >= 50;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const leafMovesRef = useRef<any[]>([]);
   const [positionMs, setPositionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
   const [soundOn, setSoundOn] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const audioCtxRef = useRef<any>(null);
-  const leafStartsRef = useRef<number[]>([]);
+  const leafStartsRef = useRef<number[]>(realPauses ? timelines.real.starts : timelines.capped.starts);
   const lastPolledPosRef = useRef(0);
   const [caption, setCaption] = useState<Cue | null>(null);
   const firedRef = useRef(new Set<number>());
@@ -92,6 +165,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   useEffect(() => {
     let cancelled = false;
     const container = containerRef.current;
+    const initialTimeline = realPauses ? timelines.real : timelines.capped;
     (async () => {
       const [{ TwistyPlayer }, { Alg }] = await Promise.all([import("cubing/twisty"), import("cubing/alg")]);
       if (cancelled || !container) return;
@@ -128,25 +202,17 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       player.alg = alg;
 
       const leafMoves = [...Alg.fromString(alg).experimentalLeafMoves()];
-      let duration = 0;
-      if (leafMoves.length > 0 && leafMoves.length === gapsMs.length) {
-        let end = 0;
-        const leaves = leafMoves.map((move, i) => {
-          const gap = Math.max(0, gapsMs[i]);
-          const start = end + Math.max(0, gap - TURN_MS);
-          end = start + TURN_MS;
-          return { animLeaf: move, start, end };
-        });
-        duration = end;
-        leafStartsRef.current = leaves.map((l) => l.start);
+      const ok = leafMoves.length > 0 && leafMoves.length === gapsMs.length;
+      if (ok) {
+        leafMovesRef.current = leafMoves;
         // `MillisecondTimestamp` is a branded number type cubing.js doesn't
         // export, so a plain number literal can't satisfy it structurally —
         // cast at this one boundary rather than fighting the brand.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        player.experimentalModel.animationTimelineLeavesRequest.set(leaves as any);
+        player.experimentalModel.animationTimelineLeavesRequest.set(leavesFor(leafMoves, initialTimeline) as any);
       }
       if (!cancelled) {
-        setDurationMs(duration);
+        setTimelineOk(ok);
         setReady(true);
       }
     })();
@@ -158,8 +224,8 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       playerRef.current = null;
     };
     // alg/setupAlg/gapsMs are only meaningful together at construction time —
-    // the parent remounts this component (via a `key`) on phase change
-    // rather than asking it to re-author a live player's timeline.
+    // the parent remounts this component (via a `key`) on phase change.
+    // Only the timing mode is re-authored on a live player (onToggleRealPauses).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -291,7 +357,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
 
   const onPlayPause = () => {
     const player = playerRef.current;
-    if (!player) return;
+    if (!player || durationMs === 0) return;
     if (playing) {
       stopHold();
       player.pause();
@@ -312,6 +378,27 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     else player.play();
   };
 
+  // Space plays/pauses while the replay sits in a dialog (the instant-replay
+  // sheet). Anywhere else it's left to the page, where it scrolls — and a
+  // focused button/link/field keeps its own Space.
+  const playPauseRef = useRef(onPlayPause);
+  useEffect(() => {
+    playPauseRef.current = onPlayPause;
+  });
+  useEffect(() => {
+    if (!ready) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== " " || e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!wrapRef.current?.closest('[role="dialog"]')) return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (target?.closest('button, a[href], select, textarea, input:not([type="range"]), [contenteditable="true"]')) return;
+      e.preventDefault();
+      playPauseRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ready]);
+
   const onScrub = (value: number) => {
     const player = playerRef.current;
     if (!player) return;
@@ -322,6 +409,32 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     setPlaying(false);
     setPositionMs(value);
     lastPolledPosRef.current = value;
+  };
+
+  /**
+   * Switches between capped idle pauses and the true gaps. The player's own
+   * timeline is re-authored in place and the position carried across (same
+   * moment in the same move), so the cube doesn't jump and elapsed/total and
+   * the scrubber stay in the new timing's units.
+   */
+  const onToggleRealPauses = () => {
+    const next = !realPauses;
+    const to = next ? timelines.real : timelines.capped;
+    const player = playerRef.current;
+    const pos = remapPosition(positionMs, timeline, to);
+    writeRealPauses(next);
+    setRealPauses(next);
+    if (!player || leafMovesRef.current.length === 0) return;
+    stopHold();
+    player.pause();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    player.experimentalModel.animationTimelineLeavesRequest.set(leavesFor(leafMovesRef.current, to) as any);
+    leafStartsRef.current = to.starts;
+    player.timestamp = pos;
+    resetCues(pos);
+    lastPolledPosRef.current = pos;
+    setPositionMs(pos);
+    if (playing) player.play();
   };
 
   const onToggleSound = () => {
@@ -335,8 +448,12 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     setSoundOn((v) => !v);
   };
 
+  const shownPos = Math.min(positionMs, durationMs);
+  const activeMove = durationMs > 0 ? activeLeaf(timeline.starts, shownPos) : -1;
+  const segments = useMemo(() => (marks && timelineOk ? markSegments(marks, timeline) : []), [marks, timelineOk, timeline]);
+
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div ref={wrapRef} className="flex flex-col items-center gap-1.5">
       <div ref={containerRef} className={className} />
 
       {cues && cues.length > 0 && (
@@ -356,7 +473,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
 
       {ready && durationMs > 0 && (
         <div className="flex w-full flex-col items-center gap-1.5">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
               onClick={onPlayPause}
@@ -394,29 +511,80 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
               {soundOn ? <Volume2 size={12} /> : <VolumeX size={12} />}
             </button>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={durationMs}
-            step={1}
-            value={Math.min(positionMs, durationMs)}
-            onChange={(e) => onScrub(Number(e.target.value))}
-            className="w-full max-w-[16rem] accent-accent"
-            aria-label="Scrub through the moves"
-          />
-          <p className="flex items-center gap-1 text-[10px] text-muted-2">
-            {hasRealTiming ? (
-              <>
-                <Clock size={11} className="text-accent" /> Timed exactly as solved
-              </>
-            ) : (
-              <>
-                <Gauge size={11} /> Estimated pacing — no capture timing for this solve
-              </>
+
+          <div className="flex w-full max-w-xs items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="relative">
+                <input
+                  type="range"
+                  min={0}
+                  max={durationMs}
+                  step={1}
+                  value={shownPos}
+                  onChange={(e) => onScrub(Number(e.target.value))}
+                  className="relative block w-full accent-accent"
+                  aria-label="Scrub through the moves"
+                  aria-valuetext={`${formatTime(shownPos)} of ${formatTime(durationMs)}`}
+                />
+                {segments.slice(0, -1).map((seg) => (
+                  <span
+                    key={`${seg.label}-${seg.endMs}`}
+                    aria-hidden
+                    title={`${seg.label} done`}
+                    className="pointer-events-none absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground/45"
+                    style={{ left: `calc(${(seg.endMs / durationMs) * 100}% + ${(0.5 - seg.endMs / durationMs) * THUMB_PX}px - 1px)` }}
+                  />
+                ))}
+              </div>
+              {segments.length > 1 && (
+                <div className="flex px-2 text-[9px] font-medium uppercase tracking-wide text-muted-2" aria-hidden>
+                  {segments.map((seg) => {
+                    const w = (seg.endMs - seg.startMs) / durationMs;
+                    return (
+                      <span key={`${seg.label}-${seg.startMs}`} className="min-w-0 truncate text-center" style={{ width: `${w * 100}%` }}>
+                        {w >= 0.1 ? seg.label : ""}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <p className="w-[5.75rem] shrink-0 pt-0.5 text-right text-[10px] tabular-nums text-muted" aria-hidden>
+              <span className="text-foreground">{formatTime(shownPos)}</span> / {formatTime(durationMs)}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <p className="flex items-center gap-1 text-[10px] text-muted-2">
+              {hasRealTiming ? (
+                <>
+                  <Clock size={11} className="text-accent" /> {realPauses || !canToggleRealPauses ? "Timed exactly as solved" : "Real move timing, long pauses shortened"}
+                </>
+              ) : (
+                <>
+                  <Gauge size={11} /> Estimated pacing — no capture timing for this solve
+                </>
+              )}
+            </p>
+            {canToggleRealPauses && (
+              <button
+                type="button"
+                onClick={onToggleRealPauses}
+                aria-pressed={realPauses}
+                title="Off: pauses over about 0.6s are shortened. On: every pause plays at its true length."
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors",
+                  realPauses ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+                )}
+              >
+                Real pauses
+              </button>
             )}
-          </p>
+          </div>
         </div>
       )}
+
+      {renderMoves?.(activeMove)}
     </div>
   );
 }

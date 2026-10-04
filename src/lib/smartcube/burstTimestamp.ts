@@ -12,6 +12,15 @@
  * as simultaneous — which would otherwise corrupt TPS, cadence, the
  * double-turn merge window, and replay pacing for exactly the fast
  * solving/heavy BLE traffic this happens under.
+ *
+ * The host timestamp is when the notification *arrived*, which is after the
+ * burst's last move, not its first — so the burst can't be anchored forward
+ * from its first move (that pushes the later moves past the arrival, and a
+ * burst that ends the solve inflates the final time). Moves come in one at a
+ * time here, so instead each is placed relative to the move before it by the
+ * cube-clock gap, which anchors the whole burst back from where the previous
+ * notification left off, and given `arrivalMs` it can never land later than
+ * the notification that carried it. Times never run backwards.
  */
 export interface BurstTimestampState {
   timestamp: number;
@@ -19,11 +28,29 @@ export interface BurstTimestampState {
   correctedTimestamp: number;
 }
 
-export function correctBurstTimestamp(prev: BurstTimestampState | null, event: { timestamp: number; cubeTimestamp?: number | null }): BurstTimestampState {
+/** A first move of a new notification is placed by the cube clock only when the gap to the last move is this short (a pause is better read off the host clock). */
+const MAX_CHAIN_GAP_MS = 1000;
+/** ...and only while it agrees with the host clock to within this much (a notification that old means the cube clock isn't to be trusted). */
+const MAX_ARRIVAL_LAG_MS = 500;
+
+export function correctBurstTimestamp(
+  prev: BurstTimestampState | null,
+  /** `arrivalMs`: when the notification carrying this move reached the host — no move happened after it. */
+  event: { timestamp: number; cubeTimestamp?: number | null; arrivalMs?: number | null },
+): BurstTimestampState {
   const cubeTimestamp = event.cubeTimestamp ?? null;
-  const correctedTimestamp =
-    prev && event.timestamp === prev.timestamp && cubeTimestamp !== null && prev.cubeTimestamp !== null
-      ? prev.correctedTimestamp + (cubeTimestamp - prev.cubeTimestamp)
-      : event.timestamp;
-  return { timestamp: event.timestamp, cubeTimestamp, correctedTimestamp };
+  const arrivalMs = event.arrivalMs ?? null;
+  let corrected = event.timestamp;
+  if (prev && cubeTimestamp !== null && prev.cubeTimestamp !== null) {
+    const gap = cubeTimestamp - prev.cubeTimestamp;
+    // A negative gap is the cube's counter wrapping or restarting: nothing to learn from it.
+    if (gap >= 0) {
+      const chained = prev.correctedTimestamp + gap;
+      if (event.timestamp === prev.timestamp) corrected = chained;
+      else if (arrivalMs !== null && gap <= MAX_CHAIN_GAP_MS && event.timestamp - chained <= MAX_ARRIVAL_LAG_MS) corrected = chained;
+    }
+  }
+  if (arrivalMs !== null) corrected = Math.min(corrected, arrivalMs);
+  if (prev) corrected = Math.max(corrected, prev.correctedTimestamp);
+  return { timestamp: event.timestamp, cubeTimestamp, correctedTimestamp: corrected };
 }

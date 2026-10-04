@@ -6,10 +6,16 @@ import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * A live race against your own PB single: a bar fills toward the PB mark as
- * the clock runs, flipping from "on pace" to "over" the instant elapsed
- * time crosses it. No hardware or recorded run needed — the "ghost" is just
- * your own best time, which is always available the moment you have one.
+ * A live race against your own best single in this session: a bar fills
+ * toward the mark as the clock runs, flipping from "on pace" to "over" the
+ * instant elapsed time crosses it. No hardware or recorded run needed — the
+ * "ghost" is just your own best time, which is always available the moment
+ * you have one. (Both call sites pass the open session's best, hence the
+ * default label; pass `label` if a caller ever races something else.)
+ *
+ * The fill is driven by a transform computed straight from elapsedMs, with no
+ * CSS transition: a transition on a value that already changes every frame
+ * only makes the bar trail the clock, so it's left to track it exactly.
  *
  * The target is frozen at the moment a run starts (via the ref below)
  * rather than read live off the PB each render, so finishing a new PB
@@ -21,12 +27,15 @@ export function GhostPaceBar({
   elapsedMs,
   pbMs,
   hideTimes,
+  label = "session best",
 }: {
   phase: TimerPhase;
   elapsedMs: number;
   /** Current session-best normal single, or null if there isn't one yet. */
   pbMs: number | null;
   hideTimes: boolean;
+  /** What the target is called in the readout. */
+  label?: string;
 }) {
   const latestPbRef = useRef<number | null>(pbMs);
   const prevPhaseRef = useRef<TimerPhase>(phase);
@@ -71,22 +80,22 @@ export function GhostPaceBar({
     <div className="flex w-full max-w-xs flex-col items-center gap-1">
       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-bg-panel-2">
         <div
-          className={cn("h-full rounded-full transition-[width] duration-100", overPb ? "bg-danger" : "bg-success")}
-          style={{ width: `${pct}%` }}
+          className={cn("h-full w-full rounded-full will-change-transform", overPb ? "bg-danger" : "bg-success")}
+          style={{ transform: `translateX(${pct - 100}%)` }}
         />
         {pulseKey > 0 && !overPb && (
-          <span key={pulseKey} aria-hidden className="absolute inset-0 animate-[lead-pulse_420ms_ease-out] rounded-full bg-success/70" />
+          <span key={pulseKey} aria-hidden className="absolute inset-0 animate-[lead-pulse_420ms_ease-out] rounded-full bg-success/70 motion-reduce:hidden" />
         )}
       </div>
       {!hideTimes && (
         <p className={cn("text-[11px] font-medium", overPb ? "text-danger" : "text-success")}>
           {finished
             ? overPb
-              ? `+${formatTime(deltaMs)} off ghost PB`
-              : `beat ghost PB by ${formatTime(deltaMs)}`
+              ? `+${formatTime(deltaMs)} off ${label}`
+              : `beat ${label} by ${formatTime(deltaMs)}`
             : overPb
-              ? `+${formatTime(deltaMs)} over ghost PB`
-              : `${formatTime(deltaMs)} to beat ghost PB`}
+              ? `+${formatTime(deltaMs)} over ${label}`
+              : `${formatTime(deltaMs)} to beat ${label}`}
         </p>
       )}
     </div>

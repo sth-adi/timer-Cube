@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Solve } from "@/types";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
-import { MIN_SCRAMBLES, analyzeCrossOrientations } from "./crossAdvisor";
+import { MIN_SCRAMBLES, analyzeCrossOrientations, solveCrossLengths } from "./crossAdvisor";
 
 const SCRAMBLES = [
   "R2 U' B2 D' L2 D2 R2 U' F2 U L' B' R D F' U2 B R U2 F'",
@@ -45,5 +45,26 @@ describe("analyzeCrossOrientations", () => {
     const report = analyzeCrossOrientations(solves)!;
     const expected = solves.reduce((sum, s) => sum + solveCrossOptimal(s.scramble).length, 0) / solves.length;
     expect(report.current.avgLen).toBeCloseTo(expected, 6);
+  });
+});
+
+describe("solveCrossLengths cache", () => {
+  it("works a scramble out once per solve and reuses it as the list grows", () => {
+    const solves = Array.from({ length: MIN_SCRAMBLES }, (_, i) => makeSolve(`${i}`, SCRAMBLES[i % SCRAMBLES.length]));
+    const before = solves.map(solveCrossLengths);
+    expect(before[0]).toHaveLength(6);
+    const added = makeSolve("99", SCRAMBLES[1]);
+    const first = analyzeCrossOrientations(solves)!;
+    const second = analyzeCrossOrientations([...solves, added])!;
+    solves.forEach((s, i) => expect(solveCrossLengths(s)).toBe(before[i]));
+    expect(solveCrossLengths(added)).toBe(solveCrossLengths(added));
+    expect(second.current.scrambles).toBe(first.current.scrambles + 1);
+  });
+
+  it("matches a from-scratch average over the same scrambles", () => {
+    const solves = Array.from({ length: MIN_SCRAMBLES }, (_, i) => makeSolve(`x${i}`, SCRAMBLES[i % SCRAMBLES.length]));
+    const warm = analyzeCrossOrientations(solves)!;
+    const cold = analyzeCrossOrientations(solves.map((s) => ({ ...s })))!;
+    expect(warm).toEqual(cold);
   });
 });

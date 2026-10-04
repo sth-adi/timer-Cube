@@ -109,3 +109,32 @@ describe("recognitionStats", () => {
     expect(stats.get(`OLL:${oll.name}`)).toMatchObject({ count: 3, meanMs: 800 });
   });
 });
+
+describe("solveCases cache", () => {
+  it("replays a solve once: a second call returns the very same result", () => {
+    const { solve } = timedSolve("s40", 0, 0, 400, 300);
+    const first = solveCases(solve);
+    expect(first.length).toBeGreaterThan(0);
+    expect(solveCases(solve)).toBe(first);
+  });
+
+  it("recomputes only a solve it hasn't seen when one is added", () => {
+    const solves = [timedSolve("s50", 0, 0, 400, 300).solve, timedSolve("s60", 3, 2, 500, 300).solve];
+    const before = solves.map(solveCases);
+    const added = timedSolve("s70", 7, 5, 600, 300).solve;
+    const after = [...solves, added].map(solveCases);
+    expect(after[0]).toBe(before[0]);
+    expect(after[1]).toBe(before[1]);
+    expect(after[2]).toEqual(solveCases(added));
+    // An edited copy (a new object, as the store makes on a penalty change) is its own entry.
+    expect(solveCases({ ...solves[0] })).not.toBe(before[0]);
+    expect(solveCases({ ...solves[0] })).toEqual(before[0]);
+  });
+
+  it("caches the empty answer for a solve with no reconstruction", () => {
+    const keyboard: Solve = { id: "k1", sessionId: "S", timeMs: 9000, penalty: "none", scramble: "R U", date: 1 };
+    const out = solveCases(keyboard);
+    expect(out).toEqual([]);
+    expect(solveCases(keyboard)).toBe(out);
+  });
+});

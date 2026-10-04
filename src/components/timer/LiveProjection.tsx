@@ -5,7 +5,7 @@ import { TrendingDown } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { liveMilestones } from "@/lib/pacer/pacer";
-import { buildProjectionModel, projectAtTime, projectLive, projectPreSolve, solveMilestoneTimes, type Projection } from "@/lib/analysis/liveProjection";
+import { buildProjectionModel, formatProjectedMs, isProjectableSolve, projectAtTime, projectLive, projectPreSolve, solveMilestoneTimes, type Projection } from "@/lib/analysis/liveProjection";
 import { useSolvePrediction } from "@/lib/prediction/useSolvePrediction";
 import { normalSolves, solvesForEvent } from "@/lib/stats/stats";
 import { solveFinalMs, type EventTag } from "@/types";
@@ -50,8 +50,9 @@ export function LiveProjection({
     // Once this solve is saved, judge the calls against a model that never saw it.
     const latest = eventSolves.reduce<(typeof eventSolves)[number] | null>((a, s) => (!a || s.date > a.date ? s : a), null);
     const pool = excludeMs !== null && latest?.timeMs === excludeMs ? eventSolves.filter((s) => s !== latest) : eventSolves;
-    const smart = pool.filter((s) => s.scramble && s.reconstruction && s.moveTimestamps?.length && s.penalty !== "dnf");
-    // Replaying every smart solve is ~1ms each; solveMilestoneTimes caches per solve, so a new solve replays only itself.
+    const smart = pool.filter(isProjectableSolve);
+    // Replaying a solve is ~1ms; solveMilestoneTimes caches by solve id and PredictionBadge pre-warms it
+    // while scrambling, so mounting here mid-solve normally finds every solve already worked out.
     const history = smart.map(solveMilestoneTimes);
     const finals = pool.map(solveFinalMs).filter((x): x is number => x !== null);
     return buildProjectionModel(history, finals.length ? Math.min(...finals) : null);
@@ -82,15 +83,18 @@ export function LiveProjection({
   }, [model, startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs, preSolveCall]);
 
   const last = trail[trail.length - 1];
+  // Mid-solve, the latest call ages with the clock, but only in 0.1s steps (it's shown to 0.1s anyway) —
+  // so the call, its headline and the pill don't recompute or re-render text on every frame.
+  const agedAtMs = finished ? finalMs : Math.floor(finalMs / 100) * 100;
+  const aged = useMemo(() => (last && !finished ? projectAtTime(model, last, agedAtMs) : null), [model, last, finished, agedAtMs]);
   if (!last) return null;
-  // Mid-solve, the latest call ages with the clock; after, the calls stand as made.
-  const current = finished ? last : projectAtTime(model, last, finalMs);
+  const current = finished ? last : aged!;
 
   if (finished) {
     const first = trail[0];
     const err = Math.abs(current.projectedMs - finalMs);
     return (
-      <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-[11px] text-muted-2">
+      <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-[11px] text-muted">
         <TrendingDown size={11} className="text-accent" />
         {trail.map((p) => (
           <span key={p.k}>
@@ -106,15 +110,17 @@ export function LiveProjection({
     );
   }
 
+  // One element throughout: the headline changing only swaps text and colour, never the node, and the
+  // pill keeps a fixed width and a height floor so a longer headline or detail doesn't resize it.
   return (
     <div
       className={cn(
-        "flex flex-col items-center rounded-xl px-3 py-1.5",
+        "flex min-h-[3rem] w-[18rem] max-w-full flex-col items-center justify-center rounded-xl px-3 py-1.5 text-center",
         current.pbPace ? "bg-success/15 text-success" : current.headline === "PB in reach" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-foreground",
       )}
     >
       <p className="text-sm font-bold tabular-nums">
-        {current.headline} · ~{formatTime(current.projectedMs)} <span className="text-[11px] font-medium opacity-70">±{(current.errMs / 1000).toFixed(1)}</span>
+        {current.headline} · ~{formatProjectedMs(current.projectedMs)} <span className="text-[11px] font-medium opacity-70">±{(current.errMs / 1000).toFixed(1)}</span>
       </p>
       <p className="text-[10px] opacity-80">{current.detail}</p>
     </div>

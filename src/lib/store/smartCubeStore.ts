@@ -8,13 +8,15 @@ import { CROSS_FACES, relabelFacelets, relabelMove, type CrossFace } from "@/lib
 import { distrust, newStateSync, onReport, onTurn, settle } from "@/lib/smartcube/stateSync";
 import { advanceMilestones, pickMilestones, type Milestones } from "@/lib/smartcube/milestones";
 import { mergesIntoDoubleTurn } from "@/lib/analysis/doubleTurns";
-import type { GyroSample } from "@/lib/gyro/orientation";
+import type { GyroSample, Quat } from "@/lib/gyro/orientation";
+import { decideGyroHome, StillnessDetector } from "@/lib/gyro/homePose";
 import { emitGyro, emitRawMove, resetLatestGyro } from "./smartCubeBus";
 import { useGyroStore } from "./gyroStore";
 import { recordTimeMachineMove, resetTimeMachine } from "@/lib/smartcube/timeMachine";
 import { friendlyConnectError } from "@/lib/smartcube/friendlyConnectError";
-import { writeLastCube } from "@/lib/smartcube/connectMemory";
+import { readLastCube, writeLastCube } from "@/lib/smartcube/connectMemory";
 import { correctBurstTimestamp, type BurstTimestampState } from "@/lib/smartcube/burstTimestamp";
+import { lostTurnTimeMs } from "@/lib/smartcube/lostTurnTime";
 import { hiddenTooLong, reconnectDelay, RECONNECT_HIDDEN_LIMIT_MS, tryEarly } from "@/lib/smartcube/autoReconnect";
 import { captureChosenDevice, connectKnownDevice, findPermittedDevice } from "@/lib/smartcube/knownDevice";
 
@@ -42,8 +44,13 @@ export interface SmartCubeMove {
 export const SOLVED_FACELETS = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";
 
 interface SmartCubeState {
-  /** Whether this browser exposes the Web Bluetooth API at all. */
-  supported: boolean;
+  /**
+   * Whether this browser exposes the Web Bluetooth API at all. `null` until
+   * the page has hydrated and asked the browser (the server can't know), so
+   * "unsupported" is only ever shown for `false`; `null` is "not known yet" and
+   * should render neutral, not the unsupported message.
+   */
+  supported: boolean | null;
   connecting: boolean;
   connected: boolean;
   deviceName: string | null;
@@ -163,8 +170,17 @@ interface SmartCubeState {
    * and answers through submitMac. Null otherwise.
    */
   macRequest: { deviceName: string | null } | null;
-  /** The cube connected to last time, so the connect screen can offer to reconnect to it. */
+  /** The cube connected to last time, so the connect screen can offer to reconnect to it. Filled in together with `supported` after hydration. */
   lastCubeName: string | null;
+  /**
+   * The gyro's home pose (see lib/gyro/homePose.ts) is a guess nobody has
+   * confirmed: the link came back mid-session without a reference that could
+   * be trusted, so the twin's orientation, regrip names and oriented
+   * reconstruction may be off until Re-center. Cleared by any re-center.
+   */
+  gyroNeedsRecenter: boolean;
+  /** Declares the cube's current pose to be the home grip (yellow top, green front), clearing gyroNeedsRecenter. False if no gyro sample has arrived yet. */
+  recenterGyro: () => boolean;
   /**
    * Getting the cube back on its own after the link dropped unexpectedly
    * (see lib/smartcube/autoReconnect.ts for the schedule): how many attempts
@@ -247,6 +263,14 @@ let batteryPollTimer: ReturnType<typeof setInterval> | null = null;
 let burstState: BurstTimestampState | null = null;
 /** Consecutive FACELETS reports rejected outright (not even well-formed) — see faceletsUnreliable's own comment. */
 let invalidFaceletsStreak = 0;
+/** Which cube is connected, and when and which one the link last dropped from — what decides whether a reconnect can keep the gyro's home reference. */
+let connectedCubeKey: string | null = null;
+let droppedCubeKey: string | null = null;
+let droppedAtMs: number | null = null;
+/** Set while a new gyro home is waiting for the cube to be held still (see decideGyroHome); null otherwise. */
+let homeStill: StillnessDetector | null = null;
+/** The gyroStore refVersion this store's own setRef calls produce, to tell them from a tap on Re-center. */
+let ownRefVersion = -1;
 /** How long the cube must be still before a disagreeing report is believed. */
 const SETTLE_MS = 400;
 /** After this long without a turn (and not mid-solve), ask the cube where it's at. */
@@ -302,7 +326,19 @@ function teardown(): void {
   batteryPollTimer = null;
   burstState = null;
   invalidFaceletsStreak = 0;
+  homeStill = null;
   clearSyncTimers();
+}
+
+/** Sets (or clears) the gyro home reference on this store's behalf, so the re-center watcher at the bottom can tell it from the user's. */
+function setGyroHome(q: Quat | null): void {
+  ownRefVersion = useGyroStore.getState().refVersion + 1;
+  useGyroStore.getState().setRef(q);
+}
+
+/** What the browser can say about itself, read once after hydration (components/chrome/ClientEnv.tsx) — both values in one step so the connect screen's Reconnect button appears with the rest of it, not a beat later. */
+export function detectBrowserEnv(): { supported: boolean; lastCubeName: string | null } {
+  return { supported: typeof navigator !== "undefined" && "bluetooth" in navigator, lastCubeName: readLastCube() };
 }
 
 /** No attempt in progress or on screen — what cancel() leaves behind. */
@@ -554,12 +590,70 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
   gyroLog = [];
   resetLatestGyro();
   resetTimeMachine();
-  useGyroStore.getState().setRef(null);
+  // Where the gyro's home comes from: see decideGyroHome. A cube that was only
+  // gone a moment keeps its frame, so the old reference is still right.
+  const cubeKey = connection.deviceMAC || connection.deviceName || connection.protocol.name;
+  const homeDecision = decideGyroHome({
+    resumed,
+    hasRef: useGyroStore.getState().ref !== null,
+    sameCube: droppedCubeKey !== null && droppedCubeKey === cubeKey,
+    droppedForMs: droppedAtMs === null ? null : Date.now() - droppedAtMs,
+  });
+  connectedCubeKey = cubeKey;
+  droppedCubeKey = droppedAtMs = null;
+  if (homeDecision !== "keep") setGyroHome(null);
+  homeStill = homeDecision === "await-still" ? new StillnessDetector() : null;
+  if (homeDecision === "await-still") set({ gyroNeedsRecenter: true });
+  else if (homeDecision === "first-sample") set({ gyroNeedsRecenter: false });
+
+  /**
+   * Plays one reported turn into the live cube, the cross-colour frames and
+   * the store. `announce` tells the bus consumers; it is called once the
+   * state is in, and before a finishing turn disarms the attempt — so a
+   * listener reading armed/recording sees the same thing it always did.
+   */
+  const applyTurn = (rawToken: string, ts: number, announce: () => void): void => {
+    liveCube.move(rawToken);
+    for (const f of CROSS_FACES) frames[f].move(relabelMove(rawToken, f));
+    const facelets = liveCube.asString();
+
+    const state = get();
+    if (!state.armed) {
+      set({ liveFacelets: facelets });
+      announce();
+      return;
+    }
+
+    // See mergesIntoDoubleTurn's own doc comment for why this merge
+    // (and its time gate) exists — short version: some cubes' firmware
+    // never reports an atomic 180° turn, only two 90° clicks.
+    const lastMove = state.moves[state.moves.length - 1];
+    const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, ts);
+    const move: SmartCubeMove = isDoubleTurn
+      ? { token: `${rawToken[0]}2`, timeStampMs: ts }
+      : { token: rawToken, timeStampMs: ts };
+    const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], ts);
+
+    set((s) => ({
+      ...milestones,
+      recording: true,
+      startedAtMs: s.startedAtMs ?? ts,
+      moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
+      liveFacelets: facelets,
+    }));
+    announce();
+
+    if (facelets === SOLVED_FACELETS) {
+      set({ armed: false, recording: false, solvedAtMs: ts });
+    }
+  };
 
   sub = connection.events$.subscribe((event: SmartCubeEvent) => {
     if (event.type === "DISCONNECT") {
       const dropped = get();
       const wasActive = dropped.armed || dropped.recording;
+      droppedCubeKey = connectedCubeKey;
+      droppedAtMs = Date.now();
       set({
         connected: false,
         deviceName: null,
@@ -589,8 +683,17 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
       emitGyro(sample);
       // First sample of a connection doubles as the home reference —
       // a best guess (the connect screen asks for the yellow-top grip)
-      // that Re-center or the calibration wizard can correct any time.
-      if (!useGyroStore.getState().ref) useGyroStore.getState().setRef(sample.q);
+      // that Re-center or the calibration wizard can correct any time. After
+      // a reconnect that lost the old reference it waits for the cube to be
+      // held still instead, since the cube is likely mid-regrip right then.
+      if (!useGyroStore.getState().ref) {
+        if (!homeStill || homeStill.push(sample)) {
+          homeStill = null;
+          setGyroHome(sample.q);
+        }
+      } else {
+        homeStill = null;
+      }
       if (!get().gyroActive) set({ gyroActive: true });
       // Capped (~10 min at 50Hz) so an armed-and-forgotten cube can't grow it without bound.
       if ((get().armed || get().recording) && gyroLog.length < 30000) gyroLog.push(sample);
@@ -634,16 +737,20 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
           // A correction can complete the solve the lost turn was hiding —
           // when it does, catch up the milestones/case names too, since no
           // further MOVE event will come along to run advanceMilestones
-          // for us the way it normally does after every turn.
+          // for us the way it normally does after every turn. The lost turn
+          // is what solved it, so it happened about one turn after the last
+          // one we have, not at that last turn's time (see lostTurnTimeMs).
           const completesSolve = fix === SOLVED_FACELETS && st.recording;
-          const milestones = completesSolve ? advanceMilestones(pickMilestones(st), liveCube, (f) => frames[f], event.timestamp) : {};
+          const solvedAt = completesSolve ? lostTurnTimeMs(st.moves.map((m) => m.timeStampMs), event.timestamp) : event.timestamp;
+          const milestones = completesSolve ? advanceMilestones(pickMilestones(st), liveCube, (f) => frames[f], solvedAt) : {};
           set({
             ...milestones,
             liveFacelets: fix,
             stateSource: "cube",
-            ...(st.armed || st.recording ? { correctedDuringSolve: true } : {}),
+            // Only a solve under way has turns that no longer add up: while merely armed (inspection) nothing is recorded yet, and the flow drops the attempt if the cube is no longer on the scramble.
+            ...(st.recording ? { correctedDuringSolve: true } : {}),
           });
-          if (completesSolve) set({ armed: false, recording: false, solvedAtMs: st.moves[st.moves.length - 1]?.timeStampMs ?? event.timestamp });
+          if (completesSolve) set({ armed: false, recording: false, solvedAtMs: solvedAt });
         }, SETTLE_MS);
       }
       return;
@@ -653,8 +760,9 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
     // See correctBurstTimestamp's own comment: several turns can arrive
     // in one Bluetooth notification sharing a single host timestamp —
     // this recovers their real spacing from the cube's own hardware
-    // clock where the protocol provides one.
-    burstState = correctBurstTimestamp(burstState, event);
+    // clock where the protocol provides one, anchored back from the
+    // notification's arrival (no turn can be later than that).
+    burstState = correctBurstTimestamp(burstState, { timestamp: event.timestamp, cubeTimestamp: event.cubeTimestamp, arrivalMs: event.timestamp });
     const ts = burstState.correctedTimestamp;
 
     onTurn(sync);
@@ -664,39 +772,22 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
       if (caps?.facelets && !get().recording) void conn?.sendCommand({ type: "REQUEST_FACELETS" }).catch(() => {});
     }, IDLE_CHECK_MS);
 
-    emitRawMove({ token: event.move, timeStampMs: ts });
-    recordTimeMachineMove(event.move, ts);
-    liveCube.move(event.move);
-    for (const f of CROSS_FACES) frames[f].move(relabelMove(event.move, f));
-    const facelets = liveCube.asString();
-
-    const state = get();
-    if (!state.armed) {
-      set({ liveFacelets: facelets });
-      return;
-    }
-
-    // See mergesIntoDoubleTurn's own doc comment for why this merge
-    // (and its time gate) exists — short version: some cubes' firmware
-    // never reports an atomic 180° turn, only two 90° clicks.
-    const rawToken = event.move;
-    const lastMove = state.moves[state.moves.length - 1];
-    const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, ts);
-    const move: SmartCubeMove = isDoubleTurn
-      ? { token: `${rawToken[0]}2`, timeStampMs: ts }
-      : { token: rawToken, timeStampMs: ts };
-    const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], ts);
-
-    set((s) => ({
-      ...milestones,
-      recording: true,
-      startedAtMs: s.startedAtMs ?? ts,
-      moves: isDoubleTurn ? [...s.moves.slice(0, -1), move] : [...s.moves, move],
-      liveFacelets: facelets,
-    }));
-
-    if (facelets === SOLVED_FACELETS) {
-      set({ armed: false, recording: false, solvedAtMs: ts });
+    // Apply the turn to the app's picture of the cube first, then tell the
+    // consumers: a bus listener (or the Time Machine) that fails must never be
+    // able to cost the cube this turn — that desyncs it for the rest of the
+    // solve. The bus swallows listener errors itself; the finally covers
+    // anything else going wrong on the way, so the turn is always announced.
+    let announced = false;
+    const announce = () => {
+      if (announced) return;
+      announced = true;
+      emitRawMove({ token: event.move, timeStampMs: ts });
+      recordTimeMachineMove(event.move, ts);
+    };
+    try {
+      applyTurn(event.move, ts, announce);
+    } finally {
+      announce();
     }
   });
 
@@ -741,8 +832,8 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
 }
 
 export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
-  // Both read from the browser, so they start empty and are filled in after hydration (components/chrome/ClientEnv.tsx) — reading them here would make the server's HTML and the client's first render disagree.
-  supported: false,
+  // Both read from the browser, so they start unknown (supported: null) and are filled in together after hydration (components/chrome/ClientEnv.tsx) — reading them here would make the server's HTML and the client's first render disagree.
+  supported: null,
   connecting: false,
   connected: false,
   deviceName: null,
@@ -776,6 +867,7 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   connectStatus: null,
   macRequest: null,
   lastCubeName: null,
+  gyroNeedsRecenter: false,
   reconnect: null,
   reconnectStopped: null,
   reconnectNotice: null,
@@ -787,6 +879,12 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
   },
 
   dismissReconnectNotice: () => set({ reconnectNotice: null }),
+
+  recenterGyro: () => {
+    const ok = useGyroStore.getState().recenter();
+    if (ok) set({ gyroNeedsRecenter: false });
+    return ok;
+  },
 
   submitMac: (mac) => {
     const resolve = pendingMac;
@@ -967,3 +1065,10 @@ export const useSmartCubeStore = create<SmartCubeState>((set, get) => ({
     void conn.sendCommand({ type: "REQUEST_BATTERY" }).catch(() => {});
   },
 }));
+
+// Any re-center that isn't this store's own guess (the Re-center button, a cube
+// gesture, the calibration wizard) is someone confirming the home pose.
+useGyroStore.subscribe((state, prev) => {
+  if (state.refVersion === prev.refVersion || state.refVersion === ownRefVersion) return;
+  if (useSmartCubeStore.getState().gyroNeedsRecenter) useSmartCubeStore.setState({ gyroNeedsRecenter: false });
+});

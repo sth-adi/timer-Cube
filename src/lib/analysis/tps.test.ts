@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { averageTps, computeTpsBuckets, peakTps, rollingTps } from "./tps";
+import { averageTps, computeTpsBuckets, formatLiveTps, peakTps, rollingTps } from "./tps";
 
 describe("computeTpsBuckets", () => {
   it("returns nothing for an empty stream", () => {
@@ -54,19 +54,92 @@ describe("peakTps", () => {
   });
 });
 
+/** A steady stream: one move every `1000 / tps` ms for `seconds`, starting at 0. */
+const steady = (tps: number, seconds: number) => Array.from({ length: Math.floor(tps * seconds) + 1 }, (_, i) => (i * 1000) / tps);
+
 describe("rollingTps", () => {
-  it("counts only moves inside the trailing window, not the whole stream", () => {
-    // 4 moves inside the last 1000ms of "now" (2000..3000), one move at 500 is outside it.
-    expect(rollingTps([500, 2200, 2500, 2800, 3000], 3000, 1000)).toBe(4);
+  it("is zero with no moves", () => {
+    expect(rollingTps([], 3000)).toBe(0);
   });
 
-  it("decays to zero the instant turning stops", () => {
-    expect(rollingTps([0, 100, 200], 5000, 1000)).toBe(0);
+  it("reads a steady stream as that rate once the window has filled", () => {
+    for (const tps of [2, 4, 6]) {
+      const ts = steady(tps, 8);
+      // Sample between moves too, not just on them.
+      for (let at = 4000; at <= 8000; at += 37) expect(Math.abs(rollingTps(ts, at) - tps)).toBeLessThan(tps * 0.12);
+    }
   });
 
-  it("slides with the clock instead of sitting at fixed bucket boundaries", () => {
-    // computeTpsBuckets would put 900 and 1500 in different fixed buckets;
-    // a rolling window straddling both sees them as one continuous burst.
-    expect(rollingTps([900, 1500], 1500, 1000)).toBe(2);
+  it("tells a fast hand from a slow one", () => {
+    expect(rollingTps(steady(6, 6), 6000)).toBeGreaterThan(rollingTps(steady(3, 6), 6000) * 1.7);
+  });
+
+  it("doesn't step when a move lands or ages out — frame to frame it only drifts", () => {
+    const ts = steady(4, 10);
+    let prev = rollingTps(ts, 3000);
+    let worst = 0;
+    for (let at = 3016; at <= 9000; at += 16) {
+      const v = rollingTps(ts, at);
+      worst = Math.max(worst, Math.abs(v - prev));
+      prev = v;
+    }
+    // The old 1s integer window jumped by a whole 1.0 at every move.
+    expect(worst).toBeLessThan(0.1);
+  });
+
+  it("is continuous at the instant a move arrives", () => {
+    const before = rollingTps([0, 250, 500], 749.9);
+    const after = rollingTps([0, 250, 500, 750], 750);
+    expect(Math.abs(after - before)).toBeLessThan(0.05);
+  });
+
+  it("decays smoothly to zero once turning stops", () => {
+    const ts = steady(4, 5);
+    // The last move's bump still fills in for a few hundred ms after it lands; from there it only falls.
+    let prev = rollingTps(ts, 5500);
+    for (let at = 5600; at <= 9000; at += 100) {
+      const v = rollingTps(ts, at);
+      expect(v).toBeLessThanOrEqual(prev + 1e-9);
+      prev = v;
+    }
+    expect(prev).toBeLessThan(0.05);
+  });
+
+  it("ignores moves older than the window and moves not yet made", () => {
+    expect(rollingTps([0, 100, 200], 20000)).toBe(0);
+    expect(rollingTps([5000, 5200], 4000)).toBe(0);
+  });
+
+  it("ramps up from the first move instead of spiking or reading low forever", () => {
+    const ts = steady(4, 6);
+    const early = rollingTps(ts, 300);
+    // Two moves in: below the true rate (the bumps are still rising), not a spike above it.
+    expect(early).toBeGreaterThan(0);
+    expect(early).toBeLessThan(4);
+    expect(rollingTps(ts, 2500)).toBeGreaterThan(early);
+    expect(rollingTps(ts, 2500)).toBeLessThan(4.5);
+  });
+
+  it("slides with the clock rather than sitting at bucket boundaries", () => {
+    // A burst reads the same wherever it falls in the solve, and fades as the clock moves on.
+    const burst = steady(5, 2);
+    const late = burst.map((t) => t + 7000);
+    expect(rollingTps(late, 9000)).toBeCloseTo(rollingTps(burst, 2000), 6);
+    expect(rollingTps(late, 9000)).toBeGreaterThan(rollingTps(late, 10500));
+  });
+});
+
+describe("formatLiveTps", () => {
+  it("is null at rest so the caller can show a placeholder", () => {
+    expect(formatLiveTps(null)).toBeNull();
+    expect(formatLiveTps(0)).toBeNull();
+    expect(formatLiveTps(0.04)).toBeNull();
+    expect(formatLiveTps(Number.NaN)).toBeNull();
+  });
+
+  it("shows one decimal otherwise", () => {
+    expect(formatLiveTps(0.05)).toBe("0.1");
+    expect(formatLiveTps(3.96)).toBe("4.0");
+    expect(formatLiveTps(12.34)).toBe("12.3");
   });
 });

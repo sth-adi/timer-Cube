@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Loader2, RotateCw } from "lucide-react";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
+import { preloadCubeViewer } from "@/components/timer/LiveCubeMimic";
+import { cn } from "@/lib/utils/cn";
+import { CONNECT_HINTS, CONNECT_STEPS, RECONNECT_HINTS, SLOW_CONNECT_MS, connectStep, reconnectLine } from "./connectSteps";
 
 /** Why the connect screen is asking for a tap when the cube dropped on its own (see smartCubeStore's reconnectStopped). */
 const STOPPED_COPY = {
@@ -9,6 +13,44 @@ const STOPPED_COPY = {
   "gave-up": "Couldn't reach the cube for a few minutes. Check it's on and nearby, then tap Reconnect.",
   hidden: "Stopped trying while the app was in the background — tap Reconnect.",
 } as const;
+
+/** Three small dots — pick, address, connect — lit from the store's real connect status; the current one pulses. */
+function ConnectSteps({ step }: { step: number }) {
+  return (
+    <ol aria-label="Connection steps" className="flex items-center text-[10px]" data-testid="connect-steps">
+      {CONNECT_STEPS.map((label, i) => (
+        <li key={label} aria-current={i === step ? "step" : undefined} className="flex items-center">
+          {i > 0 && <span aria-hidden className={cn("mx-1.5 h-px w-4", i <= step ? "bg-accent" : "bg-border-strong")} />}
+          <span className={cn("flex items-center gap-1", i < step ? "text-muted" : i === step ? "font-medium text-foreground" : "text-muted-2")}>
+            <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", i <= step ? "bg-accent" : "bg-border-strong", i === step && "animate-pulse")} />
+            {label}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * Quiet suggestions that appear only once a connection has been taking a
+ * while. Mounted fresh for each wait (the parent decides when), so its timer
+ * starts then and its state resets on unmount — no reset logic of its own.
+ */
+function SlowHints({ hints, testId }: { hints: readonly string[]; testId: string }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setSlow(true), SLOW_CONNECT_MS);
+    return () => clearTimeout(id);
+  }, []);
+  if (!slow) return null;
+  return (
+    <ul className="flex max-w-xs flex-col items-center gap-0.5 text-center text-[11px] text-muted-2" data-testid={testId}>
+      {hints.map((h) => (
+        <li key={h}>{h}</li>
+      ))}
+    </ul>
+  );
+}
 
 /**
  * The connect button and everything around it: what the connection is doing
@@ -30,6 +72,8 @@ export function ConnectControls({ label = "Connect smart cube", unsupportedLabel
   const reconnectStopped = useSmartCubeStore((s) => s.reconnectStopped);
   const cancelReconnect = useSmartCubeStore((s) => s.cancelReconnect);
   const reconnectNow = useSmartCubeStore((s) => s.reconnectNow);
+  const macRequest = useSmartCubeStore((s) => s.macRequest);
+  const step = connectStep(status);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -37,9 +81,10 @@ export function ConnectControls({ label = "Connect smart cube", unsupportedLabel
         <div className="flex flex-col items-center gap-1" data-testid="auto-reconnect" role="status">
           <p className="flex items-center gap-1.5 text-xs text-muted">
             <Loader2 size={12} className="animate-spin" />
-            {reconnect.trying ? `Reconnecting to ${lastCubeName ?? "your cube"}…` : `Waiting for ${lastCubeName ?? "your cube"} to come back…`}
+            {reconnectLine(lastCubeName, reconnect.trying)}
             {reconnect.attempt > 1 && <span className="text-muted-2">· try {reconnect.attempt}</span>}
           </p>
+          <SlowHints hints={RECONNECT_HINTS} testId="auto-reconnect-hints" />
           <div className="flex items-center gap-3 text-[11px]">
             {!reconnect.trying && (
               <button type="button" onClick={reconnectNow} className="text-accent underline hover:brightness-110" data-testid="auto-reconnect-now">
@@ -54,16 +99,23 @@ export function ConnectControls({ label = "Connect smart cube", unsupportedLabel
       )}
       <button
         type="button"
-        onClick={() => void connect()}
-        disabled={connecting || !supported}
+        onClick={() => {
+          // The first mimic render happens mid-inspection; fetch the 3D viewer now instead.
+          preloadCubeViewer();
+          void connect();
+        }}
+        disabled={connecting || supported !== true}
         className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50"
       >
         {connecting && <Loader2 size={14} className="animate-spin" />}
-        {supported ? (connecting ? "Connecting…" : label) : (unsupportedLabel ?? label)}
+        {supported === false ? (unsupportedLabel ?? label) : connecting ? "Connecting…" : label}
       </button>
       {connecting && (
-        <div className="flex flex-col items-center gap-1" data-testid="connect-progress">
+        <div className="flex flex-col items-center gap-1.5" data-testid="connect-progress">
+          <ConnectSteps step={step} />
           {status && <p className="text-xs text-muted">{status}</p>}
+          {/* Not while the browser's list is open (that wait is yours), nor while it's asking you for the address. */}
+          {step >= 1 && !macRequest && <SlowHints hints={CONNECT_HINTS} testId="connect-hints" />}
           <button type="button" onClick={cancelConnect} className="text-[11px] text-muted-2 underline hover:text-muted" data-testid="connect-cancel">
             Cancel
           </button>
@@ -74,7 +126,10 @@ export function ConnectControls({ label = "Connect smart cube", unsupportedLabel
         <div className="flex items-center gap-2 text-[11px]">
           <button
             type="button"
-            onClick={() => void connect({ deviceName: lastCubeName })}
+            onClick={() => {
+              preloadCubeViewer();
+              void connect({ deviceName: lastCubeName });
+            }}
             className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 font-medium text-foreground hover:bg-bg-panel"
             title="Only show this cube in the Bluetooth list"
             data-testid="reconnect-last"

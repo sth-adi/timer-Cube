@@ -3,8 +3,12 @@ import { newCube, type CubeJSInstance } from "@/lib/cube-engine/engine";
 import { CROSS_FACES, relabelMove, toCrossFrame, type CrossFace } from "./crossFrame";
 import { fullSolveOn } from "./testSolves";
 import { NO_MILESTONES, advanceMilestones, type Milestones } from "./milestones";
+import { f2lPairSolved } from "@/lib/solvers/oll";
+import { F2L_PAIRS } from "@/lib/solvers/data/pieceTablesClient";
+import { solvePairFromCube } from "@/lib/solvers/f2l";
+import { buildPostSolveRows } from "@/lib/analysis/postSolveTable";
 
-function run(moves: readonly string[], SCRAMBLE: string): Milestones {
+function run(moves: readonly string[], SCRAMBLE: string, opts: { finished?: boolean } = {}): Milestones {
   const live = newCube();
   live.move(SCRAMBLE);
   const frames = Object.fromEntries(
@@ -20,7 +24,7 @@ function run(moves: readonly string[], SCRAMBLE: string): Milestones {
     for (const f of CROSS_FACES) frames[f].move(relabelMove(t, f));
     m = advanceMilestones(m, live, (f) => frames[f], (i + 1) * 100);
   });
-  expect(live.isSolved()).toBe(true);
+  if (opts.finished ?? true) expect(live.isSolved()).toBe(true);
   return m;
 }
 
@@ -39,4 +43,77 @@ describe("live milestones", () => {
       expect(m.crossAtMs!).toBeLessThanOrEqual(Math.min(...(m.f2lPairAtMs as number[])));
     }, 60_000);
   }
+});
+
+describe("an F2L pair solved early, then knocked out and put back", () => {
+  /** A real U-cross solve up to its first pair, a turn that undoes that pair, then the pairs solved again with the knocked-out one last. */
+  function reinsertedPairSolve() {
+    const solve = fullSolveOn("U");
+    const base = run(solve.moves, solve.scramble);
+    const times = base.f2lPairAtMs as number[];
+    const pair = times.indexOf(Math.min(...times)) as 0 | 1 | 2 | 3;
+    const upTo = Math.min(...times) / 100;
+    const cube = newCube();
+    cube.move([solve.scramble, ...solve.moves.slice(0, upTo)].join(" "));
+    expect(f2lPairSolved(cube, pair)).toBe(true);
+    const moves = solve.moves.slice(0, upTo);
+    const breaker = ["R", "L", "F", "B"].find((f) => {
+      const probe = newCube();
+      probe.move([solve.scramble, ...moves, f].join(" "));
+      return !f2lPairSolved(probe, pair);
+    })!;
+    cube.move(breaker);
+    moves.push(breaker);
+    const others = ([0, 1, 2, 3] as const).filter((p) => p !== pair);
+    const done: (typeof F2L_PAIRS)[number][] = [];
+    for (const q of [...others, pair]) {
+      const turns = solvePairFromCube(cube, F2L_PAIRS[q], done)!;
+      expect(turns).not.toBeNull();
+      cube.move(turns.join(" "));
+      moves.push(...turns);
+      done.push(F2L_PAIRS[q]);
+    }
+    return { scramble: solve.scramble, moves, pair, firstSolvedAt: Math.min(...times) };
+  }
+
+  it("dates the pair from its re-insertion, so the pairs end exactly when the bottom layer does", () => {
+    const { scramble, moves, pair, firstSolvedAt } = reinsertedPairSolve();
+    const m = run(moves, scramble, { finished: false });
+    const times = m.f2lPairAtMs as number[];
+    expect(times.every((t) => t !== null)).toBe(true);
+    // First-solved time would still read `firstSolvedAt` here.
+    expect(times[pair]).toBeGreaterThan(firstSolvedAt);
+    expect(m.f2lAtMs).toBe(Math.max(...times));
+  }, 60_000);
+
+  it("forgets a pair the moment it's knocked out, until it's solved again", () => {
+    const { scramble, moves, pair, firstSolvedAt } = reinsertedPairSolve();
+    // Stop right after the knock-out: the pair has no time.
+    const afterBreak = run(moves.slice(0, firstSolvedAt / 100 + 1), scramble, { finished: false });
+    expect(afterBreak.f2lPairAtMs[pair]).toBeNull();
+  }, 60_000);
+
+  it("keeps the table's F2L rows and OLL start in step with the live F2L split", () => {
+    const { scramble, moves } = reinsertedPairSolve();
+    const m = run(moves, scramble, { finished: false });
+    const ollAtMs = m.f2lAtMs! + 700;
+    const rows = buildPostSolveRows({
+      moves: moves.map((token, i) => ({ token, timeStampMs: (i + 1) * 100 })),
+      startedAtMs: 100,
+      crossAtMs: m.crossAtMs,
+      f2lPairAtMs: m.f2lPairAtMs,
+      f2lAtMs: m.f2lAtMs,
+      ollAtMs,
+      solvedAtMs: ollAtMs + 900,
+      ollCaseName: null,
+      pllCaseName: null,
+    });
+    const f2l = rows.filter((r) => r.f2lPairIndex !== null);
+    const oll = rows.find((r) => r.label === "OLL")!;
+    // F2L ends where the live ribbon says, and OLL starts there.
+    expect(f2l[f2l.length - 1].atMs).toBe(m.f2lAtMs);
+    expect(oll.startMs).toBe(m.f2lAtMs);
+    expect(oll.totalMs).toBe(700);
+    expect(f2l.reduce((sum, r) => sum + r.totalMs!, 0)).toBe(m.f2lAtMs! - m.crossAtMs!);
+  }, 60_000);
 });

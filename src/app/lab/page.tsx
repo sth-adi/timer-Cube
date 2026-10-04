@@ -451,11 +451,11 @@ export default function LabPage() {
                     <button
                       type="button"
                       onClick={() => void connect()}
-                      disabled={connecting || !supported}
+                      disabled={connecting || supported !== true}
                       className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg disabled:opacity-50"
                     >
                       {connecting ? <Loader2 size={14} className="animate-spin" /> : <Bluetooth size={14} />}
-                      {supported ? (connecting ? "Connecting…" : "Connect smart cube") : "Web Bluetooth unavailable"}
+                      {supported === false ? "Web Bluetooth unavailable" : connecting ? "Connecting…" : "Connect smart cube"}
                     </button>
                     <p className="max-w-xs text-center text-[11px] text-muted-2">
                       Hold it yellow top, green front while it connects — that grip is the gyro&apos;s home. Any state is fine for most cubes.

@@ -25,21 +25,55 @@ export const MOMENT_GAP_MS = 1500;
 /** Keeps memory bounded on a cube left connected all day. */
 export const MAX_ENTRIES = 20_000;
 
-let log: TimeMachineEntry[] = [];
+/**
+ * How far past MAX_ENTRIES the buffer may grow before the oldest turns are
+ * dropped in one go. Trimming every turn at the cap would copy ~20,000
+ * entries per turn inside the Bluetooth handler; trimming in batches makes
+ * recording O(1) amortised while readers still never see more than MAX_ENTRIES.
+ */
+const TRIM_SLACK = 2_000;
+
+/** Chronological, oldest first. May hold up to TRIM_SLACK entries beyond the cap; only the newest MAX_ENTRIES are visible. */
+let buffer: TimeMachineEntry[] = [];
+/** Bumped on every change, so subscribers and snapshot caches can tell "same log" from "new log" without comparing entries. */
+let version = 0;
+/** The visible log as a plain array, built lazily on read (the turn handler never reads it) and reused until the next change. */
+let snapshot: { version: number; entries: readonly TimeMachineEntry[] } | null = null;
 const listeners = new Set<() => void>();
 
+function notify(): void {
+  version++;
+  for (const l of listeners) {
+    try {
+      l();
+    } catch {
+      // A subscriber's failure must not stop the cube's turn being recorded for the others.
+    }
+  }
+}
+
 export function recordTimeMachineMove(token: string, atMs: number): void {
-  log = log.length >= MAX_ENTRIES ? [...log.slice(1), { token, atMs, wallMs: Date.now() }] : [...log, { token, atMs, wallMs: Date.now() }];
-  for (const l of listeners) l();
+  buffer.push({ token, atMs, wallMs: Date.now() });
+  if (buffer.length > MAX_ENTRIES + TRIM_SLACK) buffer.splice(0, buffer.length - MAX_ENTRIES);
+  notify();
 }
 
 export function resetTimeMachine(): void {
-  log = [];
-  for (const l of listeners) l();
+  buffer = [];
+  notify();
 }
 
+/** The log, oldest first, at most MAX_ENTRIES long. The same array is returned until the log changes (a new one after), so it works as a useSyncExternalStore snapshot. */
 export function getTimeMachineLog(): readonly TimeMachineEntry[] {
-  return log;
+  if (!snapshot || snapshot.version !== version) {
+    snapshot = { version, entries: buffer.length > MAX_ENTRIES ? buffer.slice(buffer.length - MAX_ENTRIES) : buffer.slice() };
+  }
+  return snapshot.entries;
+}
+
+/** Changes whenever the log does — a cheap "has it changed?" for callers that don't want to hold the array. */
+export function getTimeMachineVersion(): number {
+  return version;
 }
 
 export function subscribeTimeMachine(listener: () => void): () => void {

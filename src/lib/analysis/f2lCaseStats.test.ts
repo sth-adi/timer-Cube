@@ -4,7 +4,7 @@ import { fullSolveOn } from "@/lib/smartcube/testSolves";
 import { solveBreakdown } from "./solveBreakdown";
 import { recognizeF2lCase } from "./f2lCase";
 import { Cube } from "@/lib/cube-engine/engine";
-import { f2lCaseStats } from "./f2lCaseStats";
+import { f2lCaseStats, solveF2lTurns } from "./f2lCaseStats";
 
 const saved = (id: string, scramble: string, moves: string[], gap: number, date: number): Solve => ({
   id,
@@ -42,4 +42,16 @@ describe("f2lCaseStats", () => {
     expect(f2lCaseStats([]).size).toBe(0);
     expect(f2lCaseStats([keyboard]).size).toBe(0);
   });
+
+  it("replays each solve's pairs once: repeat calls and a longer list reuse the cached rows", () => {
+    const { scramble, moves } = fullSolveOn("U");
+    const solves = [0, 1].map((k) => saved(`c${k}`, scramble, moves, 130 + k * 5, k));
+    const rows = solves.map(solveF2lTurns);
+    expect(rows[0].length).toBeGreaterThan(0);
+    const first = f2lCaseStats(solves);
+    const added = saved("c2", scramble, moves, 140, 2);
+    const second = f2lCaseStats([...solves, added]);
+    solves.forEach((s, i) => expect(solveF2lTurns(s)).toBe(rows[i]));
+    for (const [key, stat] of first) expect(second.get(key)!.count).toBe(stat.count + 1);
+  }, 60_000);
 });

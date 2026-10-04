@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
@@ -21,11 +21,13 @@ import type { AlgExecution } from "@/lib/xray/algMicroscope";
 import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import { myAlgKey, normalizedAlg, sameAlg, type SeenAlg } from "@/lib/algorithms/myAlgs";
 import { useSessionStore } from "@/lib/store/sessionStore";
-import { caseRecords, type CaseRecord } from "@/lib/analysis/caseRecord";
-import { f2lCaseStats, type F2lCaseStat } from "@/lib/analysis/f2lCaseStats";
-import { recognitionStats, type RecognitionStat } from "@/lib/analysis/caseHistory";
+import type { Solve } from "@/types";
+import type { CaseRecord } from "@/lib/analysis/caseRecord";
+import type { F2lCaseStat } from "@/lib/analysis/f2lCaseStats";
+import type { RecognitionStat } from "@/lib/analysis/caseHistory";
+import { NO_HISTORY, scheduleHistoryStats, type HistoryStats } from "@/lib/analysis/historyStats";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
-import { analyzeCrossOrientations, type CrossAdvisorReport } from "@/lib/analysis/crossAdvisor";
+import type { CrossAdvisorReport } from "@/lib/analysis/crossAdvisor";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
 
@@ -239,6 +241,19 @@ function RecognitionLine({ pausedMs, stat }: { pausedMs: number; stat?: Recognit
 }
 
 /**
+ * All-time history for the row notes, worked out in idle time: the recap
+ * paints at once with whatever the last pass found (nothing, the first time),
+ * and the notes catch up a moment later. Each solve is only ever replayed
+ * once (the analyses cache per solve), so after a save the catch-up is just
+ * the new solve.
+ */
+function useHistoryStats(solves: readonly Solve[]): HistoryStats {
+  const [stats, setStats] = useState<HistoryStats>(NO_HISTORY);
+  useEffect(() => scheduleHistoryStats(solves, setStats), [solves]);
+  return stats;
+}
+
+/**
  * The post-solve breakdown: one row per step (each F2L pair in the order you
  * solved it), with the case you had, the time, and a bar split into
  * recognising the case (light) and turning through it (solid). With enough
@@ -268,9 +283,7 @@ export function PostSolveTable({
 }) {
   const seen = useMyAlgsStore((s) => s.seen);
   const allSolves = useSessionStore((s) => s.allSolves);
-  const caseHistory = useMemo(() => caseRecords(allSolves), [allSolves]);
-  const f2lHistory = useMemo(() => f2lCaseStats(allSolves), [allSolves]);
-  const recogHistory = useMemo(() => recognitionStats(allSolves), [allSolves]);
+  const { caseHistory, f2lHistory, recogHistory, crossAdvisor } = useHistoryStats(allSolves);
   const views = useMemo(() => rows.map((row) => viewFor(row, scramble, moves, crossFace)), [rows, scramble, moves, crossFace]);
   const max = Math.max(1, ...rows.map((r) => r.totalMs ?? 0));
   // The fewest turns a computer could ever need for this exact cross — the
@@ -285,7 +298,6 @@ export function PostSolveTable({
   }, [scramble]);
   const crossRow = rows.find((r) => r.label === "Cross");
   const crossTurns = crossRow?.atMs != null ? moves.filter((m) => m.timeStampMs <= crossRow.atMs!).length : null;
-  const crossAdvisor = useMemo(() => analyzeCrossOrientations(allSolves), [allSolves]);
   const router = useRouter();
 
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());

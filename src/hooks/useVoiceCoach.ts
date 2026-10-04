@@ -5,6 +5,7 @@ import { useSettingsStore } from "@/lib/store/settingsStore";
 import type { PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { INSPECTION_CALLS, finishCallout, say, silence, splitCallout } from "@/lib/smartcube/voiceCoach";
 import type { Penalty } from "@/types";
+import { advancePhaseTracker, createPhaseTracker } from "@/hooks/voiceCoachPhases";
 
 interface VoiceCoachInput {
   recording: boolean;
@@ -31,55 +32,52 @@ interface VoiceCoachInput {
  */
 export function useVoiceCoach(o: VoiceCoachInput): void {
   const mode = useSettingsStore((s) => s.voiceCoach);
-  const spoken = useRef({ cross: false, f2l: false, oll: false });
+  const tracker = useRef(createPhaseTracker({ recording: o.recording, startedAtMs: o.startedAtMs }));
   const priorBest = useRef<number | null>(null);
-  const prevRecording = useRef(false);
   const prevFinished = useRef(o.finished);
   const inspectionSpoken = useRef<Set<number>>(new Set());
 
-  // A new attempt: forget what was called last time and pin the best to beat.
+  // Phase calls in the order the cube reaches them, and the finish. They share
+  // one effect because a milestone on the last move arrives in the same update
+  // as the finish, and the finish cuts in front of anything still queued — so
+  // the missed calls go out inside the finish utterance, not before it.
+  const { recording, finished, startedAtMs, crossAtMs, f2lAtMs, ollAtMs, solvedAtMs, penalty, baseline, bestMs } = o;
   useEffect(() => {
-    if (o.recording && !prevRecording.current) {
-      spoken.current = { cross: false, f2l: false, oll: false };
-      priorBest.current = o.bestMs;
-    }
-    prevRecording.current = o.recording;
-  }, [o.recording, o.bestMs]);
-
-  // Phase calls, in the order the cube reaches them.
-  useEffect(() => {
-    if (mode === "off" || !o.recording || o.startedAtMs === null) return;
-    const start = o.startedAtMs;
-    const phases = [
-      { key: "cross", phase: 0, at: o.crossAtMs, from: start },
-      { key: "f2l", phase: 1, at: o.f2lAtMs, from: o.crossAtMs ?? start },
-      { key: "oll", phase: 2, at: o.ollAtMs, from: o.f2lAtMs ?? o.crossAtMs ?? start },
-    ] as const;
-    for (const p of phases) {
-      if (p.at === null || spoken.current[p.key]) continue;
-      spoken.current[p.key] = true;
-      say(splitCallout({ phase: p.phase, durationMs: p.at - p.from, mode, baseline: o.baseline?.phases[p.phase] ?? null }));
-    }
-  }, [mode, o.recording, o.startedAtMs, o.crossAtMs, o.f2lAtMs, o.ollAtMs, o.baseline]);
-
-  // The finish cuts in front of anything still queued.
-  useEffect(() => {
-    if (o.finished && !prevFinished.current && mode !== "off" && o.startedAtMs !== null && o.solvedAtMs !== null) {
-      const pllMs = o.ollAtMs !== null ? o.solvedAtMs - o.ollAtMs : null;
-      say(
+    const { newAttempt, calls } = advancePhaseTracker(
+      tracker.current,
+      { recording, finished, startedAtMs, crossAtMs, f2lAtMs, ollAtMs },
+      mode !== "off",
+    );
+    // A new attempt: pin the best to beat.
+    if (newAttempt) priorBest.current = bestMs;
+    const finishing = finished && !prevFinished.current;
+    prevFinished.current = finished;
+    if (mode === "off") return;
+    const lines = calls.map((c) =>
+      splitCallout({
+        phase: c.phase,
+        durationMs: c.durationMs,
+        mode,
+        baseline: baseline?.phases[c.phase] ?? null,
+      }),
+    );
+    if (finishing && startedAtMs !== null && solvedAtMs !== null) {
+      const pllMs = ollAtMs !== null ? solvedAtMs - ollAtMs : null;
+      lines.push(
         finishCallout({
-          timeMs: o.solvedAtMs - o.startedAtMs,
-          penalty: o.penalty,
+          timeMs: solvedAtMs - startedAtMs,
+          penalty,
           mode,
           pllMs,
-          baseline: o.baseline?.phases[3] ?? null,
+          baseline: baseline?.phases[3] ?? null,
           priorBestMs: priorBest.current,
         }),
-        { interrupt: true },
       );
+      say(lines.join(". "), { interrupt: true });
+    } else {
+      for (const line of lines) say(line);
     }
-    prevFinished.current = o.finished;
-  }, [o.finished, mode, o.startedAtMs, o.solvedAtMs, o.ollAtMs, o.penalty, o.baseline]);
+  }, [mode, recording, finished, startedAtMs, crossAtMs, f2lAtMs, ollAtMs, solvedAtMs, penalty, baseline, bestMs]);
 
   // WCA inspection marks — full mode only.
   useEffect(() => {

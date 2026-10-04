@@ -79,6 +79,7 @@ function computeBreakdown(solve: Solve): SolveBreakdown | null {
     moves,
     startedAtMs: times[0],
     crossAtMs: m.crossAtMs,
+    f2lAtMs: m.f2lAtMs,
     f2lPairAtMs: m.f2lPairAtMs,
     ollAtMs: m.ollAtMs,
     solvedAtMs: totalMs,

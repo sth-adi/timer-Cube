@@ -6,6 +6,10 @@ import { X } from "lucide-react";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import { computeReplayGaps } from "@/lib/analysis/replayGaps";
+import { displayIndexForMove, displayMoves } from "@/lib/analysis/replayDisplay";
+import { phaseMarksFromMilestones } from "@/lib/analysis/replayTiming";
+import { hasBreakdown, solveBreakdown } from "@/lib/analysis/solveBreakdown";
+import type { Solve } from "@/types";
 import { useModalLayer } from "@/hooks/useModalLayer";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
@@ -37,6 +41,47 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimes
 
   const { gaps, hasRealTiming } = useMemo(() => computeReplayGaps(moves, moveTimestamps), [moveTimestamps, moves]);
 
+  // What's read under the cube: the same slice-pair merge as the recap's
+  // written reconstruction ("M", not "R' L"). The player below still gets the
+  // raw `reconstruction`, which is what the cube actually did.
+  const display = useMemo(() => displayMoves(moves, hasRealTiming ? moveTimestamps : undefined), [moves, moveTimestamps, hasRealTiming]);
+
+  // Phase ticks from the milestones the recap itself uses, rebuilt from this
+  // solve's own moves (a typed-in or hand-edited reconstruction has none).
+  const marks = useMemo(() => {
+    if (!hasRealTiming || !moveTimestamps) return undefined;
+    const probe = { id: "replay", sessionId: "", penalty: "none", scramble, reconstruction, moveTimestamps, timeMs, date: 0 } as Solve;
+    try {
+      if (!hasBreakdown(probe)) return undefined;
+      const b = solveBreakdown(probe);
+      return b ? phaseMarksFromMilestones(moveTimestamps, b.milestones) : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [hasRealTiming, moveTimestamps, scramble, reconstruction, timeMs]);
+
+  const moveText = (active: number) => {
+    if (display.length === 0) {
+      return <p className="mt-2 break-words text-center font-mono text-[11px] leading-relaxed text-foreground/80">no reconstruction captured</p>;
+    }
+    const current = displayIndexForMove(display, active);
+    return (
+      <p className="mt-2 break-words text-center font-mono text-[11px] leading-relaxed text-foreground/80">
+        {display.map((d, i) => (
+          <span key={i}>
+            {i > 0 && " "}
+            <span
+              aria-current={i === current ? "step" : undefined}
+              className={cn("rounded px-0.5", i === current && "bg-accent-soft font-semibold text-accent")}
+            >
+              {d.token}
+            </span>
+          </span>
+        ))}
+      </p>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div
@@ -66,18 +111,22 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, moveTimes
 
         <p className="mb-2 flex items-baseline gap-2">
           <span className="tabular-timer text-2xl font-bold text-foreground">{formatTime(timeMs)}</span>
-          <span className="text-xs text-muted-2">{moves.length} moves</span>
+          <span className="text-xs text-muted-2">{display.length} moves</span>
         </p>
 
         <p className="mb-2 break-words rounded-lg bg-bg-panel-2 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-muted">
           {scramble}
         </p>
 
-        <TimedCubePlayer alg={reconstruction} setupAlg={scramble} gapsMs={gaps} hasRealTiming={hasRealTiming} className="mx-auto h-56 w-full max-w-xs" />
-
-        <p className="mt-2 break-words text-center font-mono text-[11px] leading-relaxed text-foreground/80">
-          {reconstruction || "no reconstruction captured"}
-        </p>
+        <TimedCubePlayer
+          alg={reconstruction}
+          setupAlg={scramble}
+          gapsMs={gaps}
+          hasRealTiming={hasRealTiming}
+          marks={marks}
+          renderMoves={moveText}
+          className="mx-auto h-56 w-full max-w-xs"
+        />
       </div>
     </div>
   );

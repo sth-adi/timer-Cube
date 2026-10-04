@@ -166,4 +166,39 @@ describe("buildPostSolveRows", () => {
     expect(f2lRows[2].totalMs).toBeNull();
     expect(f2lRows[3].totalMs).toBeNull();
   });
+
+  it("ends F2L and starts OLL at the live F2L split when the bottom layer finished after the last pair", () => {
+    // The cross was the last thing put back: the latest pair stood at 4000 but F2L only completed at 4500.
+    const rows = buildPostSolveRows({
+      moves: [],
+      startedAtMs: 0,
+      crossAtMs: 1000,
+      f2lPairAtMs: [2000, 3000, 4000, 3500],
+      f2lAtMs: 4500,
+      ollAtMs: 6000,
+      solvedAtMs: 8000,
+      ollCaseName: null,
+      pllCaseName: null,
+    });
+    const f2l = rows.filter((r) => r.f2lPairIndex !== null);
+    expect(f2l.map((r) => r.atMs)).toEqual([2000, 3000, 3500, 4500]);
+    expect(f2l.reduce((sum, r) => sum + r.totalMs!, 0)).toBe(3500);
+    const oll = rows.find((r) => r.label === "OLL")!;
+    expect(oll.startMs).toBe(4500);
+    expect(oll.totalMs).toBe(1500);
+  });
+
+  it("without the live split, chains OLL off the latest pair as before", () => {
+    const rows = buildPostSolveRows({
+      moves: [],
+      startedAtMs: 0,
+      crossAtMs: 1000,
+      f2lPairAtMs: [2000, 3000, 4000, 3500],
+      ollAtMs: 6000,
+      solvedAtMs: 8000,
+      ollCaseName: null,
+      pllCaseName: null,
+    });
+    expect(rows.find((r) => r.label === "OLL")!.startMs).toBe(4000);
+  });
 });

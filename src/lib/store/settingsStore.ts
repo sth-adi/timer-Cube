@@ -3,6 +3,24 @@ import { persist } from "zustand/middleware";
 import type { GyroCalibration } from "@/lib/gyro/orientation";
 import type { VoiceMode } from "@/lib/smartcube/voiceCoach";
 import type { StatsScope } from "@/lib/stats/scope";
+import { firstRunFxLevel, readDeviceSignals } from "@/lib/utils/deviceTier";
+
+const SETTINGS_KEY = "cube-timer-settings";
+/** Set once the first-run FX decision has been made, so it is never made twice. */
+const FX_DECIDED_KEY = "cube-timer-fx-decided";
+
+/**
+ * The persisted settings exactly as they were when this module loaded — before
+ * persist, or any effect, can write the defaults back and make "never chose a
+ * level" look like "chose insane". Null on the server and when storage is blocked.
+ */
+const settingsAtLoad: string | null = (() => {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem(SETTINGS_KEY);
+  } catch {
+    return null;
+  }
+})();
 
 export type InputMethod = "spacebar" | "tap";
 
@@ -223,3 +241,23 @@ export const useSettingsStore = create<SettingsState>()(
     },
   ),
 );
+
+/**
+ * First-run FX level for low-power devices (see lib/utils/deviceTier.ts for the
+ * heuristic). The store's default stays "insane" so the server render and the
+ * client's first render agree; this runs from ClientEnv after hydration, and
+ * only when no FX level was ever saved — an existing choice is never changed.
+ */
+export function applyDeviceFxDefault(): void {
+  try {
+    const level = firstRunFxLevel({
+      alreadyDecided: localStorage.getItem(FX_DECIDED_KEY) !== null,
+      rawSettings: settingsAtLoad,
+      signals: readDeviceSignals(),
+    });
+    if (level) useSettingsStore.setState({ fxLevel: level });
+    localStorage.setItem(FX_DECIDED_KEY, "1");
+  } catch {
+    // Storage blocked (private mode, quota): keep the default rather than guess.
+  }
+}

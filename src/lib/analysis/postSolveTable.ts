@@ -54,7 +54,9 @@ function recognitionSplit(
  * fixed slot order — see f2lPairIndex's doc comment). Each pair's own
  * boundary is its individual completion timestamp from smartCubeStore's
  * f2lPairAtMs, chained the same way Cross/OLL/PLL chain off the previous
- * phase's end, starting from crossAtMs. A pair not yet solved (null in
+ * phase's end, starting from crossAtMs. The last pair's boundary is lifted to
+ * `f2lEndMs` when the bottom layer only finished after it (the cross put back
+ * last), so F2L ends where the live ribbon says it does. A pair not yet solved (null in
  * f2lPairAtMs — solve still in progress, or, on a real cube, effectively
  * never since bottomLayerSolved requires all 4) is appended at the end with
  * a null total, same "—" treatment every other unresolved boundary gets.
@@ -63,10 +65,12 @@ function buildF2lPairRows(
   moves: SmartCubeMove[],
   crossAtMs: number | null,
   f2lPairAtMs: (number | null)[],
+  f2lEndMs: number | null,
 ): PostSolvePhaseRow[] {
   const indexed = f2lPairAtMs.map((atMs, pairIndex) => ({ pairIndex: pairIndex as 0 | 1 | 2 | 3, atMs }));
   const known = indexed.filter((p): p is { pairIndex: 0 | 1 | 2 | 3; atMs: number } => p.atMs !== null);
   known.sort((a, b) => a.atMs - b.atMs);
+  if (known.length === 4 && f2lEndMs !== null && known[3].atMs < f2lEndMs) known[3] = { ...known[3], atMs: f2lEndMs };
   const unknown = indexed.filter((p) => p.atMs === null);
   const ordered = [...known, ...unknown];
 
@@ -106,13 +110,20 @@ export function buildPostSolveRows(opts: {
   startedAtMs: number | null;
   crossAtMs: number | null;
   f2lPairAtMs: (number | null)[];
+  /**
+   * When the bottom layer was complete (smartCubeStore's f2lAtMs, the live F2L
+   * split). Where given, it is F2L's end and OLL's start; without it that's
+   * the latest pair's own time, which is the same moment unless the cross was
+   * the last thing put back.
+   */
+  f2lAtMs?: number | null;
   ollAtMs: number | null;
   /** The solve's end boundary — pass null while the solve isn't actually finished yet, so the PLL row doesn't show a bogus in-progress total. */
   solvedAtMs: number | null;
   ollCaseName: string | null;
   pllCaseName: string | null;
 }): PostSolvePhaseRow[] {
-  const { moves, startedAtMs, crossAtMs, f2lPairAtMs, ollAtMs, solvedAtMs, ollCaseName, pllCaseName } = opts;
+  const { moves, startedAtMs, crossAtMs, f2lPairAtMs, f2lAtMs, ollAtMs, solvedAtMs, ollCaseName, pllCaseName } = opts;
 
   const crossTotalMs = startedAtMs !== null && crossAtMs !== null ? crossAtMs - startedAtMs : null;
   const crossRow: PostSolvePhaseRow = {
@@ -132,10 +143,11 @@ export function buildPostSolveRows(opts: {
     executionMs: crossTotalMs,
   };
 
-  const f2lRows = buildF2lPairRows(moves, crossAtMs, f2lPairAtMs);
-  // OLL/PLL still chain off f2lAtMs-equivalent — the last F2L pair's own
-  // boundary is exactly that moment (bottomLayerSolved requires all 4).
-  const f2lEndMs = f2lPairAtMs.every((at) => at !== null) ? Math.max(...(f2lPairAtMs as number[])) : null;
+  // OLL/PLL chain off the live F2L split (f2lAtMs) — falling back to the
+  // latest pair's own boundary, which is that moment unless a pair was
+  // knocked out and re-inserted before milestones tracked it that way.
+  const f2lEndMs = f2lAtMs ?? (f2lPairAtMs.every((at) => at !== null) ? Math.max(...(f2lPairAtMs as number[])) : null);
+  const f2lRows = buildF2lPairRows(moves, crossAtMs, f2lPairAtMs, f2lEndMs);
 
   const ollSplit = recognitionSplit(moves, f2lEndMs, ollAtMs);
   const ollRow: PostSolvePhaseRow = {
