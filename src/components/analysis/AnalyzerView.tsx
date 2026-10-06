@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Bookmark, BookmarkCheck, Gauge, Loader2, Target, Wand2, Zap } from "lucide-react";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useFullSolve } from "@/hooks/useFullSolve";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { formatTime, parseTimeInput } from "@/lib/utils/time";
 import { SolveReplay } from "./SolveReplay";
@@ -19,6 +20,12 @@ export function AnalyzerView() {
   const savedOnSolve = solveId ? solves.find((s) => s.id === solveId)?.reconstruction : undefined;
   const isSaved = solveId !== null && savedOnSolve === reconstruction && reconstruction.trim() !== "";
   const currentScramble = useScrambleStore((s) => s.scramble);
+  // The analysed solve's stored row has the gyro stream the replay's Gyro Twin follows — used only while the
+  // reconstruction on screen is still the one that was recorded.
+  const analysedSolve = useSessionStore((s) => (solveId ? s.allSolves.find((x) => x.id === solveId) : undefined));
+  const fullAnalysed = useFullSolve(result?.ok ? (analysedSolve ?? null) : null);
+  const sameMoves = (a: string, b: string) => a.trim().split(/\s+/).join(" ") === b.trim().split(/\s+/).join(" ");
+  const gyroStream = fullAnalysed.solve && sameMoves(fullAnalysed.solve.reconstruction ?? "", reconstruction) ? fullAnalysed.solve.gyroStream : null;
   const [timeText, setTimeText] = useState(() => {
     const ms = useAnalysisStore.getState().timeMs;
     return ms === null ? "" : formatTime(ms);
@@ -191,6 +198,7 @@ export function AnalyzerView() {
               summary={result.summary}
               moveTimestamps={moveTimestamps ?? undefined}
               totalMs={timeMs ?? undefined}
+              gyroStream={gyroStream}
             />
           )}
 

@@ -814,7 +814,7 @@ export function SmartCubeTimer() {
   );
 
   const onAnalyze = () => {
-    requestAnalysis(finishedScramble, elapsedMs, undefined, reconstruction, moveTimestampsRel);
+    requestAnalysis(finishedScramble, elapsedMs, savedSolve?.id, reconstruction, moveTimestampsRel);
   };
 
   const [showReplay, setShowReplay] = useState(false);

@@ -1,3 +1,4 @@
+import { newCube } from "@/lib/cube-engine/engine";
 import { slerpQuat, type Quat } from "./orientation";
 import type { GyroStreamData } from "./solveGyro";
 
@@ -45,4 +46,24 @@ export function solveMsAtPosition(starts: readonly number[], moveMs: readonly nu
   }
   const span = starts[hi] - starts[lo];
   return span > 0 ? moveMs[lo] + ((positionMs - starts[lo]) / span) * (moveMs[hi] - moveMs[lo]) : moveMs[lo];
+}
+
+/**
+ * The cube's stickers after each of `moves`, starting from `setup` (a scramble, or a scramble plus
+ * the moves already made): one string more than there are moves, the first being the setup itself.
+ * Null if the setup or a move can't be applied.
+ */
+export function faceletsAfterMoves(setup: string, moves: readonly string[]): string[] | null {
+  try {
+    const cube = newCube();
+    if (setup.trim()) cube.move(setup.trim());
+    const out = [cube.asString()];
+    for (const m of moves) {
+      cube.move(m);
+      out.push(cube.asString());
+    }
+    return out;
+  } catch {
+    return null;
+  }
 }

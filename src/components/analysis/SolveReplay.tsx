@@ -8,6 +8,9 @@ import { FALLBACK_GAP_MS, gapsFromTimestamps } from "@/lib/analysis/replayGaps";
 import { phaseMarksFromPhases } from "@/lib/analysis/replayTiming";
 import { cn } from "@/lib/utils/cn";
 import { buildDirectorsCut } from "@/lib/replay/directorsCut";
+import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
+import type { GyroStreamData } from "@/lib/gyro/solveGyro";
+import { ReplayGyroTwin } from "./ReplayGyroTwin";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
@@ -38,6 +41,8 @@ interface SolveReplayProps {
   moveTimestamps?: number[];
   /** The solve's time, for the Director's Cut sign-off. */
   totalMs?: number;
+  /** The solve's recorded cube orientation: with real timing on a phase you did yourself, a small Gyro Twin tilts with it over the replay. */
+  gyroStream?: GyroStreamData | null;
 }
 
 /** A neutral, non-alarming line for a phase that has no specific finding attached. */
@@ -64,7 +69,7 @@ function fallbackCaption(phase: PhaseAnalysis): string {
  * play/pause/scrub controls pace themselves against how long the cuber
  * really took between moves instead of a uniform per-move tempo.
  */
-export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs }: SolveReplayProps) {
+export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs, gyroStream }: SolveReplayProps) {
   const [selected, setSelected] = useState<number>(-1);
   const [director, setDirector] = useState(false);
   const [voice, setVoice] = useState(true);
@@ -109,6 +114,15 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
     return { gaps: viewMoves.map(() => FALLBACK_GAP_MS), hasRealTiming: false };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moveTimestamps, moves.length, movesBefore.length, viewMoves.length, alt]);
+
+  // The Gyro Twin: only for what you really did (not the alternate take), with the real time of each move
+  // it plays and the stickers the cube had after each one.
+  const startIdx = movesBefore.length;
+  const twinMoveMs = useMemo(
+    () => (gyroStream && hasRealTiming && !alt && moveTimestamps ? moveTimestamps.slice(startIdx, startIdx + viewMoves.length) : null),
+    [gyroStream, hasRealTiming, alt, moveTimestamps, startIdx, viewMoves.length],
+  );
+  const twinFacelets = useMemo(() => (twinMoveMs ? faceletsAfterMoves(setupAlg, viewMoves) : null), [twinMoveMs, setupAlg, viewMoves]);
 
   // Phase ticks on the scrubber, for the whole solve only (one phase alone has nothing to divide).
   const marks = useMemo(() => (isWhole ? phaseMarksFromPhases(phases) : undefined), [isWhole, phases]);
@@ -205,6 +219,20 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         cues={isWhole ? cues : undefined}
         marks={marks}
         voice={voice}
+        overlay={
+          gyroStream && twinMoveMs && twinFacelets
+            ? ({ positionMs, activeMove, timeline }) => (
+                <ReplayGyroTwin
+                  stream={gyroStream}
+                  faceletsAfter={twinFacelets}
+                  moveMs={twinMoveMs}
+                  starts={timeline.starts}
+                  positionMs={positionMs}
+                  activeMove={activeMove}
+                />
+              )
+            : undefined
+        }
       />
 
       {phase?.model && phase.model.moves.length > 0 && (phase.lost ?? 0) > 0 && (

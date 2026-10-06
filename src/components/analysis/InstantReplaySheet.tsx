@@ -11,7 +11,7 @@ import { phaseMarksFromMilestones } from "@/lib/analysis/replayTiming";
 import { hasBreakdown, solveBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveFinalMs, type Penalty, type Solve } from "@/types";
 import { useModalLayer } from "@/hooks/useModalLayer";
-import { newCube } from "@/lib/cube-engine/engine";
+import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { ReplayGyroTwin } from "./ReplayGyroTwin";
 
@@ -69,21 +69,7 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
   }, [hasRealTiming, moveTimestamps, scramble, reconstruction, timeMs]);
 
   // The Gyro Twin's stickers: the cube after each move, so it shows what the real cube showed.
-  const faceletsAfter = useMemo(() => {
-    if (!gyroStream || !hasRealTiming) return null;
-    try {
-      const cube = newCube();
-      if (scramble.trim()) cube.move(scramble.trim());
-      const out = [cube.asString()];
-      for (const m of moves) {
-        cube.move(m);
-        out.push(cube.asString());
-      }
-      return out;
-    } catch {
-      return null;
-    }
-  }, [gyroStream, hasRealTiming, scramble, moves]);
+  const faceletsAfter = useMemo(() => (gyroStream && hasRealTiming ? faceletsAfterMoves(scramble, moves) : null), [gyroStream, hasRealTiming, scramble, moves]);
 
   const moveText = (active: number) => {
     if (display.length === 0) {

@@ -184,6 +184,20 @@ await check("smart cube: the replay carries the recorded gyro as a Gyro Twin", a
   await page.getByTestId("replay-gyro-twin").waitFor({ timeout: 15000 });
 });
 
+await check("smart cube: the analyzer's replay carries the recorded gyro too", async (page) => {
+  await connectSmartCube(page);
+  await page.evaluate(() => window.__cubeSim.gyro({ x: 0, y: 0, z: 0, w: 1 }));
+  await playTurns(page, quarterTurns(sim.scramble), 10);
+  await page.waitForTimeout(500);
+  await playTurns(page, sim.solve, 60, { gyro: true });
+  await page.waitForFunction(() => /Saved/.test(document.body.innerText), null, { timeout: 20000 });
+  await page.waitForTimeout(1500);
+  await page.getByTestId("recap-analyze").click();
+  // The analyzer opens with the solve filled in; running it is one more tap.
+  await page.getByRole("button", { name: "Analyze", exact: true }).first().click();
+  await page.getByTestId("replay-gyro-twin").waitFor({ timeout: 60000 });
+});
+
 for (const r of results) console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.ok ? "" : `\n      ${r.why}`}`);
 const failed = results.filter((r) => !r.ok).length;
 console.log(failed ? `\n${failed} of ${results.length} failed` : `\nall ${results.length} passed`);

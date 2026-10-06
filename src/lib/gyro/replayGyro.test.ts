@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { solveMsAtPosition, streamQuatAt } from "./replayGyro";
+import { faceletsAfterMoves, solveMsAtPosition, streamQuatAt } from "./replayGyro";
 import type { GyroStreamData } from "./solveGyro";
 
 const stream: GyroStreamData = {
@@ -39,5 +39,20 @@ describe("solveMsAtPosition", () => {
     expect(solveMsAtPosition(starts, moveMs, 400)).toBe(1300);
     expect(solveMsAtPosition(starts, moveMs, -20)).toBe(0);
     expect(solveMsAtPosition([], [], 40)).toBe(40);
+  });
+});
+
+describe("faceletsAfterMoves", () => {
+  it("starts from the setup and shows each move's result", () => {
+    const solved = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";
+    const out = faceletsAfterMoves("", ["R", "R'"])!;
+    expect(out).toHaveLength(3);
+    expect(out[0]).toBe(solved);
+    expect(out[1]).not.toBe(solved);
+    expect(out[2]).toBe(solved);
+  });
+  it("continues from a scramble", () => {
+    const out = faceletsAfterMoves("R U", ["U'", "R'"])!;
+    expect(out[2]).toBe("UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB");
   });
 });
