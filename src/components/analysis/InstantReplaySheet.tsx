@@ -11,6 +11,9 @@ import { phaseMarksFromMilestones } from "@/lib/analysis/replayTiming";
 import { hasBreakdown, solveBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveFinalMs, type Penalty, type Solve } from "@/types";
 import { useModalLayer } from "@/hooks/useModalLayer";
+import { newCube } from "@/lib/cube-engine/engine";
+import type { GyroStreamData } from "@/lib/gyro/solveGyro";
+import { ReplayGyroTwin } from "./ReplayGyroTwin";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
@@ -25,6 +28,8 @@ interface InstantReplaySheetProps {
   penalty?: Penalty;
   /** Elapsed ms from solve start for each move, one-for-one with `reconstruction`'s tokens — real capture timing off a smart cube, not a retyped guess. */
   moveTimestamps?: number[];
+  /** The solve's recorded cube orientation (see lib/gyro/solveGyro): when there is one, a small Gyro Twin tilts with it over the replay. */
+  gyroStream?: GyroStreamData | null;
   onClose: () => void;
 }
 
@@ -36,7 +41,7 @@ interface InstantReplaySheetProps {
  * optimal-solution comparison): it's the fast "let me see that again" replay
  * Cubeast's own post-solve screen offers, not a second copy of the analyzer.
  */
-export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty = "none", moveTimestamps, onClose }: InstantReplaySheetProps) {
+export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty = "none", moveTimestamps, gyroStream, onClose }: InstantReplaySheetProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useModalLayer(dialogRef, onClose);
@@ -62,6 +67,23 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
       return undefined;
     }
   }, [hasRealTiming, moveTimestamps, scramble, reconstruction, timeMs]);
+
+  // The Gyro Twin's stickers: the cube after each move, so it shows what the real cube showed.
+  const faceletsAfter = useMemo(() => {
+    if (!gyroStream || !hasRealTiming) return null;
+    try {
+      const cube = newCube();
+      if (scramble.trim()) cube.move(scramble.trim());
+      const out = [cube.asString()];
+      for (const m of moves) {
+        cube.move(m);
+        out.push(cube.asString());
+      }
+      return out;
+    } catch {
+      return null;
+    }
+  }, [gyroStream, hasRealTiming, scramble, moves]);
 
   const moveText = (active: number) => {
     if (display.length === 0) {
@@ -133,6 +155,20 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
             hasRealTiming={hasRealTiming}
             marks={marks}
             renderMoves={moveText}
+            overlay={
+              gyroStream && faceletsAfter && moveTimestamps
+                ? ({ positionMs, activeMove, timeline }) => (
+                    <ReplayGyroTwin
+                      stream={gyroStream}
+                      faceletsAfter={faceletsAfter}
+                      moveMs={moveTimestamps}
+                      starts={timeline.starts}
+                      positionMs={positionMs}
+                      activeMove={activeMove}
+                    />
+                  )
+                : undefined
+            }
             className="mx-auto h-64 w-full max-w-md sm:h-72 [@media(orientation:landscape)_and_(max-height:32rem)]:h-44"
           />
         </div>

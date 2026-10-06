@@ -13,6 +13,8 @@ import { GestureHint, GestureToast } from "@/components/lab/GestureToast";
 import { MistakeRadarCard } from "@/components/lab/MistakeRadarCard";
 import { analyzeMistakes, mistakesByRow } from "@/lib/analysis/mistakeRadar";
 import { useMistakeHabits } from "@/hooks/useMistakeHabits";
+import { useFullSolve } from "@/hooks/useFullSolve";
+import { subscribeRawMoves } from "@/lib/store/smartCubeBus";
 import { XrayTeaser } from "@/components/xray/XrayTeaser";
 import { InspectionGradeCard } from "@/components/inspection/InspectionGradeCard";
 import { inspectionReport } from "@/lib/inspection/report";
@@ -107,6 +109,10 @@ const RECAP_ROOT = "lg:max-w-4xl lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:g
 const RECAP_TOP = "lg:col-span-2 lg:flex lg:flex-col lg:items-center lg:gap-4";
 const RECAP_LEFT = "lg:col-start-1 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:items-center lg:gap-4";
 const RECAP_RIGHT = "lg:col-start-2 lg:row-span-2 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-4";
+/** After a solve ends, turns this soon are the cube settling, not a new scramble. */
+const RECAP_FIDGET_GRACE_MS = 1500;
+/** Turns that start a new scramble, clearing the recap. */
+const RECAP_DISMISS_TURNS = 2;
 const RECAP_BAR = "lg:col-start-1 lg:row-start-3";
 const RECAP_DETAILS = "lg:col-span-2 lg:row-start-4 lg:flex lg:flex-col lg:gap-4";
 
@@ -812,6 +818,8 @@ export function SmartCubeTimer() {
   };
 
   const [showReplay, setShowReplay] = useState(false);
+  // Its stored row carries the gyro stream the replay tilts the Gyro Twin with; only read once the replay is open.
+  const savedFull = useFullSolve(showReplay ? (savedSolve ?? null) : null);
   // A replay opened by gesture for the last *saved* solve, when there's no
   // live recap on screen to replay instead.
   const [savedReplay, setSavedReplay] = useState<{
@@ -828,6 +836,19 @@ export function SmartCubeTimer() {
   const onDismiss = () => {
     cancel();
   };
+
+  // Turning the cube to scramble it again is the signal that you're done with the recap: it clears,
+  // leaving the scramble, the live cube and the guide. A moment's grace and two turns keep a fidget
+  // while reading it from throwing it away, and it stays while a replay is open over it.
+  useEffect(() => {
+    if (!finished || showReplay || savedReplay) return undefined;
+    const readyAt = performance.now() + RECAP_FIDGET_GRACE_MS;
+    let turns = 0;
+    return subscribeRawMoves(() => {
+      if (performance.now() < readyAt) return;
+      if (++turns >= RECAP_DISMISS_TURNS) queueMicrotask(cancel);
+    });
+  }, [finished, showReplay, savedReplay, cancel]);
 
   // The way out of a false arm: once armed, any turn starts the clock, and every other control waits for recording.
   // Hidden again the moment recording starts (it only renders inside the `armed && !recording` hints).
@@ -1505,6 +1526,7 @@ export function SmartCubeTimer() {
           timeMs={elapsedMs}
           penalty={savedSolve?.penalty}
           moveTimestamps={moveTimestampsRel}
+          gyroStream={savedFull.solve?.gyroStream}
           onClose={() => setShowReplay(false)}
         />
       )}
@@ -1513,7 +1535,7 @@ export function SmartCubeTimer() {
         <div className={cn("flex w-full flex-col items-center gap-3", finished && "lg:col-span-2")}>
           {finished && (
             <p className="border-t border-border pt-3 text-[11px] font-medium uppercase tracking-wide text-muted">
-              Next scramble — this recap stays up until you scramble it
+              Next scramble — turn the cube to start it and this recap clears
             </p>
           )}
           {scramble && !finished && (

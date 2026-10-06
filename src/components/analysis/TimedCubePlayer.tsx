@@ -53,6 +53,12 @@ interface TimedCubePlayerProps {
    * the caller can light it up in whatever form it displays the moves.
    */
   renderMoves?: (activeMove: number) => ReactNode;
+  /**
+   * Drawn over the corner of the cube viewport, from where the replay is right now: `positionMs`
+   * on the replay's own clock, `activeMove` as for `renderMoves`, and the `timeline` those are
+   * measured on. Doesn't take pointer input, so the cube still orbits underneath.
+   */
+  overlay?: (at: { positionMs: number; activeMove: number; timeline: ReplayTimeline }) => ReactNode;
 }
 
 const CUE_TONE: Record<Cue["tone"], string> = { good: "text-success", bad: "text-danger", neutral: "text-accent" };
@@ -119,7 +125,7 @@ function leavesFor(leafMoves: any[], timeline: ReplayTimeline) {
  * (`play()`, `pause()`, the `timestamp` setter), not simulated by swapping
  * `alg` in and out — that doesn't animate anything on its own.
  */
-export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves }: TimedCubePlayerProps) {
+export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves, overlay }: TimedCubePlayerProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -454,7 +460,12 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
 
   return (
     <div ref={wrapRef} className="flex flex-col items-center gap-1.5">
-      <div ref={containerRef} className={className} />
+      <div className={cn("relative", className)}>
+        <div ref={containerRef} className="h-full w-full" />
+        {overlay && ready && timelineOk && (
+          <div className="pointer-events-none absolute left-1 top-1">{overlay({ positionMs: shownPos, activeMove, timeline })}</div>
+        )}
+      </div>
 
       {cues && cues.length > 0 && (
         <div className="flex min-h-[3.25rem] w-full flex-col items-center justify-center rounded-lg bg-bg-panel-2 px-3 py-1.5 text-center" aria-live="polite">

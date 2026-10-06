@@ -534,7 +534,9 @@
     {"id":"src/app/global-error.tsx","kind":"page","area":"Other","exports":["default"],"summary":"Root error boundary with its own html/body, styles and saved-theme script.","loc":0,"importedBy":0,"hasTest":false},
     {"id":"src/components/chrome/ErrorScreen.tsx","kind":"component","area":"Other","exports":["ErrorScreen"],"summary":"Shared crash screen: Try again, back to timer, 'solves are safe' note, download backup.","loc":0,"importedBy":0,"hasTest":false},
     {"id":"src/hooks/useStatsSolves.ts","kind":"hook","area":"Stats","exports":["useStatsSolves"],"summary":"The Stats-scope solves and the same list without event-tagged solves, memoized; shared by InsightsPanel and ShareCardButton.","loc":0,"importedBy":0,"hasTest":false},
-    {"id":"src/lib/theme/paintScript.ts","kind":"lib","area":"Other","exports":["PAINT_SCRIPT"],"summary":"Inline <head> script string that applies the saved theme and FX level before first paint.","loc":0,"importedBy":0,"hasTest":false}
+    {"id":"src/lib/theme/paintScript.ts","kind":"lib","area":"Other","exports":["PAINT_SCRIPT"],"summary":"Inline <head> script string that applies the saved theme and FX level before first paint.","loc":0,"importedBy":0,"hasTest":false},
+    {"id":"src/lib/gyro/replayGyro.ts","kind":"lib","area":"Smart cube","exports":["solveMsAtPosition","streamQuatAt"],"summary":"The recorded cube orientation at a moment of a solve, and where a replay's own clock sits in the solve's real time.","loc":0,"importedBy":0,"hasTest":false},
+    {"id":"src/components/analysis/ReplayGyroTwin.tsx","kind":"component","area":"Analysis / X-Ray","exports":["ReplayGyroTwin"],"summary":"The Gyro Twin as it was in a recorded solve: tilted by the stored gyro stream, with the cube's stickers at that move; drawn over the replay.","loc":0,"importedBy":0,"hasTest":false}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},

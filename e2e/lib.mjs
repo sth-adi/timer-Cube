@@ -24,7 +24,10 @@ export async function launch({ viewport = { width: 390, height: 844 }, smartCube
     await ctx.addInitScript(() => {
       if (!("bluetooth" in navigator)) Object.defineProperty(navigator, "bluetooth", { value: { getAvailability: async () => true } });
       const subs = new Set();
-      window.__cubeSim = { turn: (m, at) => subs.forEach((f) => f({ type: "MOVE", move: m, timestamp: at ?? performance.now() })) };
+      window.__cubeSim = {
+        turn: (m, at) => subs.forEach((f) => f({ type: "MOVE", move: m, timestamp: at ?? performance.now() })),
+        gyro: (quaternion, at) => subs.forEach((f) => f({ type: "GYRO", quaternion, timestamp: at ?? performance.now() })),
+      };
       window.__smartCubeTestDriver = {
         connectSmartCube: async () => ({
           deviceName: "SimCube",
@@ -64,15 +67,21 @@ export const lastSolve = idb("solves", "last");
 /** Smart-cube turns from a scramble/solution string, with half turns written as two quarter turns (as the cube reports them). */
 export const quarterTurns = (s) => s.split(" ").filter(Boolean).flatMap((t) => (t.endsWith("2") ? [t[0], t[0]] : [t]));
 
-export const playTurns = (page, moves, gapMs) =>
+/** Plays turns on the simulated cube, `gapMs` apart; with `gyro` it also streams a slow swing of the cube between them. */
+export const playTurns = (page, moves, gapMs, { gyro = false } = {}) =>
   page.evaluate(
-    async ({ moves, gapMs }) => {
+    async ({ moves, gapMs, gyro }) => {
+      let i = 0;
       for (const m of moves) {
         await new Promise((r) => setTimeout(r, gapMs));
+        if (gyro) {
+          const a = (i++ * 0.05) % 6.28;
+          window.__cubeSim.gyro({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
+        }
         window.__cubeSim.turn(m);
       }
     },
-    { moves, gapMs },
+    { moves, gapMs, gyro },
   );
 
 export const pageText = async (page) => (await page.evaluate(() => document.body.innerText)).replace(/\n+/g, " | ");

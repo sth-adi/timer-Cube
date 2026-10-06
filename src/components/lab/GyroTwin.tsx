@@ -31,7 +31,7 @@ const FACES: { start: number; transform: (h: number) => string; shade: number }[
 ];
 
 /** A fixed camera slightly above and to the right, so at any orientation you see three faces — like looking down at the cube in your own hands. */
-const CAMERA = "rotateX(-24deg) rotateY(-32deg)";
+export const GYRO_TWIN_CAMERA = "rotateX(-24deg) rotateY(-32deg)";
 
 function prefersReducedMotion(): boolean {
   try {
@@ -41,7 +41,7 @@ function prefersReducedMotion(): boolean {
   }
 }
 
-function CubeFaces({ facelets, size }: { facelets: string; size: number }) {
+export function CubeFaces({ facelets, size }: { facelets: string; size: number }) {
   const half = size / 2;
   return (
     <>
@@ -91,7 +91,7 @@ interface GyroTwinProps {
  * instant they settle ("y", "x'"…) — the same detector that writes them into
  * rotation-aware reconstructions after a solve.
  */
-export function GyroTwin({ size = 120, className, showControls = true, camera = CAMERA, onRotation, navLocked = false }: GyroTwinProps) {
+export function GyroTwin({ size = 120, className, showControls = true, camera = GYRO_TWIN_CAMERA, onRotation, navLocked = false }: GyroTwinProps) {
   const cubeRef = useRef<HTMLDivElement | null>(null);
   const facelets = useSmartCubeStore((s) => s.liveFacelets);
   const gyroActive = useSmartCubeStore((s) => s.gyroActive);

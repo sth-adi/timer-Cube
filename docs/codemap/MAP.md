@@ -337,3 +337,9 @@ Appended (not regenerated).
 - src/hooks/useStatsSolves.ts [0] {Stats} — The Stats-scope solves and the same list without event-tagged solves, memoized; shared by InsightsPanel and ShareCardButton. (useStatsSolves)
 - src/lib/theme/paintScript.ts [0] {Other} — Inline <head> script string that applies the saved theme and FX level before first paint. (PAINT_SCRIPT)
 - Streaks: `stats/stats.ts` `streaksFromDayKeys` numbers days from the YYYY-MM-DD key (not UTC-day indexes). Daily challenge: `analysis/dailyChallenge` `activeStreak` hides a broken streak. Theme/FX attributes are painted by the inline script before hydration; settings re-sync across tabs via a `storage` listener.
+
+### Additions — 2026-10-06 (replay gyro, recap clears on scramble)
+Appended (not regenerated).
+- src/lib/gyro/replayGyro.ts [1] {Smart cube} — The recorded cube orientation at a moment of a solve, and where a replay's own clock sits in the solve's real time. (solveMsAtPosition, streamQuatAt)
+- src/components/analysis/ReplayGyroTwin.tsx [1] {Analysis / X-Ray} — The Gyro Twin as it was in a recorded solve: tilted by the stored gyro stream, with the cube's stickers at that move; drawn over the replay. (ReplayGyroTwin)
+- `TimedCubePlayer` takes an `overlay` render prop (drawn over the cube viewport from the replay position); `InstantReplaySheet` takes `gyroStream` (read on demand with `useFullSolve`). SmartCubeTimer clears a finished recap after two scramble turns (`subscribeRawMoves`, 1.5s grace, not while a replay is open).

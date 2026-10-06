@@ -13,6 +13,7 @@ import { buildPostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { metricsFor } from "@/lib/analytics/solveMetrics";
 import { analyzeMistakes, mistakesByRow } from "@/lib/analysis/mistakeRadar";
 import { useMistakeHabits } from "@/hooks/useMistakeHabits";
+import { useFullSolve } from "@/hooks/useFullSolve";
 import { inspectionReport } from "@/lib/inspection/report";
 import { CROSS_FACE_COLOR } from "@/lib/smartcube/crossFrame";
 import { PostSolveTable } from "@/components/timer/PostSolveTable";
@@ -41,6 +42,8 @@ export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onCl
   const router = useRouter();
   const pathname = usePathname();
   const [replay, setReplay] = useState(false);
+  // The stored row has the gyro stream the replay's Gyro Twin follows; read only once a replay is opened.
+  const fullForReplay = useFullSolve(replay ? solve : null);
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalLayer(dialogRef, onClose);
 
@@ -122,7 +125,7 @@ export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onCl
       </div>
       {replay && solve.reconstruction && (
         <div onClick={(e) => e.stopPropagation()}>
-          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} penalty={solve.penalty} moveTimestamps={solve.moveTimestamps} onClose={() => setReplay(false)} />
+          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} penalty={solve.penalty} moveTimestamps={solve.moveTimestamps} gyroStream={fullForReplay.solve?.gyroStream} onClose={() => setReplay(false)} />
         </div>
       )}
     </div>,

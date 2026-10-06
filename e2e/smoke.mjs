@@ -159,6 +159,31 @@ await check("smart cube: full solve saves, shows every CFOP row, quick delete re
   assert.equal(await solveCount(page), 0);
 });
 
+await check("smart cube: turning the cube to scramble again clears the recap", async (page) => {
+  await connectSmartCube(page);
+  await startSolving(page, 8);
+  await playTurns(page, sim.solve.slice(8), 60);
+  await page.waitForFunction(() => /Saved/.test(document.body.innerText), null, { timeout: 20000 });
+  await page.waitForTimeout(2000);
+  assert.ok(await visible(page, "recap-actions"), "the recap is up after the solve");
+  await playTurns(page, ["R", "U'"], 60);
+  await page.waitForTimeout(800);
+  assert.ok(!(await visible(page, "recap-actions")), "two scramble turns clear the recap");
+  assert.equal(await solveCount(page), 1, "the solve itself is kept");
+});
+
+await check("smart cube: the replay carries the recorded gyro as a Gyro Twin", async (page) => {
+  await connectSmartCube(page);
+  await page.evaluate(() => window.__cubeSim.gyro({ x: 0, y: 0, z: 0, w: 1 }));
+  await playTurns(page, quarterTurns(sim.scramble), 10);
+  await page.waitForTimeout(500);
+  await playTurns(page, sim.solve, 60, { gyro: true });
+  await page.waitForFunction(() => /Saved/.test(document.body.innerText), null, { timeout: 20000 });
+  await page.waitForTimeout(1500);
+  await page.getByTestId("recap-replay").click();
+  await page.getByTestId("replay-gyro-twin").waitFor({ timeout: 15000 });
+});
+
 for (const r of results) console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.ok ? "" : `\n      ${r.why}`}`);
 const failed = results.filter((r) => !r.ok).length;
 console.log(failed ? `\n${failed} of ${results.length} failed` : `\nall ${results.length} passed`);
