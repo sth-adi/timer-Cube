@@ -149,6 +149,9 @@ await check("smart cube: full solve saves, shows every CFOP row, quick delete re
   await page.waitForFunction(() => /Saved/.test(document.body.innerText), null, { timeout: 20000 });
   await page.waitForTimeout(800);
   assert.equal(await solveCount(page), 1);
+  // The recap scrolls inside its own pane; the page itself must never grow past the screen.
+  const overflow = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  assert.ok(overflow <= 1, `page scrolls ${overflow}px past the screen`);
   const text = await pageText(page);
   for (const label of ["Cross", "F2L 1", "F2L 2", "F2L 3", "F2L 4", "OLL", "PLL"]) assert.ok(text.includes(label), `recap has ${label}`);
   await page.getByTestId("quick-delete").click();

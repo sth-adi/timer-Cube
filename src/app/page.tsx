@@ -31,6 +31,7 @@ import { SaveErrorBanner } from "@/components/chrome/SaveErrorBanner";
 import { ConnectionPill } from "@/components/chrome/ConnectionPill";
 import { OnlinePresenceBadge } from "@/components/chrome/OnlinePresenceBadge";
 import { ChallengeLinkBanner } from "@/components/scramble/ChallengeLinkBanner";
+import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useNavigationStore, type PendingTrainerNav } from "@/lib/store/navigationStore";
 import { useSettingsStore, type TimerMode } from "@/lib/store/settingsStore";
@@ -75,6 +76,9 @@ function HomeInner() {
   const [tab, setTab] = useState<TabId>(() => (searchParams.get("jump") === "analyze" ? "analyze" : "timer"));
   const [moreInsights, setMoreInsights] = useState(false);
   const timerMode = useTimerMode();
+  // A finished smart-cube solve's recap is long; on a phone the scramble strip, event pills and mode toggle
+  // above it would leave only a small pane to scroll it in, so they step aside until the recap is dismissed.
+  const smartRecapOpen = useSmartCubeStore((s) => !s.armed && !s.recording && s.solvedAtMs !== null && s.startedAtMs !== null);
   const setTimerMode = useSettingsStore((s) => s.setTimerMode);
   const [pendingTrainerNav, setPendingTrainerNav] = useState<PendingTrainerNav | null>(null);
 
@@ -177,7 +181,7 @@ function HomeInner() {
       <AppBackground />
       <PBToast />
       <AchievementToast />
-      <div className="flex h-dvh flex-col overflow-hidden">
+      <div className="relative flex h-dvh flex-col overflow-hidden">
         <header className="flex shrink-0 items-center justify-between px-3 py-2">
           <SessionSwitcher />
 
@@ -235,7 +239,7 @@ function HomeInner() {
         <SyncedSessionNotice />
         <SaveErrorBanner />
 
-        <div className={cn("shrink-0", tab === "timer" ? "block" : "hidden", "lg:block")}>
+        <div className={cn("shrink-0", tab === "timer" ? "block" : "hidden", "lg:block", timerMode === "smartcube" && smartRecapOpen && "max-lg:hidden")}>
           <ScrambleBar className="mt-1" />
           <EventTagSelector />
           <div className="mt-0.5 flex justify-center gap-1">
@@ -264,7 +268,7 @@ function HomeInner() {
               // once it's taller than the viewport — see TrainerHub's Library
               // sub-view. Components that want vertical centering while short
               // (TimerView) already do it themselves via their own flex-1.
-              "min-h-0 flex-col items-center gap-3 overflow-y-auto lg:gap-4 pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-0",
+              "relative min-h-0 flex-col items-center gap-3 overflow-y-auto lg:gap-4 pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-0",
               mainPaneActive ? "flex" : "hidden",
               "lg:flex",
             )}
@@ -285,7 +289,7 @@ function HomeInner() {
 
           <aside
             className={cn(
-              "min-h-0 flex-col gap-3 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-2",
+              "relative min-h-0 flex-col gap-3 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-2",
               !mainPaneActive ? "flex" : "hidden",
               "lg:flex",
             )}
