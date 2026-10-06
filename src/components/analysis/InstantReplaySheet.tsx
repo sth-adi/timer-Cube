@@ -149,6 +149,8 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
                       faceletsAfter={faceletsAfter}
                       moveMs={moveTimestamps}
                       starts={timeline.starts}
+                      ends={timeline.ends}
+                      moves={moves}
                       positionMs={positionMs}
                       activeMove={activeMove}
                     />

@@ -3,32 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Crosshair } from "lucide-react";
-import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { subscribeGyro } from "@/lib/store/smartCubeBus";
 import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, matToQuat, orientationLabel, quatToMat, type Quat } from "@/lib/gyro/orientation";
-import { changedStickers, stepToward } from "@/lib/gyro/smooth";
+import { stepToward } from "@/lib/gyro/smooth";
+import { TurnCube } from "./TurnCube";
+import { useTurnAnimation } from "./useTurnAnimation";
 import { cn } from "@/lib/utils/cn";
-
-/**
- * Each face's placement in the body frame (white on top), where its
- * 9-facelet block starts in the Kociemba string, and a fixed brightness —
- * baked into the face itself (not the current view), like a faint material
- * difference sculpted into the plastic, so it reads as depth from any
- * orientation instead of a directional light that would go wrong the
- * moment the twin turns. With these transforms the natural row-major
- * sticker order lands correctly on all six faces.
- */
-const FACES: { start: number; transform: (h: number) => string; shade: number }[] = [
-  { start: 0, transform: (h) => `rotateX(90deg) translateZ(${h}px)`, shade: 1.08 }, // U
-  { start: 9, transform: (h) => `rotateY(90deg) translateZ(${h}px)`, shade: 0.96 }, // R
-  { start: 18, transform: (h) => `translateZ(${h}px)`, shade: 1.0 }, // F
-  { start: 27, transform: (h) => `rotateX(-90deg) translateZ(${h}px)`, shade: 0.82 }, // D
-  { start: 36, transform: (h) => `rotateY(-90deg) translateZ(${h}px)`, shade: 0.9 }, // L
-  { start: 45, transform: (h) => `rotateY(180deg) translateZ(${h}px)`, shade: 0.88 }, // B
-];
 
 /** A fixed camera slightly above and to the right, so at any orientation you see three faces — like looking down at the cube in your own hands. */
 export const GYRO_TWIN_CAMERA = "rotateX(-24deg) rotateY(-32deg)";
@@ -39,25 +22,6 @@ function prefersReducedMotion(): boolean {
   } catch {
     return false;
   }
-}
-
-export function CubeFaces({ facelets, size }: { facelets: string; size: number }) {
-  const half = size / 2;
-  return (
-    <>
-      {FACES.map((face) => (
-        <div
-          key={face.start}
-          className="absolute left-0 top-0 grid grid-cols-3 grid-rows-3 rounded-[6px] bg-black p-[3px]"
-          style={{ width: size, height: size, gap: 3, transform: face.transform(half), backfaceVisibility: "hidden", filter: `brightness(${face.shade})` }}
-        >
-          {Array.from({ length: 9 }, (_, i) => (
-            <div key={i} data-sticker={face.start + i} className="rounded-[3px]" style={{ background: FACELET_COLORS[facelets[face.start + i]] ?? "#555" }} />
-          ))}
-        </div>
-      ))}
-    </>
-  );
 }
 
 interface GyroTwinProps {
@@ -153,26 +117,13 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     };
   }, [ref, protocolName, calibrations, camera]);
 
-  // A quick brightness pulse on the stickers a turn just changed. The first
-  // facelets seen, and re-syncs that change most of the cube, don't pulse.
-  const prevFaceletsRef = useRef<string | null>(null);
-  useEffect(() => {
-    const previous = prevFaceletsRef.current;
-    prevFaceletsRef.current = facelets;
-    const el = cubeRef.current;
-    if (!el || prefersReducedMotion()) return;
-    for (const i of changedStickers(previous, facelets)) {
-      el.querySelector<HTMLElement>(`[data-sticker="${i}"]`)?.animate?.([{ filter: "brightness(1.7)" }, { filter: "brightness(1)" }], {
-        duration: 280,
-        easing: "ease-out",
-      });
-    }
-  }, [facelets]);
+  // Each turn the cube reports plays as that layer turning; anything bigger just snaps.
+  const turnView = useTurnAnimation(facelets);
 
   const { calibrated } = calibrationFor(protocolName);
 
   return (
-    <div className={cn("relative flex flex-col items-center gap-3", className)}>
+    <div className={cn("relative flex flex-col items-center gap-3", className)} data-testid="gyro-twin">
       <div className="flex items-center justify-center" style={{ width: size * 1.9, height: size * 1.9, perspective: size * 7 }}>
         <div
           ref={cubeRef}
@@ -184,7 +135,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
             transform: `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`,
           }}
         >
-          <CubeFaces facelets={facelets} size={size} />
+          <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={size} />
         </div>
       </div>
 

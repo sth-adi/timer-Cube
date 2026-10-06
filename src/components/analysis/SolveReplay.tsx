@@ -227,6 +227,8 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
                   faceletsAfter={twinFacelets}
                   moveMs={twinMoveMs}
                   starts={timeline.starts}
+                  ends={timeline.ends}
+                  moves={viewMoves}
                   positionMs={positionMs}
                   activeMove={activeMove}
                 />

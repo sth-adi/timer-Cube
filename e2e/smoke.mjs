@@ -6,6 +6,7 @@
  *   npm run dev -- -p 3110      (or `npm run build && npm start -- -p 3110`)
  *   npm run e2e                 (BASE_URL=http://localhost:3000 npm run e2e to aim elsewhere)
  *
+ * E2E_ONLY="scramble again" runs just the checks whose name contains that text.
  * Exits non-zero if any check fails or the page throws.
  */
 import assert from "node:assert/strict";
@@ -16,6 +17,7 @@ const sim = JSON.parse(fs.readFileSync(new URL("./sim.json", import.meta.url), "
 const results = [];
 
 async function check(name, fn) {
+  if (process.env.E2E_ONLY && !name.includes(process.env.E2E_ONLY)) return;
   const { browser, page, errors } = await launch({ smartCubeSim: name.startsWith("smart cube") });
   try {
     await fn(page);
@@ -182,6 +184,8 @@ await check("smart cube: the replay carries the recorded gyro as a Gyro Twin", a
   await page.waitForTimeout(1500);
   await page.getByTestId("recap-replay").click();
   await page.getByTestId("replay-gyro-twin").waitFor({ timeout: 15000 });
+  // A real cube built of cubies, not six flat faces.
+  assert.ok((await page.getByTestId("replay-gyro-twin").locator("div").count()) > 150, "the twin is drawn as cubies");
 });
 
 await check("smart cube: the analyzer's replay carries the recorded gyro too", async (page) => {
