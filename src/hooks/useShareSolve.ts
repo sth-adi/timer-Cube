@@ -5,6 +5,7 @@ import { useSessionStore } from "@/lib/store/sessionStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { displayUsername } from "@/lib/auth/username";
 import { createSharedSolve } from "@/lib/social/shareSolve";
+import { getFullSolve } from "@/lib/db/solves";
 import { solveFinalMs, type Solve } from "@/types";
 
 export type ShareState = "idle" | "busy" | "copied" | "error";
@@ -29,6 +30,8 @@ export function useShareSolve(solve: Solve): { shareable: boolean; state: ShareS
     // Read on demand: subscribing every row to these would re-render the whole list when they change.
     const user = useAuthStore.getState().user;
     const puzzle = useSessionStore.getState().sessions.find((s) => s.id === solve.sessionId)?.event ?? "333";
+    // The store's row is slim; the cube's recorded orientation is on the stored one.
+    const gyroStream = await getFullSolve(solve.id).then((full) => full?.gyroStream ?? null, () => null);
     const id = await createSharedSolve({
       scramble: solve.scramble,
       reconstruction: solve.reconstruction!,
@@ -37,6 +40,7 @@ export function useShareSolve(solve: Solve): { shareable: boolean; state: ShareS
       puzzle,
       event: solve.event ?? null,
       username: user ? displayUsername(user) : null,
+      gyroStream,
     });
     if (!id) {
       setState("error");

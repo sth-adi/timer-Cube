@@ -228,6 +228,7 @@ export default function SharedSolvePage() {
                     summary={result.summary}
                     moveTimestamps={solve.moveTimestamps ?? undefined}
                     totalMs={solve.timeMs}
+                    gyroStream={solve.gyroStream}
                   />
                 )}
 

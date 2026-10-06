@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { SupabaseTimeoutError, withTimeout } from "@/lib/supabase/withTimeout";
+import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 
 /**
  * Publishing one solve to a shareable /solve/[id] link — a friend with no
@@ -29,6 +30,29 @@ export interface SharedSolve {
   puzzle: string;
   event: string | null;
   username: string | null;
+  /** The cube's recorded orientation through the solve, when the sharer's cube had a gyro — lets the shared replay show the Gyro Twin. */
+  gyroStream?: GyroStreamData | null;
+}
+
+/**
+ * A gyro stream read back from the table, or null if it isn't one: arrays of numbers, all the same
+ * length, at least two samples. A shared row is public input, so what the replay draws from it is checked first.
+ */
+export function readGyroStream(value: unknown): GyroStreamData | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const keys = ["atMs", "qx", "qy", "qz", "qw"] as const;
+  const arrays = keys.map((k) => v[k]);
+  if (!arrays.every((a): a is number[] => Array.isArray(a) && a.every((n) => typeof n === "number" && Number.isFinite(n)))) return null;
+  const [atMs, qx, qy, qz, qw] = arrays as number[][];
+  if (atMs.length < 2 || [qx, qy, qz, qw].some((a) => a.length !== atMs.length)) return null;
+  return { atMs, qx, qy, qz, qw };
+}
+
+/** True when a Supabase error is about the gyro_stream column not being there (a host that hasn't run that migration). */
+function isMissingGyroColumn(error: unknown): boolean {
+  const message = typeof error === "object" && error && "message" in error ? String((error as { message: unknown }).message) : "";
+  return /gyro_stream/i.test(message);
 }
 
 /** Publishes a solve under a fresh id, retrying on the vanishingly rare id collision. Returns null if Supabase isn't reachable. */
@@ -37,18 +61,21 @@ export async function createSharedSolve(input: SharedSolve): Promise<string | nu
   if (!supabase) return null;
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = randomId();
-    const { error } = await withTimeout(
-      supabase.from("shared_solves").insert({
-        id,
-        scramble: input.scramble,
-        reconstruction: input.reconstruction,
-        time_ms: Math.round(input.timeMs),
-        move_timestamps: input.moveTimestamps,
-        puzzle: input.puzzle,
-        event: input.event,
-        username: input.username,
-      }),
-    ).catch((e) => ({ error: e }));
+    const row = {
+      id,
+      scramble: input.scramble,
+      reconstruction: input.reconstruction,
+      time_ms: Math.round(input.timeMs),
+      move_timestamps: input.moveTimestamps,
+      puzzle: input.puzzle,
+      event: input.event,
+      username: input.username,
+    };
+    const insert = (values: Record<string, unknown>) =>
+      withTimeout(supabase.from("shared_solves").insert(values)).catch((e) => ({ error: e as unknown }));
+    let { error } = await insert(input.gyroStream ? { ...row, gyro_stream: input.gyroStream } : row);
+    // A host without the gyro migration still shares the solve, just without the orientation.
+    if (error && input.gyroStream && isMissingGyroColumn(error)) ({ error } = await insert(row));
     if (!error) return id;
   }
   return null;
@@ -90,6 +117,7 @@ export function mapSharedSolveResponse(response: { data: SharedSolveRow | null; 
       puzzle: data.puzzle as string,
       event: (data.event as string | null) ?? null,
       username: (data.username as string | null) ?? null,
+      gyroStream: readGyroStream(data.gyro_stream),
     },
   };
 }
@@ -100,10 +128,12 @@ export async function fetchSharedSolve(id: string): Promise<SharedSolveResult> {
   // No cloud sharing configured on this host: nothing to retry, but not the link's fault either.
   if (!supabase) return { ok: false, reason: browserOffline() ? "offline" : "error" };
   try {
-    const { data, error } = await withTimeout(
-      supabase.from("shared_solves").select("scramble, reconstruction, time_ms, move_timestamps, puzzle, event, username").eq("id", id).maybeSingle(),
-    );
-    return mapSharedSolveResponse({ data: data as SharedSolveRow | null, error });
+    const read = (columns: string) => withTimeout(supabase.from("shared_solves").select(columns).eq("id", id).maybeSingle());
+    const base = "scramble, reconstruction, time_ms, move_timestamps, puzzle, event, username";
+    let { data, error } = await read(`${base}, gyro_stream`);
+    // A host that hasn't run the gyro migration has no such column: read the solve without it.
+    if (error && isMissingGyroColumn(error)) ({ data, error } = await read(base));
+    return mapSharedSolveResponse({ data: data as unknown as SharedSolveRow | null, error });
   } catch (e) {
     return mapSharedSolveResponse({ thrown: e });
   }
