@@ -8,7 +8,7 @@ import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, matToQuat, orientationLabel, quatToMat, type Quat } from "@/lib/gyro/orientation";
-import { stepToward } from "@/lib/gyro/smooth";
+import { springStep, type SpringPose } from "@/lib/gyro/smooth";
 import { TurnCube } from "./TurnCube";
 import { TwinStage } from "./TwinStage";
 import { useTurnAnimation } from "./useTurnAnimation";
@@ -83,9 +83,10 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     if (!ref) return;
     const { calibration } = calibrationFor(protocolName);
     const tracker = new RotationTracker(ref, calibration);
-    // The pose being drawn chases the latest sample; both are quaternions so
-    // the chase is a plain slerp. With reduced motion it just snaps.
-    let drawn: Quat | null = null;
+    // The pose being drawn is a critically damped spring pulled toward the latest sample: the cube streams
+    // ~20 samples a second, and a spring keeps it gliding between them at the display's frame rate instead of
+    // stepping once per sample. With reduced motion it just snaps.
+    let pose: SpringPose | null = null;
     let target: Quat | null = null;
     let raf = 0;
     let lastFrameAt = 0;
@@ -96,10 +97,16 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
       if (!target) return;
       const dt = lastFrameAt ? Math.min(100, now - lastFrameAt) : 1000 / 60;
       lastFrameAt = now;
-      const step = drawn && !reduceMotion ? stepToward(drawn, target, dt) : { q: target, settled: true };
-      drawn = step.q;
-      el.style.transform = `${camera} ${cssMatrix3d(quatToMat(drawn))}`;
-      if (step.settled) lastFrameAt = 0;
+      let settled = true;
+      if (!pose || reduceMotion) {
+        pose = { q: target, w: [0, 0, 0] };
+      } else {
+        const next = springStep(pose, target, dt);
+        pose = next;
+        settled = next.settled;
+      }
+      el.style.transform = `${camera} ${cssMatrix3d(quatToMat(pose.q))}`;
+      if (settled) lastFrameAt = 0;
       else raf = requestAnimationFrame(frame);
     };
     const unsubscribe = subscribeGyro((sample) => {

@@ -65,3 +65,85 @@ export function changedStickers(prev: string | null, next: string): number[] {
   for (let i = 0; i < next.length; i++) if (prev[i] !== next[i]) out.push(i);
   return out.length > MAX_PULSED_STICKERS ? [] : out;
 }
+
+/* ---------- A critically damped spring on orientation ----------
+ *
+ * Chasing each new sample a fixed fraction per frame (stepToward) moves the pose in a burst after every
+ * sample and nearly stops before the next one — at 20 samples a second that reads as 20 fps stop-motion.
+ * A spring has momentum: the pose keeps gliding between samples and its speed never jumps, so the
+ * motion is continuous at any frame rate. Critically damped, so it never overshoots the target.
+ */
+
+export interface SpringPose {
+  q: Quat;
+  /** Angular velocity in rad/s, in the world frame (axis × speed). */
+  w: readonly [number, number, number];
+}
+
+/** Natural frequency, rad/s. ~100–150 ms to close a gap; a lower value is smoother but lags the cube more. */
+export const SPRING_OMEGA = 26;
+/** Integrate in steps no longer than this (ms) so the spring stays stable at any frame length. */
+const MAX_SUBSTEP_MS = 8;
+/** Within this angle (deg) and speed (deg/s) of the target the spring is at rest. */
+export const SPRING_REST_DEG = 0.05;
+export const SPRING_REST_DEG_PER_S = 0.5;
+
+const mulQ = (a: Quat, b: Quat): Quat => ({
+  w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+  x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+  y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+  z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+});
+const conjQ = (a: Quat): Quat => ({ w: a.w, x: -a.x, y: -a.y, z: -a.z });
+const normQ = (a: Quat): Quat => {
+  const n = Math.hypot(a.x, a.y, a.z, a.w) || 1;
+  return { w: a.w / n, x: a.x / n, y: a.y / n, z: a.z / n };
+};
+
+/** The rotation that takes `from` to `to` (shortest way), as a rotation vector: axis × angle (rad). */
+export function rotationVector(from: Quat, to: Quat): [number, number, number] {
+  let d = mulQ(to, conjQ(from));
+  if (d.w < 0) d = { w: -d.w, x: -d.x, y: -d.y, z: -d.z };
+  const s = Math.hypot(d.x, d.y, d.z);
+  if (s < 1e-9) return [0, 0, 0];
+  const angle = 2 * Math.atan2(s, d.w);
+  const k = angle / s;
+  return [d.x * k, d.y * k, d.z * k];
+}
+
+function expVector(v: readonly [number, number, number]): Quat {
+  const angle = Math.hypot(v[0], v[1], v[2]);
+  if (angle < 1e-12) return { w: 1, x: 0, y: 0, z: 0 };
+  const s = Math.sin(angle / 2) / angle;
+  return { w: Math.cos(angle / 2), x: v[0] * s, y: v[1] * s, z: v[2] * s };
+}
+
+export function springAtRest(pose: SpringPose, target: Quat): boolean {
+  const e = rotationVector(pose.q, target);
+  const err = (Math.hypot(e[0], e[1], e[2]) * 180) / Math.PI;
+  const speed = (Math.hypot(pose.w[0], pose.w[1], pose.w[2]) * 180) / Math.PI;
+  return err < SPRING_REST_DEG && speed < SPRING_REST_DEG_PER_S;
+}
+
+/**
+ * One frame of the spring: `pose` moved toward `target` over `dtMs`. Returns the new pose and whether it
+ * has come to rest on the target (the caller can stop animating). A pose at rest lands exactly on the target.
+ */
+export function springStep(pose: SpringPose, target: Quat, dtMs: number, omega = SPRING_OMEGA): SpringPose & { settled: boolean } {
+  let { q } = pose;
+  let [wx, wy, wz] = pose.w;
+  let left = Math.min(100, Math.max(0, dtMs));
+  while (left > 1e-6) {
+    const h = Math.min(MAX_SUBSTEP_MS, left) / 1000;
+    left -= MAX_SUBSTEP_MS;
+    const e = rotationVector(q, target);
+    // Critically damped: acceleration = ω²·error − 2ω·velocity.
+    wx += (omega * omega * e[0] - 2 * omega * wx) * h;
+    wy += (omega * omega * e[1] - 2 * omega * wy) * h;
+    wz += (omega * omega * e[2] - 2 * omega * wz) * h;
+    q = normQ(mulQ(expVector([wx * h, wy * h, wz * h]), q));
+  }
+  const next: SpringPose = { q, w: [wx, wy, wz] };
+  if (springAtRest(next, target)) return { q: target, w: [0, 0, 0], settled: true };
+  return { ...next, settled: false };
+}

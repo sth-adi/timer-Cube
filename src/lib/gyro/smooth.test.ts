@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SETTLE_EPSILON_DEG, SMOOTH_PER_FRAME, changedStickers, quatAngleDeg, smoothingFactor, stepToward } from "./smooth";
+import { SETTLE_EPSILON_DEG, SMOOTH_PER_FRAME, changedStickers, quatAngleDeg, rotationVector, smoothingFactor, springAtRest, springStep, stepToward, type SpringPose } from "./smooth";
 import type { Quat } from "./orientation";
 
 const IDENTITY_Q: Quat = { x: 0, y: 0, z: 0, w: 1 };
@@ -95,5 +95,76 @@ describe("changedStickers", () => {
   it("treats a wholesale change as a re-sync, not a turn", () => {
     const scrambled = "RRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBBUUUUUUUUU";
     expect(changedStickers(solved, scrambled)).toEqual([]);
+  });
+});
+
+
+const aroundY = (deg: number): Quat => ({ x: 0, y: Math.sin((deg * Math.PI) / 360), z: 0, w: Math.cos((deg * Math.PI) / 360) });
+const REST: SpringPose = { q: aroundY(0), w: [0, 0, 0] };
+const angleTo = (a: Quat, b: Quat) => {
+  const v = rotationVector(a, b);
+  return (Math.hypot(v[0], v[1], v[2]) * 180) / Math.PI;
+};
+
+describe("springStep", () => {
+  it("glides to the target and then reports rest exactly on it", () => {
+    let pose: SpringPose & { settled?: boolean } = REST;
+    const target = aroundY(80);
+    for (let i = 0; i < 120 && !pose.settled; i++) pose = springStep(pose, target, 1000 / 60);
+    expect(pose.settled).toBe(true);
+    expect(pose.q).toEqual(target);
+  });
+
+  it("never overshoots (critically damped)", () => {
+    let pose: SpringPose = REST;
+    const target = aroundY(90);
+    let last = angleTo(pose.q, target);
+    for (let i = 0; i < 90; i++) {
+      pose = springStep(pose, target, 1000 / 60);
+      const now = angleTo(pose.q, target);
+      expect(now).toBeLessThanOrEqual(last + 1e-6);
+      last = now;
+    }
+  });
+
+  it("keeps moving between samples: a velocity carries on after the target stops changing", () => {
+    // Chase a target that steps every 50 ms (a 20 Hz sensor), at 60 fps.
+    let pose: SpringPose = REST;
+    const speeds: number[] = [];
+    let target = aroundY(0);
+    for (let frame = 0; frame < 60; frame++) {
+      if (frame % 3 === 0) target = aroundY((frame / 3) * 6);
+      pose = springStep(pose, target, 1000 / 60);
+      speeds.push((Math.hypot(...pose.w) * 180) / Math.PI);
+    }
+    // After warm-up the pose never stalls and its speed changes gradually frame to frame.
+    for (let i = 12; i < speeds.length; i++) {
+      expect(speeds[i]).toBeGreaterThan(40);
+      expect(Math.abs(speeds[i] - speeds[i - 1])).toBeLessThan(60);
+    }
+  });
+
+  it("takes the short way round for an equivalent (negated) target", () => {
+    const target = aroundY(40);
+    const negated: Quat = { x: -target.x, y: -target.y, z: -target.z, w: -target.w };
+    const a = springStep(REST, target, 16);
+    const b = springStep(REST, negated, 16);
+    expect(angleTo(a.q, b.q)).toBeLessThan(1e-6);
+  });
+
+  it("is close to frame-rate independent", () => {
+    const target = aroundY(70);
+    const run = (fps: number) => {
+      let pose: SpringPose = REST;
+      for (let i = 0; i < Math.round(fps * 0.2); i++) pose = springStep(pose, target, 1000 / fps);
+      return pose.q;
+    };
+    expect(angleTo(run(30), run(144))).toBeLessThan(2);
+  });
+
+  it("reports rest only when both close and slow", () => {
+    expect(springAtRest(REST, aroundY(0))).toBe(true);
+    expect(springAtRest(REST, aroundY(10))).toBe(false);
+    expect(springAtRest({ q: aroundY(0), w: [0, 3, 0] }, aroundY(0))).toBe(false);
   });
 });

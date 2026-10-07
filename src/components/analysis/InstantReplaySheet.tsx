@@ -148,7 +148,7 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
             renderMoves={moveText}
             overlay={
               gyroStream && faceletsAfter && moveTimestamps
-                ? ({ positionMs, activeMove, timeline }) => (
+                ? ({ positionMs, playing, speed, timeline }) => (
                     <ReplayGyroTwin
                       stream={gyroStream}
                       faceletsAfter={faceletsAfter}
@@ -157,7 +157,8 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
                       ends={timeline.ends}
                       moves={moves}
                       positionMs={positionMs}
-                      activeMove={activeMove}
+                      playing={playing}
+                      speed={speed}
                     />
                   )
                 : undefined

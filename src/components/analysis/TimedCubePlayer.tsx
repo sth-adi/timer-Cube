@@ -60,7 +60,7 @@ interface TimedCubePlayerProps {
    * on the replay's own clock, `activeMove` as for `renderMoves`, and the `timeline` those are
    * measured on. Doesn't take pointer input, so the cube still orbits underneath.
    */
-  overlay?: (at: { positionMs: number; activeMove: number; timeline: ReplayTimeline }) => ReactNode;
+  overlay?: (at: { positionMs: number; activeMove: number; timeline: ReplayTimeline; playing: boolean; speed: number }) => ReactNode;
 }
 
 const CUE_TONE: Record<Cue["tone"], string> = { good: "text-success", bad: "text-danger", neutral: "text-accent" };
@@ -493,7 +493,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       >
         <div ref={containerRef} className="cube-stage__cube h-full w-full" />
         {overlay && ready && timelineOk && (
-          <div className="pointer-events-none absolute left-1 top-1">{overlay({ positionMs: shownPos, activeMove, timeline })}</div>
+          <div className="pointer-events-none absolute left-1 top-1">{overlay({ positionMs: shownPos, activeMove, timeline, playing, speed })}</div>
         )}
       </CubeStage>
 

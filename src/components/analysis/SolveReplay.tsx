@@ -226,7 +226,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         voice={voice}
         overlay={
           gyroStream && twinMoveMs && twinFacelets
-            ? ({ positionMs, activeMove, timeline }) => (
+            ? ({ positionMs, playing, speed, timeline }) => (
                 <ReplayGyroTwin
                   stream={gyroStream}
                   faceletsAfter={twinFacelets}
@@ -235,7 +235,8 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
                   ends={timeline.ends}
                   moves={viewMoves}
                   positionMs={positionMs}
-                  activeMove={activeMove}
+                  playing={playing}
+                  speed={speed}
                 />
               )
             : undefined
