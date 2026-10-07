@@ -8,8 +8,8 @@ import { apply, FACE_NORMALS, faceForVector, type Mat3 } from "@/lib/gyro/orient
  * poliva/smartcube-web-bluetooth's own protocol decoders, which never emit
  * anything else. So a physical M/E/S turn always arrives as two ordinary
  * turns on the two faces either side of the slice — R with L for M, U
- * with D for E, F with B for S — landing together, since they travel in
- * the very same Bluetooth notification.
+ * with D for E, F with B for S — landing within a fraction of a second of
+ * each other.
  *
  * Tracking them as two literal turns is exactly right: R and L (or U/D,
  * F/B) act on disjoint pieces, so they commute, and the pair reproduces a
@@ -28,15 +28,15 @@ const OPPOSITE_FACE: Record<string, string> = { R: "L", L: "R", U: "D", D: "U", 
 /**
  * How close two opposite-face turns need to land to be this shape rather
  * than two real, independent turns that just happen to be on opposite
- * faces. Deliberately far tighter than a double-turn's merge window
- * (doubleTurns.ts, 250ms) — two chunks from the very same Bluetooth
- * notification, which is what this is catching, land within single-digit
- * milliseconds of each other; a real solver's hands, even executing an
- * algorithm at full speed, don't manage two turns that close together. A
- * looser window would risk relabelling a genuinely fast R...L-shaped
- * algorithm sequence as a slice move it never was.
+ * faces. The two halves of a slice turn are not stamped at the same
+ * instant: a MoYu (and other cubes that clock each turn as it completes)
+ * reports them 115-200ms apart in real solves, so a window of a few
+ * milliseconds read every M as "R' L". Opposite-face turns a solver
+ * really does separately sit far apart (400ms and up in the same
+ * solves), so this stays under that, and only ever merges a pair whose
+ * tokens spell a slice turn (see PAIR_LABEL) with nothing between them.
  */
-export const SLICE_PAIR_WINDOW_MS = 40;
+export const SLICE_PAIR_WINDOW_MS = 250;
 
 /**
  * The slice label a same-instant opposite-face pair reads as, keyed by the

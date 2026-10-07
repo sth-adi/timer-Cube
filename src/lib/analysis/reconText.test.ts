@@ -14,8 +14,8 @@ const saved = (scramble: string, moves: string[]): Solve => ({
   penalty: "none",
   scramble,
   reconstruction: moves.join(" "),
-  moveTimestamps: moves.map((_, i) => i * 150),
-  timeMs: (moves.length - 1) * 150,
+  moveTimestamps: moves.map((_, i) => i * 400),
+  timeMs: (moves.length - 1) * 400,
   date: 0,
 });
 
@@ -58,7 +58,7 @@ describe("written reconstruction", () => {
       // (which doesn't depend on what any one solve happens to contain)
       // covers this grip regardless.
       if (pairAt < 0) return;
-      const times = solve.moves.map((_, i) => i * 150);
+      const times = solve.moves.map((_, i) => i * 400);
       times[pairAt + 1] = times[pairAt] + 10;
       const withTiming: Solve = {
         id: "s",

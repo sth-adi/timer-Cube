@@ -47,6 +47,17 @@ describe("slicePairLabel", () => {
     expect(slicePairLabel("R", 1000, "L'", 1000 + SLICE_PAIR_WINDOW_MS + 1)).toBeNull(); // too slow
     expect(slicePairLabel("R", 1000, "L'", 1000 + SLICE_PAIR_WINDOW_MS)).toBe("M"); // right at the edge
   });
+
+  it("reads the 115-200ms spacing a MoYu stamps the two halves of a slice with", () => {
+    expect(slicePairLabel("R", 1000, "L'", 1154)).toBe("M");
+    expect(slicePairLabel("R2", 1000, "L2", 1189)).toBe("M2");
+    expect(slicePairLabel("F'", 1000, "B", 1115)).toBe("S");
+  });
+
+  it("leaves opposite-face turns made as separate moves (400ms+ apart in real solves) alone", () => {
+    expect(slicePairLabel("B'", 1000, "F", 1604)).toBeNull();
+    expect(slicePairLabel("F", 1000, "B'", 1523)).toBeNull();
+  });
 });
 
 describe("mergeSlicePairs", () => {
