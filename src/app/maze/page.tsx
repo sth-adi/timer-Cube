@@ -159,13 +159,13 @@ function MazeGame({
     <>
       <div className="flex items-end justify-between gap-2">
         <div className="flex flex-col">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--play-dim)]">Level</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">Level</span>
           <div className="flex items-center gap-1.5">
-            <button type="button" disabled={level <= 1} onClick={() => setLevel((l) => l - 1)} className="h-7 w-7 rounded-full border border-white/10 text-sm disabled:opacity-30">
+            <button type="button" disabled={level <= 1} onClick={() => setLevel((l) => l - 1)} className="hit h-7 w-7 rounded-full border border-white/10 text-sm disabled:opacity-30">
               ‹
             </button>
             <span className="w-7 text-center text-2xl font-black tabular-nums">{level}</span>
-            <button type="button" disabled={level >= 12} onClick={() => setLevel((l) => l + 1)} className="h-7 w-7 rounded-full border border-white/10 text-sm disabled:opacity-30">
+            <button type="button" disabled={level >= 12} onClick={() => setLevel((l) => l + 1)} className="hit h-7 w-7 rounded-full border border-white/10 text-sm disabled:opacity-30">
               ›
             </button>
           </div>
@@ -216,12 +216,12 @@ function MazeGame({
 
       <div className="flex flex-wrap gap-2">
         {(gyroActive || phone) && (
-          <button type="button" onClick={levelIt} className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
+          <button type="button" onClick={levelIt} className="hit-y flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
             <Crosshair size={13} /> Hold level &amp; tap to zero
           </button>
         )}
         {!gyroActive && !phone && (
-          <button type="button" onClick={() => void enablePhone()} className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
+          <button type="button" onClick={() => void enablePhone()} className="hit-y flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
             <Smartphone size={13} /> Tilt this phone instead
           </button>
         )}

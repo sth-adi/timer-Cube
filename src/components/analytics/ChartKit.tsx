@@ -77,8 +77,8 @@ export function ChartTip({ tip, width }: { tip: TipState | null; width?: number 
       style={{ left: Math.min(Math.max(8, tip.x - 60), w - 140), top: tip.y - 8, minWidth: 110 }}
     >
       <span className="text-sm font-bold text-foreground">{tip.value}</span>
-      <span className="text-[10px] text-muted">{tip.label}</span>
-      {tip.detail && <span className="text-[10px] text-muted-2">{tip.detail}</span>}
+      <span className="text-[11px] text-muted">{tip.label}</span>
+      {tip.detail && <span className="text-[11px] text-muted-2">{tip.detail}</span>}
     </div>
   );
 }
@@ -95,5 +95,5 @@ export function Hero({ value, label, sub }: { value: string; label: string; sub?
 }
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">{children}</p>;
+  return <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">{children}</p>;
 }

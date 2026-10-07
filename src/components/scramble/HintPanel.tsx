@@ -79,7 +79,7 @@ export function HintPanel() {
       <button
         type="button"
         onClick={onReveal}
-        className="flex items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-2 hover:text-muted hover:bg-bg-panel-2 transition-colors"
+        className="hit flex items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-2 hover:text-muted hover:bg-bg-panel-2 transition-colors"
       >
         {hintVisible ? <EyeOff size={13} /> : <Eye size={13} />}
         {hintVisible ? "hide solve hints" : "solve hints"}

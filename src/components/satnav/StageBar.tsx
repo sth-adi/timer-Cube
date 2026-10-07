@@ -25,7 +25,7 @@ export function StageBar({ step }: { step: NavStep | null }) {
                 <div className="h-full rounded-full bg-success" style={{ width: `${(step.pairsDone / 4) * 100}%` }} />
               )}
             </div>
-            <span className={cn("text-[10px] font-medium", active ? "text-accent" : done ? "text-success" : "text-muted-2")}>
+            <span className={cn("text-[11px] font-medium", active ? "text-accent" : done ? "text-success" : "text-muted-2")}>
               {s.label}
               {s.label === "F2L" && step && active ? ` ${step.pairsDone}/4` : ""}
             </span>

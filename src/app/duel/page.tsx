@@ -33,7 +33,7 @@ function Versus({ me, them, saved }: { me: DuelCard; them: DuelCard; saved: bool
   return (
     <div className="flex flex-col gap-3">
       <div className="card flex flex-col items-center gap-2 rounded-xl p-4 text-center">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">
           {me.name} <span className="text-accent">●</span> vs <span className="text-warning">●</span> {them.name}
         </p>
         <p className="text-sm font-semibold leading-snug text-foreground">{report.headline}</p>
@@ -41,14 +41,14 @@ function Versus({ me, them, saved }: { me: DuelCard; them: DuelCard; saved: bool
         <p className="text-[11px] text-muted">
           <span className="font-semibold text-accent">{me.trait || "You"}</span> meets <span className="font-semibold text-warning">{them.trait || them.name}</span>
         </p>
-        <p className="text-[10px] text-muted-2">Each DNA axis is measured against its owner&apos;s own best, so the radar compares styles; the table below compares times.</p>
+        <p className="text-[11px] text-muted-2">Each DNA axis is measured against its owner&apos;s own best, so the radar compares styles; the table below compares times.</p>
       </div>
 
       <div className="card flex flex-col gap-1 rounded-xl p-4">
         <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 gap-y-1.5 text-[12px]">
           <span />
-          <span className="text-right text-[10px] font-semibold uppercase text-accent">You</span>
-          <span className="text-right text-[10px] font-semibold uppercase text-warning">{them.name}</span>
+          <span className="text-right text-[11px] font-semibold uppercase text-accent">You</span>
+          <span className="text-right text-[11px] font-semibold uppercase text-warning">{them.name}</span>
           {report.rows.map((r) => (
             <div key={r.label} className="contents">
               <span className="text-muted">{r.label}</span>
@@ -57,7 +57,7 @@ function Versus({ me, them, saved }: { me: DuelCard; them: DuelCard; saved: bool
             </div>
           ))}
         </div>
-        <p className="mt-1 text-[10px] text-muted-2">
+        <p className="mt-1 text-[11px] text-muted-2">
           Their card is from {new Date(them.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}. Bold wins the row; phases and turning speed come from smart-cube solves.
         </p>
       </div>
@@ -153,17 +153,17 @@ export default function DuelPage() {
             <input
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 24))}
-              placeholder="Your name on the card"
+              placeholder="Your name"
               className="min-w-0 flex-1 rounded-lg bg-bg-panel-2 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-2"
             />
-            <button type="button" onClick={() => void share()} className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-fg">
+            <button type="button" onClick={() => void share()} className="hit-y flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-fg">
               {copied ? <Check size={13} /> : <Share2 size={13} />} {copied ? "Copied" : "Send my card"}
             </button>
           </div>
           <p className="text-[11px] text-muted">
             {(mine.averageMs / 1000).toFixed(2)}s average · {mine.count.toLocaleString()} solves · {mine.trait}. The link carries these numbers and your DNA shape, nothing else.
           </p>
-          <button type="button" onClick={() => void navigator.clipboard?.writeText(link)} className="flex items-center gap-1 self-start text-[10px] text-muted-2 hover:text-foreground">
+          <button type="button" onClick={() => void navigator.clipboard?.writeText(link)} className="hit-y flex items-center gap-1 self-start text-[11px] text-muted-2 hover:text-foreground">
             <Copy size={10} /> copy the link
           </button>
         </div>
@@ -206,7 +206,7 @@ export default function DuelPage() {
                 <span className="truncate font-medium text-foreground">{r.name}</span>
                 <span className="shrink-0 tabular-nums text-muted-2">{(r.averageMs / 1000).toFixed(2)}s</span>
               </button>
-              <button type="button" onClick={() => drop(r.name)} aria-label={`Remove ${r.name}`} className="shrink-0 text-muted-2 hover:text-danger">
+              <button type="button" onClick={() => drop(r.name)} aria-label={`Remove ${r.name}`} className="hit -m-2 shrink-0 p-2 text-muted-2 hover:text-danger">
                 <Trash2 size={12} />
               </button>
             </div>

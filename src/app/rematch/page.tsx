@@ -38,11 +38,11 @@ function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
             ] as const
           ).map(([label, ms, turns, when]) => (
             <div key={label} className={cn("rounded-lg px-2 py-2", label === "You" && faster ? "bg-success/15" : "bg-bg-panel-2")}>
-              <p className="truncate text-[10px] text-muted-2">
+              <p className="truncate text-[11px] text-muted-2">
                 {label} · {when}
               </p>
               <p className="tabular-timer text-2xl font-bold text-foreground">{formatTime(ms)}</p>
-              <p className="text-[10px] text-muted">
+              <p className="text-[11px] text-muted">
                 {turns} turns · {((turns / Math.max(1, ms)) * 1000).toFixed(2)} TPS
               </p>
             </div>
@@ -51,7 +51,7 @@ function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
       </div>
 
       <div className="card flex flex-col gap-2 rounded-xl p-4">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Stretch by stretch</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Stretch by stretch</p>
         <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-1 text-[11px]">
           <span className="text-muted-2" />
           <span className="text-right text-muted-2">before</span>
@@ -82,9 +82,9 @@ function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
 
       <div className="card flex flex-col gap-3 rounded-xl p-4">
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Cross before ({c.crossA.length})</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Cross before ({c.crossA.length})</p>
           <TurnChips moves={c.crossA} />
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Cross now ({c.crossB.length})</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Cross now ({c.crossB.length})</p>
           <TurnChips moves={c.crossB} />
         </div>
         {(c.orderA.length > 0 || c.orderB.length > 0) && (
@@ -96,7 +96,7 @@ function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
               ] as const
             ).map(([label, order]) => (
               <div key={label} className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2 px-2.5 py-2">
-                <span className="text-[10px] text-muted-2">{label}</span>
+                <span className="text-[11px] text-muted-2">{label}</span>
                 {order.map((p, i) => (
                   <span key={i} className="text-foreground">
                     {i + 1}. {p}
@@ -134,13 +134,13 @@ function GhostPanel({ ghost, elapsed, mine }: { ghost: Ghost; elapsed: number; m
           <p className="flex items-center gap-1 truncate text-[11px] font-semibold text-foreground">
             <GhostIcon size={12} className="text-accent" /> {ghost.label}
           </p>
-          <p className="text-[10px] text-muted-2">
+          <p className="text-[11px] text-muted-2">
             {turns >= ghost.moves.length ? `finished in ${formatTime(ghost.totalMs)}` : `${MILESTONES[gap.ghost] ?? "Solved"} next · turn ${turns}/${ghost.moves.length}`}
           </p>
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] uppercase tracking-wide text-muted-2">Ghost</span>
+            <span className="text-[11px] uppercase tracking-wide text-muted-2">Ghost</span>
             {lane(gap.ghost, "bg-muted-2")}
-            <span className="text-[9px] uppercase tracking-wide text-muted-2">You</span>
+            <span className="text-[11px] uppercase tracking-wide text-muted-2">You</span>
             {lane(gap.mine, "bg-accent")}
           </div>
         </div>
@@ -225,7 +225,7 @@ function GhostPicker({ onPick }: { onPick: (g: Ghost) => void }) {
               >
                 <span className="flex flex-col">
                   <span className="tabular-timer text-sm font-semibold text-foreground">{formatTime(s.timeMs)}</span>
-                  <span className="text-[10px] text-muted-2">
+                  <span className="text-[11px] text-muted-2">
                     {new Date(s.date).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} ·{" "}
                     {s.reconstruction!.split(/\s+/).length} turns
                   </span>
@@ -450,7 +450,7 @@ export default function RematchPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>

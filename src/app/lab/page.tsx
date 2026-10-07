@@ -193,7 +193,7 @@ function ToolGrid({ tools, usage }: { tools: readonly (typeof TOOLS)[number][]; 
               <span className="text-[11px] leading-snug text-muted-2">{tool.blurb}</span>
             </span>
             {usage[tool.href] && (
-              <span className="shrink-0 pt-0.5 text-[10px] tabular-nums text-muted">
+              <span className="shrink-0 pt-0.5 text-[11px] tabular-nums text-muted">
                 opened {usage[tool.href].count}×
               </span>
             )}
@@ -225,7 +225,7 @@ function CategorySection({
             <span className="text-xs font-semibold text-foreground">
               {cat.label} <span className="font-normal text-muted-2">· {tools.length}</span>
             </span>
-            <span className="text-[10px] text-muted-2">{cat.blurb}</span>
+            <span className="text-[11px] text-muted-2">{cat.blurb}</span>
           </div>
         </div>
         <ChevronDown size={15} className={cn("shrink-0 text-muted-2 transition-transform", open && "rotate-180")} />
@@ -310,7 +310,7 @@ export default function LabPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -351,17 +351,17 @@ export default function LabPage() {
             <>
               {coach && coach.findings.length > 0 ? (
                 <div className="card flex flex-col gap-2 rounded-xl p-4">
-                  <Link href="/coach" className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-accent">
+                  <Link href="/coach" className="hit-y flex items-center gap-2 text-sm font-semibold text-foreground hover:text-accent">
                     <GraduationCap size={15} className="text-accent" />
                     Coach, start here
                   </Link>
                   <p className="text-[12px] leading-relaxed text-foreground">{coach.headline}</p>
-                  <ol className="flex flex-col gap-0.5">
+                  <ol className="flex flex-col">
                     {coach.findings.slice(0, 3).map((f, i) => (
                       <li key={f.id}>
                         <Link
                           href={f.href}
-                          className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-[11px] transition-colors hover:bg-bg-panel-2/60"
+                          className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-2.5 text-[11px] transition-colors hover:bg-bg-panel-2/60"
                         >
                           <span className="truncate text-muted">
                             {i + 1}. {f.title}
@@ -371,7 +371,7 @@ export default function LabPage() {
                       </li>
                     ))}
                   </ol>
-                  <Link href="/coach" className="flex items-center justify-end gap-1 text-[11px] font-medium text-foreground hover:text-accent">
+                  <Link href="/coach" className="flex items-center justify-end gap-1 py-2.5 text-[11px] font-medium text-foreground hover:text-accent">
                     Full plan <ChevronRight size={13} className="text-muted-2" />
                   </Link>
                 </div>
@@ -423,7 +423,7 @@ export default function LabPage() {
                   <CategorySection key={cat.key} cat={cat} open={openCats.has(cat.key)} onToggle={() => toggleCat(cat.key)} usage={usage} />
                 ))}
               </div>
-              <p className="px-1 text-[10px] text-muted-2">
+              <p className="px-1 text-[11px] text-muted-2">
                 Opened-tool counts are tracked on this device only, never sent anywhere.
               </p>
             </>
@@ -438,7 +438,7 @@ export default function LabPage() {
               <HeartPulse size={16} className="shrink-0 text-accent" />
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs font-semibold text-foreground">Cube &amp; hardware</span>
-                <span className="text-[10px] text-muted-2">Gyro twin, gesture practice, mistake radar, hardware diagnostics.</span>
+                <span className="text-[11px] text-muted-2">Gyro twin, gesture practice, mistake radar, hardware diagnostics.</span>
               </div>
             </div>
             <ChevronDown size={15} className={cn("shrink-0 text-muted-2 transition-transform", hardwareOpen && "rotate-180")} />

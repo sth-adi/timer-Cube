@@ -39,7 +39,7 @@ function LuckHistogram({ r }: { r: LuckReport }) {
           );
         })}
       </div>
-      <div className="flex justify-between text-[9px] tabular-nums text-muted-2">
+      <div className="flex justify-between text-[11px] tabular-nums text-muted-2">
         <span>{signed(-span)} lucky</span>
         <span>average scramble</span>
         <span>unlucky {signed(span)}</span>
@@ -52,12 +52,12 @@ function LuckHistogram({ r }: { r: LuckReport }) {
 function Board({ title, list, by }: { title: string; list: LuckSolve[]; by: "raw" | "earned" }) {
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">{title}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">{title}</p>
       {list.slice(0, 5).map((s, i) => (
         <div key={s.id} className="flex items-baseline justify-between rounded-lg bg-bg-panel-2 px-2 py-1.5">
-          <span className="text-[10px] text-muted-2">{i + 1}.</span>
+          <span className="text-[11px] text-muted-2">{i + 1}.</span>
           <span className="text-[12px] font-semibold tabular-nums text-foreground">{secs(by === "raw" ? s.totalMs : s.earnedMs)}</span>
-          <span className={cn("text-[10px] tabular-nums", s.luckMs < -100 ? "text-success" : s.luckMs > 100 ? "text-warning" : "text-muted-2")}>
+          <span className={cn("text-[11px] tabular-nums", s.luckMs < -100 ? "text-success" : s.luckMs > 100 ? "text-warning" : "text-muted-2")}>
             {by === "raw" ? `luck ${signed(s.luckMs)}` : `was ${secs(s.totalMs)}`}
           </span>
         </div>
@@ -98,7 +98,7 @@ export default function LuckPage() {
                 )}
               </div>
             ))}
-            <p className="text-[10px] text-muted-2">Fitted to your own times; factors that never varied in your history (say, you&apos;ve never had an OLL skip) are left out.</p>
+            <p className="text-[11px] text-muted-2">Fitted to your own times; factors that never varied in your history (say, you&apos;ve never had an OLL skip) are left out.</p>
           </div>
 
           <div className="card flex flex-col gap-3 rounded-xl p-4">

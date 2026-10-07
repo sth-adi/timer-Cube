@@ -59,7 +59,7 @@ function Report({ attempt }: { attempt: Attempt }) {
           ].map(([v, l]) => (
             <div key={l} className="rounded-lg bg-bg-panel-2 px-2 py-1.5">
               <p className="text-base font-bold tabular-nums text-foreground">{v}</p>
-              <p className="text-[10px] text-muted-2">{l}</p>
+              <p className="text-[11px] text-muted-2">{l}</p>
             </div>
           ))}
         </div>
@@ -67,21 +67,21 @@ function Report({ attempt }: { attempt: Attempt }) {
 
       <div className="card flex flex-col gap-3 rounded-xl p-4">
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
           {g.moves.length ? <TurnChips moves={g.turns !== null ? g.moves.slice(0, g.turns) : g.moves} /> : <p className="text-[11px] text-muted">No turns.</p>}
         </div>
         <div className="flex flex-col gap-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Every x-cross this scramble had</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Every x-cross this scramble had</p>
           {attempt.options.map((o, i) => (
             <div key={o.pair} className={cn("flex flex-col gap-1.5 rounded-lg px-2.5 py-2", i === 0 ? "bg-accent-soft" : "bg-bg-panel-2")}>
               <p className="flex items-center gap-2 text-[11px] font-semibold text-foreground">
                 <PairSwatch pair={o.pair} /> {o.label} · {o.moves.length} turns
-                {g.pair === o.label && <span className="text-[10px] font-normal text-muted">(the pair you did)</span>}
+                {g.pair === o.label && <span className="text-[11px] font-normal text-muted">(the pair you did)</span>}
               </p>
               <TurnChips moves={o.moves} />
             </div>
           ))}
-          <p className="text-[10px] text-muted-2">Each chip is the center that turns, ↻ clockwise facing it, ↺ counter-clockwise. Pairs not listed need more turns.</p>
+          <p className="text-[11px] text-muted-2">Each chip is the center that turns, ↻ clockwise facing it, ↺ counter-clockwise. Pairs not listed need more turns.</p>
         </div>
       </div>
     </div>
@@ -228,7 +228,7 @@ function Hunter() {
               ].map(([v, l]) => (
                 <div key={l} className="rounded-lg bg-bg-panel-2 py-1.5">
                   <p className="text-base font-bold tabular-nums text-foreground">{v}</p>
-                  <p className="text-[10px] text-muted-2">{l}</p>
+                  <p className="text-[11px] text-muted-2">{l}</p>
                 </div>
               ))}
             </div>
@@ -297,7 +297,7 @@ export default function XCrossPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>

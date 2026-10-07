@@ -77,7 +77,7 @@ export default function F2lCasesPage() {
             .map((c) => (
               <SpreadRow key={c.key} c={c} maxTurns={maxTurns} />
             ))}
-          <p className="flex items-center justify-center gap-3 px-1 text-[10px] text-muted-2">
+          <p className="flex items-center justify-center gap-3 px-1 text-[11px] text-muted-2">
             <span className="flex items-center gap-1">
               <span className="h-2.5 w-2.5 rounded-full bg-accent" /> your best
             </span>

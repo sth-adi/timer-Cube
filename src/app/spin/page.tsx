@@ -51,7 +51,7 @@ export default function SpinPage() {
                   </div>
                 ));
               })()}
-              <p className="text-[10px] text-muted-2">Average time per quarter turn in each direction, across every face, half turns have no direction.</p>
+              <p className="text-[11px] text-muted-2">Average time per quarter turn in each direction, across every face, half turns have no direction.</p>
             </div>
           )}
 
@@ -68,7 +68,7 @@ export default function SpinPage() {
                   </span>
                 </div>
               ))}
-              <p className="text-[10px] text-muted-2">Only axes where both faces have at least {MIN_TURNS_PER_FACE} qualifying turns are shown.</p>
+              <p className="text-[11px] text-muted-2">Only axes where both faces have at least {MIN_TURNS_PER_FACE} qualifying turns are shown.</p>
             </div>
           )}
         </>

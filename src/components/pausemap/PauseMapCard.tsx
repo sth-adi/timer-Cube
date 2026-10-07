@@ -21,9 +21,9 @@ function HandoffRow({ h, max }: { h: HandoffStat; max: number }) {
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-foreground">{h.label}</span>
         {h.verdict ? (
-          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", VERDICT[h.verdict].className)}>{VERDICT[h.verdict].label}</span>
+          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", VERDICT[h.verdict].className)}>{VERDICT[h.verdict].label}</span>
         ) : (
-          <span className="text-[10px] text-muted-2">{h.count} pairs · need more</span>
+          <span className="text-[11px] text-muted-2">{h.count} pairs · need more</span>
         )}
       </div>
       <div className="flex h-3 overflow-hidden rounded-full bg-bg-panel-2" title={`finding ${secs(h.findMs)} · stalls ${secs(h.stallMs)} · turning ${secs(h.turningMs)}`}>
@@ -32,7 +32,7 @@ function HandoffRow({ h, max }: { h: HandoffStat; max: number }) {
         <div className="h-full bg-accent/60" style={{ width: w(h.turningMs) }} />
       </div>
       {h.count > 0 && (
-        <p className="text-[10px] tabular-nums text-muted-2">
+        <p className="text-[11px] tabular-nums text-muted-2">
           {secs(h.totalMs)} a pair · stop to look in {Math.round(h.stallRate * 100)}% · {h.turns.toFixed(1)} turns (+{h.extraTurns.toFixed(1)} over fewest) ·{" "}
           {h.count} pairs
         </p>
@@ -65,7 +65,7 @@ export function PauseMapCard({ report, onDrill }: { report: PauseMapReport; onDr
           <HandoffRow key={h.order} h={h} max={max} />
         ))}
       </div>
-      <p className="text-[10px] leading-relaxed text-muted-2">
+      <p className="text-[11px] leading-relaxed text-muted-2">
         <span className="text-danger">Finding</span>: the pause from the previous pair going in to your first turn on the next.{" "}
         <span className="text-warning">Stalls</span>: pauses of {PAUSE_MS}ms+ after you&apos;d started it. <span className="text-accent">Turning</span>: the rest.
         From {report.pairs} pairs in {report.solves} smart-cube solves; pairs that went in together are left out.
@@ -79,7 +79,7 @@ export function PauseMapCard({ report, onDrill }: { report: PauseMapReport; onDr
 
       {effects.length > 0 && (
         <div className="flex flex-col gap-2 rounded-lg bg-bg-panel-2 px-3 py-2.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Did drilling help? (your real solves, not the drills)</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Did drilling help? (your real solves, not the drills)</p>
           {effects.map(({ h, e, n }) => (
             <div key={h.order} className="text-[11px] text-muted">
               <span className="font-medium text-foreground">{h.label}</span>, drilled {n}× since {new Date(e.since).toLocaleDateString()}.{" "}

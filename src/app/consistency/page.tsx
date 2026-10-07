@@ -56,7 +56,7 @@ function SpreadChart({ r }: { r: ConsistencyReport }) {
               style={{ left: `${(p.p50 / max) * 100}%`, background: PHASE_COLOR[p.phase] }}
             />
           </div>
-          <span className="w-16 shrink-0 text-right text-[10px] tabular-nums text-muted">±{Math.round(p.cv * 100)}% CV</span>
+          <span className="w-16 shrink-0 text-right text-[11px] tabular-nums text-muted">±{Math.round(p.cv * 100)}% CV</span>
         </div>
       ))}
       <div className="ml-12 mr-[4.5rem] flex justify-between text-[9px] tabular-nums text-muted-2">
@@ -92,7 +92,7 @@ export default function ConsistencyPage() {
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <SectionTitle>Share of your inconsistency</SectionTitle>
             <ShareBar r={r} />
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               Each phase&apos;s covariance with your total time, they add up to 100% of the variance. A phase that&apos;s long but steady scores low.
             </p>
           </div>
@@ -100,7 +100,7 @@ export default function ConsistencyPage() {
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <SectionTitle>How much each phase wanders</SectionTitle>
             <SpreadChart r={r} />
-            <p className="text-[10px] text-muted-2">Bars span your 10th to 90th percentile; the dot is the median. CV is the spread relative to the phase&apos;s own length.</p>
+            <p className="text-[11px] text-muted-2">Bars span your 10th to 90th percentile; the dot is the median. CV is the spread relative to the phase&apos;s own length.</p>
           </div>
 
           <div className="card flex flex-col gap-2 rounded-xl p-4">
@@ -120,7 +120,7 @@ export default function ConsistencyPage() {
                 )}
               </div>
             ))}
-            <p className="text-[10px] text-muted-2">Replays your actual solves with that phase&apos;s wobble scaled down and everything else left as it happened.</p>
+            <p className="text-[11px] text-muted-2">Replays your actual solves with that phase&apos;s wobble scaled down and everything else left as it happened.</p>
           </div>
         </>
       )}

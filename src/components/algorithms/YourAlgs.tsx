@@ -33,27 +33,27 @@ export function YourAlgs({ algCase, onShow, showing }: { algCase: AlgCase; onSho
       <div key={alg} className={cn("flex items-center gap-2 rounded-lg px-2.5 py-1.5", isMain ? "bg-accent-soft" : "bg-bg-panel-2")}>
         <button type="button" onClick={() => onShow?.(alg)} className="min-w-0 flex-1 text-left" disabled={!onShow}>
           <p className={cn("break-words font-mono text-[11px]", showing === alg ? "text-accent" : "text-foreground")}>{alg}</p>
-          <p className="text-[10px] text-muted-2">
+          <p className="text-[11px] text-muted-2">
             {opts.book ? "book" : "yours"}
             {opts.count ? ` · done ×${opts.count}` : ""}
             {opts.meanMs ? ` · ${s2(opts.meanMs)}s avg, ${s2(opts.bestMs!)}s best` : ""}
           </p>
         </button>
         {isMain ? (
-          <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold text-accent">
+          <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-accent">
             <Check size={11} /> main
           </span>
         ) : (
           <button
             type="button"
             onClick={() => (opts.book ? clear(key) : choose(key, alg))}
-            className="hit-y shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-fg"
+            className="hit-y shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-fg"
           >
             Make main
           </button>
         )}
         {!opts.book && (
-          <button type="button" onClick={() => dismiss(key, alg)} aria-label="Remove this algorithm" className="hit-y -m-2 shrink-0 p-2 text-muted-2 hover:text-danger">
+          <button type="button" onClick={() => dismiss(key, alg)} aria-label="Remove this algorithm" className="hit-y -mx-2.5 -my-2 shrink-0 px-3 py-2 text-muted-2 hover:text-danger">
             <X size={12} />
           </button>
         )}
@@ -63,13 +63,13 @@ export function YourAlgs({ algCase, onShow, showing }: { algCase: AlgCase; onSho
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+      <p className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
         <Sparkles size={10} className="text-accent" /> Your algorithms
       </p>
       {row(algCase.alg, { book: true, count: bookSeen?.count, meanMs: bookSeen?.meanExecMs, bestMs: bookSeen?.bestExecMs })}
       {yours.map((x) => row(x.alg, { book: false, count: x.count, meanMs: x.meanExecMs, bestMs: x.bestExecMs }))}
       {chosen && !yours.some((x) => normalizedAlg(x.alg) === mainNorm) && mainNorm !== normalizedAlg(algCase.alg) && row(chosen, { book: false })}
-      <p className="text-[10px] leading-snug text-muted-2">
+      <p className="text-[11px] leading-snug text-muted-2">
         {yours.length
           ? manual
             ? "You picked the main one yourself, it stays until you change it."

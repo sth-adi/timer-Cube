@@ -80,15 +80,15 @@ function Stepper({ value, label, onMinus, onPlus }: { value: string; label: stri
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="flex items-center gap-2">
-        <button type="button" onClick={onMinus} aria-label={`Less ${label}`} className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-foreground">
+        <button type="button" onClick={onMinus} aria-label={`Less ${label}`} className="hit flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-foreground">
           <Minus size={14} />
         </button>
         <p className="min-w-[4.5rem] text-center text-xl font-bold tabular-nums text-foreground">{value}</p>
-        <button type="button" onClick={onPlus} aria-label={`More ${label}`} className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-foreground">
+        <button type="button" onClick={onPlus} aria-label={`More ${label}`} className="hit flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-foreground">
           <Plus size={14} />
         </button>
       </div>
-      <p className="text-[10px] text-muted-2">{label}</p>
+      <p className="text-[11px] text-muted-2">{label}</p>
     </div>
   );
 }
@@ -165,7 +165,7 @@ function Setup({ solves }: { solves: Solve[] }) {
         </p>
         <div className="grid grid-cols-1 gap-3">
           <Stepper value={`${(targetMs / 1000).toFixed(1)}s`} label="target average" onMinus={() => setTarget(Math.max(1000, targetMs - 500))} onPlus={() => setTarget(Math.min(level - 100, targetMs + 500))} />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 min-[400px]:gap-2">
             <Stepper value={`${weeks} wk`} label="deadline" onMinus={() => setWeeks(Math.max(2, weeks - 1))} onPlus={() => setWeeks(Math.min(16, weeks + 1))} />
             <Stepper value={`${solvesPerWeek}`} label="solves a week" onMinus={() => setPerWeek(Math.max(25, solvesPerWeek - 25))} onPlus={() => setPerWeek(Math.min(1000, solvesPerWeek + 25))} />
           </div>
@@ -190,7 +190,7 @@ function Setup({ solves }: { solves: Solve[] }) {
             </p>
           ))}
         </div>
-        <p className="text-[10px] text-muted-2">
+        <p className="text-[11px] text-muted-2">
           {plan ? "Focus weeks follow the Goal Planner's budget: the phases asked to give the most time get the most weeks." : "Weekly focus goes by phase once you have 20 smart-cube solves; until then it's consistency."}
         </p>
       </div>
@@ -212,7 +212,7 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="card flex flex-col gap-2 rounded-xl p-4">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">
           {s2(j.baselineMs)} → {s2(j.targetMs)} · {j.weeks} weeks from {day(j.createdAt)}
         </p>
         <p className="text-sm font-semibold leading-snug text-foreground">{review.headline}</p>
@@ -222,25 +222,25 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
           </p>
         ))}
         <RoadChart j={j} review={review} />
-        <p className="text-[10px] text-muted-2">
+        <p className="text-[11px] text-muted-2">
           Dashed: the checkpoints. Solid: your weekly average (extremes dropped).{review.projectedMs !== null && !review.finished ? ` Dotted: the trend, reaching ${s2(review.projectedMs)} at the deadline.` : ""}
         </p>
       </div>
 
       {thisWeek && (
         <div className="card flex flex-col gap-2 rounded-xl p-4 ring-1 ring-accent/40">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-accent">This week · {thisWeek.plan.focus}</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-accent">This week · {thisWeek.plan.focus}</p>
           <p className="text-[12px] text-foreground">{FOCUS_BLURB[thisWeek.plan.focus]}</p>
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="rounded-lg bg-bg-panel-2 py-1.5">
               <p className="text-base font-bold tabular-nums text-foreground">{s2(thisWeek.plan.checkpointMs)}</p>
-              <p className="text-[10px] text-muted-2">checkpoint {day(thisWeek.plan.end)}</p>
+              <p className="text-[11px] text-muted-2">checkpoint {day(thisWeek.plan.end)}</p>
             </div>
             <div className="rounded-lg bg-bg-panel-2 py-1.5">
               <p className="text-base font-bold tabular-nums text-foreground">
                 {thisWeek.solves}/{j.solvesPerWeek}
               </p>
-              <p className="text-[10px] text-muted-2">solves{thisWeek.meanMs !== null ? ` · ${s2(thisWeek.meanMs)} so far` : ""}</p>
+              <p className="text-[11px] text-muted-2">solves{thisWeek.meanMs !== null ? ` · ${s2(thisWeek.meanMs)} so far` : ""}</p>
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -263,7 +263,7 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
               {w.meanMs !== null && w.status !== "upcoming" ? `${s2(w.meanMs)} / ` : ""}
               {s2(w.plan.checkpointMs)}
             </span>
-            {STATUS[w.status].label && <span className={cn("w-[5.5rem] shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-semibold", STATUS[w.status].tone)}>{STATUS[w.status].label}</span>}
+            {STATUS[w.status].label && <span className={cn("w-[5.5rem] shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-semibold", STATUS[w.status].tone)}>{STATUS[w.status].label}</span>}
           </div>
         ))}
       </div>
@@ -276,16 +276,16 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
               const finalMs = [...review.weeks].reverse().find((w) => w.meanMs !== null && w.status !== "upcoming")?.meanMs ?? null;
               end({ endedAt: wallNow(), finalMs, reached: review.reached });
             }}
-            className="flex-1 rounded-full bg-danger px-4 py-2 text-xs font-semibold text-white"
+            className="hit-y flex-1 rounded-full bg-danger px-4 py-2 text-xs font-semibold text-white"
           >
             End it
           </button>
-          <button type="button" onClick={() => setConfirm(false)} className="flex-1 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
+          <button type="button" onClick={() => setConfirm(false)} className="hit-y flex-1 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
             Keep going
           </button>
         </div>
       ) : (
-        <button type="button" onClick={() => setConfirm(true)} className="self-center text-[11px] text-muted-2 underline-offset-2 hover:underline">
+        <button type="button" onClick={() => setConfirm(true)} className="hit-y self-center text-[11px] text-muted-2 underline-offset-2 hover:underline">
           {review.finished || review.reached ? "Finish and plan the next one" : "End this journey"}
         </button>
       )}

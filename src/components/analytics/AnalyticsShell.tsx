@@ -30,7 +30,7 @@ export function AnalyticsShell({
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>

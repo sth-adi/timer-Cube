@@ -58,11 +58,11 @@ export default function CrossColorPage() {
                     <div className="absolute inset-y-0 left-0 rounded bg-accent/60" style={{ width: `${max > 0 ? (s.avgLen / max) * 100 : 0}%` }} />
                   </div>
                   <span className="w-16 shrink-0 text-right tabular-nums text-muted-2">{s.avgLen.toFixed(2)}</span>
-                  {s.face === "U" && <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-semibold text-accent">used</span>}
+                  {s.face === "U" && <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-semibold text-accent">used</span>}
                 </div>
               ));
             })()}
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               Each bar is the average optimal cross length on those same scrambles, rotated so that color starts up, a lookup, not a real search per solve.
             </p>
           </div>

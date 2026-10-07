@@ -26,7 +26,7 @@ export function LearnedAlgNotice({ solveDate }: { solveDate: number | null }) {
           </div>
         </div>
       ))}
-      <p className="text-[10px] text-muted-2">
+      <p className="text-[11px] text-muted-2">
         Added to the case as yours, do it again and it becomes your main algorithm.{" "}
         <Link href="/myalgs" className="text-accent hover:underline">
           My Algs →

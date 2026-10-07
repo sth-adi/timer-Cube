@@ -55,7 +55,7 @@ export default function ColdStartPage() {
                 </div>
               ));
             })()}
-            <p className="text-[10px] text-muted-2">Every pause counts, mistake or not, only whether the turns right after it are slower than the rest of the same solve.</p>
+            <p className="text-[11px] text-muted-2">Every pause counts, mistake or not, only whether the turns right after it are slower than the rest of the same solve.</p>
           </div>
         </>
       )}

@@ -104,7 +104,7 @@ export function WhatIf() {
               )}
             >
               <span className="tabular-timer text-xs font-semibold">{final === null ? "DNF" : formatTime(final)}</span>
-              <span className={cn("text-[9px]", s.id === solve.id ? "text-accent-fg/80" : "text-muted-2")}>
+              <span className={cn("text-[11px]", s.id === solve.id ? "text-accent-fg/80" : "text-muted-2")}>
                 {new Date(s.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
               </span>
             </button>
@@ -198,12 +198,12 @@ export function WhatIf() {
             </button>
           )}
         </div>
-        <p className="text-[10px] text-muted-2">Notation is yellow on top, green in front.</p>
+        <p className="text-[11px] text-muted-2">Notation is yellow on top, green in front.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="card flex flex-col items-center gap-1.5 rounded-xl p-3">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
           <div className="w-24">
             <FaceletNet facelets={fork} className="w-full" />
           </div>
@@ -211,7 +211,7 @@ export function WhatIf() {
           <p className="text-[11px] text-muted">{secs(original.ms)} from the fork</p>
         </div>
         <div className="card flex flex-col items-center gap-1.5 rounded-xl p-3">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-accent">Branch</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-accent">Branch</p>
           <div className="w-24">
             <FaceletNet facelets={branchState} className="w-full" />
           </div>
@@ -239,7 +239,7 @@ export function WhatIf() {
 
       {current?.solved && current.legs.length > 0 && (
         <div className="card flex flex-col gap-2 rounded-xl p-3">
-          <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">
             <Navigation size={11} className="text-accent" /> How the Sat-Nav finishes {branch.length ? "your branch" : "from the fork"}
           </p>
           {current.legs.map((l, i) => (
@@ -248,7 +248,7 @@ export function WhatIf() {
               <p className="font-mono text-[11px] text-muted">{l.display.join(" ")}</p>
             </div>
           ))}
-          <p className="text-[10px] text-muted-2">
+          <p className="text-[11px] text-muted-2">
             Seconds are an estimate: branch turns priced at your own pace after the fork ({Math.round(pace)}ms a turn, pauses included).
           </p>
         </div>

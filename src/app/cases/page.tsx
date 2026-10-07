@@ -62,7 +62,7 @@ function CaseRow({ stat, maxTotal, deepLinked }: { stat: CaseStat; maxTotal: num
       </button>
       {open && (
         <div className="border-t border-border px-3 pb-3 pt-2">
-          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">
             Best {secs(stat.bestTotalMs)}s · last {Math.min(10, stat.occurrences.length)} times
           </p>
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-1 text-[11px] tabular-nums">
@@ -144,7 +144,7 @@ function CasesPageInner() {
             key={g}
             type="button"
             onClick={() => setGroup(g)}
-            className={cn("flex-1 rounded-full py-1.5 text-xs font-semibold", group === g ? "bg-accent text-accent-fg" : "text-muted")}
+            className={cn("hit-y flex-1 rounded-full py-1.5 text-xs font-semibold", group === g ? "bg-accent text-accent-fg" : "text-muted")}
           >
             {g}
           </button>
@@ -165,7 +165,7 @@ function CasesPageInner() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground"
+              className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground [@media(pointer:coarse)]:min-h-11"
               aria-label="Sort cases"
             >
               {SORTS.map((s) => (
@@ -182,7 +182,7 @@ function CasesPageInner() {
             ))}
           </div>
 
-          <p className="flex items-center justify-center gap-3 text-[10px] text-muted-2">
+          <p className="flex items-center justify-center gap-3 text-[11px] text-muted-2">
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-3 rounded-full bg-warning/50" /> recognising
             </span>
@@ -193,7 +193,7 @@ function CasesPageInner() {
 
           {unseen.length > 0 && (
             <div className="card rounded-xl p-3">
-              <button type="button" onClick={() => setShowUnseen((v) => !v)} className="flex w-full items-center justify-between text-xs font-medium text-muted">
+              <button type="button" onClick={() => setShowUnseen((v) => !v)} className="hit-y flex w-full items-center justify-between text-xs font-medium text-muted">
                 Not seen yet ({unseen.length})
                 <ChevronDown size={13} className={cn("transition-transform", showUnseen && "rotate-180")} />
               </button>
@@ -202,7 +202,7 @@ function CasesPageInner() {
                   {unseen.map((c) => (
                     <div key={c.name} className="flex flex-col items-center gap-0.5 opacity-60" title={c.name}>
                       <Icon stat={{ group, name: c.name }} className="h-9 w-9" />
-                      <span className="w-full truncate text-center text-[9px] text-muted-2">{c.name}</span>
+                      <span className="w-full truncate text-center text-[11px] text-muted-2">{c.name}</span>
                     </div>
                   ))}
                 </div>

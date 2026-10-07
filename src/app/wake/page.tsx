@@ -287,7 +287,7 @@ export default function WakePage() {
               </span>
             </button>
             {!connected && (
-              <button type="button" onClick={() => resetVirtual()} className="text-[10px] text-white/30 underline">
+              <button type="button" onClick={() => resetVirtual()} className="hit-y text-[11px] text-white/30 underline">
                 reset on-screen cube
               </button>
             )}
@@ -336,7 +336,7 @@ export default function WakePage() {
             <button type="button" onClick={() => arm()} className="play-btn play-glow flex items-center gap-2 px-8 py-3 text-base">
               <AlarmClock size={18} /> Arm alarm
             </button>
-            <button type="button" onClick={() => arm(5000)} className="text-[12px] font-semibold text-[var(--play-dim)] underline underline-offset-4">
+            <button type="button" onClick={() => arm(5000)} className="hit-y text-[12px] font-semibold text-[var(--play-dim)] underline underline-offset-4">
               Try it, ring in 5 seconds
             </button>
           </>

@@ -49,7 +49,7 @@ export default function MomentumPage() {
                 <span className="text-[11px] tabular-nums text-muted-2">{pct(row.rel)} vs sitting median</span>
               </div>
             ))}
-            <p className="text-[10px] text-muted-2">Each solve is measured against its own sitting&apos;s median time, so a good day and a bad day compare fairly.</p>
+            <p className="text-[11px] text-muted-2">Each solve is measured against its own sitting&apos;s median time, so a good day and a bad day compare fairly.</p>
           </div>
         </>
       )}

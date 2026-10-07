@@ -45,7 +45,7 @@ export default function BottleneckPage() {
             {r.cases.slice(0, 8).map((c) => (
               <div key={`${c.group}-${c.key}`} className="flex items-center justify-between gap-2 rounded-lg bg-bg-panel-2 px-3 py-2">
                 <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-foreground">
-                  <span className="shrink-0 rounded-full bg-bg-panel px-1.5 py-0.5 text-[9px] font-semibold text-muted">{c.group}</span>
+                  <span className="shrink-0 rounded-full bg-bg-panel px-1.5 py-0.5 text-[11px] font-semibold text-muted">{c.group}</span>
                   <span className="truncate">{c.name}</span>
                 </span>
                 <span className="shrink-0 text-right text-[11px] tabular-nums text-muted-2">
@@ -56,7 +56,7 @@ export default function BottleneckPage() {
                 </span>
               </div>
             ))}
-            <p className="text-[10px] text-muted-2">Total cost is average time × how often it came up. A case needs 3+ occurrences to be classified.</p>
+            <p className="text-[11px] text-muted-2">Total cost is average time × how often it came up. A case needs 3+ occurrences to be classified.</p>
           </div>
         </>
       )}

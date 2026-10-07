@@ -33,7 +33,7 @@ function ArchetypeCard({ a, maxMs }: { a: Archetype; maxMs: number }) {
           />
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] tabular-nums text-muted">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums text-muted">
         {a.phases.map((p, k) => (
           <span key={k}>
             {PHASES[k]} {secs(p)}
@@ -41,7 +41,7 @@ function ArchetypeCard({ a, maxMs }: { a: Archetype; maxMs: number }) {
         ))}
         <span>paused {Math.round(a.pauseShare * 100)}%</span>
       </div>
-      <div className="flex items-center justify-between text-[10px]">
+      <div className="flex items-center justify-between text-[11px]">
         <span className="text-muted-2">
           {Math.round(a.shareEarly * 100)}% of older solves → <span className="font-semibold text-foreground">{Math.round(a.shareLate * 100)}%</span> of recent
         </span>
@@ -80,7 +80,7 @@ export default function ArchetypesPage() {
           {r.archetypes.map((a) => (
             <ArchetypeCard key={a.name} a={a} maxMs={maxMs} />
           ))}
-          <p className="px-1 text-[10px] text-muted-2">
+          <p className="px-1 text-[11px] text-muted-2">
             Grouped by shape, not speed: what share of each solve went to each phase and to pausing, standardised and clustered (k-means, k = 4). Names come from
             what sets each group apart from your average solve.
           </p>

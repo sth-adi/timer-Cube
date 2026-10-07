@@ -123,7 +123,7 @@ export default function SatNavPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -147,7 +147,7 @@ export default function SatNavPage() {
                 onClick={() => setMode(id)}
                 aria-pressed={mode === id}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  "hit-y flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
                   mode === id ? "bg-accent text-accent-fg" : "text-muted",
                 )}
               >

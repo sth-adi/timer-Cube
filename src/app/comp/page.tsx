@@ -148,7 +148,7 @@ function KeyboardAttempt({ scramble, limitMs, voice, onDone }: { scramble: strin
         {label}
       </button>
       {call && <p className="animate-pulse text-sm font-bold text-warning">Judge: “{call}”</p>}
-      <p className="text-[10px] text-muted-2">Hold space (or the pad) until it turns green, release to start. Any press stops the clock.</p>
+      <p className="text-[11px] text-muted-2">Hold space (or the pad) until it turns green, release to start. Any press stops the clock.</p>
     </div>
   );
 }
@@ -229,7 +229,7 @@ function Scorecard({ format, attempts, pending }: { format: RoundFormat; attempt
   const worst = results.length === 5 ? (results.includes(null) ? null : Math.max(...finite)) : undefined;
   return (
     <div className="card flex flex-col gap-1 rounded-xl p-3">
-      <p className="flex items-center justify-between px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+      <p className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
         <span>Scorecard · {format.kind === "ao5" ? "Average of 5" : "Mean of 3"}</span>
         {format.cutoffMs !== null && <span>cutoff {formatTime(format.cutoffMs)}</span>}
       </p>
@@ -246,7 +246,7 @@ function Scorecard({ format, attempts, pending }: { format: RoundFormat; attempt
               <span className={cn("tabular-timer flex-1 font-semibold", trimmed && "text-muted")}>
                 {a ? `${trimmed ? "(" : ""}${fmt(r)}${a.penalty === "plus2" && r !== null ? "+" : ""}${trimmed ? ")" : ""}` : skipped ? "—" : ""}
               </span>
-              {a?.bpm && <span className="text-[10px] text-danger">♥ {Math.round(a.bpm)}</span>}
+              {a?.bpm && <span className="text-[11px] text-danger">♥ {Math.round(a.bpm)}</span>}
             </div>
           </div>
         );
@@ -338,7 +338,7 @@ function CompSim() {
         <div className="card flex flex-col gap-3 rounded-xl p-4">
           <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1 text-xs">
             {(["ao5", "mo3"] as const).map((k) => (
-              <button key={k} type="button" onClick={() => setFormat((f) => ({ ...f, kind: k }))} className={cn("rounded-full py-1.5 font-semibold", format.kind === k ? "bg-accent text-accent-fg" : "text-muted")}>
+              <button key={k} type="button" onClick={() => setFormat((f) => ({ ...f, kind: k }))} className={cn("hit-y rounded-full py-1.5 font-semibold", format.kind === k ? "bg-accent text-accent-fg" : "text-muted")}>
                 {k === "ao5" ? "Average of 5" : "Mean of 3"}
               </button>
             ))}
@@ -354,7 +354,7 @@ function CompSim() {
                 setFormat((f) => ({ ...f, cutoffMs: v > 0 ? Math.round(v * 1000) : null }));
               }}
               placeholder="e.g. 20"
-              className="w-24 rounded-lg bg-bg-panel-2 px-2 py-1.5 text-right text-foreground outline-none"
+              className="w-24 rounded-lg bg-bg-panel-2 px-2 py-1.5 text-right text-foreground outline-none [@media(pointer:coarse)]:min-h-11"
             />
           </label>
           <label className="flex items-center justify-between gap-3 text-xs text-muted">
@@ -362,7 +362,7 @@ function CompSim() {
             <select
               value={format.timeLimitMs ?? 0}
               onChange={(e) => setFormat((f) => ({ ...f, timeLimitMs: Number(e.target.value) || null }))}
-              className="rounded-lg bg-bg-panel-2 px-2 py-1.5 text-foreground outline-none"
+              className="rounded-lg bg-bg-panel-2 px-2 py-1.5 text-foreground outline-none [@media(pointer:coarse)]:min-h-11"
             >
               <option value={30000}>0:30</option>
               <option value={60000}>1:00</option>
@@ -373,10 +373,10 @@ function CompSim() {
           </label>
           <label className="flex items-center justify-between gap-3 text-xs text-muted">
             Target average to beat (optional)
-            <input value={target} inputMode="decimal" onChange={(e) => setTarget(e.target.value)} placeholder="e.g. 15" className="w-24 rounded-lg bg-bg-panel-2 px-2 py-1.5 text-right text-foreground outline-none" />
+            <input value={target} inputMode="decimal" onChange={(e) => setTarget(e.target.value)} placeholder="e.g. 15" className="w-24 rounded-lg bg-bg-panel-2 px-2 py-1.5 text-right text-foreground outline-none [@media(pointer:coarse)]:min-h-11" />
           </label>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <button type="button" onClick={() => setInput("keyboard")} className={cn("flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", input === "keyboard" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+          <div className="flex flex-wrap items-center gap-2 text-xs [@media(pointer:coarse)]:gap-y-3">
+            <button type="button" onClick={() => setInput("keyboard")} className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", input === "keyboard" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
               <Keyboard size={12} /> Keyboard / touch
             </button>
             <button
@@ -384,14 +384,14 @@ function CompSim() {
               disabled={!cubeConnected}
               onClick={() => setInput("cube")}
               title={cubeConnected ? undefined : "Connect a smart cube on the timer first"}
-              className={cn("flex items-center gap-1 rounded-full px-3 py-1.5 font-medium disabled:opacity-40", input === "cube" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
+              className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium disabled:opacity-40", input === "cube" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
             >
               <Bluetooth size={12} /> Smart cube
             </button>
-            <button type="button" onClick={() => setVoice((v) => !v)} className={cn("flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", voice ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+            <button type="button" onClick={() => setVoice((v) => !v)} className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", voice ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
               {voice ? <Volume2 size={12} /> : <VolumeX size={12} />} Judge voice
             </button>
-            <button type="button" onClick={() => setSave((v) => !v)} className={cn("flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", save ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+            <button type="button" onClick={() => setSave((v) => !v)} className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", save ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
               <Check size={12} /> Save to session
             </button>
           </div>
@@ -403,7 +403,7 @@ function CompSim() {
 
         {rounds.length > 0 && (
           <div className="card flex flex-col gap-1 rounded-xl p-3">
-            <p className="flex items-center justify-between px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+            <p className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
               <span>Past rounds</span>
               {compPb !== null && (
                 <span className="flex items-center gap-1 text-accent">
@@ -415,15 +415,15 @@ function CompSim() {
               <div key={r.id} className="flex items-center gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-1.5 text-xs">
                 <span className="text-muted-2">{new Date(r.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
                 <span className="tabular-timer flex-1 font-semibold text-foreground">
-                  {r.average === undefined ? "cutoff" : fmt(r.average)} <span className="text-[10px] font-normal text-muted">best {fmt(r.best)}</span>
+                  {r.average === undefined ? "cutoff" : fmt(r.average)} <span className="text-[11px] font-normal text-muted">best {fmt(r.best)}</span>
                 </span>
                 {typeof r.average === "number" && r.practiceAvgMs !== null && (
-                  <span className={cn("text-[10px] tabular-nums", r.average > r.practiceAvgMs ? "text-danger" : "text-success")}>
+                  <span className={cn("text-[11px] tabular-nums", r.average > r.practiceAvgMs ? "text-danger" : "text-success")}>
                     {r.average > r.practiceAvgMs ? "+" : "−"}
                     {(Math.abs(r.average - r.practiceAvgMs) / 1000).toFixed(2)}
                   </span>
                 )}
-                <button type="button" onClick={() => removeRound(r.id)} className="text-muted-2 hover:text-danger" aria-label="Delete round">
+                <button type="button" onClick={() => removeRound(r.id)} className="hit -m-2 p-2 text-muted-2 hover:text-danger" aria-label="Delete round">
                   <Trash2 size={11} />
                 </button>
               </div>
@@ -441,7 +441,7 @@ function CompSim() {
     <div className="flex flex-col gap-3">
       {stage === "done" && saved ? (
         <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
-          <p className="text-[10px] uppercase tracking-wide text-muted-2">{format.kind === "ao5" ? "Average" : "Mean"}</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-2">{format.kind === "ao5" ? "Average" : "Mean"}</p>
           <p className="tabular-timer text-5xl font-black text-foreground">{summary.average === undefined ? "—" : fmt(summary.average)}</p>
           <p className="text-xs text-muted">best single {fmt(summary.best)}</p>
           <p className="mt-1 text-sm font-medium text-foreground">{summary.headline}</p>
@@ -526,7 +526,7 @@ export default function CompPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>

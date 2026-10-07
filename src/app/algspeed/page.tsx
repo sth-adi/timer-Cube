@@ -32,7 +32,7 @@ function AlgRow({ a, baselineTps }: { a: AlgSpeed; baselineTps: number }) {
           <span className="truncate text-xs font-semibold text-foreground">
             {a.name} <span className="font-normal text-muted-2">{a.count}×</span>
           </span>
-          <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold", v.tone)}>{v.label}</span>
+          <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", v.tone)}>{v.label}</span>
         </p>
         <p className="text-[11px] tabular-nums text-muted-2">
           <span className={cn(a.medianTps < baselineTps * 0.85 && "text-foreground")}>{a.medianTps.toFixed(1)} TPS</span> · {a.medianTurns.toFixed(0)} turns
@@ -93,7 +93,7 @@ export default function AlgSpeedPage() {
                 ))}
             </>
           )}
-          <p className="px-1 text-[10px] text-muted-2">
+          <p className="px-1 text-[11px] text-muted-2">
             TPS leaves out pauses, so it&apos;s your fingers alone. Book lengths count a slice move as two turns, the way the cube reports it. Savings compare against the
             book algorithm turned at your own pace.
           </p>

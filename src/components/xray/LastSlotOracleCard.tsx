@@ -24,7 +24,7 @@ function OutcomeIcon({ outcome }: { outcome: LastLayerOutcome }) {
     return (
       <span
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[9px] font-bold",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[11px] font-bold",
           outcome.kind === "ll-skip" || outcome.kind === "oll-skip" ? "bg-[#ffd42a] text-black" : "bg-bg-panel-2 text-muted-2",
         )}
       >
@@ -42,13 +42,13 @@ function OptionRow({ option, highlight, tag }: { option: InsertionOption; highli
       <div className="flex min-w-0 flex-1 flex-col">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
           {outcomeLabel(option.outcome)}
-          {tag && <span className="rounded-full bg-bg-panel px-1.5 py-px text-[9px] font-medium text-muted">{tag}</span>}
+          {tag && <span className="rounded-full bg-bg-panel px-1.5 py-px text-[11px] font-medium text-muted">{tag}</span>}
         </p>
         <p className="break-words font-mono text-[11px] text-muted">{option.display}</p>
       </div>
       <div className="flex shrink-0 flex-col items-end">
         <span className="text-xs font-bold tabular-nums text-foreground">{option.cost}</span>
-        <span className="text-[9px] text-muted-2">turns to OLL done</span>
+        <span className="text-[11px] text-muted-2">turns to OLL done</span>
       </div>
     </div>
   );
@@ -100,11 +100,11 @@ export function LastSlotOracleCard({ report }: { report: OracleReport }) {
       )}
 
       <OptionRow option={report.yours} tag="yours" />
-      {shown.length > 0 && <p className="pt-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">Other insertions from the same spot</p>}
+      {shown.length > 0 && <p className="pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Other insertions from the same spot</p>}
       {shown.map((o) => (
         <OptionRow key={o.moves.join(" ")} option={o} highlight={o.moves.join(" ") === betterKey} />
       ))}
-      <p className="text-[10px] text-muted-2">
+      <p className="text-[11px] text-muted-2">
         Yellow on top, this slot at front-right. Searched every insertion up to {report.searchedDepth} turns
         {report.partial ? " (search cut short)" : ""}.
       </p>

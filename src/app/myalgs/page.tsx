@@ -89,16 +89,16 @@ export default function MyAlgsPage() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
             {(["PLL", "OLL"] as const).map((g) => (
-              <button key={g} type="button" onClick={() => setGroup(g)} className={cn("px-3 py-1.5 font-semibold", group === g ? "bg-accent text-accent-fg" : "text-muted")}>
+              <button key={g} type="button" onClick={() => setGroup(g)} className={cn("px-3 py-1.5 font-semibold [@media(pointer:coarse)]:py-3", group === g ? "bg-accent text-accent-fg" : "text-muted")}>
                 {g}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <button type="button" onClick={() => setOnlyMine((v) => !v)} className={cn("rounded-full px-2.5 py-1.5 text-[11px] font-medium", onlyMine ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+            <button type="button" onClick={() => setOnlyMine((v) => !v)} className={cn("hit-y rounded-full px-2.5 py-1.5 text-[11px] font-medium", onlyMine ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
               Only mine
             </button>
-            <button type="button" onClick={() => window.print()} className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1.5 text-[11px] font-medium text-muted hover:text-foreground">
+            <button type="button" onClick={() => window.print()} className="hit-y flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1.5 text-[11px] font-medium text-muted hover:text-foreground">
               <Printer size={11} /> Print sheet
             </button>
           </div>
@@ -129,8 +129,8 @@ export default function MyAlgsPage() {
                 <div key={c.id} className="flex items-center gap-2 break-inside-avoid border border-gray-300 p-1.5 text-black">
                   <CaseIcon setupAlg={invertAlg(c.alg)} kind={c.group} className="h-10 w-10 shrink-0" />
                   <div>
-                    <p className="text-[10px] font-bold">{c.name}</p>
-                    <p className="font-mono text-[9px]">{effectiveAlg(chosen, c.group, c.name, c.alg)}</p>
+                    <p className="text-[11px] font-bold">{c.name}</p>
+                    <p className="font-mono text-[11px]">{effectiveAlg(chosen, c.group, c.name, c.alg)}</p>
                   </div>
                 </div>
               ))}

@@ -54,7 +54,7 @@ export default function EventMixPage() {
                 </div>
               ));
             })()}
-            <p className="text-[10px] text-muted-2">1.00x means exactly your ordinary 3x3 pace. Each group needs at least {MIN_PER_GROUP} completed solves to show up.</p>
+            <p className="text-[11px] text-muted-2">1.00x means exactly your ordinary 3x3 pace. Each group needs at least {MIN_PER_GROUP} completed solves to show up.</p>
           </div>
         </>
       )}

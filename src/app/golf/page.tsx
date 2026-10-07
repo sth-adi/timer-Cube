@@ -184,7 +184,7 @@ export default function GolfPage() {
           <h2 className="text-lg font-black">Scorecard</h2>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[10px] uppercase tracking-wider text-[var(--play-dim)]">
+              <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--play-dim)]">
                 <th className="py-1">Hole</th>
                 <th>Par</th>
                 <th>Strokes</th>

@@ -228,7 +228,7 @@ export function SatNavLesson() {
 
             {progress && (
               <div className="flex flex-col gap-1">
-                <div className="flex justify-between text-[10px] font-medium text-muted-2">
+                <div className="flex justify-between text-[11px] font-medium text-muted-2">
                   <span>
                     {progress.done}/{progress.total} {progress.label}
                   </span>
@@ -252,7 +252,7 @@ export function SatNavLesson() {
                   <>
                     {nextDisplay && (
                       <div className="flex items-center gap-3">
-                        <span className="text-[10px] uppercase tracking-wide text-muted-2">
+                        <span className="text-[11px] uppercase tracking-wide text-muted-2">
                           Turn {nav.position + 1}/{step.turns.length}
                         </span>
                         <span className="flex flex-col items-center rounded-xl bg-accent px-4 py-1.5 font-mono text-4xl font-black text-accent-fg shadow-lg">
@@ -301,7 +301,7 @@ export function SatNavLesson() {
 
       {recaps.length > 0 && (
         <div className="card flex w-full flex-col gap-1.5 rounded-xl p-3">
-          <p className="px-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">This solve</p>
+          <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">This solve</p>
           {recaps.map((r, i) => {
             // A stage's takeaway goes under its last leg (the fourth F2L pair, say), once it's really behind you.
             const lastOfStage = recaps[i + 1] ? recaps[i + 1].stage !== r.stage : !!finished || stage !== r.stage;

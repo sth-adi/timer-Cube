@@ -52,7 +52,7 @@ export default function PacerPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -72,7 +72,7 @@ export default function PacerPage() {
                 role="switch"
                 aria-checked={enabled}
                 onClick={() => setEnabled(!enabled)}
-                className={cn("relative h-6 w-11 rounded-full transition-colors", enabled ? "bg-accent" : "bg-bg-panel-2")}
+                className={cn("hit-y relative h-6 w-11 rounded-full transition-colors", enabled ? "bg-accent" : "bg-bg-panel-2")}
               >
                 <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", enabled ? "left-[22px]" : "left-0.5")} />
               </button>
@@ -90,11 +90,11 @@ export default function PacerPage() {
                 step={250}
                 value={targetMs}
                 onChange={(e) => setTargetMs(Number(e.target.value))}
-                className="w-full accent-[var(--accent)]"
+                className="w-full accent-[var(--accent)] [@media(pointer:coarse)]:h-11"
                 aria-label="Target time"
               />
               {avgMs !== null && bestMs !== null && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 [@media(pointer:coarse)]:gap-y-3">
                   {[
                     ["Recent average", round(avgMs)],
                     ["10% faster", round(avgMs * 0.9)],
@@ -104,7 +104,7 @@ export default function PacerPage() {
                       key={label}
                       type="button"
                       onClick={() => setTargetMs(ms as number)}
-                      className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground"
+                      className="hit-y rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground"
                     >
                       {label} · {formatTime(ms as number)}
                     </button>
@@ -115,7 +115,7 @@ export default function PacerPage() {
           </div>
 
           <div className="card flex flex-col gap-3 rounded-xl p-4">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Your target splits</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Your target splits</p>
             <div className="flex h-4 overflow-hidden rounded-full">
               {targets.map((t, k) => (
                 <span key={k} title={MILESTONES[k]} style={{ flexGrow: Math.max(1, t - (k ? targets[k - 1] : 0)), background: STRETCH_COLORS[k] }} />
@@ -136,7 +136,7 @@ export default function PacerPage() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               {personal
                 ? `Shaped like your own solves, learned from your last ${solves} complete smart-cube solves, scaled to the target.`
                 : `A typical CFOP shape for now; after ${MIN_HISTORY} complete smart-cube solves (you have ${solves}) it switches to your own.`}
@@ -144,7 +144,7 @@ export default function PacerPage() {
           </div>
 
           <div className="card flex flex-col gap-2 rounded-xl p-4">
-            <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">
               <Volume2 size={12} /> What you&apos;ll hear
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -157,7 +157,7 @@ export default function PacerPage() {
               ).map(([v, label, blurb]) => (
                 <button key={v} type="button" onClick={() => playPaceTone(v)} className="flex flex-col items-center rounded-lg bg-bg-panel-2 py-2">
                   <span className={cn("text-xs font-semibold", v === "ahead" ? "text-success" : v === "behind" ? "text-danger" : "text-accent")}>{label}</span>
-                  <span className="text-[10px] text-muted-2">{blurb} · tap</span>
+                  <span className="text-[11px] text-muted-2">{blurb} · tap</span>
                 </button>
               ))}
             </div>
@@ -165,7 +165,7 @@ export default function PacerPage() {
 
           {recent.length > 0 && (
             <div className="card flex flex-col gap-2 rounded-xl p-4">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Your last {recent.length} solves against this target</p>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Your last {recent.length} solves against this target</p>
               <div className="grid grid-cols-[auto_repeat(4,1fr)] gap-x-2 gap-y-1 text-[11px]">
                 <span />
                 {SHOWN.map((k) => (

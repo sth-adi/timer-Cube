@@ -70,7 +70,7 @@ function SolvePicker({ solves, selectedId, onPick }: { solves: Solve[]; selected
             )}
           >
             <span className="tabular-timer text-xs font-semibold">{final === null ? "DNF" : formatTime(final)}</span>
-            <span className={cn("text-[9px]", s.id === selectedId ? "text-accent-fg/80" : "text-muted-2")}>
+            <span className={cn("text-[11px]", s.id === selectedId ? "text-accent-fg/80" : "text-muted-2")}>
               {new Date(s.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}{" "}
               {new Date(s.date).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
             </span>
@@ -134,7 +134,7 @@ function XrayPageInner() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -198,7 +198,7 @@ function XrayPageInner() {
                 <History size={15} className="text-accent" />
                 <h2 className="text-sm font-semibold text-foreground">Across your solves</h2>
                 {scanning && (
-                  <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-2">
+                  <span className="ml-auto flex items-center gap-1 text-[11px] text-muted-2">
                     <Loader2 size={11} className="animate-spin" /> scanning {historyDone}/{historyTotal}
                   </span>
                 )}
@@ -225,7 +225,7 @@ function XrayPageInner() {
                       </div>
                     ))}
                   </div>
-                  <Link href="/coach" className="text-[11px] font-medium text-accent">
+                  <Link href="/coach" className="hit-y text-[11px] font-medium text-accent">
                     See it ranked with everything else in the Coach →
                   </Link>
                 </Card>
@@ -292,7 +292,7 @@ function Stat({ value, label, tone }: { value: string; label: string; tone?: "su
       <p className={cn("text-base font-bold tabular-nums", tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-foreground")}>
         {value}
       </p>
-      <p className="text-[10px] leading-tight text-muted-2">{label}</p>
+      <p className="text-[11px] leading-tight text-muted-2">{label}</p>
     </div>
   );
 }

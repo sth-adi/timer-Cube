@@ -30,7 +30,7 @@ function StageCard({ s }: { s: AufStageStats }) {
         ].map(([v, l]) => (
           <div key={l} className="rounded-lg bg-bg-panel-2 py-1.5">
             <p className={cn("text-base font-bold tabular-nums", l === "extra turns" && s.wastedRate > 0.12 ? "text-warning" : "text-foreground")}>{v}</p>
-            <p className="text-[10px] text-muted-2">{l}</p>
+            <p className="text-[11px] text-muted-2">{l}</p>
           </div>
         ))}
       </div>
@@ -43,7 +43,7 @@ function StageCard({ s }: { s: AufStageStats }) {
               ) : null,
             )}
           </div>
-          <p className="text-[10px] text-muted-2">
+          <p className="text-[11px] text-muted-2">
             {["U", "U2", "U'"]
               .filter((k) => s.byNet[k])
               .map((k) => `${k} ${Math.round((s.byNet[k] / total) * 100)}%`)
@@ -77,7 +77,7 @@ export default function AufPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -98,7 +98,7 @@ export default function AufPage() {
                 <p className="text-[11px] text-muted">per solve on AUFs, turning them, plus the pause before the last one ({report.solves} solves)</p>
               </div>
               <div className="card flex flex-col gap-2 rounded-xl p-4">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What to fix</p>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What to fix</p>
                 {report.insights.map((i) => (
                   <p key={i} className="rounded-lg bg-bg-panel-2 px-3 py-2 text-[11px] text-foreground">
                     {i}
@@ -108,7 +108,7 @@ export default function AufPage() {
               {report.stages.map((s) => (
                 <StageCard key={s.stage} s={s} />
               ))}
-              <p className="px-1 text-[10px] text-muted-2">
+              <p className="px-1 text-[11px] text-muted-2">
                 Shown as you hold the cube, yellow on top. An algorithm that happens to begin or end with a U turn counts that turn toward the AUF next to it.
               </p>
             </>

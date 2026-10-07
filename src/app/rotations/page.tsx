@@ -19,11 +19,11 @@ function SlotTile({ s }: { s: SlotStats }) {
       className={cn("flex flex-col items-center justify-center gap-0.5 rounded-lg p-2 text-center", hot ? "bg-warning/20" : "bg-bg-panel-2")}
       title={`${s.pairs} pairs started ${SLOT_POS_LABEL[s.pos]}`}
     >
-      <span className="text-[9px] font-medium uppercase tracking-wide text-muted-2">{SLOT_POS_LABEL[s.pos]}</span>
+      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-2">{SLOT_POS_LABEL[s.pos]}</span>
       <span className={cn("text-xl font-black tabular-nums", hot ? "text-warning" : "text-foreground")}>{s.pairs ? `${Math.round(s.rotatedRate * 100)}%` : "—"}</span>
-      <span className="text-[9px] text-muted">rotated · {s.pairs} pairs</span>
+      <span className="text-[11px] text-muted">rotated · {s.pairs} pairs</span>
       {s.msRotated !== null && s.msStill !== null && (
-        <span className="text-[9px] tabular-nums text-muted-2">
+        <span className="text-[11px] tabular-nums text-muted-2">
           {secs(s.msRotated)} vs {secs(s.msStill)}
         </span>
       )}
@@ -63,7 +63,7 @@ export default function RotationsPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -89,27 +89,27 @@ export default function RotationsPage() {
                 ].map(([v, l]) => (
                   <div key={l} className="rounded-lg bg-bg-panel-2 py-2">
                     <p className="text-lg font-bold tabular-nums text-foreground">{v}</p>
-                    <p className="text-[10px] text-muted-2">{l}</p>
+                    <p className="text-[11px] text-muted-2">{l}</p>
                   </div>
                 ))}
-                <p className="col-span-3 text-[10px] text-muted-2">
+                <p className="col-span-3 text-[11px] text-muted-2">
                   Cost is how much longer the gap around a rotation was than your usual gap between turns. {report.solves} gyro solves.
                 </p>
               </div>
 
               <div className="card flex flex-col gap-3 rounded-xl p-4">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">F2L pairs by where their slot was when you started on them</p>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">F2L pairs by where their slot was when you started on them</p>
                 <div className="grid grid-cols-2 gap-2">
                   {(["BL", "BR", "FL", "FR"] as const).map((p) => (
                     <SlotTile key={p} s={tile(p)} />
                   ))}
                 </div>
-                <p className="text-center text-[10px] text-muted-2">▲ back of the cube · you are here ▼</p>
-                <p className="text-[10px] text-muted-2">% of pairs you rotated for, and their time with vs without a rotation.</p>
+                <p className="text-center text-[11px] text-muted-2">▲ back of the cube · you are here ▼</p>
+                <p className="text-[11px] text-muted-2">% of pairs you rotated for, and their time with vs without a rotation.</p>
               </div>
 
               <div className="card flex flex-col gap-2 rounded-xl p-4">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What to fix</p>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What to fix</p>
                 {report.insights.map((i) => (
                   <p key={i} className="rounded-lg bg-bg-panel-2 px-3 py-2 text-[11px] text-foreground">
                     {i}
@@ -119,7 +119,7 @@ export default function RotationsPage() {
 
               <div className="card flex flex-col gap-3 rounded-xl p-4">
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Rotations per solve, by phase</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Rotations per solve, by phase</p>
                   {(
                     [
                       ["Cross", report.byPhase.cross],
@@ -132,7 +132,7 @@ export default function RotationsPage() {
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-panel-2">
                         <div className="h-full rounded-full bg-accent/70" style={{ width: `${Math.min(100, (v / Math.max(0.5, report.perSolve)) * 100)}%` }} />
                       </div>
-                      <span className="w-8 text-right text-[10px] tabular-nums text-muted-2">{v.toFixed(1)}</span>
+                      <span className="w-8 text-right text-[11px] tabular-nums text-muted-2">{v.toFixed(1)}</span>
                     </div>
                   ))}
                 </div>
@@ -147,7 +147,7 @@ export default function RotationsPage() {
                 )}
                 {report.trend.length > 1 && (
                   <div className="flex flex-col gap-1">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Rotations in each solve, oldest to newest</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Rotations in each solve, oldest to newest</p>
                     <div className="flex h-10 items-end gap-[2px]">
                       {report.trend.map((v, i) => (
                         <div key={i} className="flex-1 rounded-t-sm bg-accent/60" style={{ height: `${Math.max(4, (v / maxTrend) * 100)}%` }} />

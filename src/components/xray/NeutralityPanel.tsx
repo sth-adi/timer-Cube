@@ -21,7 +21,7 @@ export function SolveNeutrality({ solve }: { solve: NeutralitySolve }) {
           const len = solve.lengths[c];
           return (
             <div key={c} className="flex items-center gap-2">
-              <span className="w-12 text-[10px] text-muted">{CROSS_COLOR_NAME[c]}</span>
+              <span className="w-12 text-[11px] text-muted">{CROSS_COLOR_NAME[c]}</span>
               <div className="relative h-4 flex-1 overflow-hidden rounded bg-bg-panel-2">
                 <div
                   className="h-full rounded"
@@ -65,15 +65,15 @@ export function NeutralityHistory({ report }: { report: NeutralityReport }) {
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-lg bg-bg-panel-2 px-2 py-2">
           <p className="text-base font-bold tabular-nums text-foreground">{report.avgYourMoves.toFixed(1)}</p>
-          <p className="text-[10px] text-muted-2">your cross turns</p>
+          <p className="text-[11px] text-muted-2">your cross turns</p>
         </div>
         <div className="rounded-lg bg-bg-panel-2 px-2 py-2">
           <p className="text-base font-bold tabular-nums text-foreground">{report.avgWhiteOptimal.toFixed(1)}</p>
-          <p className="text-[10px] text-muted-2">white optimal</p>
+          <p className="text-[11px] text-muted-2">white optimal</p>
         </div>
         <div className="rounded-lg bg-bg-panel-2 px-2 py-2">
           <p className="text-base font-bold tabular-nums text-foreground">{Math.round(report.msPerTurn)}ms</p>
-          <p className="text-[10px] text-muted-2">per cross turn</p>
+          <p className="text-[11px] text-muted-2">per cross turn</p>
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -98,7 +98,7 @@ export function NeutralityHistory({ report }: { report: NeutralityReport }) {
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-muted-2">
+      <p className="text-[11px] text-muted-2">
         {report.solves} scrambles. Savings assume you&apos;d solve other colors&apos; crosses as efficiently ({report.efficiency.toFixed(2)}×
         optimal) and as fast as your white ones.
       </p>

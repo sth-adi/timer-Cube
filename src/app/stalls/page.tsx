@@ -22,7 +22,7 @@ function Heatmap({ r }: { r: StallMapReport }) {
       <div className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(4, 1fr)` }}>
         {PHASES.map((p) => (
           <div key={p} className="flex flex-col gap-0.5">
-            <span className="text-[10px] font-medium text-muted">{p}</span>
+            <span className="text-[11px] font-medium text-muted">{p}</span>
             <span className="h-[3px] rounded-full" style={{ background: PHASE_COLOR[p] }} />
           </div>
         ))}
@@ -36,7 +36,7 @@ function Heatmap({ r }: { r: StallMapReport }) {
           </div>
         ))}
       </div>
-      <p className="text-[9px] text-muted-2">↑ oldest of your last {r.solves} solves · newest ↓</p>
+      <p className="text-[11px] text-muted-2">↑ oldest of your last {r.solves} solves · newest ↓</p>
       <div className="mt-1 grid h-12 items-end gap-px" style={{ gridTemplateColumns: `repeat(${r.columns.length}, 1fr)` }}>
         {r.columns.map((v, c) => (
           <div
@@ -47,7 +47,7 @@ function Heatmap({ r }: { r: StallMapReport }) {
           />
         ))}
       </div>
-      <p className="text-[9px] text-muted-2">Average pause time per solve at each point, each phase stretched to the same width.</p>
+      <p className="text-[11px] text-muted-2">Average pause time per solve at each point, each phase stretched to the same width.</p>
       <ChartTip tip={tip} />
     </div>
   );
@@ -94,7 +94,7 @@ export default function StallsPage() {
               {PHASES.map((p, k) => (
                 <div key={p} className="rounded-lg bg-bg-panel-2 py-1.5">
                   <p className="text-sm font-bold text-foreground">{secs(r.byPhase[k])}</p>
-                  <p className="text-[10px] text-muted-2">in {p}</p>
+                  <p className="text-[11px] text-muted-2">in {p}</p>
                 </div>
               ))}
             </div>

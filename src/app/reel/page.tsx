@@ -75,14 +75,14 @@ function HighlightReel() {
       ) : (
         <>
           <div className="card flex flex-col gap-1 rounded-xl p-3">
-            <p className="px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+            <p className="px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
               The cut · {highlights.length} solve{highlights.length === 1 ? "" : "s"}, building to the fastest
             </p>
             {highlights.map((h, i) => (
               <div key={h.solve.id} className="flex items-center gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-1.5 text-xs">
                 <span className="w-4 text-muted-2">{i + 1}</span>
                 <span className="flex-1 font-semibold text-foreground">{h.caption}</span>
-                <span className="text-[10px] text-muted">{h.detail}</span>
+                <span className="text-[11px] text-muted">{h.detail}</span>
                 <span className="tabular-timer font-semibold text-foreground">{formatTime(h.finalMs)}</span>
               </div>
             ))}
@@ -152,7 +152,7 @@ function SingleReel() {
                       )}
                     >
                       <span className="tabular-timer text-xs font-semibold">{final === null ? "DNF" : formatTime(final)}</span>
-                      <span className={cn("text-[9px]", s.id === selected.id ? "text-accent-fg/80" : "text-muted-2")}>
+                      <span className={cn("text-[11px]", s.id === selected.id ? "text-accent-fg/80" : "text-muted-2")}>
                         {new Date(s.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                       </span>
                     </button>
@@ -185,7 +185,7 @@ export default function ReelPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -212,7 +212,7 @@ export default function ReelPage() {
                 onClick={() => setTab(id)}
                 aria-pressed={tab === id}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  "hit-y flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
                   tab === id ? "bg-accent text-accent-fg" : "text-muted",
                 )}
               >

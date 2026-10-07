@@ -136,7 +136,7 @@ export default function PortraitsPage() {
     <PlayShell accent={ACCENT} title="Solve Portraits" tagline="Every solve you've done, drawn as its own piece of art. Each face swings the pen its own way, pauses shoot out long strokes, and each phase has its own ink." wide>
       <div className="flex gap-1 self-start rounded-full bg-white/[0.05] p-1">
         {(["gallery", "sketch"] as const).map((m) => (
-          <button key={m} type="button" onClick={() => setMode(m)} className={cn("rounded-full px-4 py-1.5 text-[12px] font-bold", mode === m ? "bg-[var(--play-accent)] text-black" : "text-[var(--play-dim)]")}>
+          <button key={m} type="button" onClick={() => setMode(m)} className={cn("hit-y rounded-full px-4 py-1.5 text-[12px] font-bold", mode === m ? "bg-[var(--play-accent)] text-black" : "text-[var(--play-dim)]")}>
             {m === "gallery" ? "Your solves" : "Live sketch"}
           </button>
         ))}
@@ -154,7 +154,7 @@ export default function PortraitsPage() {
             <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{pieces.length} portraits</span>
             <div className="flex gap-1">
               {(["recent", "fastest"] as const).map((s) => (
-                <button key={s} type="button" onClick={() => setSort(s)} className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold", sort === s ? "bg-white/10 text-white" : "text-[var(--play-dim)]")}>
+                <button key={s} type="button" onClick={() => setSort(s)} className={cn("hit-y rounded-full px-2.5 py-1 text-[11px] font-semibold", sort === s ? "bg-white/10 text-white" : "text-[var(--play-dim)]")}>
                   {s === "recent" ? "Recent" : "Fastest"}
                 </button>
               ))}
@@ -264,7 +264,7 @@ function Sketch() {
             t0.current = null;
             setTurns({ moves: [], times: [], faces: [] });
           }}
-          className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold"
+          className="hit-y flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold"
         >
           <Eraser size={13} /> Clear
         </button>

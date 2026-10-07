@@ -91,32 +91,32 @@ function Report({ report }: { report: TempoReport }) {
         ].map(([v, l]) => (
           <div key={l} className="rounded-lg bg-bg-panel-2 px-2 py-2">
             <p className="text-lg font-bold tabular-nums text-foreground">{v}</p>
-            <p className="text-[10px] leading-tight text-muted-2">{l}</p>
+            <p className="text-[11px] leading-tight text-muted-2">{l}</p>
           </div>
         ))}
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Every turn against the beat</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Every turn against the beat</p>
         <div className="flex flex-wrap gap-[3px]">
           {report.turns.map((t, i) => (
             <span key={i} className={cn("h-3 w-3 rounded-sm", JUDGE_COLOR[t.judgement])} title={`${Math.round(t.offsetMs)} ms`} />
           ))}
         </div>
-        <p className="text-[10px] text-muted-2">
+        <p className="text-[11px] text-muted-2">
           {report.counts.perfect} perfect · {report.counts.good} close · {report.counts.off} off the beat
         </p>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Where you lost the beat</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Where you lost the beat</p>
         {phases.map((p) => (
           <div key={p} className="flex items-center gap-2">
             <span className="w-10 text-[11px] text-muted">{p}</span>
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-panel-2">
               <div className="h-full rounded-full bg-danger/70" style={{ width: `${((report.missedByPhase[p] ?? 0) / maxMissed) * 100}%` }} />
             </div>
-            <span className="w-14 text-right text-[10px] tabular-nums text-muted-2">{report.missedByPhase[p] ?? 0} missed</span>
+            <span className="w-14 text-right text-[11px] tabular-nums text-muted-2">{report.missedByPhase[p] ?? 0} missed</span>
           </div>
         ))}
       </div>
@@ -267,7 +267,7 @@ export default function TempoPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>

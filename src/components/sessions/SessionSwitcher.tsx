@@ -291,7 +291,7 @@ export function SessionSwitcher() {
                       className="flex min-h-11 flex-1 flex-col items-center justify-center rounded-lg py-1.5 text-center text-xs font-medium text-muted hover:text-accent hover:bg-bg-panel-2 transition-colors"
                     >
                       {e.label}
-                      <span className={cn("text-[10px] font-normal", e.randomState ? "text-muted-2" : "text-warning")}>
+                      <span className={cn("text-[11px] font-normal", e.randomState ? "text-muted-2" : "text-warning")}>
                         {e.randomState ? "random-state" : "random-move"}
                       </span>
                     </button>

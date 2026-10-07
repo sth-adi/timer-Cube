@@ -71,11 +71,11 @@ export default function LookaheadPage() {
               ].map((x) => (
                 <div key={x.label} className="rounded-lg bg-bg-panel-2 px-2 py-2">
                   <p className="text-sm font-semibold tabular-nums text-foreground">{x.value}</p>
-                  <p className="text-[10px] text-muted-2">{x.label}</p>
+                  <p className="text-[11px] text-muted-2">{x.label}</p>
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               Pairs are split at your median turning pace. Pace leaves out stops, so a pair where you paused to find a piece doesn&apos;t count as calm turning.
             </p>
           </div>

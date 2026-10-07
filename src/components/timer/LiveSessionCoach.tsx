@@ -70,7 +70,7 @@ export function LiveSessionCoach() {
         <div className="min-w-0 flex-1">
           <p className="flex items-center justify-between gap-2 text-[12px] font-semibold text-foreground">
             {top.title}
-            <span className="shrink-0 text-[10px] font-normal tabular-nums text-muted-2">
+            <span className="shrink-0 text-[11px] font-normal tabular-nums text-muted-2">
               solve {coach.n + 1}
               {coach.vsTypical !== null && ` · ${coach.vsTypical >= 0 ? "+" : "−"}${Math.abs(Math.round(coach.vsTypical * 100))}% today`}
             </span>

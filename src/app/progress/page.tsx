@@ -94,8 +94,8 @@ function CurveChart({ r }: { r: ProgressReport }) {
           style={{ left: `${Math.min(62, (x(hover) / W) * 100)}%` }}
         >
           <span className="text-sm font-bold text-foreground">{secs(r.rolling[hover])}</span>
-          <span className="text-[10px] text-muted">avg of 12 at solve {hover + 1}</span>
-          <span className="text-[10px] text-muted-2">that solve: {secs(r.totals[hover])}</span>
+          <span className="text-[11px] text-muted">avg of 12 at solve {hover + 1}</span>
+          <span className="text-[11px] text-muted-2">that solve: {secs(r.totals[hover])}</span>
         </div>
       )}
     </div>
@@ -124,7 +124,7 @@ function PhaseMini({ p }: { p: PhaseProgress }) {
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label={`${p.phase} rolling average`}>
         <path d={path} fill="none" stroke={PHASE_COLOR[p.phase]} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
-      <span className={cn("self-start rounded-full px-2 py-0.5 text-[10px] font-medium", p.plateau ? "bg-warning/15 text-warning" : "bg-success/15 text-success")}>
+      <span className={cn("self-start rounded-full px-2 py-0.5 text-[11px] font-medium", p.plateau ? "bg-warning/15 text-warning" : "bg-success/15 text-success")}>
         {p.plateau ? "⏸ stalled lately" : `▼ ${(p.per100 * 100).toFixed(1)}% per 100 solves`}
       </span>
     </div>
@@ -168,7 +168,7 @@ export default function ProgressPage() {
           <div className="card flex flex-col gap-2 rounded-xl p-4">
             <SectionTitle>Your learning curve</SectionTitle>
             <CurveChart r={r} />
-            <div className="flex flex-wrap gap-3 text-[10px] text-muted">
+            <div className="flex flex-wrap gap-3 text-[11px] text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="h-0.5 w-4 rounded bg-accent" /> average of 12
               </span>
@@ -188,7 +188,7 @@ export default function ProgressPage() {
                 <PhaseMini key={p.phase} p={p} />
               ))}
             </div>
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               Rates come from a power-law fit (time ≈ C·n⁻ᵖ) over all {r.solves} solves; &quot;stalled&quot; means your most recent stretch isn&apos;t trending down by more than
               its own noise.
             </p>

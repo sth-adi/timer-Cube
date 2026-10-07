@@ -110,11 +110,11 @@ export default function EchoPage() {
 
         <div className="flex items-end gap-8">
           <div className="text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--play-dim)]">Rounds</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--play-dim)]">Rounds</p>
             <p className="text-3xl font-black" data-testid="echo-round">{game.round}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--play-dim)]">Best</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--play-dim)]">Best</p>
             <p className="text-3xl font-black text-white/70" data-testid="echo-best">{Math.max(best, over ? game.round : 0)}</p>
           </div>
         </div>

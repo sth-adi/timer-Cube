@@ -42,7 +42,7 @@ function CiBar({ r }: { r: ExperimentResult }) {
       <div className={cn("absolute top-2 h-2 rounded-full opacity-70", tone)} style={{ left: `${x(r.ci[0])}%`, width: `${Math.max(1, x(r.ci[1]) - x(r.ci[0]))}%` }} />
       <div className="absolute top-1 h-4 w-0.5 bg-foreground" style={{ left: `${x(r.diffMs)}%` }} />
       <div className="absolute top-0 h-6 w-px bg-accent" style={{ left: `${x(0)}%` }} />
-      <span className="absolute -bottom-3 text-[9px] text-accent" style={{ left: `${x(0)}%`, transform: "translateX(-50%)" }}>
+      <span className="absolute -bottom-3 text-[11px] text-accent" style={{ left: `${x(0)}%`, transform: "translateX(-50%)" }}>
         no change
       </span>
     </div>
@@ -89,13 +89,13 @@ function ExperimentCard({ e, solves, onRemove }: { e: Experiment; solves: readon
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col">
           <p className="truncate text-sm font-bold text-foreground">{e.name}</p>
-          <p className="text-[10px] text-muted-2">
+          <p className="text-[11px] text-muted-2">
             {KINDS.find((k) => k.id === e.kind)?.label} · {new Date(e.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} ·{" "}
             {nBefore} before / {nAfter} after
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", badge.cls)}>{badge.text}</span>
+          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", badge.cls)}>{badge.text}</span>
           <button type="button" onClick={onRemove} className="text-muted-2 hover:text-danger" aria-label="Delete experiment">
             <Trash2 size={12} />
           </button>
@@ -114,7 +114,7 @@ function ExperimentCard({ e, solves, onRemove }: { e: Experiment; solves: readon
             ).map(([l, v]) => (
               <div key={l} className="rounded-lg bg-bg-panel-2 px-2 py-1.5">
                 <p className="text-sm font-bold tabular-nums text-foreground">{v}</p>
-                <p className="text-[10px] text-muted-2">{l}</p>
+                <p className="text-[11px] text-muted-2">{l}</p>
               </div>
             ))}
           </div>
@@ -122,7 +122,7 @@ function ExperimentCard({ e, solves, onRemove }: { e: Experiment; solves: readon
           <p className="pt-1 text-[11px] leading-relaxed text-foreground">{overall.headline}</p>
           {phases.length > 0 && (
             <div className="flex flex-col gap-1 border-t border-border pt-2">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Where it changed (smart-cube solves)</p>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Where it changed (smart-cube solves)</p>
               {phases.map(({ name, r }) => (
                 <div key={name} className="flex items-center gap-2 text-[11px]">
                   <span className="w-10 text-muted">{name}</span>
@@ -206,7 +206,7 @@ export default function ExperimentsPage() {
               Start the experiment
             </button>
           </div>
-          <p className="text-[10px] text-muted-2">Set the time in the past if you already made the change, your existing solves become the evidence.</p>
+          <p className="text-[11px] text-muted-2">Set the time in the past if you already made the change, your existing solves become the evidence.</p>
         </div>
       )}
       {experiments.length === 0 && !open && (
@@ -217,7 +217,7 @@ export default function ExperimentsPage() {
       {experiments.map((e) => (
         <ExperimentCard key={e.id} e={e} solves={solves} onRemove={() => remove(e.id)} />
       ))}
-      <p className="px-1 text-[10px] leading-relaxed text-muted-2">
+      <p className="px-1 text-[11px] leading-relaxed text-muted-2">
         Up to {WINDOW} solves each side of the change (normal 3x3 solves, DNFs excluded). &ldquo;Very unlikely to be luck&rdquo; means a permutation test
         gave p &lt; 0.05 and the 95% interval doesn&apos;t cross zero.
       </p>

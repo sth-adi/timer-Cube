@@ -192,7 +192,7 @@ export default function TwistrisPage() {
         <div className="flex w-[104px] flex-col gap-2.5">
           <Mini label="Hold" type={game.hold} dim={!game.canHold} />
           <div className="play-panel flex flex-col gap-1 rounded-xl p-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--play-dim)]">Next</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">Next</span>
             {game.queue.slice(0, 3).map((t, i) => (
               <PieceGlyph key={i} type={t} size={i === 0 ? 11 : 8} />
             ))}
@@ -242,7 +242,7 @@ export default function TwistrisPage() {
 function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{label}</span>
       <span className={big ? "text-xl font-black tabular-nums" : "text-sm font-bold tabular-nums"}>{value}</span>
     </div>
   );
@@ -264,8 +264,8 @@ function PieceGlyph({ type, size }: { type: PieceType; size: number }) {
 function Mini({ label, type, dim }: { label: string; type: PieceType | null; dim: boolean }) {
   return (
     <div className="play-panel flex min-h-[52px] flex-col gap-1 rounded-xl p-2" style={{ opacity: dim ? 0.45 : 1 }}>
-      <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{label}</span>
-      {type ? <PieceGlyph type={type} size={10} /> : <span className="text-[10px] text-white/20">turn B</span>}
+      <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{label}</span>
+      {type ? <PieceGlyph type={type} size={10} /> : <span className="text-[11px] text-white/20">turn B</span>}
     </div>
   );
 }

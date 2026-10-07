@@ -55,7 +55,7 @@ export function TimingStrip({ tokens, gaps, stallIndex }: { tokens: readonly str
 function VariantBlock({ v, bestMean }: { v: VariantProfile; bestMean: number }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-lg bg-bg-panel-2/60 p-2">
-      <div className="flex items-center justify-between text-[10px] text-muted-2">
+      <div className="flex items-center justify-between text-[11px] text-muted-2">
         <span>
           used {v.count}× · mean {secs(v.meanExecMs)}s · best {secs(v.bestExecMs)}s
         </span>
@@ -63,7 +63,7 @@ function VariantBlock({ v, bestMean }: { v: VariantProfile; bestMean: number }) 
       </div>
       <TimingStrip tokens={v.tokens} gaps={v.meanGaps} stallIndex={v.stall?.index} />
       {v.stall && (
-        <p className="text-[10px] text-danger">
+        <p className="text-[11px] text-danger">
           Stall on turn {v.stall.index + 1} ({v.stall.token}): {Math.round(v.stall.ms)} ms, {v.stall.ratio.toFixed(1)}× your pace
           through the rest of it.
         </p>
@@ -84,12 +84,12 @@ function CaseRow({ c }: { c: CaseProfile }) {
           <span className="text-[11px] font-semibold text-foreground">
             {c.step} · {c.caseName}
           </span>
-          <span className="text-[10px] text-muted-2">
+          <span className="text-[11px] text-muted-2">
             {c.count}× · {c.variants.length} alg{c.variants.length === 1 ? "" : "s"}
             {stalls > 0 && <span className="text-danger"> · stall found</span>}
           </span>
         </div>
-        <div className="flex flex-col items-end text-[10px] tabular-nums">
+        <div className="flex flex-col items-end text-[11px] tabular-nums">
           <span className="text-muted">
             <span className="text-muted-2">see</span> {secs(c.meanRecognitionMs)}s
           </span>
@@ -144,14 +144,14 @@ export function SolveAlgMicroscope({ executions }: { executions: AlgExecution[] 
                 <span className="text-[11px] font-semibold text-foreground">
                   {e.step} · {e.caseName}
                 </span>
-                <span className="text-[10px] tabular-nums text-muted-2">
+                <span className="text-[11px] tabular-nums text-muted-2">
                   recognized in {secs(e.recognitionMs)}s · executed in {secs(e.executionMs)}s
                 </span>
               </div>
             </div>
             <TimingStrip tokens={e.tokens} gaps={e.gaps} stallIndex={v.stall?.index} />
             {v.stall && (
-              <p className="text-[10px] text-danger">
+              <p className="text-[11px] text-danger">
                 Hesitated before {v.stall.token} (turn {v.stall.index + 1}): {Math.round(v.stall.ms)} ms, {v.stall.ratio.toFixed(1)}× the rest.
               </p>
             )}

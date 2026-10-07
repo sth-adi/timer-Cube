@@ -52,7 +52,7 @@ export default function CadencePage() {
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <SectionTitle>Consistency over your last {Math.min(40, r.solves.length)} solves</SectionTitle>
             <TrendStrip solves={r.solves} />
-            <p className="text-[10px] text-muted-2">Each bar is one solve&apos;s score (0-100). Taller is steadier turning.</p>
+            <p className="text-[11px] text-muted-2">Each bar is one solve&apos;s score (0-100). Taller is steadier turning.</p>
           </div>
 
           <div className="card flex flex-col gap-2 rounded-xl p-4">
@@ -68,7 +68,7 @@ export default function CadencePage() {
                 </span>
               </div>
             ))}
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               Consistency is 100 minus the coefficient of variation of your turning gaps, pauses to look aren&apos;t counted as stutters.
             </p>
           </div>

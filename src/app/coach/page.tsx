@@ -52,7 +52,7 @@ export default function CoachPage() {
                   <span>
                     {f.title}
                     {f.source === "xray" && (
-                      <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 align-middle text-[9px] font-medium text-muted">
+                      <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 align-middle text-[11px] font-medium text-muted">
                         <ScanLine size={9} /> X-Ray
                       </span>
                     )}
@@ -71,7 +71,7 @@ export default function CoachPage() {
             </Link>
           ))}
           {findings.length > 0 && (
-            <p className="px-1 text-[10px] text-muted-2">
+            <p className="px-1 text-[11px] text-muted-2">
               Seconds per solve, measured against what you already do on your better solves. Some fixes overlap, so treat a combined total as an upper bound.
             </p>
           )}

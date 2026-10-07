@@ -189,7 +189,7 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
         disabled={busy}
         onChange={(e) => scrub(Number(e.target.value))}
         aria-label="Scrub reel"
-        className="h-5 w-full max-w-sm cursor-pointer accent-accent disabled:cursor-default disabled:opacity-60"
+        className="h-5 w-full max-w-sm cursor-pointer accent-accent [@media(pointer:coarse)]:h-11 disabled:cursor-default disabled:opacity-60"
       />
       <div className="flex flex-wrap items-center justify-center gap-2">
         {busy ? (
@@ -218,7 +218,7 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
               type="button"
               disabled={busy}
               onClick={() => setSpeed(s)}
-              className={cn("px-3 py-2 font-medium", speed === s ? "bg-accent-soft text-accent" : "text-muted")}
+              className={cn("px-3 py-2 font-medium [@media(pointer:coarse)]:py-3.5", speed === s ? "bg-accent-soft text-accent" : "text-muted")}
             >
               {s === 1 ? "Real speed" : "Slow-mo"}
             </button>
@@ -230,7 +230,7 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
             disabled={busy}
             onClick={() => setSound((v) => !v)}
             aria-pressed={sound}
-            className={cn("flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium", sound ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
+            className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium", sound ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
           >
             {sound ? <Music size={12} /> : <VolumeX size={12} />} Soundtrack
           </button>

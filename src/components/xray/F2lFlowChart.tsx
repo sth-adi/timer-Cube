@@ -115,16 +115,16 @@ export function F2lFlowChart({ report }: { report: F2lFlowReport }) {
                 <PairChip pair={d.pair} />
                 {d.label}
               </span>
-              <span className="text-[10px] tabular-nums text-muted-2">
+              <span className="text-[11px] tabular-nums text-muted-2">
                 {d.movesUsed} turns · {formatTime(d.endMs - d.startMs)}
               </span>
             </div>
             {d.regret === 0 ? (
-              <p className="flex items-center gap-1 text-[10px] text-success">
+              <p className="flex items-center gap-1 text-[11px] text-success">
                 <Check size={11} /> Easiest pair available ({d.chosenDistance} away)
               </p>
             ) : (
-              <p className="flex items-center gap-1 text-[10px] text-warning">
+              <p className="flex items-center gap-1 text-[11px] text-warning">
                 <TriangleAlert size={11} /> Picked a {d.chosenDistance}-turn pair while
                 <PairChip pair={d.easiestPair} />
                 {PAIR_LABELS[d.easiestPair]} was {d.easiestDistance} away
@@ -138,7 +138,7 @@ export function F2lFlowChart({ report }: { report: F2lFlowReport }) {
                     <span
                       key={e.pair}
                       className={cn(
-                        "flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                        "flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium",
                         e.after < e.before ? "bg-success/15 text-success" : "bg-danger/15 text-danger",
                       )}
                     >

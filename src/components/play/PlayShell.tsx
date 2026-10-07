@@ -37,7 +37,7 @@ export function PlayShell({
       <AppBootstrap />
       <div className={cn("relative mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4", wide ? "max-w-3xl" : "max-w-md")}>
         <div className="flex items-center justify-between">
-          <Link href={back} className="flex items-center gap-0.5 text-xs font-semibold text-[var(--play-dim)] hover:text-white">
+          <Link href={back} className="hit flex items-center gap-0.5 text-xs font-semibold text-[var(--play-dim)] hover:text-white">
             <ChevronLeft size={16} /> {back === "/" ? "Timer" : "Play"}
           </Link>
           <CubeStatus />
@@ -61,7 +61,7 @@ export function CubeStatus() {
   const connect = useSmartCubeStore((s) => s.connect);
   if (connected)
     return (
-      <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10.5px] font-semibold text-emerald-300">
+      <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
         {deviceName ?? "Cube"}
         {gyroActive && <span className="text-emerald-300/60">· gyro</span>}
@@ -72,7 +72,7 @@ export function CubeStatus() {
       type="button"
       onClick={() => void connect()}
       disabled={connecting || supported !== true}
-      className="hit-y flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[var(--play-dim)] hover:text-white disabled:hover:text-[var(--play-dim)]"
+      className="hit-y flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--play-dim)] hover:text-white disabled:hover:text-[var(--play-dim)]"
       title={supported === false ? "No Web Bluetooth here, play with the keys and pad" : "Connect a smart cube"}
     >
       <Keyboard size={12} />
@@ -103,7 +103,7 @@ export function TurnPad({ onTurn, labels, className }: { onTurn: (grip: string) 
           style={{ boxShadow: `inset 0 -3px 0 ${FACE_HEX[HOME_COLOR[t[0]]]}` }}
         >
           {labels?.[t] ?? t}
-          <span className="text-[9px] font-medium text-[var(--play-dim)]">{KEY_FOR[t]}</span>
+          <span className="text-[11px] font-medium text-[var(--play-dim)]">{KEY_FOR[t]}</span>
         </button>
       ))}
     </div>

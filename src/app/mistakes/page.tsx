@@ -110,7 +110,7 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
         <ChevronLeft size={12} /> All drills
       </button>
       <div className="card flex flex-col gap-1 rounded-xl p-4">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">
           {KIND_LABEL[drill.mistake.kind]} · {drill.mistake.phase} · cost {s2(drill.mistake.costMs)}s
         </p>
         <p className="text-sm font-semibold text-foreground">{drill.mistake.title}</p>
@@ -164,17 +164,17 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
             ].map(([v, l]) => (
               <div key={l} className="rounded-lg bg-bg-panel-2 px-2 py-1.5">
                 <p className="text-base font-bold tabular-nums text-foreground">{v}</p>
-                <p className="text-[10px] text-muted-2">{l}</p>
+                <p className="text-[11px] text-muted-2">{l}</p>
               </div>
             ))}
           </div>
           <div className="flex flex-col gap-1.5">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
             {moves.length ? <TurnChips moves={moves} /> : <p className="text-[11px] text-muted">No turns.</p>}
           </div>
           {legs && legs.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">The Sat-Nav&apos;s way from here</p>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">The Sat-Nav&apos;s way from here</p>
               {legs.map((l, i) => (
                 <div key={i} className="rounded-lg bg-bg-panel-2 px-2.5 py-1.5">
                   <p className="text-[11px] font-semibold text-foreground">
@@ -226,7 +226,7 @@ export default function MistakeDrillsPage() {
               <button key={d.id} type="button" onClick={() => setActive(d)} className="card flex items-center gap-3 rounded-xl p-3 text-left hover:ring-1 hover:ring-accent/40">
                 <div className="flex w-14 shrink-0 flex-col items-center rounded-lg bg-bg-panel-2 py-1.5">
                   <span className="text-sm font-bold tabular-nums text-danger">{s2(d.mistake.costMs)}s</span>
-                  <span className="text-[9px] text-muted-2">lost</span>
+                  <span className="text-[11px] text-muted-2">lost</span>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <p className="truncate text-sm font-semibold text-foreground">{d.mistake.title}</p>
@@ -237,7 +237,7 @@ export default function MistakeDrillsPage() {
                 </div>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                    "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
                     status.tone === "good" ? "bg-success/15 text-success" : status.tone === "bad" ? "bg-danger/15 text-danger" : "bg-bg-panel-2 text-muted-2",
                   )}
                 >

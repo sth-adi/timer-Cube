@@ -78,7 +78,7 @@ export default function GoalPage() {
                 </div>
               );
             })}
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               Bar = the phase&apos;s target. Bright tick = your good day (25th percentile), faint tick = your best days (10th). The gap goes to the phase with the most room first.
             </p>
           </div>

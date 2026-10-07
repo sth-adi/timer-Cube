@@ -134,7 +134,7 @@ export default function StaminaPage() {
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <SectionTitle>Solve time by position in the sitting, vs that sitting&apos;s median</SectionTitle>
             <DeltaColumns buckets={r.positions} highlight={(b, i) => i < 3 || i === r.positions.length - 1 || (b.rel !== null && Math.abs(b.rel) === Math.max(...r.positions.map((x) => Math.abs(x.rel ?? 0))))} />
-            <div className="flex gap-3 text-[10px] text-muted">
+            <div className="flex gap-3 text-[11px] text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2.5 rounded-sm bg-warning" /> slower than usual
               </span>
@@ -171,13 +171,13 @@ export default function StaminaPage() {
                 </div>
               );
             })}
-            <p className="text-[10px] text-muted-2">Extra time each phase takes in your first three solves of a sitting, compared with solves 6–20.</p>
+            <p className="text-[11px] text-muted-2">Extra time each phase takes in your first three solves of a sitting, compared with solves 6–20.</p>
           </div>
 
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <SectionTitle>Does resting between solves help?</SectionTitle>
             <DeltaColumns buckets={r.rest} highlight={() => true} />
-            <p className="text-[10px] text-muted-2">Rest is the time from finishing one solve to starting the next, within a sitting.</p>
+            <p className="text-[11px] text-muted-2">Rest is the time from finishing one solve to starting the next, within a sitting.</p>
           </div>
         </>
       )}

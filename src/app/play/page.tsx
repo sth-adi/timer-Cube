@@ -111,7 +111,7 @@ export default function PlayHub() {
             </div>
             <p className="text-[15px] font-bold leading-tight text-white">{LEAD.hook}</p>
             <p className="text-[12.5px] leading-snug text-[var(--play-dim)]">{LEAD.body}</p>
-            <span className="mt-1 self-start text-[10px] font-semibold uppercase tracking-wider text-white/45">{LEAD.needs}</span>
+            <span className="mt-1 self-start text-[11px] font-semibold uppercase tracking-wider text-white/45">{LEAD.needs}</span>
           </div>
         </Link>
         <ul className="flex flex-col divide-y divide-white/10 border-y border-white/10">
@@ -127,7 +127,7 @@ export default function PlayHub() {
                   </h2>
                   <p className="text-[14px] font-bold leading-tight text-white">{g.hook}</p>
                   <p className="text-[12.5px] leading-snug text-[var(--play-dim)]">{g.body}</p>
-                  <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">{g.needs}</span>
+                  <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-white/45">{g.needs}</span>
                 </div>
                 <ArrowUpRight size={18} className="shrink-0 text-white/30 transition-colors group-hover:text-white" />
               </Link>

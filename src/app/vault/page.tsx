@@ -125,7 +125,7 @@ function LockView() {
               setKeyTurns([]);
               setLink(null);
             }}
-            className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-[var(--play-dim)] hover:text-white"
+            className="hit flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-[var(--play-dim)] hover:text-white"
           >
             <RotateCcw size={12} /> {connected ? "I've solved it" : "Reset"}
           </button>
@@ -171,7 +171,7 @@ function LockView() {
           </button>
         ) : (
           <div className="flex flex-col gap-2 animate-fade-in-up">
-            <div className="break-all rounded-xl bg-black/40 p-3 font-mono text-[10.5px] leading-relaxed text-[var(--play-accent)]">{link}</div>
+            <div className="break-all rounded-xl bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-[var(--play-accent)]">{link}</div>
             <div className="flex gap-2">
               <button type="button" onClick={() => void share()} className="play-btn flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm">
                 {copied ? <Check size={15} /> : "share" in navigator ? <Share2 size={15} /> : <Copy size={15} />} {copied ? "Copied" : "Share link"}
@@ -190,14 +190,14 @@ function LockView() {
             {showRecipe && (
               <p className="rounded-lg bg-black/30 p-2 font-mono text-[12px] text-white/90">
                 {keyTurns.join(" ")}
-                <span className="mt-1 block font-sans text-[10.5px] text-[var(--play-dim)]">
+                <span className="mt-1 block font-sans text-[11px] text-[var(--play-dim)]">
                   From solved (white top, green front), this reaches the key. Tell it to them some other way, never in the same message as the link.
                 </span>
               </p>
             )}
           </div>
         )}
-        <p className="text-[10.5px] leading-snug text-[var(--play-dim)]">
+        <p className="text-[11px] leading-snug text-[var(--play-dim)]">
           The link carries only ciphertext (AES-256-GCM, key stretched from the 54 stickers with 120,000 rounds of PBKDF2). Nothing is uploaded, and nothing, not even this app, can open it without the state.
         </p>
       </section>
@@ -301,7 +301,7 @@ function UnlockView({ sealed }: { sealed: Sealed }) {
             Try
           </button>
         </div>
-        <p className="text-[10.5px] leading-snug text-[var(--play-dim)]">
+        <p className="text-[11px] leading-snug text-[var(--play-dim)]">
           Start from solved, white top, green front. Every state you pass through is tried the moment you stop turning.
         </p>
       </section>

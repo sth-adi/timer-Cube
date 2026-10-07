@@ -45,7 +45,7 @@ export default function EconomyPage() {
                 return shown.map((v, i) => <div key={i} className="min-w-[2px] flex-1 rounded-t-sm bg-accent/70" style={{ height: `${4 + ((v - min) / span) * 96}%` }} />);
               })()}
             </div>
-            <p className="text-[10px] text-muted-2">A rolling average of your last 12 solves&apos; move count, over your most recent {Math.min(60, r.rolling.length)} solves.</p>
+            <p className="text-[11px] text-muted-2">A rolling average of your last 12 solves&apos; move count, over your most recent {Math.min(60, r.rolling.length)} solves.</p>
           </div>
         </>
       )}

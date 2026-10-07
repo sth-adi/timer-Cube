@@ -102,7 +102,7 @@ export default function SolvesPage() {
         <div className="flex w-full max-w-2xl flex-col gap-3 pb-8">
           <div className="flex items-center justify-between px-1">
             <h1 className="text-lg font-semibold text-foreground">Solves</h1>
-            <div className="flex flex-wrap justify-end gap-1.5">
+            <div className="flex flex-wrap justify-end gap-1.5 [@media(pointer:coarse)]:gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -113,7 +113,7 @@ export default function SolvesPage() {
                 // Nothing to select on an empty history (and a selection mode already open can still be closed).
                 disabled={rawSolves.length === 0 && !selecting}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40",
+                  "hit-y flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40",
                   selecting ? "bg-accent text-accent-fg" : "bg-accent-soft text-accent hover:bg-accent-soft/80",
                 )}
                 data-testid="select-toggle"
@@ -123,28 +123,28 @@ export default function SolvesPage() {
               </button>
               <Link
                 href="/xray"
-                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
+                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
               >
                 <ScanLine size={13} />
                 X-Ray
               </Link>
               <Link
                 href="/reel"
-                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
+                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
               >
                 <Clapperboard size={13} />
                 Reel
               </Link>
               <Link
                 href="/lab"
-                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
+                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
               >
                 <FlaskConical size={13} />
                 Lab
               </Link>
               <Link
                 href="/rhythm"
-                className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
+                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
               >
                 <Music size={13} />
                 Rhythm
@@ -153,13 +153,13 @@ export default function SolvesPage() {
           </div>
 
           {presentTags.length > 0 && (
-            <div className="flex animate-fade-in-up flex-wrap gap-1.5 px-1">
+            <div className="flex animate-fade-in-up flex-wrap gap-1.5 px-1 [@media(pointer:coarse)]:gap-2">
               <button
                 type="button"
                 onClick={() => setSelected(null)}
                 aria-pressed={selected === null}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   selected === null ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >
@@ -174,7 +174,7 @@ export default function SolvesPage() {
                     onClick={() => setSelected(tag)}
                     aria-pressed={selected === tag}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                      "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                       selected === tag ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                     )}
                   >
@@ -186,7 +186,7 @@ export default function SolvesPage() {
           )}
 
           {smart && (
-            <div className="flex animate-fade-in-up flex-wrap items-center gap-1.5 px-1" aria-label="Filter and sort solves">
+            <div className="flex animate-fade-in-up flex-wrap items-center gap-1.5 px-1 [@media(pointer:coarse)]:gap-2" aria-label="Filter and sort solves">
               <PillSelect label="Sort" value={sort} onChange={(v) => setSort(v as SolveSort)} options={SORTS} />
               {cubes.length > 0 && (
                 <PillSelect
@@ -237,7 +237,7 @@ export default function SolvesPage() {
                 aria-pressed={!!filter.twoLook}
                 title="Solves where a step's algorithm took more than one look"
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   filter.twoLook ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >
@@ -249,7 +249,7 @@ export default function SolvesPage() {
                 aria-pressed={!!filter.mistake}
                 title="Solves the Mistake Radar flagged, a knocked pair, a broken cross, an extra look, wasted turns"
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   filter.mistake ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >
@@ -259,7 +259,7 @@ export default function SolvesPage() {
                 <button
                   type="button"
                   onClick={() => setFilter({})}
-                  className="rounded-full px-2 py-1.5 text-xs font-medium text-muted-2 hover:text-foreground"
+                  className="hit-y rounded-full px-2 py-1.5 text-xs font-medium text-muted-2 hover:text-foreground"
                 >
                   Clear
                 </button>

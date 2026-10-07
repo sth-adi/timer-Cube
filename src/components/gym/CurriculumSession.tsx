@@ -225,7 +225,7 @@ export function CurriculumSession() {
                 <span className="shrink-0 text-[11px] font-bold tabular-nums text-accent">{b.minutes} min</span>
               </div>
               <p className="text-[11px] text-muted">{b.reason}</p>
-              <p className="text-[10px] text-muted-2">
+              <p className="text-[11px] text-muted-2">
                 {WHERE[b.kind]}
                 {b.reps ? ` · ${b.reps} reps` : ""}
                 {b.msPerSolve > 0 ? ` · worth ~${secs(b.msPerSolve)}/solve` : ""}

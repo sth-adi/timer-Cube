@@ -130,7 +130,7 @@ export default function SharedSolvePage() {
 
   return (
     <div className="flex flex-col items-center gap-4 px-4 py-6">
-      <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+      <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
         <TimerIcon size={16} className="text-accent" />
         Cube
       </Link>
@@ -152,7 +152,7 @@ export default function SharedSolvePage() {
               <button
                 type="button"
                 onClick={retry}
-                className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg"
+                className="hit mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg"
               >
                 <RefreshCw size={13} /> Retry
               </button>

@@ -25,10 +25,10 @@ function SolvePickerRow({ solve, onPick }: { solve: Solve; onPick: () => void })
     >
       <span className="flex flex-col">
         <span className="tabular-timer text-sm font-semibold text-foreground">{finalMs === null ? "DNF" : formatTime(finalMs)}</span>
-        <span className="text-[10px] text-muted-2">{new Date(solve.date).toLocaleDateString()}</span>
+        <span className="text-[11px] text-muted-2">{new Date(solve.date).toLocaleDateString()}</span>
       </span>
       {solve.moveTimestamps && solve.moveTimestamps.length > 0 && (
-        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-accent">real timing</span>
+        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">real timing</span>
       )}
     </button>
   );
@@ -51,7 +51,7 @@ export default function RhythmPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>

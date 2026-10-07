@@ -59,7 +59,7 @@ function FactorChart({ factors }: { factors: Factor[] }) {
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-[11px] text-foreground">
                 {f.label}
-                {f.family === "luck" && <span className="ml-1.5 rounded bg-bg-panel-2 px-1 py-px text-[9px] font-medium uppercase text-muted-2">luck</span>}
+                {f.family === "luck" && <span className="ml-1.5 rounded bg-bg-panel-2 px-1 py-px text-[11px] font-medium uppercase text-muted-2">luck</span>}
               </span>
               <span className="shrink-0 text-[11px] tabular-nums text-muted">
                 {f.format(f.fast)} <span className="text-muted-2">→</span> <span className="font-semibold text-foreground">{f.format(f.slow)}</span>
@@ -108,15 +108,15 @@ export default function AutopsyPage() {
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <SectionTitle>Where the gap comes from</SectionTitle>
             <GapChart a={a} />
-            <p className="text-[10px] text-muted-2">Each phase&apos;s average in your slow solves minus your fast ones. They add up to the whole gap.</p>
+            <p className="text-[11px] text-muted-2">Each phase&apos;s average in your slow solves minus your fast ones. They add up to the whole gap.</p>
           </div>
 
           <div className="card flex flex-col gap-3 rounded-xl p-4">
             <div className="flex items-baseline justify-between">
               <SectionTitle>What separates them, biggest first</SectionTitle>
-              <span className="text-[10px] text-muted-2">fast → slow</span>
+              <span className="text-[11px] text-muted-2">fast → slow</span>
             </div>
-            <div className="flex gap-3 text-[10px] text-muted">
+            <div className="flex gap-3 text-[11px] text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-3 rounded-full bg-accent" /> you control it
               </span>
@@ -128,7 +128,7 @@ export default function AutopsyPage() {
               </span>
             </div>
             <FactorChart factors={a.factors} />
-            <p className="text-[10px] text-muted-2">Bar length is the effect size (Cohen&apos;s d): the difference relative to how much it normally varies. Past 0.8 is large.</p>
+            <p className="text-[11px] text-muted-2">Bar length is the effect size (Cohen&apos;s d): the difference relative to how much it normally varies. Past 0.8 is large.</p>
           </div>
 
           <div className={cn("card rounded-xl p-4 text-[12px]", a.factors.some((f) => f.family === "luck" && Math.abs(f.d) >= 0.5) ? "text-foreground" : "text-success")}>

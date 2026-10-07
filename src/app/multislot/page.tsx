@@ -61,14 +61,14 @@ export default function MultiSlotPage() {
               <div key={row.label} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2">
                 <span className="flex items-center gap-1.5 text-[11px] text-foreground">
                   {row.label}
-                  {row.faster && <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-semibold text-accent">faster</span>}
+                  {row.faster && <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-semibold text-accent">faster</span>}
                 </span>
                 <span className="text-[11px] tabular-nums text-muted-2">
                   {row.events === 0 ? "never" : `${row.turns.toFixed(1)} turns/pair · ${secs(row.ms)}/pair`}
                 </span>
               </div>
             ))}
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               Per-pair cost splits a multi-pair stretch evenly across the pairs it solved, so it&apos;s a fair comparison against solo insertions.
             </p>
           </div>

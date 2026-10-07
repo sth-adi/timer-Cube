@@ -30,7 +30,7 @@ function CaseCard({ algCase, onOpen }: { algCase: AlgCase; onOpen: () => void })
       <div className="flex w-full items-center justify-between">
         <span className="flex items-center gap-1 text-sm font-medium">
           {algCase.name}
-          {yours && <span className="rounded-full bg-accent-soft px-1.5 py-px text-[9px] font-semibold text-accent">yours</span>}
+          {yours && <span className="rounded-full bg-accent-soft px-1.5 py-px text-[11px] font-semibold text-accent">yours</span>}
         </span>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[status])} />
       </div>

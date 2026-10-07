@@ -48,7 +48,7 @@ function Cell({ cell, metric, baseline }: { cell: SpotCell; metric: Metric; base
       title={`${CORNER_SPOT_LABEL[cell.corner]}, ${EDGE_SPOT_LABEL[cell.edge]}`}
     >
       <span className={cn("text-sm font-bold tabular-nums", enough ? "text-foreground" : "text-muted-2")}>{cell.count ? secs(v) : "—"}</span>
-      <span className="text-[9px] text-muted">{cell.count} pair{cell.count === 1 ? "" : "s"}</span>
+      <span className="text-[11px] text-muted">{cell.count} pair{cell.count === 1 ? "" : "s"}</span>
     </div>
   );
 }
@@ -86,7 +86,7 @@ export default function BlindSpotsPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -137,26 +137,26 @@ export default function BlindSpotsPage() {
                       key={x.key}
                       type="button"
                       onClick={() => setMetric(x.key)}
-                      className={cn("flex-1 rounded-full py-1.5 text-xs font-semibold", metric === x.key ? "bg-accent text-accent-fg" : "text-muted")}
+                      className={cn("hit-y flex-1 rounded-full py-1.5 text-xs font-semibold", metric === x.key ? "bg-accent text-accent-fg" : "text-muted")}
                     >
                       {x.label}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-2">
+                <p className="text-[11px] text-muted-2">
                   {m.label}: {m.blurb}. Average {secs(report.overall[metric])}.
                 </p>
 
                 <div className="grid grid-cols-[4.5rem_repeat(3,1fr)] gap-1.5">
                   <span />
                   {SPOTS.map((e) => (
-                    <span key={e} className="text-center text-[9px] font-medium uppercase leading-tight tracking-wide text-muted-2">
+                    <span key={e} className="text-center text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-2">
                       Edge {e === "top" ? "up top" : e === "slot" ? "in other slot" : "flipped in slot"}
                     </span>
                   ))}
                   {SPOTS.map((c) => (
                     <div key={c} className="contents">
-                      <span className="flex items-center text-[9px] font-medium uppercase leading-tight tracking-wide text-muted-2">
+                      <span className="flex items-center text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-2">
                         Corner {c === "top" ? "up top" : c === "slot" ? "in other slot" : "twisted in slot"}
                       </span>
                       {SPOTS.map((e) => (
@@ -165,11 +165,11 @@ export default function BlindSpotsPage() {
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-2">Green is at or under your average, red is 1.5× it. Needs {MIN_CELL}+ pairs to color a square.</p>
+                <p className="text-[11px] text-muted-2">Green is at or under your average, red is 1.5× it. Needs {MIN_CELL}+ pairs to color a square.</p>
               </div>
 
               <div className="card flex flex-col gap-2 rounded-xl p-4">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Your blind spots</p>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Your blind spots</p>
                 {report.insights.length === 0 ? (
                   <p className="text-[11px] text-muted">No situation stands out yet, every kind of pair costs you about the same. That&apos;s a well-rounded F2L.</p>
                 ) : (
@@ -189,7 +189,7 @@ export default function BlindSpotsPage() {
 
               <div className="card flex flex-col gap-3 rounded-xl p-4">
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">By pair (total time)</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">By pair (total time)</p>
                   {report.byPair.map((p, i) => (
                     <div key={p.label} className="flex items-center gap-2">
                       <span className="flex w-24 items-center gap-1.5 text-[11px] text-muted">
@@ -203,23 +203,23 @@ export default function BlindSpotsPage() {
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-panel-2">
                         <div className="h-full rounded-full bg-accent/70" style={{ width: `${((p.totalMs ?? 0) / maxPair) * 100}%` }} />
                       </div>
-                      <span className="w-12 text-right text-[10px] tabular-nums text-muted-2">{secs(p.totalMs)}</span>
+                      <span className="w-12 text-right text-[11px] tabular-nums text-muted-2">{secs(p.totalMs)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Finding time, 1st to 4th pair</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Finding time, 1st to 4th pair</p>
                   <div className="flex h-16 items-end gap-2">
                     {report.byOrder.map((o) => (
                       <div key={o.order} className="flex flex-1 flex-col items-center gap-1">
                         <div className="w-full rounded-t-sm bg-accent/70" style={{ height: `${Math.max(4, ((o.findMs ?? 0) / maxOrder) * 44)}px` }} />
-                        <span className="text-[9px] tabular-nums text-muted-2">
+                        <span className="text-[11px] tabular-nums text-muted-2">
                           #{o.order} · {secs(o.findMs)}
                         </span>
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-muted-2">A tall first bar is the cross-to-F2L transition; tall middle bars mean lookahead stops during insertions.</p>
+                  <p className="text-[11px] text-muted-2">A tall first bar is the cross-to-F2L transition; tall middle bars mean lookahead stops during insertions.</p>
                 </div>
               </div>
             </>

@@ -51,7 +51,7 @@ export default function TiltPage() {
                 </span>
               </div>
             ))}
-            <p className="text-[10px] text-muted-2">
+            <p className="text-[11px] text-muted-2">
               For each Cross/F2L/OLL mistake Mistake Radar flags, this compares the phase right after against your own average for that phase, pooled across every qualifying transition in your history.
             </p>
           </div>

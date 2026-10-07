@@ -17,7 +17,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="rounded-lg bg-bg-panel-2 px-2 py-2 text-center">
       <p className="text-base font-bold tabular-nums text-foreground">{value}</p>
-      <p className="text-[10px] leading-tight text-muted-2">{label}</p>
+      <p className="text-[11px] leading-tight text-muted-2">{label}</p>
     </div>
   );
 }
@@ -55,7 +55,7 @@ export default function InspectionPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -110,7 +110,7 @@ export default function InspectionPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <p className="px-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">Recent solves</p>
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Recent solves</p>
                 {[...rows]
                   .reverse()
                   .slice(0, 40)
@@ -131,7 +131,7 @@ export default function InspectionPage() {
                             </span>
                           </div>
                           <PlannedBar report={report} />
-                          <p className="truncate text-[10px] text-muted">{report.notes.join(" ")}</p>
+                          <p className="truncate text-[11px] text-muted">{report.notes.join(" ")}</p>
                         </div>
                       </div>
                     );

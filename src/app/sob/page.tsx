@@ -80,7 +80,7 @@ export default function SumOfBestPage() {
             </div>
             <Stretches r={r} />
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex gap-3 text-[10px] text-muted">
+              <div className="flex gap-3 text-[11px] text-muted">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-3 rounded-sm bg-accent" /> best ever
                 </span>
@@ -88,8 +88,8 @@ export default function SumOfBestPage() {
                   <span className="h-2 w-3 rounded-sm bg-accent/25" /> up to your median
                 </span>
               </div>
-              <label className="flex items-center gap-1.5 text-[10px] text-muted">
-                <input type="checkbox" checked={countSkips} onChange={(e) => setCountSkips(e.target.checked)} className="accent-[var(--accent)]" />
+              <label className="hit flex items-center gap-1.5 text-[11px] text-muted">
+                <input type="checkbox" checked={countSkips} onChange={(e) => setCountSkips(e.target.checked)} className="accent-[var(--accent)] pointer-coarse:size-5" />
                 count OLL/PLL skips as bests
               </label>
             </div>

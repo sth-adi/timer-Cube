@@ -141,7 +141,7 @@ function TimeMachine() {
                 )}
               </p>
               <RouteChips display={rewind.route} turns={rewind.route} position={rewind.position} partial={rewind.partial} variant="color" />
-              <p className="text-[10px] text-muted-2">Each square is the center to turn, ↻ clockwise looking at that face, ↺ counter-clockwise.</p>
+              <p className="text-[11px] text-muted-2">Each square is the center to turn, ↻ clockwise looking at that face, ↺ counter-clockwise.</p>
             </>
           )}
         </div>
@@ -196,7 +196,7 @@ function TimeMachine() {
       </button>
 
       <div className="flex flex-col gap-1.5">
-        <p className="px-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">Moments</p>
+        <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Moments</p>
         {reversed.length <= 1 && <p className="px-1 text-xs text-muted">Turn the cube, every pause becomes a moment you can jump back to.</p>}
         {reversed.slice(0, 60).map((m) => (
           <button
@@ -212,9 +212,9 @@ function TimeMachine() {
             <div className="flex flex-1 flex-col">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                 {m.count === log.length ? "Now" : m.count === 0 ? "Connected" : timeAgo(m.wallMs)}
-                {m.solved && <span className="rounded-full bg-success/15 px-1.5 py-px text-[9px] font-medium text-success">solved</span>}
+                {m.solved && <span className="rounded-full bg-success/15 px-1.5 py-px text-[11px] font-medium text-success">solved</span>}
               </span>
-              <span className="text-[10px] text-muted-2">
+              <span className="text-[11px] text-muted-2">
                 {m.count === 0 ? "the state you connected in" : `${m.burstTurns} turns in ${(m.burstMs / 1000).toFixed(1)}s · ${log.length - m.count} turns ago`}
               </span>
             </div>
@@ -265,7 +265,7 @@ export default function TimeMachinePage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -292,7 +292,7 @@ export default function TimeMachinePage() {
                 onClick={() => setTab(id)}
                 aria-pressed={tab === id}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  "hit-y flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
                   tab === id ? "bg-accent text-accent-fg" : "text-muted",
                 )}
               >

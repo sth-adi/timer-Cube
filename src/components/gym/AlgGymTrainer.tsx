@@ -316,7 +316,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
 
       {table.length > 0 && (
         <div className="card flex flex-col gap-1 rounded-xl p-3">
-          <div className="flex items-center justify-between px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+          <div className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
             <span>Your cases, slowest first</span>
             <span>see + do · best · hit rate</span>
           </div>
@@ -324,7 +324,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
             <div key={caseKey(c)} className="flex items-center gap-2 rounded-lg bg-bg-panel-2 px-2 py-1.5">
               <CaseIcon setupAlg={invertAlg(c.alg)} kind={c.group} className="h-7 w-7 shrink-0 overflow-hidden rounded-[2px]" />
               <span className="flex-1 truncate text-[11px] font-medium text-foreground">{c.name}</span>
-              <span className="text-[10px] tabular-nums text-muted">
+              <span className="text-[11px] tabular-nums text-muted">
                 {caseAverageMs(s) !== null ? `${secs(caseAverageMs(s)!)}s` : "—"} · {s!.bestMs !== null ? `${secs(s!.bestMs)}s` : "—"} ·{" "}
                 {Math.round((s!.successes / s!.attempts) * 100)}%
               </span>

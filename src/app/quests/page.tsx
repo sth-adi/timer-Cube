@@ -27,7 +27,7 @@ function LevelRing({ level, pct }: { level: number; pct: number }) {
       <text x="55" y="52" textAnchor="middle" className="fill-foreground text-[30px] font-black">
         {level}
       </text>
-      <text x="55" y="72" textAnchor="middle" className="fill-muted-2 text-[9px] font-semibold uppercase tracking-widest">
+      <text x="55" y="72" textAnchor="middle" className="fill-muted-2 text-[11px] font-semibold uppercase tracking-widest">
         level
       </text>
     </svg>
@@ -101,14 +101,14 @@ export default function QuestsPage() {
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-panel-2">
                 <div className={cn("h-full rounded-full", q.done ? "bg-success" : "bg-accent")} style={{ width: `${(q.progress / q.target) * 100}%` }} />
               </div>
-              <span className="text-[10px] tabular-nums text-muted-2">
+              <span className="text-[11px] tabular-nums text-muted-2">
                 {q.progress}/{q.target}
               </span>
               {q.done &&
                 (isClaimed ? (
                   <span className="text-[11px] font-semibold text-success">Claimed</span>
                 ) : (
-                  <button type="button" onClick={() => claim(q.id, q.xp)} className="flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-fg">
+                  <button type="button" onClick={() => claim(q.id, q.xp)} className="hit flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-fg">
                     <Gift size={11} /> Claim
                   </button>
                 ))}
@@ -119,7 +119,7 @@ export default function QuestsPage() {
 
       {next.length > 0 && (
         <div className="card flex flex-col gap-2 rounded-xl p-4">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Closest milestones · +150 XP each</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Closest milestones · +150 XP each</p>
           {next.map(({ a, pct }) => (
             <div key={a.id} className="flex items-center gap-2 text-xs">
               <span className="text-base">{a.icon}</span>
@@ -133,7 +133,7 @@ export default function QuestsPage() {
       )}
 
       <div className="card flex flex-col gap-1 rounded-xl p-4">
-        <p className="pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">Where your XP came from</p>
+        <p className="pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Where your XP came from</p>
         {xp.parts.map((p) => (
           <div key={p.label} className="flex justify-between text-xs">
             <span className="text-muted">{p.label}</span>
