@@ -8,6 +8,9 @@ import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { angleBetween, quatToMat, solveCalibration, type Mat3, type Quat } from "@/lib/gyro/orientation";
 import { cn } from "@/lib/utils/cn";
+import "@/styles/twinoverlay.css";
+import { GyroTwin } from "./GyroTwin";
+import { PoseTarget } from "./PoseTarget";
 
 /** How still (degrees of drift) and for how long (ms) the cube must be held before a pose is captured automatically. */
 const STILL_DEG = 4;
@@ -39,6 +42,10 @@ const STEP_COPY: Record<"home" | "y" | "yx", { title: string; body: string }> = 
  * poses the cuber holds (home → y → y x) and solves for the mounting that
  * explains them (see solveCalibration). Poses are captured automatically
  * once the cube is held still — no buttons to press with a cube in hand.
+ *
+ * Beside the instructions sits a live Gyro Twin (it turns with the cube in your hands, so you can see
+ * the gyro is being read) and a still twin in the grip being asked for, which turns into it when the step
+ * begins ("hold this"). A check lands on the live twin each time a pose has been captured.
  */
 export function GyroCalibration({ onClose }: { onClose?: () => void }) {
   const protocolName = useSmartCubeStore((s) => s.protocolName);
@@ -46,6 +53,8 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
   const setRef = useGyroStore((s) => s.setRef);
   const [step, setStep] = useState<Step>("intro");
   const [stillness, setStillness] = useState(0);
+  // How many poses have been captured so far this run: each one lands a tick on the live twin.
+  const [captured, setCaptured] = useState(0);
   const captures = useRef<Quat[]>([]);
 
   useEffect(() => {
@@ -73,6 +82,7 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
       if (held < STILL_MS) return;
       done = true;
       captures.current = [...captures.current, anchor.q];
+      setCaptured((c) => c + 1);
       if (step === "home") setStep("y");
       else if (step === "y") setStep("yx");
       else {
@@ -92,6 +102,7 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
 
   const start = () => {
     captures.current = [];
+    setCaptured(0);
     setStillness(0);
     setStep("home");
   };
@@ -104,13 +115,28 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
         <>
           <Compass size={26} className="text-accent" />
           <p className="max-w-xs text-sm text-muted">
-            Teach the app how your cube&apos;s gyro chip is mounted. Three poses, about ten seconds, each one captures
-            itself once you hold still.
+            Teach the app how your cube&apos;s gyro chip is mounted. Three poses, about ten seconds, each one captures itself once you hold still.
           </p>
           <button type="button" onClick={start} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
             Start calibration
           </button>
         </>
+      )}
+
+      {(stepIndex >= 0 || step === "done") && (
+        <div className="relative -my-2 flex items-start justify-center" data-testid="gyro-calibration-preview">
+          <figure className="relative flex flex-col items-center">
+            <GyroTwin size={68} showControls={false} navLocked />
+            {captured > 0 && <Check key={captured} size={26} strokeWidth={3} aria-hidden className="tw-tick right-3 top-3" />}
+            <figcaption className="-mt-3 text-[10px] text-muted-2">Your cube</figcaption>
+          </figure>
+          {stepIndex >= 0 && (
+            <figure className="flex flex-col items-center">
+              <PoseTarget pose={step as "home" | "y" | "yx"} size={68} />
+              <figcaption className="-mt-3 text-[10px] text-muted-2">Hold this</figcaption>
+            </figure>
+          )}
+        </div>
       )}
 
       {stepIndex >= 0 && (
@@ -148,11 +174,7 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
           <p className="max-w-xs text-xs text-muted">
             Usually a rotation went the other way or wasn&apos;t a clean quarter turn. Try again, a bit more deliberately.
           </p>
-          <button
-            type="button"
-            onClick={start}
-            className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg"
-          >
+          <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
             <RotateCcw size={13} /> Try again
           </button>
         </>

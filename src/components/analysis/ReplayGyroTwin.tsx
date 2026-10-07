@@ -4,13 +4,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GYRO_TWIN_CAMERA } from "@/components/lab/GyroTwin";
 import { TurnCube } from "@/components/lab/TurnCube";
 import { TwinStage } from "@/components/lab/TwinStage";
-import { parseTurn } from "@/lib/cube-engine/stickerTurns";
+import { MoveLabel } from "@/components/lab/MoveLabel";
+import { FaceLetters, useFaceLetters } from "@/components/lab/FaceLetters";
+import { parseMove } from "@/lib/cube-engine/stickerTurns";
 import { cssMatrix3d, quatToMat } from "@/lib/gyro/orientation";
 import { solveMsAtPosition, streamQuatAt } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { springStep, type SpringPose } from "@/lib/gyro/smooth";
 import { activeLeaf } from "@/lib/analysis/replayTiming";
+import { displayIndexForMove, displayMoves } from "@/lib/analysis/replayDisplay";
 import { REST_SPRING, buildLeanTurns, cameraMotionAllowed, leanAt, stepLean, type LeanSpring } from "@/lib/analysis/replayCamera";
+
+/** Face letters need a twin this big to be legible; the default replay twin never shows them. */
+const FACE_LETTERS_MIN_SIZE = 90;
 
 /** The twin's fixed camera, nudged by the replay's lean (degrees): yaw swings it right, pitch raises it. */
 const cameraFor = (yaw: number, pitch: number) => `rotateX(${(-24 - pitch).toFixed(2)}deg) rotateY(${(-32 - yaw).toFixed(2)}deg)`;
@@ -32,7 +38,7 @@ function prefersReducedMotion(): boolean {
  * the twin keeps its own clock: between reports it carries on from the last one at the playback rate
  * (every animation frame), and its tilt is a spring toward the recorded orientation so it glides through
  * the stream's ~20 Hz samples. The turning layer is drawn by how far through its move that clock is.
- * Its camera also leans a few degrees toward the face being turned (as the replay's does, see
+ * Each move is named in a small label that fades over 400 ms as it begins (a slice reads as M, E or S). Its camera also leans a few degrees toward the face being turned (as the replay's does, see
  * lib/analysis/replayCamera), except under reduced motion or with effects off.
  *
  * `faceletsAfter[k]` is the cube with the first k moves made (so one more entry than there are
@@ -75,6 +81,11 @@ export function ReplayGyroTwin({
   // Everything the frame loop reads, kept current without restarting it.
   const turns = useMemo(() => buildLeanTurns(moves, starts, ends), [moves, starts, ends]);
   const dataRef = useRef({ stream, moveMs, starts, ends, turns });
+  const [faceLetters] = useFaceLetters();
+  // The move named in the label, set when the replay enters a new move (not on mount, so a paused replay shows none).
+  const display = useMemo(() => displayMoves(moves, moveMs), [moves, moveMs]);
+  const [seen, setSeen] = useState<number | null>(null);
+  const [named, setNamed] = useState<{ text: string; nonce: number } | null>(null);
 
   useEffect(() => {
     dataRef.current = { stream, moveMs, starts, ends, turns };
@@ -145,7 +156,13 @@ export function ReplayGyroTwin({
 
   // The turn in progress: the cube before it, plus how far round the layer is. Finished (or not a face turn) shows the result.
   const k = starts.length ? activeLeaf(starts, clock) : -1;
-  const turn = k >= 0 ? parseTurn(moves[k] ?? "") : null;
+  // Name a move the moment the replay enters it; the first position seen is only remembered (unless it is already playing).
+  const shownIndex = displayIndexForMove(display, k);
+  if (seen !== shownIndex) {
+    setSeen(shownIndex);
+    if ((seen !== null || playing) && shownIndex >= 0) setNamed({ text: display[shownIndex].token, nonce: (named?.nonce ?? 0) + 1 });
+  }
+  const turn = k >= 0 ? parseMove(moves[k] ?? "") : null;
   const span = k >= 0 ? (ends[k] ?? 0) - (starts[k] ?? 0) : 0;
   const progress = turn && span > 0 ? (clock - starts[k]) / span : 1;
   const turning = turn && progress < 1 ? { turn, progress: Math.max(0, progress) } : null;
@@ -153,20 +170,24 @@ export function ReplayGyroTwin({
   if (!facelets) return null;
   return (
     <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-panel p-1" aria-hidden="true" data-testid="replay-gyro-twin">
-      <TwinStage size={size} box={1.7} drop={0.8}>
-        <div
-          ref={orientRef}
-          className="relative"
-          style={{
-            width: size,
-            height: size,
-            transformStyle: "preserve-3d",
-            // The tilt is written by the frame loop, never by a style prop: a re-render would set it back.
-          }}
-        >
-          <TurnCube facelets={facelets} turning={turning} size={size} />
-        </div>
-      </TwinStage>
+      <div className="relative">
+        <TwinStage size={size} box={1.7} drop={0.8}>
+          <div
+            ref={orientRef}
+            className="relative"
+            style={{
+              width: size,
+              height: size,
+              transformStyle: "preserve-3d",
+              // The tilt is written by the frame loop, never by a style prop: a re-render would set it back.
+            }}
+          >
+            <TurnCube facelets={facelets} turning={turning} size={size} />
+            {faceLetters && size >= FACE_LETTERS_MIN_SIZE && <FaceLetters size={size} />}
+          </div>
+        </TwinStage>
+        {named && <MoveLabel label={named.text} nonce={named.nonce} size={size} />}
+      </div>
       <span className="text-[9px] font-medium uppercase tracking-wide text-muted-2">Gyro</span>
     </div>
   );

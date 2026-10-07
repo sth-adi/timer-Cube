@@ -4,10 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSmartCubeStore, type SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
+import { tickPositionClass } from "@/components/timer/tickPlacement";
 import { MIMIC_STABLE_MS, faceletsOf, fixAfter, mimicAlg, mimicSyncVerdict, mimicView, movesToReach, type MimicFix } from "@/lib/analysis/mimicSync";
 import { TurnCube } from "@/components/lab/TurnCube";
 import { TwinStage } from "@/components/lab/TwinStage";
 import { useTurnAnimation } from "@/components/lab/useTurnAnimation";
+import { useProgressFills } from "@/components/lab/useProgressFills";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -20,21 +22,6 @@ export function preloadCubeViewer(): void {}
 const MIMIC_CAMERA = "rotateX(-24deg) rotateY(32deg)";
 /** The cube turned over (z2) so yellow is up, inside the camera. */
 const YELLOW_UP = "rotateZ(180deg)";
-
-/**
- * Where the tick sits for each face: on the matching edge of the box (the
- * view has yellow on top, so these are the sides you'd expect). F and B have
- * no edge of their own in a three-quarter view, so they take a bottom-left
- * and top-right corner.
- */
-const TICK_POSITION: Record<string, string> = {
-  U: "left-1/4 right-1/4 top-0 h-[3px]",
-  D: "left-1/4 right-1/4 bottom-0 h-[3px]",
-  L: "left-0 top-1/4 bottom-1/4 w-[3px]",
-  R: "right-0 top-1/4 bottom-1/4 w-[3px]",
-  F: "bottom-0 left-0 h-[3px] w-1/5",
-  B: "right-0 top-0 h-[3px] w-1/5",
-};
 
 /**
  * A short, face-coloured mark on the edge of the box that fades out — keyed
@@ -54,8 +41,8 @@ function TurnTick({ face }: { face: string }) {
     <span
       ref={ref}
       aria-hidden
-      className={cn("pointer-events-none absolute rounded-full opacity-0 motion-reduce:hidden", TICK_POSITION[face])}
-      style={{ background: FACELET_COLORS[face], boxShadow: `0 0 6px ${FACELET_COLORS[face]}` }}
+      className={cn("pointer-events-none absolute rounded-full opacity-0 motion-reduce:hidden", tickPositionClass(face))}
+      style={{ background: FACELET_COLORS[face] }}
     />
   );
 }
@@ -75,6 +62,10 @@ function TurnTick({ face }: { face: string }) {
  * reports aren't flagged unreliable), the corrective moves are worked out on
  * the cube-engine worker and become the mimic's new setup, a snap with no
  * animation, with later turns riding on top as before. See mimicSync.ts.
+ *
+ * While it shows the cuber's own live solve (the moves are the store's, and a solve is armed or recording) the
+ * pieces of the current stage not yet home are drawn a little dimmed, so the cube fills in as the cross, each
+ * F2L pair, OLL and PLL land (see useProgressFills); a mimic of someone else's turns never does.
  *
  * Each landed turn also lights a small tick in that face's colour on the
  * matching edge of the box, so a turn reads as *caught* the instant it
@@ -97,6 +88,8 @@ export function LiveCubeMimic({
   idle?: boolean;
 }) {
   const tokens = useMemo(() => moves.map((m) => m.token), [moves]);
+  // True for the cuber's own live solve: these are the store's own moves, and a solve is running.
+  const ownSolveLive = useSmartCubeStore((s) => (s.armed || s.recording) && s.moves === moves);
   const liveFacelets = useSmartCubeStore((s) => s.liveFacelets);
   const unreliable = useSmartCubeStore((s) => s.faceletsUnreliable);
   const [fix, setFix] = useState<MimicFix | null>(null);
@@ -133,13 +126,14 @@ export function LiveCubeMimic({
   }, [verdict, expected, shownAlg, liveFacelets, unreliable, scramble, tokens]);
   const lastFace = tokens.length > 0 ? tokens[tokens.length - 1][0] : null;
   // Slice and whole-cube moves have no face colour to show, so they get no tick.
-  const tickFace = lastFace !== null && lastFace in TICK_POSITION ? lastFace : null;
+  const tickFace = lastFace !== null && tickPositionClass(lastFace) !== null ? lastFace : null;
 
   // The facelets to draw: what the alg works out to (the cube's own report only if that alg can't be parsed).
   const turnView = useTurnAnimation(expected ?? liveFacelets);
   // The cube is drawn in px, so it takes its size from the box it is given (the stage is 1.9 cubes across).
   const boxRef = useRef<HTMLDivElement>(null);
   const [cubeSize, setCubeSize] = useState(0);
+  const progressFills = useProgressFills(turnView.facelets, ownSolveLive && !idle, cubeSize);
   useEffect(() => {
     const el = boxRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -156,7 +150,7 @@ export function LiveCubeMimic({
       {cubeSize > 0 && (
         <TwinStage size={cubeSize}>
           <div className="relative" style={{ width: cubeSize, height: cubeSize, transformStyle: "preserve-3d", transform: `${MIMIC_CAMERA} ${YELLOW_UP}` }}>
-            <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={cubeSize} />
+            <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={cubeSize} stickerFills={progressFills} />
           </div>
         </TwinStage>
       )}

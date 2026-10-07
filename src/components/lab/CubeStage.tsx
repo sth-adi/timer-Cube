@@ -8,10 +8,10 @@ import "@/styles/cubestage.css";
 export type CubeStageState = "loading" | "ready" | "failed";
 
 /**
- * The stage a big 3D cube stands on: a faint accent glow behind it, a soft ground shadow under it and a
- * drop-shadow on the cube itself (the same recipe as the Gyro Twin; see styles/cubestage.css). The caller
+ * The stage a big 3D cube stands on: a flat contact shadow under it (the same recipe as the Gyro Twin: a plain
+ * dark low-opacity shape, no glow and no blur; see styles/cubestage.css). The caller
  * sizes it with `className` (it reserves its box, so nothing jumps when the cube arrives) and puts the
- * cube's own element in `children`, wrapped in a `.cube-stage__cube` element so the shadow follows it.
+ * cube's own element in `children`, wrapped in a `.cube-stage__cube` element.
  *
  * While `state` is "loading" or "failed" a quiet CSS-drawn cube stands in for it, so the box is never an
  * empty hole — "failed" adds a short note and a Retry (cubing.js can fail to load offline or without WebGL).

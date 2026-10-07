@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { applyTurn, parseTurn, turnToken } from "@/lib/cube-engine/stickerTurns";
-import { FIRST_TURN_MS, MAX_TURN_MS, MIN_TURN_MS, RUSH_TURN_MS, stepTurns, turnDurationMs, type QueuedTurn, type TurnClock } from "./useTurnAnimation";
+import { cubeFromAlg } from "@/lib/cube-engine/engine";
+import { applyMove, applyTurn, isPairMove, moveToken, parseMove, parseTurn, turnToken } from "@/lib/cube-engine/stickerTurns";
+import {
+  FIRST_TURN_MS,
+  MAX_TURN_MS,
+  MIN_TURN_MS,
+  RUSH_TURN_MS,
+  SLICE_HOLD_MS,
+  enqueueTurn,
+  stepTurns,
+  turnDurationMs,
+  type QueuedTurn,
+  type TurnClock,
+} from "./useTurnAnimation";
 
 const SOLVED = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";
 const q = (tokens: string[], gapMs: number | null): QueuedTurn[] => tokens.map((t) => ({ turn: parseTurn(t)!, gapMs }));
@@ -81,5 +93,97 @@ describe("stepTurns", () => {
     const queue = q(["R", "U"], 100);
     stepTurns({ shown: SOLVED, active: null, queue }, 0);
     expect(queue).toHaveLength(2);
+  });
+});
+
+describe("slice and rotation moves in the queue", () => {
+  it("plays an M and an x as one move each and lands exactly on the engine's state", () => {
+    const queue: QueuedTurn[] = [
+      { turn: parseMove("M")!, gapMs: 100 },
+      { turn: parseMove("U")!, gapMs: 100 },
+      { turn: parseMove("x'")!, gapMs: 100 },
+    ];
+    const seen: string[] = [];
+    let clock: TurnClock = { shown: SOLVED, active: null, queue };
+    for (let now = 0; now < 2000 && (clock.active || clock.queue.length || !seen.length); now += 8) {
+      clock = stepTurns(clock, now);
+      if (clock.active) {
+        const t = moveToken(clock.active.turn);
+        if (seen[seen.length - 1] !== t) seen.push(t);
+      }
+    }
+    expect(seen).toEqual(["M", "U", "x'"]);
+    expect(clock.shown).toBe(cubeFromAlg("M U x'").asString());
+  });
+});
+
+describe("a slice-shaped opposite-face pair plays as one turn", () => {
+  /** Runs every turn that is waiting to its end. */
+  const settle = (c: TurnClock) => stepTurns(stepTurns(c, 60_000), 120_000);
+  const face = (t: string, gapMs: number | null): QueuedTurn => ({ turn: parseTurn(t)!, gapMs });
+  const idle: TurnClock = { shown: SOLVED, active: null, queue: [] };
+
+  it("holds a lone first turn a moment, and not a turn behind another", () => {
+    const one = enqueueTurn(idle, face("R'", null), 1000);
+    expect(one.queue[0].holdUntil).toBe(1000 + SLICE_HOLD_MS);
+    expect(stepTurns(one, 1000 + SLICE_HOLD_MS - 1).active).toBeNull();
+    expect(stepTurns(one, 1000 + SLICE_HOLD_MS - 1).queue).toHaveLength(1);
+    expect(stepTurns(one, 1000 + SLICE_HOLD_MS).active).not.toBeNull();
+    // Behind a queued turn there is no waiting.
+    const two = enqueueTurn(one, face("U", 300), 1300);
+    expect(two.queue[1].holdUntil).toBeUndefined();
+    expect(stepTurns(two, 1300).active).not.toBeNull();
+  });
+
+  it("merges a partner that arrives while the first is still waiting", () => {
+    const first = enqueueTurn(idle, face("R'", 400), 1000);
+    const both = enqueueTurn(first, face("L", 60), 1060);
+    expect(both.queue).toHaveLength(1);
+    const move = both.queue[0].turn;
+    expect(isPairMove(move) && moveToken(move)).toBe("R' L");
+    expect(both.queue[0].gapMs).toBe(400);
+    expect(both.queue[0].holdUntil).toBeUndefined();
+    const played = stepTurns(both, 1060);
+    expect(played.active && isPairMove(played.active.turn)).toBe(true);
+    expect(settle(both).shown).toBe(cubeFromAlg("R' L").asString());
+  });
+
+  it("merges a partner that arrives while the first is under way, the late layer setting off from rest", () => {
+    const started = stepTurns(enqueueTurn(idle, face("R'", 400), 1000), 1000 + SLICE_HOLD_MS);
+    const start = started.active!.start;
+    const dur = started.active!.dur;
+    const arrive = start + dur * 0.4;
+    const joined = enqueueTurn(started, face("L", 150), arrive);
+    expect(joined.queue).toHaveLength(0);
+    const a = joined.active!;
+    expect(isPairMove(a.turn) && a.turn.lag).toBeCloseTo(0.4, 5);
+    // The first layer is exactly where it was, and it still has time to run.
+    expect((arrive - a.start) / a.dur).toBeCloseTo(0.4, 5);
+    expect(a.start + a.dur).toBeGreaterThan(arrive + dur * 0.5);
+    expect(stepTurns(joined, a.start + a.dur + 1).shown).toBe(cubeFromAlg("R' L").asString());
+  });
+
+  it("does not merge a pair that arrives too late, on the same face, or turning against each other", () => {
+    const first = enqueueTurn(idle, face("R'", 400), 1000);
+    expect(enqueueTurn(first, face("L", 300), 1300).queue).toHaveLength(2); // beyond the pair window
+    expect(enqueueTurn(first, face("R", 50), 1050).queue).toHaveLength(2); // same face
+    expect(enqueueTurn(first, face("L'", 50), 1050).queue).toHaveLength(2); // R' L' is not a slice shape
+    expect(enqueueTurn(first, face("U", 50), 1050).queue).toHaveLength(2);
+  });
+
+  it("does not merge into a turn that is nearly done, nor into a pair that already merged", () => {
+    const started = stepTurns(enqueueTurn(idle, face("R'", 400), 1000), 1000 + SLICE_HOLD_MS);
+    const late = started.active!.start + started.active!.dur * 0.95;
+    expect(enqueueTurn(started, face("L", 150), late).queue).toHaveLength(1);
+    const pair = enqueueTurn(enqueueTurn(idle, face("R'", 400), 1000), face("L", 50), 1050);
+    expect(enqueueTurn(pair, face("R'", 50), 1100).queue).toHaveLength(2);
+  });
+
+  it("every merge keeps the cube on exactly the state the plain face turns add up to", () => {
+    for (const alg of [["R'", "L"], ["U", "D'"], ["F2", "B2"], ["B", "F'"]]) {
+      let clock = enqueueTurn(idle, face(alg[0], 500), 1000);
+      clock = enqueueTurn(clock, face(alg[1], 80), 1080);
+      expect(settle(clock).shown).toBe(alg.reduce(applyMove, SOLVED));
+    }
   });
 });

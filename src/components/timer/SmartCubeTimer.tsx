@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Bluetooth, BluetoothOff, Check, ChevronDown, Radio, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -33,6 +33,8 @@ import { useSmartCubeFlow } from "@/hooks/useSmartCubeFlow";
 import { useVoiceCoach } from "@/hooks/useVoiceCoach";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { ConnectControls } from "@/components/smartcube/ConnectControls";
+import { CUBE_SETTLE_MS, finishHueVar } from "@/components/timer/finishMoment";
+import { ConnectedMoment } from "@/components/smartcube/ConnectMoment";
 import { useFreestyle } from "@/hooks/useFreestyle";
 import { useScrambleVoice } from "@/hooks/useScrambleVoice";
 import { scrambleForState } from "@/lib/smartcube/adoptScramble";
@@ -335,6 +337,15 @@ export function SmartCubeTimer() {
       dismissReconnectNotice: s.dismissReconnectNotice,
     })),
   );
+  // The beat after a cube connects (a card over the page, see ConnectedMoment): raised the render the link comes up, unless the
+  // app won it back by itself after a drop, and ended by the card itself. Compared during render so no frame shows the page without it.
+  const [connectSeen, setConnectSeen] = useState({ connected, reconnecting: !!reconnect });
+  const [readyMoment, setReadyMoment] = useState(false);
+  if (connectSeen.connected !== connected || connectSeen.reconnecting !== !!reconnect) {
+    setConnectSeen({ connected, reconnecting: !!reconnect });
+    if (connected && !connectSeen.connected && !connectSeen.reconnecting) setReadyMoment(true);
+  }
+  const endReadyMoment = useCallback(() => setReadyMoment(false), []);
   const cancelReconnect = useSmartCubeStore((s) => s.cancelReconnect);
   const reconnectNow = useSmartCubeStore((s) => s.reconnectNow);
   const storeScramble = useScrambleStore((s) => s.scramble);
@@ -459,6 +470,19 @@ export function SmartCubeTimer() {
   }, [armed, pendingEvent]);
 
   const finished = !armed && !recording && solvedAtMs !== null && startedAtMs !== null;
+  // The live cube hangs on for a beat when a solve finishes (not when one is aborted), so its last turn can ease to a stop before the recap takes the screen.
+  const liveNow = armed || recording;
+  const [wasLive, setWasLive] = useState(liveNow);
+  const [cubeSettling, setCubeSettling] = useState(false);
+  if (wasLive !== liveNow) {
+    setWasLive(liveNow);
+    setCubeSettling(!liveNow && finished);
+  }
+  useEffect(() => {
+    if (!cubeSettling) return undefined;
+    const timer = setTimeout(() => setCubeSettling(false), CUBE_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [cubeSettling]);
   const lastMoveMs = moves[moves.length - 1]?.timeStampMs ?? startedAtMs ?? 0;
   // The final time, once there is one. While the solve runs its clock is NOT held here: the
   // per-frame time lives in the small <LiveElapsed>/<LiveMoveLine>/<LiveAura> children
@@ -1119,6 +1143,8 @@ export function SmartCubeTimer() {
   }
 
   const solveLive = armed || recording;
+  // A solve under way ends the connected beat for good (it must not come back when the recap is dismissed).
+  if (readyMoment && (solveLive || finished || flow.phase !== "scrambling")) setReadyMoment(false);
   const cubeTitle =
     [
       protocolName && `protocol ${protocolName}`,
@@ -1197,7 +1223,11 @@ export function SmartCubeTimer() {
                 </LiveElapsed>
               ) : (
                 (armed || finished) && (
-                  <LiveDigits text={formatTime(elapsedMs)} styleClass={timerStyle !== "glow" ? `timer-digits--${timerStyle}` : undefined} />
+                  <>
+                    <LiveDigits text={formatTime(elapsedMs)} styleClass={timerStyle !== "glow" ? `timer-digits--${timerStyle}` : undefined} />
+                    {/* One ring, once, in the colour of the phase the solve ended in; absolutely placed, so nothing moves. */}
+                    {finished && <span aria-hidden="true" className="finish-ring" data-testid="finish-ring" style={{ ["--finish-hue" as string]: `var(${finishHueVar(durations)})` }} />}
+                  </>
                 )
               )
             )}
@@ -1274,7 +1304,7 @@ export function SmartCubeTimer() {
           key="mimic"
           className={cn(
             gyroActive ? "relative" : "card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl",
-            solveLive ? LIVE_CUBE : "pointer-events-none invisible absolute",
+            solveLive ? LIVE_CUBE : cubeSettling ? "cube-settle pointer-events-none absolute" : "pointer-events-none invisible absolute",
           )}
           data-testid={gyroActive ? undefined : "live-mimic"}
         >
@@ -1286,7 +1316,8 @@ export function SmartCubeTimer() {
           )}
           {gyroActive && solveLive && regripCount > 0 && (
             <span
-              className="absolute -right-1.5 -top-1.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-muted"
+              className="absolute right-0 top-0 whitespace-nowrap rounded-full bg-bg-elevated px-2 py-1 text-[11px] font-medium leading-none text-foreground ring-1 ring-border-strong"
+              data-testid="regrip-badge"
               title="Whole-cube rotations so far this attempt, fewer usually means a smoother solve"
             >
               {regripCount} regrip{regripCount === 1 ? "" : "s"}
@@ -1542,7 +1573,9 @@ export function SmartCubeTimer() {
       )}
 
       {!armed && !recording && flow.phase === "scrambling" && (
-        <div className={cn("flex w-full flex-col items-center gap-3", finished && "lg:col-span-2")}>
+        <div className={cn("relative flex w-full flex-col items-center gap-3", finished && "lg:col-span-2")}>
+          {/* Hangs above this block (out of the flow), over the empty room under the cube's controls, so nothing moves when it comes or goes. */}
+          {readyMoment && <ConnectedMoment name={nickname ?? deviceName} batterySupported={batterySupported} batteryLevel={batteryLevel} onDone={endReadyMoment} />}
           {finished && (
             <p className="border-t border-border pt-3 text-[11px] font-medium uppercase tracking-wide text-muted">
               Next scramble, turn the cube to start it and this recap clears

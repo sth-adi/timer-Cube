@@ -70,6 +70,28 @@
     transform: scale(1);
   }
 }
+/* A gold split: a gold tick at the end of that segment's fill, popping in a beat after the phase lands. */
+.phase-ribbon-gold {
+  background: var(--moment-gold, #f6c453);
+  transform-origin: center;
+}
+.phase-ribbon-seg[data-done] .phase-ribbon-gold {
+  animation: phase-ribbon-gold-in 340ms cubic-bezier(0.2, 0.9, 0.3, 1) 260ms both;
+}
+@keyframes phase-ribbon-gold-in {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+.phase-ribbon--entrance .phase-ribbon-seg[data-done] .phase-ribbon-gold {
+  animation-delay: calc(var(--ribbon-i, 0) * 110ms + 620ms);
+}
+
 @keyframes phase-ribbon-fill-in {
   from {
     transform: translate3d(-100%, 0, 0);
@@ -142,6 +164,7 @@
 }
 :root[data-fx-level="off"] .phase-ribbon-seg .phase-ribbon-track,
 :root[data-fx-level="off"] .phase-ribbon-seg .phase-ribbon-mark,
+:root[data-fx-level="off"] .phase-ribbon-seg .phase-ribbon-gold,
 :root[data-fx-level="off"] .phase-ribbon .phase-ribbon-fill {
   animation: none;
 }
@@ -161,6 +184,7 @@
   }
   .phase-ribbon-seg .phase-ribbon-track,
   .phase-ribbon-seg .phase-ribbon-mark,
+  .phase-ribbon-seg .phase-ribbon-gold,
   .phase-ribbon .phase-ribbon-fill,
   .live-digits {
     animation: none !important;

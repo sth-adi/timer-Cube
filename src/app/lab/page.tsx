@@ -469,7 +469,6 @@ export default function LabPage() {
                   </div>
                 ) : calibrating ? (
                   <div className="flex flex-col items-center gap-4 py-2">
-                    <GyroTwin size={80} showControls={false} />
                     <GyroCalibration onClose={() => setCalibrating(false)} />
                   </div>
                 ) : (

@@ -339,10 +339,104 @@ body:has([data-testid="recap-actions"]) .moment-toast-wrap {
     opacity: 0;
   }
 }
+/* --- The finish ring: one hairline pill round the digits, once ------------------------------ */
+/* Absolutely placed over the stage (which is `relative`), so it takes no room. The hue is the phase the solve ended in (--finish-hue). */
+.finish-ring {
+  position: absolute;
+  inset: 2px -6px;
+  border: 2px solid var(--finish-hue, var(--accent));
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+}
+:root:not([data-fx-level="off"]) .finish-ring {
+  animation: finish-ring 600ms cubic-bezier(0.2, 0.7, 0.3, 1) 40ms both;
+}
+@keyframes finish-ring {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+/* The cube hangs on for a beat after the last turn, easing to a stop, then goes (the recap takes its place; it floats, so nothing moves). */
+.cube-settle {
+  animation: cube-settle 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes cube-settle {
+  0% {
+    opacity: 1;
+    transform: scale(1.035);
+  }
+  45% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+/* --- Connecting: a small cube turning, then a card that says Ready ------------------------- */
+.connect-cube {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+/* Hangs just above the block it is placed in (which is `relative`), out of the flow, so nothing moves when it arrives or leaves. */
+.connect-ready-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 8px;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.connect-ready {
+  display: flex;
+  max-width: min(320px, 100%);
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px 6px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 18px;
+  background: var(--bg-elevated);
+  box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.5);
+  animation: connect-ready-life var(--connect-ready-ms, 2600ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes connect-ready-life {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  9% {
+    opacity: 1;
+    transform: none;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* --- Flat: nothing moves, nothing sweeps --------------------------------------------------- */
 :root[data-fx-level="off"] .moment-toast::after,
 :root[data-fx-level="off"] .moment-glint::after,
 :root[data-fx-level="off"] .moment-toast__life,
+:root[data-fx-level="off"] .connect-ready,
+:root[data-fx-level="off"] .cube-settle,
+:root[data-fx-level="off"] .finish-ring,
 :root[data-fx-level="off"] .timer-digits.moment-stop,
 :root[data-fx-level="off"] .timer-digits.moment-stop::after,
 :root[data-fx-level="off"] .recap-hero > *,
@@ -357,10 +451,22 @@ body:has([data-testid="recap-actions"]) .moment-toast-wrap {
 :root[data-fx-level="off"] .recap-hero [data-gold="true"]::after {
   display: none;
 }
+/* With no motion there is nothing to settle: the cube is simply gone at the finish. */
+:root[data-fx-level="off"] .cube-settle {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cube-settle {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .moment-toast::after,
   .moment-glint::after,
   .moment-toast__life,
+  .connect-ready,
+  .cube-settle,
+  .finish-ring,
   .timer-digits.moment-stop,
   .timer-digits.moment-stop::after,
   .recap-hero > *,

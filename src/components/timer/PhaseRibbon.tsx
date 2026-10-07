@@ -6,6 +6,7 @@ import { PHASE_LABELS_4, fillOffsetPct, isSlow, ribbonSegments, segmentFill, seg
 import { useSmoothedValue } from "@/components/motion";
 import { cn } from "@/lib/utils/cn";
 import "@/styles/live-solve.css";
+import "@/styles/moments.css";
 
 const RIBBON_TINT = [
   { solid: "bg-accent", soft: "bg-accent/20" },
@@ -111,6 +112,9 @@ export function PhaseRibbon({
           >
             <div className={cn("phase-ribbon-track relative h-2.5 overflow-hidden rounded-full", tint.soft)}>
               <RibbonFill fill={fill} current={current} solidClass={slow ? "bg-warning" : tint.solid} />
+              {gold[i] && done && (
+                <span aria-hidden data-testid="ribbon-gold" className="phase-ribbon-gold absolute inset-y-0 w-[3px] -translate-x-full rounded-full" style={{ left: `${Math.max(fill, 4)}%` }} />
+              )}
               {seg.tickPct !== null && (
                 <span
                   aria-hidden

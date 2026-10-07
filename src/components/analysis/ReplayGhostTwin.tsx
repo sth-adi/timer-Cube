@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GYRO_TWIN_CAMERA } from "@/components/lab/GyroTwin";
 import { TurnCube } from "@/components/lab/TurnCube";
 import { TwinStage } from "@/components/lab/TwinStage";
-import { parseTurn } from "@/lib/cube-engine/stickerTurns";
+import { parseMove } from "@/lib/cube-engine/stickerTurns";
 import { HOME_ORIENTATION, cssMatrix3d } from "@/lib/gyro/orientation";
 import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
 import type { Ghost } from "@/lib/rematch/ghost";
@@ -110,7 +110,7 @@ export function ReplayGhostTwin({
   }, []);
 
   const frame = ghostFrameAt(timeline, clock);
-  const turn = frame.turning ? parseTurn(ghost.moves[frame.turning.index] ?? "") : null;
+  const turn = frame.turning ? parseMove(ghost.moves[frame.turning.index] ?? "") : null;
   const turning = turn && frame.turning ? { turn, progress: frame.turning.progress } : null;
   const facelets = faceletsAfter?.[turning && frame.turning ? frame.turning.index : frame.done];
   if (!facelets) return null;

@@ -1,0 +1,85 @@
+/*
+ * Small overlays that ride on the Gyro Twin and the replay twin: the floating label of the move being turned,
+ * the optional face letters on the centre stickers, and the capture tick in the gyro calibration. Text only,
+ * no boxes or glows. Every selector is scoped to a tw- class.
+ */
+
+/* The move being turned: sits just above the cube, shown and faded by MoveLabel (opacity is driven there). */
+.tw-move-label {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--foreground);
+}
+
+/* Face letters: flat planes laid over the six centre stickers (placed in 3D by FaceLetters). */
+.tw-face-letter {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-weight: 700;
+  line-height: 1;
+  backface-visibility: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.tw-face-letter[data-ink="dark"] {
+  color: rgb(0 0 0 / 0.55);
+}
+.tw-face-letter[data-ink="light"] {
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* Calibration: a check that lands when a pose has been captured, then fades. */
+.tw-tick {
+  position: absolute;
+  pointer-events: none;
+  color: var(--success);
+  animation: tw-tick 1000ms ease-out both;
+}
+@keyframes tw-tick {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  34% {
+    transform: scale(1);
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@keyframes tw-tick-still {
+  0%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw-tick {
+    animation-name: tw-tick-still;
+  }
+}
+:root[data-fx-level="off"] .tw-tick {
+  animation-name: tw-tick-still;
+}

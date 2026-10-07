@@ -1,20 +1,18 @@
 /*
  * The "stage" around the big replay cube (see components/lab/CubeStage.tsx) and the scrubber
  * of the replay player. Everything is scoped to the .cube-stage / .replay-* class names, and
- * only transform/opacity ever animate. Shared cube recipe (same as the Gyro Twin): a soft
- * ground shadow squashed to ~12% height just under the cube, a drop-shadow on the cube itself
- * (no accent glow).
+ * only transform/opacity ever animate. Shared cube recipe (same as the Gyro Twin): a flat contact
+ * shadow squashed to ~12% height just under the cube (a plain dark low-opacity shape: no blur, no
+ * drop-shadow filter, no accent glow).
  */
 
 .cube-stage {
   position: relative;
   isolation: isolate;
   --stage-shadow: 0.38;
-  --stage-drop: 0.45;
 }
 :root[data-theme="paper"] .cube-stage {
   --stage-shadow: 0.2;
-  --stage-drop: 0.26;
 }
 
 /* Reserved backdrop layer: no glow, kept as a hook. */
@@ -39,19 +37,14 @@
   z-index: -1;
   transform: translateX(-50%);
   pointer-events: none;
-  background: radial-gradient(closest-side, rgb(0 0 0 / var(--stage-shadow)), transparent);
+  border-radius: 50%;
+  background: rgb(0 0 0 / calc(var(--stage-shadow) * 0.6));
+  box-shadow: 0 0 0 4px rgb(0 0 0 / calc(var(--stage-shadow) * 0.26));
 }
 
-.cube-stage__cube {
-  filter: drop-shadow(0 10px 18px rgb(0 0 0 / var(--stage-drop)));
-}
-
-/* FX off stays flat and cheap: no glow, no filter on the live canvas; just the plain ground shadow. */
+/* FX off stays flat and cheap: no glow; just the plain ground shadow. */
 :root[data-fx-level="off"] .cube-stage::before {
   display: none;
-}
-:root[data-fx-level="off"] .cube-stage__cube {
-  filter: none;
 }
 
 /* The placeholder / failure cube, shown until cubing.js has drawn the real one. */
@@ -68,7 +61,6 @@
 .cube-stage__fallback svg {
   width: min(52%, 9.5rem);
   height: auto;
-  filter: drop-shadow(0 8px 12px rgb(0 0 0 / var(--stage-drop)));
 }
 .cube-stage[data-state="loading"] .cube-stage__fallback svg {
   opacity: 0.55;
@@ -76,7 +68,7 @@
 }
 .cube-stage[data-state="failed"] .cube-stage__fallback svg {
   opacity: 0.4;
-  filter: grayscale(0.6) drop-shadow(0 8px 12px rgb(0 0 0 / var(--stage-drop)));
+  filter: grayscale(0.6);
 }
 @keyframes cube-stage-pulse {
   50% {
@@ -89,7 +81,6 @@
   }
 }
 :root[data-fx-level="off"] .cube-stage__fallback svg {
-  filter: none;
   animation: none !important;
 }
 

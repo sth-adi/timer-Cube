@@ -3,19 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Crosshair } from "lucide-react";
-import { subscribeGyro } from "@/lib/store/smartCubeBus";
+import { subscribeGyro, subscribeRawMoves } from "@/lib/store/smartCubeBus";
 import { calibrationFor, useGyroStore } from "@/lib/store/gyroStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, matToQuat, orientationLabel, quatToMat, type Quat } from "@/lib/gyro/orientation";
 import { springStep, type SpringPose } from "@/lib/gyro/smooth";
+import { liveMoveLabel } from "@/lib/smartcube/moveLabel";
 import { TurnCube } from "./TurnCube";
 import { TwinStage } from "./TwinStage";
 import { useTurnAnimation } from "./useTurnAnimation";
+import { useProgressFills } from "./useProgressFills";
+import { MoveLabel } from "./MoveLabel";
+import { FaceLetters, FaceLettersToggle, useFaceLetters } from "./FaceLetters";
 import { cn } from "@/lib/utils/cn";
 
 /** A fixed camera slightly above and to the right, so at any orientation you see three faces — like looking down at the cube in your own hands. */
 export const GYRO_TWIN_CAMERA = "rotateX(-24deg) rotateY(-32deg)";
+
+/** The face letters are only drawn on a twin big enough to read them; the compact one never shows them or its toggle. */
+const FACE_LETTERS_MIN_SIZE = 90;
 
 function prefersReducedMotion(): boolean {
   try {
@@ -52,6 +59,10 @@ interface GyroTwinProps {
  * loop stops when it arrives. When a turn changes the stickers, the ones that
  * changed colour get a quick brightness pulse so a turn reads as motion.
  *
+ * While a smart-cube solve is live the pieces of the current stage that are not home yet are drawn a little
+ * dimmed (useProgressFills), and each turn is named in a small label that fades over 400 ms (MoveLabel).
+ * The full-size twin can also letter its centre stickers (FaceLetters, remembered per browser).
+ *
  * Also runs a live RotationTracker so whole-cube rotations get named the
  * instant they settle ("y", "x'"…) — the same detector that writes them into
  * rotation-aware reconstructions after a solve.
@@ -68,6 +79,9 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
   const calibrations = useSettingsStore((s) => s.gyroCalibrations);
   const [label, setLabel] = useState(orientationLabel(HOME_ORIENTATION));
   const [lastRotation, setLastRotation] = useState<{ token: string; id: number } | null>(null);
+  // The move being turned right now, named at the instant the cube reports it (see MoveLabel).
+  const [moveLabel, setMoveLabel] = useState<{ text: string; nonce: number } | null>(null);
+  const [faceLetters] = useFaceLetters();
   // Kept in a ref (not an effect dependency) so a caller passing a fresh
   // inline callback each render — e.g. SmartCubeTimer's live regrip tally —
   // never forces the tracker below to tear down and resubscribe.
@@ -116,6 +130,8 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
       if (out.segment) setLabel(orientationLabel(out.segment.orientation));
       if (out.rotation) {
         setLastRotation({ token: out.rotation.token, id: ++rotationId });
+        const rotation = out.rotation.token;
+        setMoveLabel((m) => ({ text: rotation, nonce: (m?.nonce ?? 0) + 1 }));
         onRotationRef.current?.(out.rotation.token);
       }
     });
@@ -125,27 +141,43 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     };
   }, [ref, protocolName, calibrations, camera]);
 
+  // Every turn the cube reports is named in the label; a slice (two outer turns together) reads as the slice.
+  useEffect(() => {
+    let previous: { token: string; atMs: number } | null = null;
+    return subscribeRawMoves(({ token, timeStampMs }) => {
+      const text = liveMoveLabel(previous, token, timeStampMs);
+      previous = { token, atMs: timeStampMs };
+      setMoveLabel((m) => ({ text, nonce: (m?.nonce ?? 0) + 1 }));
+    });
+  }, []);
+
   // Each turn the cube reports plays as that layer turning; anything bigger just snaps.
   const turnView = useTurnAnimation(facelets);
+  const solveLive = useSmartCubeStore((s) => s.armed || s.recording);
+  const progressFills = useProgressFills(turnView.facelets, solveLive, size);
 
   const { calibrated } = calibrationFor(protocolName);
 
   return (
     <div className={cn("relative flex flex-col items-center gap-3", className)} data-testid="gyro-twin">
-      <TwinStage size={size}>
-        <div
-          ref={cubeRef}
-          className="relative"
-          style={{
-            width: size,
-            height: size,
-            transformStyle: "preserve-3d",
-            transform: `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`,
-          }}
-        >
-          <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={size} />
-        </div>
-      </TwinStage>
+      <div className="relative">
+        <TwinStage size={size}>
+          <div
+            ref={cubeRef}
+            className="relative"
+            style={{
+              width: size,
+              height: size,
+              transformStyle: "preserve-3d",
+              transform: `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`,
+            }}
+          >
+            <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={size} stickerFills={progressFills} />
+            {faceLetters && size >= FACE_LETTERS_MIN_SIZE && <FaceLetters size={size} />}
+          </div>
+        </TwinStage>
+        {moveLabel && <MoveLabel label={moveLabel.text} nonce={moveLabel.nonce} size={size} />}
+      </div>
 
       {showControls && (
         <div className="flex w-full flex-col items-center gap-2">
@@ -171,6 +203,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
                 <Crosshair size={12} /> Re-center
               </button>
               {!calibrated && <span className="text-[10px] text-warning">Uncalibrated, using GAN axes</span>}
+              {size >= FACE_LETTERS_MIN_SIZE && <FaceLettersToggle />}
             </div>
           )}
         </div>
