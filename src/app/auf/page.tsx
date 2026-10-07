@@ -86,7 +86,7 @@ export default function AufPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <RefreshCcw size={17} className="text-accent" /> AUF Audit
             </h1>
-            <p className="text-[11px] text-muted-2">Every last-layer adjustment you&apos;ve made on a smart cube — the pauses, the turning, and the wasted turns.</p>
+            <p className="text-[11px] text-muted-2">Every last-layer adjustment you&apos;ve made on a smart cube, the pauses, the turning, and the wasted turns.</p>
           </div>
 
           {!report ? (
@@ -95,7 +95,7 @@ export default function AufPage() {
             <>
               <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
                 <p className="tabular-timer text-4xl font-bold text-foreground">{secs(report.avgOverheadMs)}</p>
-                <p className="text-[11px] text-muted">per solve on AUFs — turning them, plus the pause before the last one ({report.solves} solves)</p>
+                <p className="text-[11px] text-muted">per solve on AUFs, turning them, plus the pause before the last one ({report.solves} solves)</p>
               </div>
               <div className="card flex flex-col gap-2 rounded-xl p-4">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What to fix</p>

@@ -91,9 +91,9 @@ export function gradeBlindCross(scramble: string, rawMoves: readonly string[], l
   if (success) {
     verdict =
       level === "xcross"
-        ? `X-cross solved blind — ${PAIR_LABELS[pairIndex!]} pair included.`
+        ? `X-cross solved blind, ${PAIR_LABELS[pairIndex!]} pair included.`
         : extra <= 0
-          ? "Perfect — an optimal cross, eyes closed."
+          ? "Perfect, an optimal cross, eyes closed."
           : `Cross solved blind in ${moves.length} turns (optimal ${optimal}).`;
     detail =
       level === "cross" && extra > 0 && wanderedAt !== null
@@ -102,7 +102,7 @@ export function gradeBlindCross(scramble: string, rawMoves: readonly string[], l
           ? "Every turn took the cross one step closer."
           : `${moves.length} turns.`;
   } else if (wrong.length === 0) {
-    verdict = "Cross is right — but no F2L pair went in with it.";
+    verdict = "Cross is right, but no F2L pair went in with it.";
     detail = "For an x-cross, one pair has to be solved together with the cross.";
   } else {
     const flipped = wrong.filter((e) => e.status === "flipped").map((e) => e.name);
@@ -116,7 +116,7 @@ export function gradeBlindCross(scramble: string, rawMoves: readonly string[], l
       wanderedAt === null
         ? moves.length === 0
           ? "No turns made."
-          : `Every turn was on an optimal path — the plan just stopped ${trail[trail.length - 1]} turn${trail[trail.length - 1] === 1 ? "" : "s"} short.`
+          : `Every turn was on an optimal path, the plan just stopped ${trail[trail.length - 1]} turn${trail[trail.length - 1] === 1 ? "" : "s"} short.`
         : `Your first ${onPlan} turn${onPlan === 1 ? " was" : "s were"} optimal; turn ${wanderedAt + 1} (${moves[wanderedAt]}) is where the plan in your head and the cube parted ways.`;
   }
 

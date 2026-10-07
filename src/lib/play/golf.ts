@@ -178,7 +178,7 @@ export function countStrokes(turns: readonly string[]): number {
 
 export function scoreLabel(strokes: number, par: number): string {
   const over = strokes - par;
-  if (over <= 0) return "Par — the shortest possible";
+  if (over <= 0) return "Par, the shortest possible";
   if (over === 1) return "One over";
   return `${over} over`;
 }

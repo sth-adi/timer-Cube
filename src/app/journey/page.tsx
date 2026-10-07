@@ -51,11 +51,11 @@ const DRILLS: Record<Focus, { href: string; label: string }[]> = {
 
 const FOCUS_BLURB: Record<Focus, string> = {
   Cross: "Plan the whole cross in inspection and execute it without a pause.",
-  F2L: "Your biggest budget cut is in F2L — fewer pauses between pairs, fewer wasted turns.",
+  F2L: "Your biggest budget cut is in F2L, fewer pauses between pairs, fewer wasted turns.",
   OLL: "Faster recognition and cleaner execution of the OLLs you see most.",
   PLL: "Recognise from two sides and trim the AUFs.",
   Consistency: "Fewer bad solves: the average drops when the tail does.",
-  Consolidate: "Hold the gains under pressure — full rounds, no new technique this week.",
+  Consolidate: "Hold the gains under pressure, full rounds, no new technique this week.",
 };
 
 const STATUS: Record<WeekStatus, { label: string; tone: string }> = {
@@ -148,7 +148,7 @@ function Setup({ solves }: { solves: Solve[] }) {
   const [weeks, setWeeks] = useState(6);
   const [perWeek, setPerWeek] = useState<number | null>(null);
   if (level === null) {
-    return <div className="card rounded-xl p-6 text-center text-sm text-muted">A journey starts from where you are now — do at least 12 solves on a 3x3 session first.</div>;
+    return <div className="card rounded-xl p-6 text-center text-sm text-muted">A journey starts from where you are now, do at least 12 solves on a 3x3 session first.</div>;
   }
   const targetMs = target ?? Math.max(1000, (Math.ceil(level / 1000) - 2) * 1000);
   const solvesPerWeek = perWeek ?? rate;
@@ -172,7 +172,7 @@ function Setup({ solves }: { solves: Solve[] }) {
         </div>
         <p className={cn("text-center text-[11px]", perWeekDrop > level * 0.03 ? "text-warning" : "text-muted")}>
           {perWeekDrop > level * 0.03
-            ? `That's ${s2(perWeekDrop)} a week — steep. Most cubers manage 1–2% a week; consider more weeks.`
+            ? `That's ${s2(perWeekDrop)} a week, steep. Most cubers manage 1–2% a week; consider more weeks.`
             : `About ${s2(perWeekDrop)} a week on average, more at the start.`}
         </p>
       </div>

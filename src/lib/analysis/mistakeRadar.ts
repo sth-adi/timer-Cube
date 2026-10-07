@@ -300,7 +300,7 @@ export function analyzeMistakes(input: MistakeRadarInput): MistakeReport {
         costMs: Math.max(0, t(snaps.length - 1) - t(i)),
         moveIndex: i,
         title: "Extra PLL look",
-        detail: `Your first algorithm didn't finish the permutation${name ? ` — it left ${name}` : ""}, so PLL took another look.`,
+        detail: `Your first algorithm didn't finish the permutation${name ? `, it left ${name}` : ""}, so PLL took another look.`,
       });
     }
   }
@@ -335,7 +335,7 @@ export function analyzeMistakes(input: MistakeRadarInput): MistakeReport {
       costMs: cancelled ? t(end) - t(first) + typicalGap : extra * typicalGap,
       moveIndex: first,
       title: cancelled ? "Turn undone" : "Turn could have been one",
-      detail: cancelled ? `${shown.join(" ")} cancel out — ${run.length} moves that did nothing.` : `${shown.join(" ")} is just ${target} done in ${run.length}.`,
+      detail: cancelled ? `${shown.join(" ")} cancel out, ${run.length} moves that did nothing.` : `${shown.join(" ")} is just ${target} done in ${run.length}.`,
     });
   }
 

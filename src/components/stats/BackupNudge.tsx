@@ -42,8 +42,8 @@ export function BackupNudge() {
       </p>
       <p className="text-[11px] leading-snug text-muted sm:hidden">Stored in this browser only. Sign in under Settings for a cloud copy, or save a file.</p>
       <p className="text-[11px] leading-snug text-muted max-sm:hidden">{isSupabaseConfigured()
-          ? "Your solves are stored in this browser only — clearing site data, or a new phone, would lose them. Sign in under Settings to keep a cloud copy, or save a backup file."
-          : "Your solves are stored in this browser only — clearing site data, or a new phone, would lose them. A backup is one file."}</p>
+          ? "Your solves are stored in this browser only, clearing site data, or a new phone, would lose them. Sign in under Settings to keep a cloud copy, or save a backup file."
+          : "Your solves are stored in this browser only, clearing site data, or a new phone, would lose them. A backup is one file."}</p>
       <div className="flex gap-2">
         <button
           type="button"

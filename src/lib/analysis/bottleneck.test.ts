@@ -85,9 +85,9 @@ describe("summarizeBottlenecks", () => {
 
   it("headline calls out an all-recognition or all-execution split", () => {
     const allRecognition = Array.from({ length: MIN_CASES }, (_, i) => case_(`r${i}`, "recognition", 100));
-    expect(summarizeBottlenecks(allRecognition)!.headline).toMatch(/recognition-bound — the algorithms are fine/);
+    expect(summarizeBottlenecks(allRecognition)!.headline).toMatch(/recognition-bound, the algorithms are fine/);
     const allExecution = Array.from({ length: MIN_CASES }, (_, i) => case_(`e${i}`, "execution", 100));
-    expect(summarizeBottlenecks(allExecution)!.headline).toMatch(/execution-bound — you see them fine/);
+    expect(summarizeBottlenecks(allExecution)!.headline).toMatch(/execution-bound, you see them fine/);
   });
 });
 

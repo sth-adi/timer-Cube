@@ -3,7 +3,7 @@
  * of the replay player. Everything is scoped to the .cube-stage / .replay-* class names, and
  * only transform/opacity ever animate. Shared cube recipe (same as the Gyro Twin): a soft
  * ground shadow squashed to ~12% height just under the cube, a drop-shadow on the cube itself
- * and a very faint accent glow behind it.
+ * (no accent glow).
  */
 
 .cube-stage {
@@ -17,7 +17,7 @@
   --stage-drop: 0.26;
 }
 
-/* Faint accent glow, behind everything. */
+/* Reserved backdrop layer: no glow, kept as a hook. */
 .cube-stage::before {
   content: "";
   position: absolute;
@@ -25,7 +25,7 @@
   z-index: -2;
   border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 14%, transparent), transparent);
+  background: none;
 }
 
 /* Ground shadow: an ellipse ~12% of the stage's height, a few px under the cube. */

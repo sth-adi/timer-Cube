@@ -73,10 +73,10 @@ export function MistakeRadarCard({
             <Radar size={13} className="text-accent" /> Mistake Radar
           </p>
           {mistakes.length === 0 ? (
-            <p className="text-[11px] text-muted">Clean solve — nothing knocked out, no extra looks, no wasted turns.</p>
+            <p className="text-[11px] text-muted">Clean solve, nothing knocked out, no extra looks, no wasted turns.</p>
           ) : (
             <p className="text-[11px] text-muted">
-              {mistakes.length} mistake{mistakes.length === 1 ? "" : "s"} cost ~{formatTime(report.totalCostMs)} — this was a{" "}
+              {mistakes.length} mistake{mistakes.length === 1 ? "" : "s"} cost ~{formatTime(report.totalCostMs)}, this was a{" "}
               <span className="font-semibold text-success">{formatTime(report.potentialMs)}</span> solve without them.
             </p>
           )}
@@ -123,7 +123,7 @@ export function MistakeRadarCard({
                     <p className="text-[11px] text-muted">{m.detail}</p>
                     {habit && (
                       <p className="mt-0.5 text-[10px] text-warning">
-                        A habit — {habit.solvesAffected} of your recent solves had this, ~{formatTime(habit.costPerSolveMs)} a solve on average.
+                        A habit, {habit.solvesAffected} of your recent solves had this, ~{formatTime(habit.costPerSolveMs)} a solve on average.
                       </p>
                     )}
                   </div>

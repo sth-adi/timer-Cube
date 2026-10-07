@@ -41,7 +41,7 @@ describe("DNA Duel", () => {
   it("puts the numbers side by side and finds where the gap is", () => {
     const them = card({ name: "Sam", averageMs: 12900, phases: { Cross: 2100, F2L: 6100, OLL: 2300, PLL: 2600 }, tps: 6.0 });
     const r = compareCards(card(), them);
-    expect(r.headline).toBe("Sam is 1.10s faster on average — 0.90s of it in F2L.");
+    expect(r.headline).toBe("Sam is 1.10s faster on average, 0.90s of it in F2L.");
     expect(r.rows.find((x) => x.label === "F2L")!.edge).toBe("them");
     expect(r.rows.find((x) => x.label === "PLL")!.edge).toBe("me");
     expect(r.rows.find((x) => x.label === "Cross")!.edge).toBe("them");
@@ -52,7 +52,7 @@ describe("DNA Duel", () => {
 
   it("doesn't call a phase gap part of a smaller total gap", () => {
     const them = card({ name: "Sam", averageMs: 13500, phases: { Cross: 2200, F2L: 6000, OLL: 2400, PLL: 2900 } });
-    expect(compareCards(card(), them).headline).toBe("Sam is 0.50s faster on average — the biggest gap is F2L, 1.00s.");
+    expect(compareCards(card(), them).headline).toBe("Sam is 0.50s faster on average, the biggest gap is F2L, 1.00s.");
   });
 
   it("says so when the phases can't be compared", () => {

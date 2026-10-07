@@ -138,7 +138,7 @@ export default function PacerPage() {
             </div>
             <p className="text-[10px] text-muted-2">
               {personal
-                ? `Shaped like your own solves — learned from your last ${solves} complete smart-cube solves, scaled to the target.`
+                ? `Shaped like your own solves, learned from your last ${solves} complete smart-cube solves, scaled to the target.`
                 : `A typical CFOP shape for now; after ${MIN_HISTORY} complete smart-cube solves (you have ${solves}) it switches to your own.`}
             </p>
           </div>

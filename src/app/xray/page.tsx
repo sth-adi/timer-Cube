@@ -251,8 +251,8 @@ function XrayPageInner() {
                   </div>
                   <p className="text-[11px] text-muted">
                     {flowHistory.easiestPickRate < 0.6
-                      ? `You start on a harder pair than necessary ${Math.round((1 - flowHistory.easiestPickRate) * 100)}% of the time — about ${flowHistory.avgRegret.toFixed(1)} extra turns each time. Scan for the easiest pair before committing.`
-                      : "You usually go for the easiest pair available — good pair selection."}
+                      ? `You start on a harder pair than necessary ${Math.round((1 - flowHistory.easiestPickRate) * 100)}% of the time, about ${flowHistory.avgRegret.toFixed(1)} extra turns each time. Scan for the easiest pair before committing.`
+                      : "You usually go for the easiest pair available, good pair selection."}
                   </p>
                 </Card>
               )}

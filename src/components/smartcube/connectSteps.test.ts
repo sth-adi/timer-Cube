@@ -29,9 +29,9 @@ describe("connectStep", () => {
 
 describe("reconnectLine", () => {
   it("reads as a drop, distinct from the first-connect wording", () => {
-    expect(reconnectLine("GAN i3", true)).toBe("Lost the link to GAN i3 — getting it back…");
+    expect(reconnectLine("GAN i3", true)).toBe("Lost the link to GAN i3, getting it back…");
     expect(reconnectLine("GAN i3", true)).not.toMatch(/^Connecting/);
-    expect(reconnectLine(null, false)).toBe("Your cube went quiet — will try again shortly");
+    expect(reconnectLine(null, false)).toBe("Your cube went quiet, will try again shortly");
   });
 });
 

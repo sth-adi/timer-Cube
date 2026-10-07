@@ -87,7 +87,7 @@ export function buildSumOfBest(metrics: readonly SolveMetrics[], countSkips = fa
   const pbMs = Math.min(...metrics.map((m) => m.totalMs));
   const top = [...segments].sort((a, b) => b.possibleSaveMs - a.possibleSaveMs)[0];
   const headline =
-    `Your best-ever stretches add up to ${(sumOfBestMs / 1000).toFixed(2)}s — ${((pbMs - sumOfBestMs) / 1000).toFixed(2)}s under your ${(pbMs / 1000).toFixed(2)}s PB. ` +
+    `Your best-ever stretches add up to ${(sumOfBestMs / 1000).toFixed(2)}s, ${((pbMs - sumOfBestMs) / 1000).toFixed(2)}s under your ${(pbMs / 1000).toFixed(2)}s PB. ` +
     `The most time is waiting in ${top.label}: you typically take ${(top.medianMs / 1000).toFixed(2)}s, but you've done it in ${(top.bestMs / 1000).toFixed(2)}s.`;
 
   return { solves: ordered.length, sumOfBestMs, pbMs, headroomMs: pbMs - sumOfBestMs, segments, goldsPerSolve, lastGold, headline };

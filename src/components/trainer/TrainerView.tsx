@@ -127,7 +127,7 @@ export function TrainerView() {
         className="hit-y flex items-center gap-1.5 text-xs text-muted-2 hover:text-muted disabled:opacity-40"
       >
         <RotateCcw size={11} />
-        {times.length} practiced — reset
+        {times.length} practiced, reset
       </button>
     </div>
   );

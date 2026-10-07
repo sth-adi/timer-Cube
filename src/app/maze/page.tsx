@@ -181,10 +181,10 @@ function MazeGame({
       <div className="relative mx-auto w-full" style={{ maxWidth: `min(100%, ${Math.round(62 * aspect)}vh)` }}>
         <canvas ref={canvas} width={maze.w * 64} height={maze.h * 64} className="block h-auto w-full rounded-2xl border border-white/10 bg-[#07141a]" />
         {status === "won" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-black/65 text-center backdrop-blur-[2px] animate-fade-in-up">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-black/75 text-center animate-fade-in-up">
             <p className="text-3xl font-black">Out in {fmt(elapsed)}</p>
             <p className="text-sm text-[var(--play-dim)]">
-              {falls === 0 ? "Clean — no falls." : `${falls} fall${falls === 1 ? "" : "s"} on the way.`} {best[level] === elapsed ? "New best!" : ""}
+              {falls === 0 ? "Clean, no falls." : `${falls} fall${falls === 1 ? "" : "s"} on the way.`} {best[level] === elapsed ? "New best!" : ""}
             </p>
             <div className="mt-2 flex gap-2">
               <button type="button" onClick={retry} className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold">
@@ -200,7 +200,7 @@ function MazeGame({
         )}
         {status === "ready" && (
           <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
-            <span className="rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-[var(--play-accent)] play-pulse">Tilt to start the clock</span>
+            <span className="rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-[var(--play-accent)]">Tilt to start the clock</span>
           </div>
         )}
       </div>
@@ -236,7 +236,7 @@ function MazeGame({
             : gyroActive
               ? "Tilt the cube to roll."
               : connected
-                ? "This cube has no gyro — tilt your phone, or use the arrow keys, and turn faces to open gates."
+                ? "This cube has no gyro, tilt your phone, or use the arrow keys, and turn faces to open gates."
                 : "Arrow keys tilt the board; turn faces (pad or csTimer keys) to open gates. Connect a gyro cube to steer for real."}
       </p>
     </>

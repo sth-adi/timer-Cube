@@ -28,7 +28,7 @@ export default function SpinPage() {
           <p className="text-sm text-muted">
             Spin needs at least {MIN_TURNS_PER_FACE} qualifying turns on two opposite faces, or a clear mix of clockwise and counter-clockwise turns.
           </p>
-          <p className="text-[11px] text-muted-2">Every smart-cube solve with timing adds to this — keep going and it fills in.</p>
+          <p className="text-[11px] text-muted-2">Every smart-cube solve with timing adds to this, keep going and it fills in.</p>
         </div>
       ) : (
         <>
@@ -51,7 +51,7 @@ export default function SpinPage() {
                   </div>
                 ));
               })()}
-              <p className="text-[10px] text-muted-2">Average time per quarter turn in each direction, across every face — half turns have no direction.</p>
+              <p className="text-[10px] text-muted-2">Average time per quarter turn in each direction, across every face, half turns have no direction.</p>
             </div>
           )}
 

@@ -170,15 +170,15 @@ export function reviewJourney(j: Journey, solves: readonly Solve[], now: number)
 
   const done = weeks.filter((w) => w.status !== "upcoming" && w.status !== "current");
   let headline: string;
-  if (reached && lastJudged) headline = `You're there — ${s2(lastJudged.meanMs!)}s against a target of ${s2(j.targetMs)}s.`;
-  else if (finished) headline = `The deadline has passed at ${lastJudged?.meanMs ? `${s2(lastJudged.meanMs)}s` : "no recent average"} — ${s2(j.targetMs)}s not reached yet.`;
+  if (reached && lastJudged) headline = `You're there, ${s2(lastJudged.meanMs!)}s against a target of ${s2(j.targetMs)}s.`;
+  else if (finished) headline = `The deadline has passed at ${lastJudged?.meanMs ? `${s2(lastJudged.meanMs)}s` : "no recent average"}, ${s2(j.targetMs)}s not reached yet.`;
   else if (!done.length) headline = `Week 1 of ${j.weeks}: aim for ${s2(plans[0].checkpointMs)}s by the end of the week, with the focus on ${plans[0].focus}.`;
   else {
     const last = done[done.length - 1];
     const vs =
       last.meanMs === null
         ? "no week average (too few solves)"
-        : `${s2(last.meanMs)}s against a checkpoint of ${s2(last.plan.checkpointMs)}s — ${last.status === "ahead" ? "ahead" : last.status === "on-track" ? "on track" : "behind"}`;
+        : `${s2(last.meanMs)}s against a checkpoint of ${s2(last.plan.checkpointMs)}s, ${last.status === "ahead" ? "ahead" : last.status === "on-track" ? "on track" : "behind"}`;
     headline = `Week ${current + 1} of ${j.weeks}. Last week: ${vs}.`;
   }
 
@@ -189,16 +189,16 @@ export function reviewJourney(j: Journey, solves: readonly Solve[], now: number)
       if (slope !== null && slope < 0 && lastJudged?.meanMs) {
         const weeksMore = Math.ceil((lastJudged.meanMs - j.targetMs) / -slope);
         const extra = Math.max(1, current + weeksMore - j.weeks);
-        advice.push(`Two weeks behind. At your real rate you'd need about ${extra} more week${extra === 1 ? "" : "s"} — extend the deadline, or ease the target to ${s2(projectedMs!)}s.`);
+        advice.push(`Two weeks behind. At your real rate you'd need about ${extra} more week${extra === 1 ? "" : "s"}, extend the deadline, or ease the target to ${s2(projectedMs!)}s.`);
       } else {
-        advice.push(`Two weeks behind and not trending down yet — the plan's pace isn't happening. Ease the target or extend the deadline, and look at the focus drills.`);
+        advice.push(`Two weeks behind and not trending down yet, the plan's pace isn't happening. Ease the target or extend the deadline, and look at the focus drills.`);
       }
     } else if (onPace === true && done.length >= 2) {
       advice.push(`On pace: the trend reaches ${s2(projectedMs!)}s by the deadline.`);
     }
     const lastDone = done[done.length - 1];
     if (lastDone && lastDone.solves < j.solvesPerWeek * 0.6) {
-      advice.push(`${lastDone.solves} of ${j.solvesPerWeek} planned solves last week — volume is the easiest lever you have.`);
+      advice.push(`${lastDone.solves} of ${j.solvesPerWeek} planned solves last week, volume is the easiest lever you have.`);
     }
   }
   return { weeks, current, projectedMs, onPace, finished, reached, headline, advice };

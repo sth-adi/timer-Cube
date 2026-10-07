@@ -73,7 +73,7 @@ export function parseManualTime(input: string): ManualTimeResult {
     ms = parseTimeInput(trimmed);
   }
 
-  if (ms === null) return { ok: false, error: "Not a time — try 12.34, 1:02.34 or 1234" };
+  if (ms === null) return { ok: false, error: "Not a time, try 12.34, 1:02.34 or 1234" };
   if (ms <= 0) return { ok: false, error: POSITIVE_ONLY };
   return { ok: true, ms };
 }

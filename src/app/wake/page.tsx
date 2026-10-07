@@ -238,7 +238,7 @@ export default function WakePage() {
           {phase === "scramble" && view ? (
             <>
               <p className="text-2xl font-black">Scramble your cube</p>
-              <p className="text-[12px] text-white/70">Yellow top, green front. Follow along — it tracks every turn.</p>
+              <p className="text-[12px] text-white/70">Yellow top, green front. Follow along, it tracks every turn.</p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {view.steps.map((s, i) => (
                   <span
@@ -254,7 +254,7 @@ export default function WakePage() {
               </div>
               {view.undo.length > 0 && (
                 <div className="rounded-xl bg-red-500/20 px-4 py-2 text-sm">
-                  Off track — undo: <span className="font-mono font-bold">{view.undo.map(toGrip).join(" ")}</span>
+                  Off track, undo: <span className="font-mono font-bold">{view.undo.map(toGrip).join(" ")}</span>
                   {view.fix && (
                     <>
                       {" "}
@@ -319,7 +319,7 @@ export default function WakePage() {
             <p className="text-6xl font-black tabular-nums tracking-tight">{time}</p>
             <p className="text-sm text-[var(--play-dim)]">rings in {untilLabel(until)}</p>
             <p className="max-w-xs text-center text-[11px] leading-snug text-[var(--play-dim)]">
-              Leave this page open and the phone plugged in, volume up. The screen stays on while it&apos;s armed. {connected ? "Keep the cube connected and solved." : "No cube connected — you'll scramble and solve the on-screen one."}
+              Leave this page open and the phone plugged in, volume up. The screen stays on while it&apos;s armed. {connected ? "Keep the cube connected and solved." : "No cube connected, you'll scramble and solve the on-screen one."}
             </p>
             <button type="button" onClick={disarm} className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold">
               Turn off
@@ -337,7 +337,7 @@ export default function WakePage() {
               <AlarmClock size={18} /> Arm alarm
             </button>
             <button type="button" onClick={() => arm(5000)} className="text-[12px] font-semibold text-[var(--play-dim)] underline underline-offset-4">
-              Try it — ring in 5 seconds
+              Try it, ring in 5 seconds
             </button>
           </>
         )}

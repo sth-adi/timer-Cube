@@ -134,7 +134,7 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
               )}
             >
               {isPB && <Trophy size={11} />}
-              {formatTime(recallMs)} recall{isPB ? " — new best!" : ""}
+              {formatTime(recallMs)} recall{isPB ? ", new best!" : ""}
               {!isPB && bestRecallMs(currentId) !== null && (
                 <span className="text-muted-2"> · best {formatTime(bestRecallMs(currentId)!)}</span>
               )}

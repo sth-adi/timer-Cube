@@ -113,7 +113,7 @@ export function CurriculumSession() {
           <p key={b.id} className="flex items-start gap-2 px-1 text-xs text-foreground">
             <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-success" />
             <span>
-              {b.title} — {Math.max(1, Math.round(results[i].ms / 60000))} min
+              {b.title}, {Math.max(1, Math.round(results[i].ms / 60000))} min
               {results[i].reps ? `, ${results[i].hits}/${results[i].reps} clean` : ""}
             </span>
           </p>
@@ -164,7 +164,7 @@ export function CurriculumSession() {
               {index + 1 < plan.length ? "Next block" : "Finish"} <SkipForward size={11} />
             </button>
           </div>
-          {(timeUp || repsDone) && <p className="text-center text-xs font-semibold text-success">Block done — move on when you&apos;re ready.</p>}
+          {(timeUp || repsDone) && <p className="text-center text-xs font-semibold text-success">Block done, move on when you&apos;re ready.</p>}
         </div>
 
         {block.kind === "gym" && (
@@ -178,7 +178,7 @@ export function CurriculumSession() {
         {block.kind === "lookahead" && (
           <div className="card flex w-full max-w-md flex-col items-center gap-2 rounded-xl p-5 text-center">
             <Navigation size={22} className="text-accent" />
-            <p className="text-sm font-semibold text-foreground">Solve at a calm, steady pace — never stop</p>
+            <p className="text-sm font-semibold text-foreground">Solve at a calm, steady pace, never stop</p>
             <p className="text-xs text-muted">
               The Sat-Nav&apos;s coach mode hides the route unless you stall, so every pause is visible. Aim to find the next pair while the current one
               is still going in.
@@ -216,9 +216,7 @@ export function CurriculumSession() {
         const Icon = ICON[b.kind];
         return (
           <div key={b.id} className="card flex gap-3 rounded-xl p-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
-              <Icon size={15} />
-            </span>
+            <Icon size={15} className="mt-0.5 shrink-0 text-accent" />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs font-semibold text-foreground">

@@ -78,5 +78,5 @@ export function buildTrainerState(mode: TrainerMode): TrainerState {
       // Rare from-scratch OLL search failure — try a fresh scramble.
     }
   }
-  throw new Error(`Could not generate a ${mode.toUpperCase()} practice state — please try again.`);
+  throw new Error(`Could not generate a ${mode.toUpperCase()} practice state, please try again.`);
 }

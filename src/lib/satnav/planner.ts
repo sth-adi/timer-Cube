@@ -91,7 +91,7 @@ export function planNextStep(cube: CubeJSInstance, overrides: AlgOverrides = {})
     return {
       stage: "cross",
       title: `Cross · ${turns.length} turns`,
-      grip: `${HOME_GRIP_TEXT} — white cross on the bottom`,
+      grip: `${HOME_GRIP_TEXT}, white cross on the bottom`,
       turns,
       display: inGrip(turns, HOME_ORIENTATION),
       pairsDone: done.length,
@@ -172,7 +172,7 @@ export function planNextStep(cube: CubeJSInstance, overrides: AlgOverrides = {})
 
   // Anything the book doesn't cover (a pair search that ran out of budget,
   // a state outside the library): say so rather than guess.
-  return { stage: "lost", title: "Off the map — solve on and the Sat-Nav picks you back up", grip: "", turns: [], display: [], pairsDone: done.length };
+  return { stage: "lost", title: "Off the map, solve on and the Sat-Nav picks you back up", grip: "", turns: [], display: [], pairsDone: done.length };
 }
 
 export function planFromFacelets(facelets: string, overrides: AlgOverrides = {}): NavStep {

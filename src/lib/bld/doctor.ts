@@ -93,18 +93,18 @@ function verdictFor(unsolved: UnsolvedPiece[]): { verdict: string; detail: strin
   const twisted = unsolved.filter((u) => u.issue === "twisted").length;
   const flipped = unsolved.filter((u) => u.issue === "flipped").length;
   if (misplacedCorners === 2 && misplacedEdges === 2 && twisted + flipped === 0) {
-    return { verdict: "Parity wasn't fixed", detail: "Exactly two corners and two edges are swapped — the classic sign of an odd number of targets without the parity algorithm." };
+    return { verdict: "Parity wasn't fixed", detail: "Exactly two corners and two edges are swapped, the classic sign of an odd number of targets without the parity algorithm." };
   }
   if (twisted > 0 && misplacedCorners + misplacedEdges + flipped === 0) {
     return {
       verdict: `${twisted} corner${twisted === 1 ? "" : "s"} twisted in place`,
-      detail: "Everything is in the right place — only orientation is off. A twist target was skipped, or done the wrong way round.",
+      detail: "Everything is in the right place, only orientation is off. A twist target was skipped, or done the wrong way round.",
     };
   }
   if (flipped > 0 && misplacedCorners + misplacedEdges + twisted === 0) {
     return {
       verdict: `${flipped} edge${flipped === 1 ? "" : "s"} flipped in place`,
-      detail: "Every edge is in its slot but some face the wrong way — a flip target was skipped or done twice.",
+      detail: "Every edge is in its slot but some face the wrong way, a flip target was skipped or done twice.",
     };
   }
   if (misplacedCorners + misplacedEdges === 3 && twisted + flipped === 0) {
@@ -115,7 +115,7 @@ function verdictFor(unsolved: UnsolvedPiece[]): { verdict: string; detail: strin
   }
   return {
     verdict: `${unsolved.length} pieces unsolved`,
-    detail: `${misplacedCorners} corners and ${misplacedEdges} edges out of place, ${twisted} twisted, ${flipped} flipped — check the chunk where things started breaking.`,
+    detail: `${misplacedCorners} corners and ${misplacedEdges} edges out of place, ${twisted} twisted, ${flipped} flipped, check the chunk where things started breaking.`,
   };
 }
 

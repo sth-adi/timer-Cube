@@ -52,9 +52,9 @@ interface SolveReplayProps {
 
 /** A neutral, non-alarming line for a phase that has no specific finding attached. */
 function fallbackCaption(phase: PhaseAnalysis): string {
-  if (phase.moves.length === 0) return `${phase.label} was skipped — free.`;
+  if (phase.moves.length === 0) return `${phase.label} was skipped, free.`;
   if (phase.model === null) return `${phase.label}: no shorter reference was found to compare against.`;
-  if ((phase.lost ?? 0) === 0) return `${phase.label} matched the shortest solution available — clean.`;
+  if ((phase.lost ?? 0) === 0) return `${phase.label} matched the shortest solution available, clean.`;
   return `${phase.label} cost ${phase.lost} move${phase.lost === 1 ? "" : "s"} more than the shortest available.`;
 }
 
@@ -264,7 +264,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         {fullAlg || "nothing to play"}
       </p>
 
-      {/* The commentary — what this component exists for, not the video. */}
+      {/* The commentary, what this component exists for, not the video. */}
       <div className="mt-3 space-y-2.5 border-t border-border pt-3">
         {captions.length > 0 ? (
           captions.map((f) => {

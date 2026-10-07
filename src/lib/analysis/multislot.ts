@@ -97,13 +97,13 @@ export function summarizeInsertions(events: readonly InsertionEvent[]): MultiSlo
 
   const parts: string[] = [];
   if (multi.length === 0) {
-    parts.push(`Every one of your ${solo.length} tracked F2L insertions has been solo — you don't multi-slot pairs.`);
+    parts.push(`Every one of your ${solo.length} tracked F2L insertions has been solo, you don't multi-slot pairs.`);
   } else {
     parts.push(`${Math.round(multiPairShare * 100)}% of your F2L pairs arrive as part of a multi-pair insertion, the rest one at a time.`);
     if (faster === "multi") {
-      parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo — multi-slotting is genuinely saving you time.`);
+      parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo, multi-slotting is genuinely saving you time.`);
     } else if (faster === "solo") {
-      parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo — the extra recognition is costing more than it saves.`);
+      parts.push(`Those combined stretches average ${secs(avgMsPerPairMulti)}s/pair versus ${secs(avgMsPerPairSolo)}s/pair solo, the extra recognition is costing more than it saves.`);
     }
   }
 

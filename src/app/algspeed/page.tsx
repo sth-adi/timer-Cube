@@ -42,7 +42,7 @@ function AlgRow({ a, baselineTps }: { a: AlgSpeed; baselineTps: number }) {
         {a.verdict !== "fine" && (
           <p className="text-[11px] text-foreground">
             {v.fix}
-            {a.savableMs >= 50 && <span className="text-muted-2"> — {secs(a.savableMs)} each time</span>}
+            {a.savableMs >= 50 && <span className="text-muted-2">, {secs(a.savableMs)} each time</span>}
           </p>
         )}
       </div>
@@ -61,7 +61,7 @@ export default function AlgSpeedPage() {
   const eligible = allSolves.filter((s) => s.reconstruction && s.moveTimestamps && s.penalty !== "dnf").length;
 
   return (
-    <AnalyticsShell icon={<Hourglass size={17} className="text-accent" />} title="Alg Speed Check" subtitle="Which OLLs and PLLs are slow — and why: a second look, a stop, or slow fingers.">
+    <AnalyticsShell icon={<Hourglass size={17} className="text-accent" />} title="Alg Speed Check" subtitle="Which OLLs and PLLs are slow, and why: a second look, a stop, or slow fingers.">
       {!r ? (
         <NotEnough need={MIN_SOLVES} have={eligible} what="Alg Speed Check" />
       ) : (

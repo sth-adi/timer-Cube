@@ -76,7 +76,7 @@ export default function RhythmPage() {
             </div>
           ) : candidates.length === 0 ? (
             <div className="card rounded-xl p-6 text-center text-sm text-muted">
-              No solves with a saved reconstruction yet — solve on a connected smart cube, or save a reconstruction from the Analyzer, to
+              No solves with a saved reconstruction yet, solve on a connected smart cube, or save a reconstruction from the Analyzer, to
               unlock a track.
             </div>
           ) : (

@@ -96,7 +96,7 @@ export default function AutopsyPage() {
     <AnalyticsShell
       icon={<Scale size={17} className="text-accent" />}
       title="Fast vs Slow Autopsy"
-      subtitle="Your fastest quarter of solves against your slowest — what actually separates them."
+      subtitle="Your fastest quarter of solves against your slowest, what actually separates them."
     >
       {!a ? (
         <NotEnough need={MIN_SOLVES} have={metrics.length} what="The autopsy" />

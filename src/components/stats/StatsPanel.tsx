@@ -164,7 +164,7 @@ export function StatsPanel() {
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-2">Current ao5</p>
-          <p className="tabular-timer bg-gradient-to-b from-foreground to-accent bg-clip-text text-4xl font-bold leading-none text-transparent">
+          <p className="tabular-timer text-4xl font-bold leading-none text-foreground">
             {fmt(stats.ao5, stats.ao5Dnf)}
           </p>
           {ao5Delta !== null && (

@@ -85,9 +85,7 @@ export function AnalyzerEmptyState() {
       className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-border-strong px-6 py-8 text-center"
       data-testid="analyzer-empty"
     >
-      <span className="mb-1.5 grid h-11 w-11 place-items-center rounded-full bg-accent-soft text-accent">
-        <ScanSearch size={20} aria-hidden="true" />
-      </span>
+      <ScanSearch size={22} aria-hidden="true" className="mb-1.5 text-accent" />
       <p className="text-sm font-medium text-foreground">Your analysis shows up here</p>
       <p className="max-w-[18rem] text-xs leading-relaxed text-muted-2">
         Add a scramble and your moves above, then press Analyze: you get the cost of each phase and what to work on.

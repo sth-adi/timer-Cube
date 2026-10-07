@@ -46,7 +46,7 @@ export function buildXrayFindings(results: readonly SolveXray[]): XrayFinding[] 
         id: "xray-pair-choice",
         source: "xray",
         title: "Start on the easiest F2L pair",
-        detail: `A typical solve spends ${gap.toFixed(1)} more turns on harder-than-necessary pairs than your better quarter does — e.g. ${worst.label} at ${worst.chosenDistance} turns while another pair was ${worst.easiestDistance} away.`,
+        detail: `A typical solve spends ${gap.toFixed(1)} more turns on harder-than-necessary pairs than your better quarter does, e.g. ${worst.label} at ${worst.chosenDistance} turns while another pair was ${worst.easiestDistance} away.`,
         action: "During inspection and after each pair, check all four slots before committing.",
         msPerSolve: gap * msPerTurn,
         href: "/xray",
@@ -61,7 +61,7 @@ export function buildXrayFindings(results: readonly SolveXray[]): XrayFinding[] 
         source: "xray",
         title: "Stop scattering the pairs you haven't solved yet",
         detail: `While solving one pair, a typical solve pushes the others ${quantile(netScatter, 0.5).toFixed(1)} turns further away; your better quarter, ${quantile(netScatter, 0.25).toFixed(1)}.`,
-        action: "Pick insertions that leave the next pair's pieces alone — F2L Flow shows which turns did it.",
+        action: "Pick insertions that leave the next pair's pieces alone, F2L Flow shows which turns did it.",
         msPerSolve: scatterGap * msPerTurn,
         href: "/xray",
       });
@@ -106,7 +106,7 @@ export function buildXrayFindings(results: readonly SolveXray[]): XrayFinding[] 
         detail: top
           .map((x) => `${x.c.caseName}: turn ${x.v.stall!.index + 1} (${x.v.stall!.token}) takes ${s(x.v.stall!.ms)}s, ${x.v.stall!.ratio.toFixed(1)}× your usual`)
           .join("; "),
-        action: "Drill just that transition — the two turns either side — until it flows.",
+        action: "Drill just that transition, the two turns either side, until it flows.",
         msPerSolve: top.reduce((a, x) => a + x.lost, 0),
         href: "/xray",
       });
@@ -142,7 +142,7 @@ export function buildXrayFindings(results: readonly SolveXray[]): XrayFinding[] 
       id: "xray-neutrality",
       source: "xray",
       title: `Learn a second cross color: ${b.label.replace("White + ", "")}`,
-      detail: `On the scrambles you actually solved, it would have given a shorter cross ${Math.round(b.helpedRate * 100)}% of the time — ${b.turnsSaved.toFixed(1)} turns a solve at your own cross pace.`,
+      detail: `On the scrambles you actually solved, it would have given a shorter cross ${Math.round(b.helpedRate * 100)}% of the time, ${b.turnsSaved.toFixed(1)} turns a solve at your own cross pace.`,
       action: "Solve a few crosses in that color every session in the Blind Cross trainer.",
       msPerSolve: b.msSaved,
       href: "/xray",

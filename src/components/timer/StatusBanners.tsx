@@ -23,14 +23,14 @@ export function anyBanner(state: BannerState): boolean {
 }
 
 const UNRELIABLE_HINT =
-  "Several state reports in a row came back garbled rather than just out of date — its position tracking may drift until one comes back clean. Solve it and tap 'Cube out of sync?' if a scramble or solve stops matching.";
+  "Several state reports in a row came back garbled rather than just out of date, its position tracking may drift until one comes back clean. Solve it and tap 'Cube out of sync?' if a scramble or solve stops matching.";
 
 function lowBatteryText(level: number) {
-  return `Cube battery at ${level}% — a dying battery is a common cause of a mid-solve Bluetooth drop`;
+  return `Cube battery at ${level}%, a dying battery is a common cause of a mid-solve Bluetooth drop`;
 }
 
 function reconnectText(lostMoves: number | null) {
-  return `Reconnected — the solve the drop interrupted${lostMoves ? ` (${lostMoves} move${lostMoves === 1 ? "" : "s"} in)` : ""} wasn't saved. Scramble again.`;
+  return `Reconnected, the solve the drop interrupted${lostMoves ? ` (${lostMoves} move${lostMoves === 1 ? "" : "s"} in)` : ""} wasn't saved. Scramble again.`;
 }
 
 const UNRELIABLE_TEXT = "This cube's state reports look corrupted";

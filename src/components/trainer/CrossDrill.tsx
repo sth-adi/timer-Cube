@@ -8,7 +8,7 @@ import type { Face } from "@/lib/analysis/frames";
 import { cn } from "@/lib/utils/cn";
 
 const GRIPS: { face: Face; label: string; hint: string }[] = [
-  { face: "D", label: "Cross on the bottom", hint: "white down — how nearly everyone holds it" },
+  { face: "D", label: "Cross on the bottom", hint: "white down, how nearly everyone holds it" },
   { face: "U", label: "Cross on top", hint: "white up, matching the scramble orientation" },
 ];
 
@@ -60,7 +60,7 @@ export function CrossDrill() {
         </h2>
         <p className="mb-3 text-xs leading-relaxed text-muted">
           Plan the whole cross before you touch the cube, then type it. You get graded against the provably
-          shortest cross for this scramble — the exact one, from a complete lookup table, not an estimate.
+          shortest cross for this scramble, the exact one, from a complete lookup table, not an estimate.
         </p>
 
         <div className="mb-3 flex gap-1.5">
@@ -155,13 +155,13 @@ export function CrossDrill() {
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted">
                 Replayed on a virtual cube, those {last.result.moveCount} moves leave at least one cross edge out
-                of place. Check the grip setting above if you&apos;re sure — the moves are read as though the cross
+                of place. Check the grip setting above if you&apos;re sure, the moves are read as though the cross
                 is on {crossFace}.
               </p>
             </>
           ) : last.result.optimal ? (
             <p className="flex items-center gap-1.5 text-sm font-semibold text-success">
-              <Check size={15} /> Optimal — {last.result.moveCount} moves, and nothing shorter exists
+              <Check size={15} /> Optimal, {last.result.moveCount} moves, and nothing shorter exists
             </p>
           ) : (
             <>

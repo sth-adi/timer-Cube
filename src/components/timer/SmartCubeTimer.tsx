@@ -229,11 +229,11 @@ function GoldSummary({ golds, sumOfBestMs, totalMs }: { golds: { phase: 0 | 1 | 
     <div className="flex flex-col items-center gap-0.5 text-[11px]" data-testid="gold-summary">
       {golds.map((g) => (
         <span key={g.phase} className="font-semibold text-warning">
-          ★ New best {PHASE_NAMES[g.phase]} — {(g.underBy / 1000).toFixed(2)}s under your old one
+          ★ New best {PHASE_NAMES[g.phase]}, {(g.underBy / 1000).toFixed(2)}s under your old one
         </span>
       ))}
       {sumOfBestMs !== null && (
-        <span className="text-muted" title="Your best-ever Cross, F2L, OLL and PLL added together — a solve you've proven you can do, just never all at once">
+        <span className="text-muted" title="Your best-ever Cross, F2L, OLL and PLL added together, a solve you've proven you can do, just never all at once">
           Sum of bests {formatTime(sumOfBestMs)} · this solve {totalMs <= sumOfBestMs ? "beat it" : `${((totalMs - sumOfBestMs) / 1000).toFixed(2)}s off`}
         </span>
       )}
@@ -858,7 +858,7 @@ export function SmartCubeTimer() {
       type="button"
       onClick={() => cancel()}
       className="rounded-full px-2 py-0.5 text-[11px] font-medium text-muted-2 underline-offset-2 hover:text-muted hover:underline"
-      title="Not ready after all? Disarm — nothing is recorded, and the next scramble check starts over."
+      title="Not ready after all? Disarm, nothing is recorded, and the next scramble check starts over."
       data-testid="cancel-inspection"
     >
       Cancel
@@ -1088,12 +1088,12 @@ export function SmartCubeTimer() {
         </h1>
         <p className="max-w-xs text-sm text-muted" role="status" data-testid={deliberateDrop ? "deliberate-drop-notice" : undefined}>
           {droppedMidSolve
-            ? `The Bluetooth link dropped${movesInto} — not a step you missed, the connection itself. ${reconnect ? "That solve can't be saved; once the cube is back, start the scramble again." : "Reconnect and start the scramble again."}`
+            ? `The Bluetooth link dropped${movesInto}, not a step you missed, the connection itself. ${reconnect ? "That solve can't be saved; once the cube is back, start the scramble again." : "Reconnect and start the scramble again."}`
             : deliberateDrop
-              ? `You disconnected${movesInto || " during your solve"} — that solve wasn't saved. Reconnect and start the scramble again.`
+              ? `You disconnected${movesInto || " during your solve"}, that solve wasn't saved. Reconnect and start the scramble again.`
               : reconnect
-                ? "The Bluetooth link dropped — keep the cube close and awake (turn a face) and it'll be picked straight back up."
-                : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns — no spacebar, and the reconstruction is captured automatically, case names and all."}
+                ? "The Bluetooth link dropped, keep the cube close and awake (turn a face) and it'll be picked straight back up."
+                : "A GAN, GiiKER, GoCube, QiYi, or MoYu (including MHC and the WCU-series AI cubes) times and records solves straight from your physical turns, no spacebar, and the reconstruction is captured automatically, case names and all."}
         </p>
         <ConnectControls label={dropped ? "Reconnect smart cube" : "Connect smart cube"} />
         {error && (
@@ -1104,7 +1104,7 @@ export function SmartCubeTimer() {
         {!dropped && !reconnect && (
           <p className="max-w-xs text-[11px] text-muted">
             Connect it in any state: GAN, Giiker, GoCube, QiYi and MoYu&apos;s AI cubes report where every piece is. (A
-            MoYu MHC can&apos;t — connect that one solved.) Then just scramble: matching the target scramble starts
+            MoYu MHC can&apos;t, connect that one solved.) Then just scramble: matching the target scramble starts
             inspection automatically.
           </p>
         )}
@@ -1199,7 +1199,7 @@ export function SmartCubeTimer() {
 
           {armed && !recording && flow.phase === "inspecting" && <LiveInspectionTicks startedAtMs={flow.inspectionStartedAtMs} fallbackMs={flow.inspectionRemainingMs} penalty={flow.pendingPenalty} />}
 
-          {/* Always mounted (not just while recording/finished) so its own idle→running transition detection — the same instant-of-liftoff logic the keyboard timer uses — actually fires; mounting it fresh already inside "running" would miss it. */}
+          {/* Always mounted (not just while recording/finished) so its own idle→running transition detection, the same instant-of-liftoff logic the keyboard timer uses, actually fires; mounting it fresh already inside "running" would miss it. */}
           <LiveElapsed active={recording} startedAtMs={startedAtMs} lastMoveMs={lastMoveMs}>
             {(liveMs) => (
               <GhostPaceBar
@@ -1224,7 +1224,7 @@ export function SmartCubeTimer() {
 
           {abortedByBack && !recording && (
             <p className="rounded-full bg-warning/15 px-3 py-1 text-[11px] font-medium text-warning" role="status" data-testid="solve-aborted">
-              Solve aborted — nothing was saved
+              Solve aborted, nothing was saved
             </p>
           )}
 
@@ -1266,7 +1266,7 @@ export function SmartCubeTimer() {
             {regripCount > 0 && (
               <span
                 className="absolute -right-1.5 -top-1.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-muted"
-                title="Whole-cube rotations so far this attempt — fewer usually means a smoother solve"
+                title="Whole-cube rotations so far this attempt, fewer usually means a smoother solve"
               >
                 {regripCount} regrip{regripCount === 1 ? "" : "s"}
               </span>
@@ -1291,15 +1291,15 @@ export function SmartCubeTimer() {
           {armed && !recording && flow.phase !== "inspecting" && (
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
               <p className="flex items-center gap-1.5 text-sm text-accent">
-                <Radio size={14} className="animate-pulse" />{" "}
-                {flow.pendingPenalty === "dnf" ? "Inspection ran past 17s — this attempt will be saved as a DNF" : "Waiting for your first move…"}
+                <Radio size={14} />{" "}
+                {flow.pendingPenalty === "dnf" ? "Inspection ran past 17s, this attempt will be saved as a DNF" : "Waiting for your first move…"}
               </p>
               {cancelArmButton}
             </div>
           )}
           {armed && !recording && flow.phase === "inspecting" && (
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-              <p className="text-xs text-muted">Scramble verified — start solving any time, inspection is just the max.</p>
+              <p className="text-xs text-muted">Scramble verified, start solving any time, inspection is just the max.</p>
               {cancelArmButton}
             </div>
           )}
@@ -1308,15 +1308,15 @@ export function SmartCubeTimer() {
               {/* The clock child: the move count and the live TPS (the delimited block inside it) re-render each frame on their own. */}
               <LiveMoveLine timestamps={timestamps} />
               {correctedDuringSolve && (
-                <p className="text-[11px] text-warning" title="A turn went unreported over Bluetooth and was corrected from the cube's own state report — the time still stands, and when you finish the app works out where the missing turn went so the recap can still be built">
-                  A turn was lost over Bluetooth — the time stands; the recap is rebuilt when you finish
+                <p className="text-[11px] text-warning" title="A turn went unreported over Bluetooth and was corrected from the cube's own state report, the time still stands, and when you finish the app works out where the missing turn went so the recap can still be built">
+                  A turn was lost over Bluetooth, the time stands; the recap is rebuilt when you finish
                 </p>
               )}
               {/* Throwing the solve away is "Abort solve" above; this is only for a cube that IS solved while the app missed a turn. 40px+ targets: it is tapped mid-solve with a cube in the other hand. */}
               {stopOpen ? (
                 <div className="flex flex-wrap items-center justify-center gap-1.5">
                   <button type="button" onClick={() => stopSolve("solved")} className="flex min-h-10 items-center rounded-full bg-accent px-4 text-xs font-semibold text-accent-fg" title="The cube is solved but the app missed a turn" data-testid="stop-solved">
-                    It&apos;s solved — save {formatTime(lastMoveMs - (startedAtMs ?? lastMoveMs))}
+                    It&apos;s solved, save {formatTime(lastMoveMs - (startedAtMs ?? lastMoveMs))}
                   </button>
                   <button type="button" onClick={() => stopSolve("dnf")} className="flex min-h-10 items-center rounded-full bg-bg-panel-2 px-4 text-xs font-semibold text-foreground" data-testid="stop-dnf">
                     Save as DNF
@@ -1330,7 +1330,7 @@ export function SmartCubeTimer() {
                   type="button"
                   onClick={() => setStopOpen(true)}
                   className="flex min-h-10 items-center rounded-full px-3 text-xs text-muted underline-offset-2 hover:text-foreground hover:underline"
-                  title="The cube is solved but the clock kept running — save the time as it stands, or as a DNF"
+                  title="The cube is solved but the clock kept running, save the time as it stands, or as a DNF"
                   data-testid="stop-solve"
                 >
                   Cube solved but still running?
@@ -1393,7 +1393,7 @@ export function SmartCubeTimer() {
                 </span>
               )}
               {turnConsistency !== null && (
-                <span title="How evenly spaced your turns were, independent of speed — a smooth stream scores higher than the same pace in bursts">
+                <span title="How evenly spaced your turns were, independent of speed, a smooth stream scores higher than the same pace in bursts">
                   {turnConsistency}% steady
                 </span>
               )}
@@ -1449,7 +1449,7 @@ export function SmartCubeTimer() {
                     loadExternalScramble(finishedScramble);
                   }}
                   className="flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground"
-                  title="Scramble this same scramble again — a second go at the same solve"
+                  title="Scramble this same scramble again, a second go at the same solve"
                   data-testid="redo-scramble"
                 >
                   <RotateCcw size={12} /> Redo this scramble
@@ -1472,7 +1472,7 @@ export function SmartCubeTimer() {
                         key={i}
                         className={cn("flex-1 rounded-sm opacity-70", PHASE_TINTS[phaseForMs(b.startMs, boundaries)])}
                         style={{ height: `${Math.max(6, (b.tps / maxBucket) * 100)}%` }}
-                        title={`${b.tps.toFixed(1)} TPS — ${PHASE_LABELS_4[phaseForMs(b.startMs, boundaries)]}`}
+                        title={`${b.tps.toFixed(1)} TPS, ${PHASE_LABELS_4[phaseForMs(b.startMs, boundaries)]}`}
                       />
                     ))}
                   </div>
@@ -1535,7 +1535,7 @@ export function SmartCubeTimer() {
         <div className={cn("flex w-full flex-col items-center gap-3", finished && "lg:col-span-2")}>
           {finished && (
             <p className="border-t border-border pt-3 text-[11px] font-medium uppercase tracking-wide text-muted">
-              Next scramble — turn the cube to start it and this recap clears
+              Next scramble, turn the cube to start it and this recap clears
             </p>
           )}
           {scramble && !finished && (
@@ -1586,7 +1586,7 @@ export function SmartCubeTimer() {
           </button>
           {gyroUncalibrated && (
             <Link href="/lab" className="hit-y text-[11px] text-warning underline decoration-dotted underline-offset-2" data-testid="gyro-calibrate-link">
-              Gyro uncalibrated — calibrate in Lab
+              Gyro uncalibrated, calibrate in Lab
             </Link>
           )}
           {cubeGesturesOn && <GestureHint />}

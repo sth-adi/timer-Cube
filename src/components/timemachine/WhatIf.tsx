@@ -144,7 +144,7 @@ export function WhatIf() {
         <p className="text-sm font-semibold text-foreground">Your branch</p>
         <div className="flex min-h-[32px] flex-wrap items-center gap-1 rounded-lg bg-bg-panel-2 p-2 font-mono text-sm">
           {branch.length === 0 ? (
-            <span className="text-[11px] text-muted-2">No turns yet — the Sat-Nav finishes straight from the fork.</span>
+            <span className="text-[11px] text-muted-2">No turns yet, the Sat-Nav finishes straight from the fork.</span>
           ) : (
             inGrip(branch, HOME_ORIENTATION).map((t, i) => (
               <span key={i} className="rounded bg-accent-soft px-1.5 font-bold text-accent">

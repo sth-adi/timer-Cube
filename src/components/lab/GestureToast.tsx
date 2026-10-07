@@ -57,7 +57,7 @@ export function GestureLegend({ className }: { className?: string }) {
 export function GestureHint() {
   return (
     <p className="flex items-center gap-1 text-[10px] text-muted-2">
-      <Hand size={11} /> Cube gestures on — spin a face 4× to control the app
+      <Hand size={11} /> Cube gestures on, spin a face 4× to control the app
     </p>
   );
 }

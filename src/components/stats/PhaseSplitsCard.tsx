@@ -40,7 +40,7 @@ export function PhaseSplitsCard() {
             key={phase.label}
             className={PHASE_TINTS[i % PHASE_TINTS.length]}
             style={{ width: `${phase.share * 100}%` }}
-            title={`${phase.label} — ${Math.round(phase.share * 100)}%`}
+            title={`${phase.label}, ${Math.round(phase.share * 100)}%`}
           />
         ))}
       </div>
@@ -61,7 +61,7 @@ export function PhaseSplitsCard() {
 
       <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2">
         Mean, share of the solve, then your best for that phase. The gap between the mean and the best is what
-        consistency is worth — it&apos;s already inside your hands.
+        consistency is worth, it&apos;s already inside your hands.
       </p>
     </div>
   );
@@ -109,7 +109,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
 
       <div className="mb-3 flex h-3 gap-0.5 overflow-hidden rounded-full">
         {steps.map((st, i) => (
-          <div key={st.label} className={PHASE_TINTS[i]} style={{ width: `${st.share * 100}%` }} title={`${st.label} — ${Math.round(st.share * 100)}%`} />
+          <div key={st.label} className={PHASE_TINTS[i]} style={{ width: `${st.share * 100}%` }} title={`${st.label}, ${Math.round(st.share * 100)}%`} />
         ))}
       </div>
 
@@ -167,7 +167,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
       <p className="mt-3 text-[11px] leading-relaxed text-muted-2">
         {lookiest && lookiest.lookMs >= 300 && (
           <>
-            You spend {formatTime(lookiest.lookMs)} looking before you start turning in {lookiest.label === "F2L" ? "F2L (across its four pairs)" : lookiest.label} — {Math.round((lookiest.lookMs / lookiest.meanMs) * 100)}% of the step.{" "}
+            You spend {formatTime(lookiest.lookMs)} looking before you start turning in {lookiest.label === "F2L" ? "F2L (across its four pairs)" : lookiest.label}, {Math.round((lookiest.lookMs / lookiest.meanMs) * 100)}% of the step.{" "}
           </>
         )}
         {sittings

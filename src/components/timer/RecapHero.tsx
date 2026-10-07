@@ -6,7 +6,7 @@ import "@/styles/moments.css";
 
 /** What this solve did to your session best, in words: the sign and the arrow carry it, not just the colour. */
 export function bestDelta(finalMs: number | null, priorBestMs: number | null): { text: string; tone: "best" | "off" | "neutral" } {
-  if (finalMs === null) return { text: "DNF — no time counted", tone: "neutral" };
+  if (finalMs === null) return { text: "DNF, no time counted", tone: "neutral" };
   if (priorBestMs === null) return { text: "First time on the board this session", tone: "neutral" };
   const diff = finalMs - priorBestMs;
   if (diff < 0) return { text: `▼ New session best · −${(Math.abs(diff) / 1000).toFixed(2)}s`, tone: "best" };

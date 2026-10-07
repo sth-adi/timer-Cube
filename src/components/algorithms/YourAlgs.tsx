@@ -72,8 +72,8 @@ export function YourAlgs({ algCase, onShow, showing }: { algCase: AlgCase; onSho
       <p className="text-[10px] leading-snug text-muted-2">
         {yours.length
           ? manual
-            ? "You picked the main one yourself — it stays until you change it."
-            : `Learned from your smart-cube solves (one-look only). The one you use most becomes your main after ${MAIN_AFTER} solves — the Alg Gym and the Sat-Nav use it.`
+            ? "You picked the main one yourself, it stays until you change it."
+            : `Learned from your smart-cube solves (one-look only). The one you use most becomes your main after ${MAIN_AFTER} solves, the Alg Gym and the Sat-Nav use it.`
           : "Solve this case in one look on a smart cube with an algorithm of your own and it appears here."}
       </p>
     </div>

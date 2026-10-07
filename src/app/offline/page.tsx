@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { WifiOff } from "lucide-react";
 
-export const metadata = { title: "Offline — Cube" };
+export const metadata = { title: "Offline, Cube" };
 
 /** What the service worker shows for a page it hasn't saved: the timer itself always works. */
 export default function OfflinePage() {

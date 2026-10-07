@@ -78,12 +78,12 @@ export function planGoal(metrics: readonly SolveMetrics[], targetMs: number): Go
   const biggest = [...phases].sort((a, b) => b.cutMs - a.cutMs)[0];
   const headline =
     reach === "already"
-      ? `Your typical solve (${s(currentMs)}s) is already under ${s(targetMs)}s — pick a faster target.`
+      ? `Your typical solve (${s(currentMs)}s) is already under ${s(targetMs)}s, pick a faster target.`
       : reach === "good-days"
-        ? `${s(targetMs)}s is within reach with consistency alone — no phase has to beat its good-day level. The biggest ask is ${biggest.phase}, down ${s(biggest.cutMs)}s to ${s(biggest.targetMs)}s.`
+        ? `${s(targetMs)}s is within reach with consistency alone, no phase has to beat its good-day level. The biggest ask is ${biggest.phase}, down ${s(biggest.cutMs)}s to ${s(biggest.targetMs)}s.`
         : reach === "best-days"
-          ? `${s(targetMs)}s needs best-day phases, not just good days — ${biggest.phase} has to drop ${s(biggest.cutMs)}s. A stretch, but you've done every part of it before.`
-          : `${s(targetMs)}s is ${s(remaining)}s beyond even your best days in every phase — that gap needs new skill, not consistency. ${biggest.phase} is where the most room is.`;
+          ? `${s(targetMs)}s needs best-day phases, not just good days, ${biggest.phase} has to drop ${s(biggest.cutMs)}s. A stretch, but you've done every part of it before.`
+          : `${s(targetMs)}s is ${s(remaining)}s beyond even your best days in every phase, that gap needs new skill, not consistency. ${biggest.phase} is where the most room is.`;
 
   return { targetMs, currentMs, needMs, phases, reach, shortfallMs: Math.max(0, remaining), headline };
 }

@@ -442,9 +442,7 @@ function EmptySolves({ filtered, compact, addByHand }: { filtered: boolean; comp
         : "Hit space to start.";
   return (
     <div className={cn("flex flex-col items-center gap-1 px-4 text-center", compact ? "py-5" : "py-10")} data-testid="solves-empty">
-      <span className={cn("mb-1.5 grid place-items-center rounded-full bg-accent-soft text-accent", compact ? "h-8 w-8" : "h-11 w-11")}>
-        <TimerIcon size={compact ? 15 : 20} aria-hidden="true" />
-      </span>
+      <TimerIcon size={compact ? 16 : 22} aria-hidden="true" className="mb-1.5 text-accent" />
       <p className="text-sm font-medium text-foreground">{filtered ? "No solves match" : "No solves yet"}</p>
       <p className="max-w-[16rem] text-balance text-xs leading-relaxed text-muted-2">{hint}</p>
     </div>

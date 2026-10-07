@@ -46,7 +46,7 @@ export function useCubeGestures(handlers: Record<GestureAction, () => string | n
       const binding = bindingFor(gesture);
       if (!binding) return;
       const result = handlersRef.current[binding.action]();
-      setToast({ id: ++id, gesture, label: result ?? `${binding.label} — nothing to do`, ok: result !== null });
+      setToast({ id: ++id, gesture, label: result ?? `${binding.label}, nothing to do`, ok: result !== null });
     });
   }, [enabled]);
 

@@ -137,7 +137,7 @@ function ExperimentCard({ e, solves, onRemove }: { e: Experiment; solves: readon
           )}
         </>
       ) : (
-        <p className="text-[11px] text-muted">Needs solves on both sides of the change — keep solving.</p>
+        <p className="text-[11px] text-muted">Needs solves on both sides of the change, keep solving.</p>
       )}
     </div>
   );
@@ -206,7 +206,7 @@ export default function ExperimentsPage() {
               Start the experiment
             </button>
           </div>
-          <p className="text-[10px] text-muted-2">Set the time in the past if you already made the change — your existing solves become the evidence.</p>
+          <p className="text-[10px] text-muted-2">Set the time in the past if you already made the change, your existing solves become the evidence.</p>
         </div>
       )}
       {experiments.length === 0 && !open && (

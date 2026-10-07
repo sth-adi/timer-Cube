@@ -144,7 +144,7 @@ export default function DuelPage() {
   };
 
   return (
-    <AnalyticsShell icon={<Swords size={17} className="text-accent" />} title="DNA Duel" subtitle="Your Cube DNA against a friend's — one link, no account.">
+    <AnalyticsShell icon={<Swords size={17} className="text-accent" />} title="DNA Duel" subtitle="Your Cube DNA against a friend's, one link, no account.">
       {!mine ? (
         <div className="card rounded-xl p-6 text-center text-sm text-muted">Your duel card needs at least 12 solves on a 3x3 session.</div>
       ) : (
@@ -161,7 +161,7 @@ export default function DuelPage() {
             </button>
           </div>
           <p className="text-[11px] text-muted">
-            {(mine.averageMs / 1000).toFixed(2)}s average · {mine.count.toLocaleString()} solves · {mine.trait}. The link carries these numbers and your DNA shape — nothing else.
+            {(mine.averageMs / 1000).toFixed(2)}s average · {mine.count.toLocaleString()} solves · {mine.trait}. The link carries these numbers and your DNA shape, nothing else.
           </p>
           <button type="button" onClick={() => void navigator.clipboard?.writeText(link)} className="flex items-center gap-1 self-start text-[10px] text-muted-2 hover:text-foreground">
             <Copy size={10} /> copy the link
@@ -169,7 +169,7 @@ export default function DuelPage() {
         </div>
       )}
 
-      {badLink && <p className="px-1 text-[12px] text-danger">That duel link is broken or incomplete — ask for it again.</p>}
+      {badLink && <p className="px-1 text-[12px] text-danger">That duel link is broken or incomplete, ask for it again.</p>}
 
       {mine && them ? (
         <Versus me={mine} them={them} saved={rivals.some((r) => r.name === them.name && r.at === them.at)} />

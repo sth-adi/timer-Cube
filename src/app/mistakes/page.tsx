@@ -123,7 +123,7 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
       {phase === "setup" && (
         <div className="card flex flex-col items-center gap-3 rounded-xl p-4 text-center">
           <p className="text-sm font-semibold text-foreground">Put your cube back to that moment</p>
-          <p className="max-w-xs text-[11px] text-muted">Hold it yellow top, green front and follow the turns — it&apos;s the solve&apos;s scramble plus your own turns up to the mistake.</p>
+          <p className="max-w-xs text-[11px] text-muted">Hold it yellow top, green front and follow the turns, it&apos;s the solve&apos;s scramble plus your own turns up to the mistake.</p>
           {setupRoute ? (
             <RouteChips display={setupRoute.turns} turns={setupRoute.turns} position={setupRoute.position} partial={setupRoute.partial} variant="color" />
           ) : (
@@ -136,7 +136,7 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
         <div className="card flex flex-col items-center gap-2 rounded-xl p-6 text-center">
           <Crosshair size={26} className="text-accent" />
           <p className="text-sm font-semibold text-foreground">You&apos;re at the spot. Do it properly this time.</p>
-          <p className="max-w-xs text-[11px] text-muted">Take a look first — the clock starts on your first turn and stops when {GOAL_TEXT[drill.goal]}.</p>
+          <p className="max-w-xs text-[11px] text-muted">Take a look first, the clock starts on your first turn and stops when {GOAL_TEXT[drill.goal]}.</p>
         </div>
       )}
 
@@ -207,13 +207,13 @@ export default function MistakeDrillsPage() {
   const [active, setActive] = useState<Drill | null>(null);
 
   return (
-    <AnalyticsShell icon={<Bandage size={17} className="text-accent" />} title="Mistake Drills" subtitle="Your costliest mistakes, set back up on your cube — redo them until they're fixed.">
+    <AnalyticsShell icon={<Bandage size={17} className="text-accent" />} title="Mistake Drills" subtitle="Your costliest mistakes, set back up on your cube, redo them until they're fixed.">
       {active ? (
         <ConnectGate blurb="Mistake Drills put your cube back to the exact moment of a mistake and watch your retry turn by turn, so they need a connected smart cube.">
           <Runner key={active.id} drill={active} onBack={() => setActive(null)} />
         </ConnectGate>
       ) : drills.length === 0 ? (
-        <div className="card rounded-xl p-6 text-center text-sm text-muted">No mistakes to drill yet — they come from smart-cube solves the Mistake Radar has flagged.</div>
+        <div className="card rounded-xl p-6 text-center text-sm text-muted">No mistakes to drill yet, they come from smart-cube solves the Mistake Radar has flagged.</div>
       ) : (
         <div className="flex flex-col gap-2">
           <p className="px-1 text-[11px] text-muted">

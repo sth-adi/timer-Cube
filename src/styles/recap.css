@@ -272,15 +272,16 @@
   transition: none;
 }
 
-/* What sits behind a row's chevron: indented under the label, a quiet rule on the left. */
+/* What sits behind a row's chevron: indented under the label, on a faint tint. */
 .rc-detail {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 8px;
   margin: 0 0 8px 60px;
-  padding: 0 0 0 12px;
-  border-left: 2px solid var(--border-strong);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
   font-size: 12px;
   line-height: 16px;
   color: var(--muted);
@@ -397,8 +398,9 @@
 }
 .rc-step-moves {
   margin: 4px 0 0;
-  padding-left: 8px;
-  border-left: 2px solid var(--border-strong);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 12px;
   line-height: 20px;

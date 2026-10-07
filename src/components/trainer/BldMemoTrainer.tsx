@@ -115,7 +115,7 @@ export function BldMemoTrainer() {
         {!scramble ? (
           <p className="text-xs text-muted-2">Waiting on a scramble…</p>
         ) : nothingToMemo ? (
-          <p className="text-xs text-muted-2">This scramble is already solved — nothing to memorize.</p>
+          <p className="text-xs text-muted-2">This scramble is already solved, nothing to memorize.</p>
         ) : (
           <>
             <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -140,7 +140,7 @@ export function BldMemoTrainer() {
                   className="accent-[var(--accent)]"
                 />
               </label>
-              {!speechSupported && <span className="text-[11px] text-muted-2">voice isn&apos;t supported in this browser — read the letters below</span>}
+              {!speechSupported && <span className="text-[11px] text-muted-2">voice isn&apos;t supported in this browser, read the letters below</span>}
             </div>
 
             {(["corner", "edge"] as const).map((section) => {

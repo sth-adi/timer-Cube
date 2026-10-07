@@ -80,7 +80,7 @@ function SatNav() {
               <p className="py-2 text-xs text-muted">{step.title}</p>
             ) : hidden ? (
               <p className="flex items-center gap-2 py-4 text-xs text-muted-2">
-                <EyeOff size={14} /> Coach mode — the route appears if you stall for {COACH_DELAY_MS / 1000}s
+                <EyeOff size={14} /> Coach mode, the route appears if you stall for {COACH_DELAY_MS / 1000}s
               </p>
             ) : (
               <RouteChips display={step.display} turns={step.turns} position={nav.position} partial={nav.partial} size="lg" />
@@ -110,7 +110,7 @@ function SatNav() {
       </div>
       <p className="max-w-sm text-center text-[11px] text-muted-2">
         Each turn&apos;s color swatch is the center that actually turns, so you can check the notation against your cube whichever way
-        you&apos;re holding it. Coach mode hides directions until you stall — practice lookahead with a safety net.
+        you&apos;re holding it. Coach mode hides directions until you stall, practice lookahead with a safety net.
       </p>
     </div>
   );

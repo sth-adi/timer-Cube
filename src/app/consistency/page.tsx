@@ -93,7 +93,7 @@ export default function ConsistencyPage() {
             <SectionTitle>Share of your inconsistency</SectionTitle>
             <ShareBar r={r} />
             <p className="text-[10px] text-muted-2">
-              Each phase&apos;s covariance with your total time — they add up to 100% of the variance. A phase that&apos;s long but steady scores low.
+              Each phase&apos;s covariance with your total time, they add up to 100% of the variance. A phase that&apos;s long but steady scores low.
             </p>
           </div>
 

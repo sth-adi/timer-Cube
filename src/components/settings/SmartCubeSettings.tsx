@@ -88,7 +88,7 @@ function GyroRow({ protocolName, gyroActive, needsRecenter, recenter }: { protoc
         ) : recentered === "ok" ? (
           <p className="mt-1.5 text-[11px] text-muted-2">Re-centered on this grip.</p>
         ) : recentered === "none" ? (
-          <p className="mt-1.5 text-[11px] text-muted-2">No gyro reading yet — turn the cube a little and try again.</p>
+          <p className="mt-1.5 text-[11px] text-muted-2">No gyro reading yet, turn the cube a little and try again.</p>
         ) : null}
       </div>
     </div>

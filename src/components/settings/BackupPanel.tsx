@@ -91,7 +91,7 @@ export function BackupPanel() {
     <div className="mt-4 border-t border-border pt-3" data-testid="backup-panel">
       <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Backup</p>
       <p className="mb-2 text-[11px] leading-relaxed text-muted-2">
-        Your solves live only in this browser. A backup is one file with everything — solves, sessions, settings, algorithm progress — that you can keep anywhere.
+        Your solves live only in this browser. A backup is one file with everything, solves, sessions, settings, algorithm progress, that you can keep anywhere.
         {lastAt !== null && <> Last backup: {new Date(lastAt).toLocaleDateString()}.</>}
       </p>
       <div className="flex gap-1.5">
@@ -106,7 +106,7 @@ export function BackupPanel() {
       {gzipAvailable && (
         <label className="mt-1.5 flex items-center gap-2 text-[11px] text-muted" data-testid="backup-gzip">
           <input type="checkbox" checked={gzip} onChange={(e) => setGzip(e.target.checked)} />
-          Compress the backup (.json.gz — much smaller; restores the same way)
+          Compress the backup (.json.gz, much smaller; restores the same way)
         </label>
       )}
       <div className="mt-1.5 flex gap-1.5">
@@ -129,7 +129,7 @@ export function BackupPanel() {
           {preview.summary.settings > 0 && (
             <label className="flex items-center gap-2 text-[11px] text-muted">
               <input type="checkbox" checked={withSettings} onChange={(e) => setWithSettings(e.target.checked)} />
-              Also restore settings and training progress ({preview.summary.settings}) — replaces what&apos;s here
+              Also restore settings and training progress ({preview.summary.settings}), replaces what&apos;s here
             </label>
           )}
           <div className="flex gap-1.5">

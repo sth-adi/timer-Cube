@@ -48,7 +48,7 @@ export function ReconstructionCard({ recon, stepMistakes }: { recon: Reconstruct
         </div>
       </div>
       <p className="mt-2 text-[12px] leading-4 text-muted">
-        {recon.rotation ? <span className="font-mono text-foreground">{recon.rotation}</span> : "No rotation"} — held {recon.gripLabel}
+        {recon.rotation ? <span className="font-mono text-foreground">{recon.rotation}</span> : "No rotation"}, held {recon.gripLabel}
         {copy === "failed" && <span className="rc-t-slow"> · Couldn&apos;t copy, the text is selectable</span>}
       </p>
       <div className="rc-steps mt-4">
@@ -114,7 +114,7 @@ function StepMistakes({ hits }: { hits: Mistake[] }) {
         <ul className="flex flex-col gap-1 pb-1 pl-4 pt-1 text-muted">
           {hits.map((m, i) => (
             <li key={i}>
-              <span className="font-medium text-foreground">{m.title}</span> — {m.detail}
+              <span className="font-medium text-foreground">{m.title}</span>, {m.detail}
             </li>
           ))}
         </ul>

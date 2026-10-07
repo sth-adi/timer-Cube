@@ -137,7 +137,7 @@ export function ReplayGyroTwin({
   const facelets = turning ? faceletsAfter[k] : faceletsAfter[Math.min(faceletsAfter.length - 1, Math.max(0, k + 1))];
   if (!facelets) return null;
   return (
-    <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-panel/60 p-1 backdrop-blur-sm" aria-hidden="true" data-testid="replay-gyro-twin">
+    <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-panel p-1" aria-hidden="true" data-testid="replay-gyro-twin">
       <TwinStage size={size} box={1.7} drop={0.8}>
         <div
           ref={orientRef}

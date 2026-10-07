@@ -325,7 +325,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         await waitForIceGatheringComplete(conn);
         set({ localCode: encode(conn.localDescription!), busy: false });
       } catch {
-        set({ busy: false, error: "That code didn't work — double check it was copied in full." });
+        set({ busy: false, error: "That code didn't work, double check it was copied in full." });
       }
     },
 
@@ -359,7 +359,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         const code = await createRaceRoom(offerCode);
         if (!code) {
           // No Supabase (or it's unreachable) — fall back to the manual code, same as startHosting.
-          set({ localCode: offerCode, scramble, busy: false, error: "Couldn't create a quick room — use the code below instead." });
+          set({ localCode: offerCode, scramble, busy: false, error: "Couldn't create a quick room, use the code below instead." });
           return;
         }
         // Keep the manual offer code around too (unused unless the quick-connect wait fails or the racer opts into the fallback UI).
@@ -367,7 +367,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         const answer = await waitForRaceRoomAnswer(code, abort.signal);
         if (abort.signal.aborted || !pc) return;
         if (!answer) {
-          set({ error: "Nobody joined in time — try hosting again.", roomCode: null });
+          set({ error: "Nobody joined in time, try hosting again.", roomCode: null });
           return;
         }
         await pc.setRemoteDescription(decode(answer));
@@ -388,7 +388,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         const offer = await fetchRaceRoomOffer(normalized);
         if (abort.signal.aborted) return;
         if (!offer) {
-          set({ busy: false, roomCode: null, error: "That room code wasn't found — check it and try again." });
+          set({ busy: false, roomCode: null, error: "That room code wasn't found, check it and try again." });
           return;
         }
         const conn = new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -440,7 +440,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         }
         if (!outcome) {
           offerer.conn?.close();
-          set({ busy: false, matchmaking: false, error: "No one else is racing right now — try a room code instead, or try again in a bit." });
+          set({ busy: false, matchmaking: false, error: "No one else is racing right now, try a room code instead, or try again in a bit." });
           return;
         }
 
@@ -471,7 +471,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => {
         // would leave the UI on "Finding an opponent…" forever.
         window.setTimeout(() => {
           if (!abort.signal.aborted && get().matchmaking && !get().connected) {
-            set({ matchmaking: false, error: "Couldn't complete the match — try again." });
+            set({ matchmaking: false, error: "Couldn't complete the match, try again." });
           }
         }, 20000);
       } catch (err) {

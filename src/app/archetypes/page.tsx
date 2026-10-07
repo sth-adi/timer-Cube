@@ -66,7 +66,7 @@ export default function ArchetypesPage() {
     <AnalyticsShell
       icon={<Shapes size={17} className="text-accent" />}
       title="Solve Archetypes"
-      subtitle="The handful of shapes your solves actually come in, found by clustering — and what each one costs you."
+      subtitle="The handful of shapes your solves actually come in, found by clustering, and what each one costs you."
     >
       {!r ? (
         <NotEnough need={MIN_SOLVES} have={metrics.length} what="Solve Archetypes" />

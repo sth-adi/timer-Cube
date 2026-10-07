@@ -34,7 +34,7 @@ export default function EventMixPage() {
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
             <p className="text-5xl font-bold text-foreground">{secs(r.baseline.avgMs)}</p>
             <p className="text-xs font-medium text-muted">ordinary 3x3 average</p>
-            <p className="max-w-sm text-[11px] text-muted-2">over {r.baseline.count} solves — your baseline</p>
+            <p className="max-w-sm text-[11px] text-muted-2">over {r.baseline.count} solves, your baseline</p>
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 

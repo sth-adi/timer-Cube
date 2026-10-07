@@ -36,7 +36,7 @@ export default function CadencePage() {
     <AnalyticsShell
       icon={<Activity size={17} className="text-accent" />}
       title="Cadence"
-      subtitle="How steady your turn-to-turn spacing is — smooth stream or stutters."
+      subtitle="How steady your turn-to-turn spacing is, smooth stream or stutters."
     >
       {!r ? (
         <NotEnough need={MIN_SOLVES} have={allSolves.filter((s) => s.reconstruction && s.moveTimestamps).length} what="Cadence" />
@@ -69,7 +69,7 @@ export default function CadencePage() {
               </div>
             ))}
             <p className="text-[10px] text-muted-2">
-              Consistency is 100 minus the coefficient of variation of your turning gaps — pauses to look aren&apos;t counted as stutters.
+              Consistency is 100 minus the coefficient of variation of your turning gaps, pauses to look aren&apos;t counted as stutters.
             </p>
           </div>
         </>

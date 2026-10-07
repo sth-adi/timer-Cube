@@ -9,12 +9,12 @@ import { CONNECT_HINTS, CONNECT_STEPS, HOLD_LINE, RECONNECT_HINTS, SLOW_CONNECT_
 
 /** Why the connect screen is asking for a tap when the cube dropped on its own (see smartCubeStore's reconnectStopped). */
 const STOPPED_COPY = {
-  unsupported: "This browser can't reconnect to the cube on its own — tap Reconnect.",
+  unsupported: "This browser can't reconnect to the cube on its own, tap Reconnect.",
   "gave-up": "Couldn't reach the cube for a few minutes. Check it's on and nearby, then tap Reconnect.",
-  hidden: "Stopped trying while the app was in the background — tap Reconnect.",
+  hidden: "Stopped trying while the app was in the background, tap Reconnect.",
 } as const;
 
-/** Three small dots — pick, address, connect — lit from the store's real connect status; the current one pulses. */
+/** Three small dots — pick, address, connect — lit from the store's real connect status; the current one is ringed. */
 function ConnectSteps({ step }: { step: number }) {
   return (
     <ol aria-label="Connection steps" className="flex items-center text-[10px]" data-testid="connect-steps">
@@ -22,7 +22,7 @@ function ConnectSteps({ step }: { step: number }) {
         <li key={label} aria-current={i === step ? "step" : undefined} className="flex items-center">
           {i > 0 && <span aria-hidden className={cn("mx-1.5 h-px w-4", i <= step ? "bg-accent" : "bg-border-strong")} />}
           <span className={cn("flex items-center gap-1", i < step ? "text-muted" : i === step ? "font-medium text-foreground" : "text-muted-2")}>
-            <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", i <= step ? "bg-accent" : "bg-border-strong", i === step && "animate-pulse")} />
+            <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", i <= step ? "bg-accent" : "bg-border-strong", i === step && "ring-2 ring-accent/40 ring-offset-1 ring-offset-bg-panel")} />
             {label}
           </span>
         </li>

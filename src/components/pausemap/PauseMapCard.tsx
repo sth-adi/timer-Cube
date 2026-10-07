@@ -82,7 +82,7 @@ export function PauseMapCard({ report, onDrill }: { report: PauseMapReport; onDr
           <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Did drilling help? (your real solves, not the drills)</p>
           {effects.map(({ h, e, n }) => (
             <div key={h.order} className="text-[11px] text-muted">
-              <span className="font-medium text-foreground">{h.label}</span> — drilled {n}× since {new Date(e.since).toLocaleDateString()}.{" "}
+              <span className="font-medium text-foreground">{h.label}</span>, drilled {n}× since {new Date(e.since).toLocaleDateString()}.{" "}
               {e.enough ? (
                 <>
                   Finding pause {secs(e.before.findMs)} → {secs(e.after.findMs)}, stopping in {Math.round(e.before.stallRate * 100)}% →{" "}
@@ -90,7 +90,7 @@ export function PauseMapCard({ report, onDrill }: { report: PauseMapReport; onDr
                 </>
               ) : (
                 <>
-                  Too early to tell: {e.before.pairs} pairs before, {e.after.pairs} since — needs 10 on each side.
+                  Too early to tell: {e.before.pairs} pairs before, {e.after.pairs} since, needs 10 on each side.
                 </>
               )}
             </div>

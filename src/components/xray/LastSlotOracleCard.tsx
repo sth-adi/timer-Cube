@@ -91,7 +91,7 @@ export function LastSlotOracleCard({ report }: { report: OracleReport }) {
           <Sparkles size={13} className="mt-px shrink-0" />
           <span>
             <span className="font-mono font-semibold">{report.better.display}</span> would have left{" "}
-            <span className="font-semibold">{outcomeLabel(report.better.outcome)}</span> — {report.yours.cost - report.better.cost} turns
+            <span className="font-semibold">{outcomeLabel(report.better.outcome)}</span>, {report.yours.cost - report.better.cost} turns
             fewer to finish OLL than what you did.
           </span>
         </p>

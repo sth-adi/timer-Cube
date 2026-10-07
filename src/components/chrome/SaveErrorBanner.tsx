@@ -7,9 +7,9 @@ import { downloadBackup } from "@/lib/backup/restore";
 
 /** What to tell the person, by what went wrong (see SaveErrorKind). */
 const COPY = {
-  write: "Couldn't save your last solve — storage is full or blocked. Export a backup now.",
-  open: "Couldn't open this device's storage, so your solves can't be saved here. A private window or blocked site data can cause this — try a normal window.",
-  loading: "Your last solve wasn't saved — your history was still loading. Give it a moment, then solve again.",
+  write: "Couldn't save your last solve, storage is full or blocked. Export a backup now.",
+  open: "Couldn't open this device's storage, so your solves can't be saved here. A private window or blocked site data can cause this, try a normal window.",
+  loading: "Your last solve wasn't saved, your history was still loading. Give it a moment, then solve again.",
 } as const;
 
 /**

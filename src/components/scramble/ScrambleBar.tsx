@@ -85,18 +85,18 @@ export function ScrambleBar({ className }: { className?: string }) {
             className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-warning"
             title={
               event !== "333"
-                ? "A random-move scramble for this puzzle size — not a true random-state competition scramble."
+                ? "A random-move scramble for this puzzle size, not a true random-state competition scramble."
                 : undefined
             }
           >
-            {event !== "333" ? "Random-move — not WCA-legal" : "Practice scramble — not WCA-legal"}
+            {event !== "333" ? "Random-move, not WCA-legal" : "Practice scramble, not WCA-legal"}
           </span>
         )}
       </div>
       <div className="flex flex-col items-center gap-0.5 sm:flex-row sm:items-start sm:justify-center sm:gap-2">
         <p className="tabular-timer max-w-3xl text-center text-base leading-snug sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
           {freestyleAwaiting
-            ? "Freestyle — scramble your cube however you like"
+            ? "Freestyle, scramble your cube however you like"
             : loading && !scramble
             ? "Generating scramble…"
             : guided
@@ -145,7 +145,7 @@ export function ScrambleBar({ className }: { className?: string }) {
               type="button"
               onClick={() => void onPaste()}
               aria-label="Paste a scramble"
-              title={pasteState === "bad" ? "That isn't a 3x3 scramble — only U D L R F B turns" : "Paste a scramble from your clipboard and solve that one"}
+              title={pasteState === "bad" ? "That isn't a 3x3 scramble, only U D L R F B turns" : "Paste a scramble from your clipboard and solve that one"}
               className={cn(
                 "tap-target rounded-full transition-colors",
                 pasteState === "ok" ? "text-success" : pasteState === "bad" ? "text-danger" : "text-muted hover:text-foreground hover:bg-bg-panel-2",

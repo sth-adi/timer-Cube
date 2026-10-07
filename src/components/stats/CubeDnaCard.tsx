@@ -151,7 +151,7 @@ export function CubeDnaCard() {
       {view === "now" || !canEvolve || !snap ? (
         <>
           <p className="mb-2 text-[11px] text-muted-2">
-            Every axis is a ratio against your own personal best — 100 means your average already matches your peak.
+            Every axis is a ratio against your own personal best, 100 means your average already matches your peak.
           </p>
           <RadarChart axes={axes} ghost={canEvolve ? timeline[timeline.length - 2].axes : null} className="mx-auto w-full max-w-[260px]" />
           {canEvolve && <p className="text-center text-[11px] text-muted-2">Dashed: {timeline[timeline.length - 2].label}</p>}

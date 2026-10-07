@@ -32,7 +32,7 @@ describe("Alg Gym", () => {
   it("names the algorithm you did instead", () => {
     const sune = GYM_CASES.find((c) => c.name === "Sune")!;
     const antisune = toPhysicalTurns("R U2 R' U' R U' R'", HOME_ORIENTATION).turns;
-    expect(explainMiss(sune, antisune)).toBe("That was the Antisune algorithm — this case is Sune.");
+    expect(explainMiss(sune, antisune)).toBe("That was the Antisune algorithm, this case is Sune.");
     expect(explainMiss(sune, ["R", "U", "R'", "U'"])).toMatch(/broke F2L/);
   });
 

@@ -40,7 +40,7 @@ export const RECONNECT_HINTS = [
 
 /** The line shown while the link is being won back after an unexpected drop — worded as a drop, not as a first connection. */
 export function reconnectLine(name: string | null, trying: boolean): string {
-  return trying ? `Lost the link to ${name ?? "your cube"} — getting it back…` : `${name ?? "Your cube"} went quiet — will try again shortly`;
+  return trying ? `Lost the link to ${name ?? "your cube"}, getting it back…` : `${name ?? "Your cube"} went quiet, will try again shortly`;
 }
 
 /** Said on the connect screen before connecting: the gyro's home pose is the first sample, assumed to be this grip (see lib/gyro/homePose.ts). */

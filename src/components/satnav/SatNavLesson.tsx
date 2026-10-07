@@ -201,7 +201,7 @@ export function SatNavLesson() {
           <p className="text-lg font-bold text-foreground">You solved it</p>
           <p className="text-xs text-muted">
             {finished.turns} turns in {(finished.ms / 1000).toFixed(1)}s. Scramble it and the next lesson starts on its own
-            {style === "guided" ? " — try it with “Try first” on." : "."}
+            {style === "guided" ? ", try it with “Try first” on." : "."}
           </p>
         </div>
       ) : !step || status === "planning" ? (
@@ -209,7 +209,7 @@ export function SatNavLesson() {
           <Loader2 size={15} className="animate-spin text-accent" /> Reading your cube…
         </p>
       ) : step.stage === "solved" ? (
-        <div className="card w-full rounded-xl p-5 text-center text-sm text-muted">Your cube is solved — scramble it to start a lesson.</div>
+        <div className="card w-full rounded-xl p-5 text-center text-sm text-muted">Your cube is solved, scramble it to start a lesson.</div>
       ) : (
         lesson && (
           <div className="card flex w-full flex-col gap-3 rounded-xl p-4">
@@ -246,7 +246,7 @@ export function SatNavLesson() {
               ) : style === "guided" ? (
                 status === "recalculating" ? (
                   <p className="flex items-center gap-2 text-sm font-semibold text-warning">
-                    <RefreshCw size={14} className="animate-spin" /> That wasn&apos;t the planned turn — recalculating…
+                    <RefreshCw size={14} className="animate-spin" /> That wasn&apos;t the planned turn, recalculating…
                   </p>
                 ) : (
                   <>
@@ -266,7 +266,7 @@ export function SatNavLesson() {
                 )
               ) : hint === 0 ? (
                 <>
-                  <p className="text-sm font-semibold text-foreground">Your turn — work it out.</p>
+                  <p className="text-sm font-semibold text-foreground">Your turn, work it out.</p>
                   <p className="text-[11px] text-muted-2">Stall for {STALL_HINT_MS / 1000}s and a hint appears on its own.</p>
                 </>
               ) : hint === 1 ? (

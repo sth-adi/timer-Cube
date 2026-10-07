@@ -8,7 +8,7 @@ import "@/styles/recap.css";
 
 /** The banner's line while the store is getting the cube back: wording only, the store owns the attempt count. */
 export function cubeLostText(attempt: number, trying: boolean): string {
-  return `Cube lost — ${trying ? "reconnecting…" : "turn a face to wake it"}${attempt > 1 ? ` · try ${attempt}` : ""}`;
+  return `Cube lost, ${trying ? "reconnecting…" : "turn a face to wake it"}${attempt > 1 ? ` · try ${attempt}` : ""}`;
 }
 
 /**
@@ -95,7 +95,7 @@ export function DroppedSolveView({
         </div>
       </div>
       <p className="max-w-xs text-center text-[12px] leading-4 text-muted">
-        The Bluetooth link dropped{moveCount ? ` ${moveCount} move${moveCount === 1 ? "" : "s"} into your solve` : ""} — not a step you missed, the connection itself. That solve can&apos;t be saved; once the cube is back, start the scramble again.
+        The Bluetooth link dropped{moveCount ? ` ${moveCount} move${moveCount === 1 ? "" : "s"} into your solve` : ""}, not a step you missed, the connection itself. That solve can&apos;t be saved; once the cube is back, start the scramble again.
       </p>
     </div>
   );

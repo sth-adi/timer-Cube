@@ -118,7 +118,7 @@ export default function StaminaPage() {
     <AnalyticsShell
       icon={<Thermometer size={17} className="text-accent" />}
       title="Warm-up & Fatigue"
-      subtitle="How your solving changes across a sitting — how long you take to warm up, and when you start to fade."
+      subtitle="How your solving changes across a sitting, how long you take to warm up, and when you start to fade."
     >
       {!r ? (
         <NotEnough need={3 * MIN_SITTING} have={metrics.length} what={`Warm-up & Fatigue (3 sittings of ${MIN_SITTING}+ solves)`} />
@@ -126,7 +126,7 @@ export default function StaminaPage() {
         <>
           <Hero
             value={r.warmupSolves === 5 ? "5+" : `${r.warmupSolves}`}
-            label={r.warmupSolves === 0 ? "warm-up solves needed — you start at speed" : `warm-up solve${r.warmupSolves === 1 ? "" : "s"} before you're at full speed`}
+            label={r.warmupSolves === 0 ? "warm-up solves needed, you start at speed" : `warm-up solve${r.warmupSolves === 1 ? "" : "s"} before you're at full speed`}
             sub={`${r.solves} solves across ${r.sittings} sittings (a new sitting starts after 15+ minutes away)`}
           />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
@@ -149,7 +149,7 @@ export default function StaminaPage() {
             <PauseLine buckets={r.positions} />
             {r.fatigue !== null && (
               <p className="text-[11px] text-muted">
-                Solves after #30 run {pct(r.fatigue)} against solves 6–30 {r.fatigue > 0.03 ? "— that's fatigue." : "— no real fade."}
+                Solves after #30 run {pct(r.fatigue)} against solves 6–30 {r.fatigue > 0.03 ? ", that's fatigue." : ", no real fade."}
               </p>
             )}
           </div>

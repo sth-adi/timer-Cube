@@ -133,11 +133,11 @@ function Report({ attempt }: { attempt: Attempt }) {
           return (
             <div key={kind} className="flex flex-col gap-1.5">
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">
-                {kind === "corner" ? "Corners" : "Edges"} never solved during the attempt — a skipped target or memo slip
+                {kind === "corner" ? "Corners" : "Edges"} never solved during the attempt, a skipped target or memo slip
               </p>
               <div className="flex flex-wrap gap-2">
                 {never.map((u) => (
-                  <span key={u.piece.index} className="rounded-lg bg-bg-panel-2 px-2 py-1" title={`${u.piece.name} — ${u.issue}`}>
+                  <span key={u.piece.index} className="rounded-lg bg-bg-panel-2 px-2 py-1" title={`${u.piece.name}, ${u.issue}`}>
                     <PieceChip u={u} />
                   </span>
                 ))}
@@ -280,7 +280,7 @@ function BldDoctor() {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black">
         <p className="flex items-center gap-2 text-sm font-medium text-white/40">
-          <EyeOff size={16} /> {phase === "memo" ? "Memo — first turn starts execution" : "Executing"}
+          <EyeOff size={16} /> {phase === "memo" ? "Memo, first turn starts execution" : "Executing"}
         </p>
         <p className="tabular-timer text-7xl font-bold text-white/90">{formatTime(elapsed)}</p>
         <button
@@ -324,7 +324,7 @@ function BldDoctor() {
       {phase === "setup" && (
         <div className="card flex flex-col items-center gap-3 rounded-xl p-4 text-center">
           <p className="text-sm font-semibold text-foreground">Scramble your cube</p>
-          <p className="max-w-xs text-[11px] text-muted">Follow the turns — no need to hold it any particular way. Don&apos;t look at the result once it&apos;s scrambled if you want a fair attempt.</p>
+          <p className="max-w-xs text-[11px] text-muted">Follow the turns, no need to hold it any particular way. Don&apos;t look at the result once it&apos;s scrambled if you want a fair attempt.</p>
           {route ? (
             <RouteChips display={route.turns} turns={route.turns} position={route.position} partial={route.partial} variant="color" />
           ) : (
@@ -362,7 +362,7 @@ export default function BldPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Stethoscope size={17} className="text-accent" /> BLD Doctor
             </h1>
-            <p className="text-[11px] text-muted-2">Blindfolded attempts on your smart cube — and when one DNFs, exactly why.</p>
+            <p className="text-[11px] text-muted-2">Blindfolded attempts on your smart cube, and when one DNFs, exactly why.</p>
           </div>
           <ConnectGate blurb="BLD Doctor sets up the scramble on your cube and watches every turn of the attempt, so it needs a connected smart cube.">
             <BldDoctor />

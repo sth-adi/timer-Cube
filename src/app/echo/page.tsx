@@ -54,7 +54,7 @@ export default function EchoPage() {
       : game.phase === "show"
         ? "Watch"
         : game.phase === "input"
-          ? `Your turn — ${game.input.length} of ${game.seq.length}`
+          ? `Your turn, ${game.input.length} of ${game.seq.length}`
           : "Missed it";
 
   return (
@@ -128,7 +128,7 @@ export default function EchoPage() {
 
       <TurnPad onTurn={(g) => press(g)} />
       <p className="text-center text-[11px] text-[var(--play-dim)]">
-        {connected ? "Turn your cube — quarter turns only (a half turn counts as two)." : "No cube connected — use the pad above or the keyboard (I K · E D · J F · S L · H G · W O)."}
+        {connected ? "Turn your cube, quarter turns only (a half turn counts as two)." : "No cube connected, use the pad above or the keyboard (I K · E D · J F · S L · H G · W O)."}
       </p>
     </PlayShell>
   );

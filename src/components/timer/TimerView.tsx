@@ -376,7 +376,7 @@ export function TimerView() {
       )}
       {phase === "stopped" && lastResult && lastResult.penalty !== "none" && (
         <p className="rounded-full bg-danger/15 px-3 py-1 text-sm font-semibold text-danger">
-          {lastResult.penalty === "dnf" ? "DNF" : "+2"} — started {((lastResult.inspection?.elapsedMs ?? 0) / 1000).toFixed(2)}s into inspection
+          {lastResult.penalty === "dnf" ? "DNF" : "+2"}, started {((lastResult.inspection?.elapsedMs ?? 0) / 1000).toFixed(2)}s into inspection
         </p>
       )}
       {phase === "stopped" && (justSaved || deletedResult === lastResult) && (

@@ -309,7 +309,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
           )}
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">
             {practiceMode
-              ? "Random-move scrambles at a fixed length you pick — not WCA-legal, and never scored against official stats. Good for drilling lookahead on long scrambles or isolating a stage on short ones."
+              ? "Random-move scrambles at a fixed length you pick, not WCA-legal, and never scored against official stats. Good for drilling lookahead on long scrambles or isolating a stage on short ones."
               : "Off, 3x3 uses random-state scrambles, the same kind competitions use. (2x2, 4x4 and 5x5 always use random-move scrambles.)"}
           </p>
         </div>
@@ -369,7 +369,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
             </button>
           </div>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-2">
-            Accepts this app&apos;s own export, or a csTimer export — both go straight into the current session.
+            Accepts this app&apos;s own export, or a csTimer export, both go straight into the current session.
           </p>
           <input
             ref={fileInputRef}
@@ -385,7 +385,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
           {csTimerPending && (
             <div className="mt-2 rounded-lg bg-bg-panel-2 p-2.5">
               <p className="mb-1.5 text-[11px] text-muted-2">
-                This csTimer file has {csTimerPending.sessions.length} sessions — pick one to import into{" "}
+                This csTimer file has {csTimerPending.sessions.length} sessions, pick one to import into{" "}
                 <span className="text-foreground/80">the current session</span>:
               </p>
               <div className="flex flex-wrap gap-1.5">

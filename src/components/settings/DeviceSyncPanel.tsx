@@ -80,7 +80,7 @@ export function DeviceSyncPanel() {
       {mode === "idle" && (
         <>
           <p className="mb-2 text-[11px] leading-relaxed text-muted-2">
-            Bring your solve history from your other phone or laptop — direct device-to-device, both need to be open
+            Bring your solve history from your other phone or laptop, direct device-to-device, both need to be open
             at once. No account, nothing passes through us.
           </p>
           <div className="flex gap-2">

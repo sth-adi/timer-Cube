@@ -59,10 +59,10 @@
 }
 /* The filter lives on the flat stage around the 3D scene (a filter on a preserve-3d element would flatten it). */
 :root:not([data-fx-level="off"]) .twin-stage {
-  filter: drop-shadow(0 10px 18px rgb(0 0 0 / var(--twin-drop))) drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 14%, transparent));
+  filter: drop-shadow(0 10px 18px rgb(0 0 0 / var(--twin-drop)));
 }
 :root:not([data-fx-level="off"]) .twin-stage[data-compact="true"] {
-  filter: drop-shadow(0 4px 7px rgb(0 0 0 / var(--twin-drop))) drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 12%, transparent));
+  filter: drop-shadow(0 4px 7px rgb(0 0 0 / var(--twin-drop)));
 }
 .twin-shadow {
   position: absolute;

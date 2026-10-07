@@ -95,9 +95,6 @@ export function LiveMoveLine({ timestamps }: { timestamps: readonly number[] }) 
         ·
       </span>
       <LiveTps tps={liveTps} />
-      <span aria-hidden className="text-muted-2/70">
-        —
-      </span>
       <span className="text-muted-2">solve the cube to stop</span>
     </p>
   );

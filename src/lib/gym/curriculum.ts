@@ -173,7 +173,7 @@ export function candidateBlocks(input: CurriculumInput): Omit<Block, "minutes" |
 function starter(minutes: number): Block[] {
   const third = Math.max(MIN_BLOCK_MIN, Math.round(minutes / 3));
   return [
-    { id: "gym-pll", kind: "gym", title: "PLL on your cube", reason: "No solve history yet — start with the step every solve ends on.", msPerSolve: 0, minutes: third, reps: third * REPS_PER_MIN, cases: [] },
+    { id: "gym-pll", kind: "gym", title: "PLL on your cube", reason: "No solve history yet, start with the step every solve ends on.", msPerSolve: 0, minutes: third, reps: third * REPS_PER_MIN, cases: [] },
     { id: "recognize", kind: "recognize", title: "Recognition flashcards", reason: "Naming a case fast is half of last-layer speed.", msPerSolve: 0, minutes: third },
     { id: "cross", kind: "cross", title: "Cross planning", reason: "Every solve starts with it.", msPerSolve: 0, minutes: Math.max(MIN_BLOCK_MIN, minutes - 2 * third) },
   ];

@@ -152,18 +152,18 @@ export function weeklyQuests(input: QuestInput): Quest[] {
   const f = input.topFinding ?? "";
   if ((f === "two-look" || f === "drill-algs") && input.gymReps) {
     const clean = input.gymReps.filter((r) => r.ok && r.at >= start && r.at <= input.now).length;
-    quests.push(cap({ id: `${weekKey}:gym`, kind: "skill", title: "30 clean Alg Gym reps", detail: "Your last layer is where the Coach says you lose the most — drill it on the cube.", target: 30, progress: clean, xp: 200 }));
+    quests.push(cap({ id: `${weekKey}:gym`, kind: "skill", title: "30 clean Alg Gym reps", detail: "Your last layer is where the Coach says you lose the most, drill it on the cube.", target: 30, progress: clean, xp: 200 }));
   } else if ((f === "f2l-pauses" || f === "lookahead") && pastMetrics.length >= 5) {
     const bar = median(pastMetrics.map((m) => m.f2lPauseMs)) * 0.8;
     const hit = weekMetrics.filter((m) => m.f2lPauseMs <= bar).length;
-    quests.push(cap({ id: `${weekKey}:f2lpause`, kind: "skill", title: `10 solves with under ${s1(bar)}s of F2L pausing`, detail: "Pausing between pairs is your biggest leak — keep turning, look ahead.", target: 10, progress: hit, xp: 200 }));
+    quests.push(cap({ id: `${weekKey}:f2lpause`, kind: "skill", title: `10 solves with under ${s1(bar)}s of F2L pausing`, detail: "Pausing between pairs is your biggest leak, keep turning, look ahead.", target: 10, progress: hit, xp: 200 }));
   } else if (pastMetrics.length >= 5) {
     const bar = median(pastMetrics.map((m) => m.phases[0])) * 0.85;
     const hit = weekMetrics.filter((m) => m.phases[0] <= bar).length;
     quests.push(cap({ id: `${weekKey}:cross`, kind: "skill", title: `15 crosses under ${s1(bar)}s`, detail: "Plan the whole cross in inspection, then execute without stopping.", target: 15, progress: hit, xp: 200 }));
   } else {
     const rounds = input.compRoundDates.filter((d) => d >= start && d <= input.now).length;
-    quests.push(cap({ id: `${weekKey}:comp`, kind: "skill", title: "Finish 2 Comp Sim rounds", detail: "Practise under pressure — judge calls, official average.", target: 2, progress: rounds, xp: 200 }));
+    quests.push(cap({ id: `${weekKey}:comp`, kind: "skill", title: "Finish 2 Comp Sim rounds", detail: "Practise under pressure, judge calls, official average.", target: 2, progress: rounds, xp: 200 }));
   }
 
   // Stretch: beat your best Ao5 from before this week (or, early on, set a first one).

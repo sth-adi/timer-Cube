@@ -506,7 +506,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
             </>
           ) : (
             <p className="flex items-center gap-1.5 text-[11px] text-muted">
-              <Clapperboard size={12} className="text-accent" /> Director&apos;s Cut — press play for the narrated replay
+              <Clapperboard size={12} className="text-accent" /> Director&apos;s Cut, press play for the narrated replay
             </p>
           )}
         </div>
@@ -606,7 +606,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 </>
               ) : (
                 <>
-                  <Gauge size={12} /> Estimated pacing — no capture timing for this solve
+                  <Gauge size={12} /> Estimated pacing, no capture timing for this solve
                 </>
               )}
             </p>

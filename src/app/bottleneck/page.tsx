@@ -27,7 +27,7 @@ export default function BottleneckPage() {
       {!r ? (
         <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
           <p className="text-sm text-muted">Bottleneck Report needs at least {MIN_CASES} OLL/PLL/F2L cases you&apos;ve each hit a few times.</p>
-          <p className="text-[11px] text-muted-2">Every smart-cube solve logs its cases automatically — see Case History to check.</p>
+          <p className="text-[11px] text-muted-2">Every smart-cube solve logs its cases automatically, see Case History to check.</p>
         </div>
       ) : (
         <>

@@ -152,11 +152,11 @@ export function buildPauseMap(solves: readonly SolveCapture[]): PauseMapReport |
 
   let headline: string;
   if (!handoffs.some((h) => h.verdict)) {
-    headline = `${stretches.length} pairs so far — each hand-off needs ${MIN_PAIRS} before it gets a verdict.`;
+    headline = `${stretches.length} pairs so far, each hand-off needs ${MIN_PAIRS} before it gets a verdict.`;
   } else if (!worst) {
     headline = "No hand-off stands out: you rarely stop between pairs, and you solve them close to the fewest turns.";
   } else if (worst.verdict === "finding") {
-    headline = `${worst.label} is where your F2L stalls: you stop to look in ${Math.round(worst.stallRate * 100)}% of solves, ${s2(worst.lookingMs)} per pair on average before and during it. That's lookahead — track this pair while you finish the one before.`;
+    headline = `${worst.label} is where your F2L stalls: you stop to look in ${Math.round(worst.stallRate * 100)}% of solves, ${s2(worst.lookingMs)} per pair on average before and during it. That's lookahead, track this pair while you finish the one before.`;
   } else {
     headline = `You find the pair at ${worst.label.toLowerCase()} quickly, then take the long way: ${worst.extraTurns.toFixed(1)} turns more than the fewest, on average. That's the solution, not your eyes.`;
   }

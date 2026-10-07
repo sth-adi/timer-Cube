@@ -51,7 +51,7 @@ export function solveCrossFromCube(start: CubeJSInstance): string[] {
   let idx = crossIndex(cube);
   let remaining = dist[idx];
   if (remaining === 255) {
-    throw new Error("Unreachable cross state — this should never happen for a valid scramble");
+    throw new Error("Unreachable cross state, this should never happen for a valid scramble");
   }
 
   const moves: string[] = [];
@@ -74,7 +74,7 @@ export function solveCrossFromCube(start: CubeJSInstance): string[] {
       }
     }
     if (!found) {
-      throw new Error("Cross solver failed to find a descending move — table may be corrupt");
+      throw new Error("Cross solver failed to find a descending move, table may be corrupt");
     }
   }
   return moves;

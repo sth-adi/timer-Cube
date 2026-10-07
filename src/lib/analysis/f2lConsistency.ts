@@ -94,7 +94,7 @@ export function summarizeF2lConsistency(occurrences: readonly CaseOccurrence[], 
     parts.push(`"${w.name}" is the least settled: you've done it in ${w.bestTurns} turns but usually take ${w.medianTurns.toFixed(0)}.`);
     parts.push(`Learning one fixed algorithm for your ${worst.length === 1 ? "worst case" : `${worst.length} least-settled cases`} is worth about ${(lostMsPerSolve / 1000).toFixed(2)}s a solve.`);
   } else {
-    parts.push("Every case you see often is within a couple of turns of your best — your F2L algorithms are settled.");
+    parts.push("Every case you see often is within a couple of turns of your best, your F2L algorithms are settled.");
   }
 
   return { solves: solveCount, pairs: f2l.length, medianTurnsPerPair, cases, worst, lostMsPerSolve, headline: parts.join(" ") };

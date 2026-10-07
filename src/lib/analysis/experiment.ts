@@ -135,15 +135,15 @@ export function analyzeExperiment(before: readonly number[], after: readonly num
         ? " That's about what your existing improvement trend predicted, so the change itself may not be why."
         : trendAdjustedMs < 0
           ? ` Even allowing for how fast you were already improving, that's ${s2(trendAdjustedMs)}s better than expected.`
-          : ` But you were already improving — against that trend it's ${s2(trendAdjustedMs)}s worse than expected.`;
+          : ` But you were already improving, against that trend it's ${s2(trendAdjustedMs)}s worse than expected.`;
   const pText = p < 0.001 ? "p < 0.001" : `p = ${p.toFixed(3)}`;
   const headline =
     verdict === "too-few"
-      ? `Too few solves yet — at least ${MIN_PER_SIDE} on each side of the change (now ${before.length} before, ${after.length} after).`
+      ? `Too few solves yet, at least ${MIN_PER_SIDE} on each side of the change (now ${before.length} before, ${after.length} after).`
       : verdict === "better"
         ? `Faster after the change: ${s2(diffMs)}s a solve (plausibly ${s2(ci[1])}–${s2(ci[0])}s), and very unlikely to be luck (${pText}).${trendNote}`
         : verdict === "worse"
           ? `Slower after the change: +${s2(diffMs)}s a solve (plausibly ${s2(ci[0])}–${s2(ci[1])}s), and very unlikely to be luck (${pText}).${trendNote}`
-          : `No clear difference yet (${diffMs < 0 ? "−" : "+"}${s2(diffMs)}s, p = ${p.toFixed(2)}) — could easily be ordinary variation.${neededPerSide ? ` About ${neededPerSide} solves on each side would settle an effect this size.` : ""}`;
+          : `No clear difference yet (${diffMs < 0 ? "−" : "+"}${s2(diffMs)}s, p = ${p.toFixed(2)}), could easily be ordinary variation.${neededPerSide ? ` About ${neededPerSide} solves on each side would settle an effect this size.` : ""}`;
   return { nBefore: before.length, nAfter: after.length, meanBefore, meanAfter, diffMs, ci, p, trendAdjustedMs, verdict, neededPerSide, headline };
 }

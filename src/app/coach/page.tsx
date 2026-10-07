@@ -35,12 +35,12 @@ export default function CoachPage() {
         <>
           <p className="px-1 text-[13px] leading-relaxed text-foreground">
             {top
-              ? `Your biggest lever: ${top.title.charAt(0).toLowerCase()}${top.title.slice(1)} — about ${secs(top.msPerSolve)} a solve.`
+              ? `Your biggest lever: ${top.title.charAt(0).toLowerCase()}${top.title.slice(1)}, about ${secs(top.msPerSolve)} a solve.`
               : (r?.headline ?? "")}
           </p>
           {xray.scanning && (
             <p className="flex items-center gap-1.5 px-1 text-[11px] text-muted-2">
-              <Loader2 size={11} className="animate-spin" /> X-Raying your smart-cube solves for more — {xray.done}/{xray.total}
+              <Loader2 size={11} className="animate-spin" /> X-Raying your smart-cube solves for more, {xray.done}/{xray.total}
             </p>
           )}
 
@@ -48,7 +48,7 @@ export default function CoachPage() {
             <Link key={f.id} href={f.href} className="card flex flex-col gap-2 rounded-xl p-4 transition-colors hover:bg-bg-panel-2/60">
               <div className="flex items-start justify-between gap-3">
                 <p className="flex items-start gap-2 text-sm font-semibold leading-snug text-foreground">
-                  <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[11px] font-bold text-accent">{i + 1}</span>
+                  <span className="shrink-0 text-sm font-bold tabular-nums text-accent">{i + 1}.</span>
                   <span>
                     {f.title}
                     {f.source === "xray" && (

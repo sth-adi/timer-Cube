@@ -136,10 +136,10 @@ export function summarizeAlgSpeed(occurrences: readonly CaseOccurrence[], solveC
     if (top.length) parts.push(`Learning full OLL for ${top.map((a) => a.name).join(", ")} first is worth about ${s(top.reduce((x, a) => x + a.lostMsPerSolve, 0))}s a solve.`);
   }
   const stop = flagged.find((a) => a.verdict === "hesitates");
-  if (stop) parts.push(`You stop partway through ${stop.name} (${(stop.medianPauseMs / 1000).toFixed(1)}s) — it isn't fully memorized yet.`);
+  if (stop) parts.push(`You stop partway through ${stop.name} (${(stop.medianPauseMs / 1000).toFixed(1)}s), it isn't fully memorized yet.`);
   const hands = flagged.find((a) => a.verdict === "slow-hands");
-  if (hands) parts.push(`${hands.name} is your slowest to turn (${hands.medianTps.toFixed(1)} TPS) — worth drilling.`);
-  if (!flagged.length) parts.push("No case you do regularly stands out — your last-layer execution is even.");
+  if (hands) parts.push(`${hands.name} is your slowest to turn (${hands.medianTps.toFixed(1)} TPS), worth drilling.`);
+  if (!flagged.length) parts.push("No case you do regularly stands out, your last-layer execution is even.");
 
   return { baselineTps, algs, flagged, twoLookOllShare, lostMsPerSolve, headline: parts.join(" ") };
 }

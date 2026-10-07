@@ -188,7 +188,7 @@ export const useSyncStore = create<SyncStoreState>((set) => {
         await waitForIceGatheringComplete(conn);
         set({ localCode: encode(conn.localDescription!), busy: false });
       } catch {
-        set({ busy: false, error: "That code didn't work — double check it was copied in full." });
+        set({ busy: false, error: "That code didn't work, double check it was copied in full." });
       }
     },
 

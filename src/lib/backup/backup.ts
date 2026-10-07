@@ -79,7 +79,7 @@ export function parseBackup(raw: unknown): ParsedBackup {
   if (typeof raw !== "object" || raw === null) throw new Error("That isn't a backup file.");
   const o = raw as Record<string, unknown>;
   if (o.app !== BACKUP_APP) throw new Error("That isn't a backup made by this app.");
-  if (!isNum(o.version) || o.version > BACKUP_VERSION) throw new Error("That backup is from a newer version of the app — update first.");
+  if (!isNum(o.version) || o.version > BACKUP_VERSION) throw new Error("That backup is from a newer version of the app, update first.");
   const sync = (o.sync ?? {}) as Record<string, unknown>;
   const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
   const sessions = list(sync.sessions);
@@ -141,7 +141,7 @@ export function isGzip(bytes: Uint8Array): boolean {
 /** A backup file's text, un-gzipping it first when its bytes say it's gzip. Throws with a message fit to show. */
 export async function decodeBackupBytes(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   if (!isGzip(bytes)) return new TextDecoder().decode(bytes);
-  if (typeof DecompressionStream === "undefined") throw new Error("This browser can't open compressed backups — try a current Chrome, Firefox or Safari.");
+  if (typeof DecompressionStream === "undefined") throw new Error("This browser can't open compressed backups, try a current Chrome, Firefox or Safari.");
   try {
     return new TextDecoder().decode(await pipeBytes(bytes, new DecompressionStream("gzip")));
   } catch {

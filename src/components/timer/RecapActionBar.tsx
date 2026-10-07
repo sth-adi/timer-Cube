@@ -17,7 +17,7 @@ export function RecapActionBar({ onReplay, onAnalyze, onDone, className }: { onR
       aria-label="Solve actions"
       data-testid="recap-actions"
       className={cn(
-        "sticky bottom-2 z-20 flex w-full gap-2 rounded-full border border-border bg-bg-elevated/90 p-1.5 shadow-lg backdrop-blur-md lg:static lg:shadow-none",
+        "sticky bottom-2 z-20 flex w-full gap-2 rounded-full border border-border bg-bg-elevated p-1.5 shadow-lg lg:static lg:shadow-none",
         className,
       )}
     >

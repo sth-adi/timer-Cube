@@ -149,8 +149,8 @@ export function gradeAttempt(drill: Drill, attempt: DrillAttempt, routeTurns: nu
   const time = vsOriginalMs < 0 ? `${s2(vsOriginalMs)}s faster than the original` : `${s2(vsOriginalMs)}s slower than the original`;
   const route = routeTurns !== null ? ` The Sat-Nav's route was ${routeTurns} turn${routeTurns === 1 ? "" : "s"}; you took ${turns}.` : "";
   const verdict = repeated
-    ? `Same mistake again — ${time}.${route} Slow down through this spot and try it once more.`
-    : `Clean — no ${drill.mistake.kind === "extra-oll-look" || drill.mistake.kind === "extra-pll-look" ? "second look" : "repeat of the mistake"}, ${time}.${route}`;
+    ? `Same mistake again, ${time}.${route} Slow down through this spot and try it once more.`
+    : `Clean, no ${drill.mistake.kind === "extra-oll-look" || drill.mistake.kind === "extra-pll-look" ? "second look" : "repeat of the mistake"}, ${time}.${route}`;
   return { turns, ms, vsOriginalTurns, vsOriginalMs, vsRouteTurns: routeTurns === null ? null : turns - routeTurns, repeated, verdict };
 }
 

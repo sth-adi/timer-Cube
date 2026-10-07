@@ -114,9 +114,9 @@ function garageNotes(cubes: GarageCube[]): string[] {
     const slow = sorted[sorted.length - 1];
     const gap = (slow.median! - fast.median!) / slow.median!;
     if (gap >= MEANINGFUL_GAP) {
-      notes.push(`Your median is ${pct(gap)} quicker on ${fast.label} than on ${slow.label} — though a cube you've used more, or more recently, will always look better.`);
+      notes.push(`Your median is ${pct(gap)} quicker on ${fast.label} than on ${slow.label}, though a cube you've used more, or more recently, will always look better.`);
     } else {
-      notes.push(`No real speed difference between ${comparable.map((c) => c.label).join(" and ")} — their medians are within ${pct(MEANINGFUL_GAP)}.`);
+      notes.push(`No real speed difference between ${comparable.map((c) => c.label).join(" and ")}, their medians are within ${pct(MEANINGFUL_GAP)}.`);
     }
     const tpsCubes = comparable.filter((c) => c.avgTps !== null).sort((a, b) => b.avgTps! - a.avgTps!);
     if (tpsCubes.length >= 2 && tpsCubes[0].avgTps! / tpsCubes[tpsCubes.length - 1].avgTps! - 1 >= 0.08) {
@@ -125,7 +125,7 @@ function garageNotes(cubes: GarageCube[]): string[] {
   }
   for (const c of cubes) {
     if (c.solves >= MIN_SOLVES_TO_COMPARE && c.correctedRate >= RELIABILITY_FLAG_RATE) {
-      notes.push(`${c.label} lost a turn over Bluetooth in ${pct(c.correctedRate)} of its solves — worth a battery check, a fresh pairing, or a firmware update.`);
+      notes.push(`${c.label} lost a turn over Bluetooth in ${pct(c.correctedRate)} of its solves, worth a battery check, a fresh pairing, or a firmware update.`);
     }
   }
   return notes;

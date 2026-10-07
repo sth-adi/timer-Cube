@@ -30,7 +30,7 @@ export default function GoalPage() {
   const step = (d: number) => setTarget(Math.max(1000, targetMs + d));
 
   return (
-    <AnalyticsShell icon={<Flag size={17} className="text-accent" />} title="Goal Planner" subtitle="Pick a target — get a phase-by-phase budget from your own good days.">
+    <AnalyticsShell icon={<Flag size={17} className="text-accent" />} title="Goal Planner" subtitle="Pick a target, get a phase-by-phase budget from your own good days.">
       {!plan ? (
         <NotEnough need={MIN_SOLVES} have={metrics.length} what="Goal Planner" />
       ) : (

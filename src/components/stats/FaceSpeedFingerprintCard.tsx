@@ -43,7 +43,7 @@ export function FaceSpeedFingerprintCard({ solves }: { solves: Solve[] }) {
       </div>
       <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2">
         Average time per turn for each face while you&apos;re turning. Gaps of {PAUSE_MS}ms or more are you looking,
-        not turning, so they&apos;re left out — see the F2L pause map for where those land.
+        not turning, so they&apos;re left out, see the F2L pause map for where those land.
       </p>
     </div>
   );

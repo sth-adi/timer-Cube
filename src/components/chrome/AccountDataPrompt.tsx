@@ -60,15 +60,13 @@ function AccountDataDialog() {
         className="card flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4 outline-none"
       >
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-            <Users size={16} />
-          </span>
+          <Users size={16} className="shrink-0 text-accent" />
           <h2 id="account-data-title" className="text-base font-semibold text-foreground">
             Solves from {owner}
           </h2>
         </div>
         <p className="text-xs leading-relaxed text-muted">
-          This device has {solves} from {owner}. You&apos;re signed in as {me}. Nothing has been synced yet — choose
+          This device has {solves} from {owner}. You&apos;re signed in as {me}. Nothing has been synced yet, choose
           what to do with them.
         </p>
         <div className="flex flex-col gap-2">

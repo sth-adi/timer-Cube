@@ -340,7 +340,7 @@ export function createRoomStore(deps: {
             set({
               status: "error",
               error:
-                "Couldn't reach the room — check your connection and try again.",
+                "Couldn't reach the room, check your connection and try again.",
             });
           }
         });

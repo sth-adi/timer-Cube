@@ -52,7 +52,7 @@ export function NotEnough({ need, have, what }: { need: number; have: number; wh
   return (
     <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
       <p className="text-sm text-muted">
-        {what} needs at least {need} complete smart-cube solves — you have {have}.
+        {what} needs at least {need} complete smart-cube solves, you have {have}.
       </p>
       <p className="text-[11px] text-muted-2">Every solve on a connected cube counts; keep going and this fills in.</p>
     </div>

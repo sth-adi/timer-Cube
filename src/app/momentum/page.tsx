@@ -26,7 +26,7 @@ export default function MomentumPage() {
     >
       {!r ? (
         <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">Momentum Meter needs at least {MIN_PAIRS} consecutive solve pairs within sittings of 5 or more — you don&apos;t have enough yet.</p>
+          <p className="text-sm text-muted">Momentum Meter needs at least {MIN_PAIRS} consecutive solve pairs within sittings of 5 or more, you don&apos;t have enough yet.</p>
           <p className="text-[11px] text-muted-2">A sitting is a run of solves with no 15+ minute gap. Keep going and this fills in.</p>
         </div>
       ) : (

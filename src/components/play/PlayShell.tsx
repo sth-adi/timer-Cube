@@ -62,7 +62,7 @@ export function CubeStatus() {
   if (connected)
     return (
       <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10.5px] font-semibold text-emerald-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 play-pulse" />
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
         {deviceName ?? "Cube"}
         {gyroActive && <span className="text-emerald-300/60">· gyro</span>}
       </span>
@@ -73,7 +73,7 @@ export function CubeStatus() {
       onClick={() => void connect()}
       disabled={connecting || supported !== true}
       className="hit-y flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[var(--play-dim)] hover:text-white disabled:hover:text-[var(--play-dim)]"
-      title={supported === false ? "No Web Bluetooth here — play with the keys and pad" : "Connect a smart cube"}
+      title={supported === false ? "No Web Bluetooth here, play with the keys and pad" : "Connect a smart cube"}
     >
       <Keyboard size={12} />
       {connecting ? "Connecting…" : supported === false ? "Keys & pad" : "Keys & pad · connect cube"}

@@ -170,7 +170,7 @@ export function analyzeGaze(
     const where = sides.length ? `the ${sides.map(faceColorName).join(" or ")} side` : "those sides";
     headline =
       hidden.length === 1
-        ? `You never looked at ${where} — the ${hidden[0].name} edge was hiding there.`
+        ? `You never looked at ${where}, the ${hidden[0].name} edge was hiding there.`
         : `${hidden.length} cross edges were on sides you never looked at (${where}).`;
   }
 

@@ -27,7 +27,7 @@ export default function GymPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Dumbbell size={17} className="text-accent" /> Alg Gym
             </h1>
-            <p className="text-[11px] text-muted-2">Last-layer drills on your real cube — timed, checked, and aimed at your weak cases.</p>
+            <p className="text-[11px] text-muted-2">Last-layer drills on your real cube, timed, checked, and aimed at your weak cases.</p>
           </div>
           <AlgGymTrainer />
         </div>

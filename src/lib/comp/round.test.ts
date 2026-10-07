@@ -38,7 +38,7 @@ describe("round progress", () => {
     expect(s.average).toBe(12500);
     expect(s.compTaxMs).toBe(500);
     expect(s.headline).toMatch(/0\.50 slower than your practice average/);
-    expect(summarizeRound(fmt, [21000, 25000], null).headline).toMatch(/Missed the 20\.00 cutoff — best single 21\.00/);
+    expect(summarizeRound(fmt, [21000, 25000], null).headline).toMatch(/Missed the 20\.00 cutoff, best single 21\.00/);
   });
 });
 

@@ -62,7 +62,7 @@ function CaseRow({ group, name, weak, chosen }: { group: "OLL" | "PLL"; name: st
           <span className="flex shrink-0 items-center gap-1">
             <Sparkles size={11} aria-hidden />
             {group}: {name}
-            {weak && <TriangleAlert size={11} role="img" className="text-warning" aria-label={`One of your slower ${group} cases — take your time recognizing it`} />}
+            {weak && <TriangleAlert size={11} role="img" className="text-warning" aria-label={`One of your slower ${group} cases, take your time recognizing it`} />}
           </span>
           {alg && (
             <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-normal text-muted" title={alg}>

@@ -133,7 +133,7 @@ export function HandoffDrillPanel({
           </button>
         </div>
         <p className="text-[10px] text-muted-2">
-          Position {(index % examples.length) + 1} of {examples.length}, from your own solves — each one a spot where you stopped to look.
+          Position {(index % examples.length) + 1} of {examples.length}, from your own solves, each one a spot where you stopped to look.
         </p>
 
         {error && <p className="text-xs text-danger">{error}</p>}
@@ -142,7 +142,7 @@ export function HandoffDrillPanel({
           <div className="flex flex-col gap-2">
             <p className="text-[11px] leading-relaxed text-muted">
               Your cube gets set to a moment one step before a stall. Finish that step (the pair, or the cross) as you normally would and keep
-              going into the next pair — the drill times the gap between them. It walks the cube there from whatever state it&apos;s in.
+              going into the next pair, the drill times the gap between them. It walks the cube there from whatever state it&apos;s in.
             </p>
             <button type="button" onClick={() => start(0)} className="rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
               Set up position 1
@@ -158,7 +158,7 @@ export function HandoffDrillPanel({
 
         {phase === "setup" && (
           <div className="flex flex-col items-center gap-2 text-center">
-            <p className="text-xs text-muted">Set the cube up — the drill starts when it matches.</p>
+            <p className="text-xs text-muted">Set the cube up, the drill starts when it matches.</p>
             {route ? (
               <RouteChips display={route.turns} turns={route.turns} position={route.position} partial={route.partial} variant="color" />
             ) : (
@@ -172,10 +172,10 @@ export function HandoffDrillPanel({
             <p className={cn("text-lg font-bold", trackerPhase === "finding" ? "text-danger" : "text-foreground")}>
               {trackerPhase === "lead-in"
                 ? drill.order === 1
-                  ? "Solve the cross — and look for your first pair while you do"
-                  : "Finish this pair — and find the next one while you do"
+                  ? "Solve the cross, and look for your first pair while you do"
+                  : "Finish this pair, and find the next one while you do"
                 : trackerPhase === "finding"
-                  ? "Keep turning — next pair!"
+                  ? "Keep turning, next pair!"
                   : "Get the next pair in"}
             </p>
             <p className="text-[11px] text-muted-2">In your solve you paused {secs(drill.originalFindMs)} here.</p>
@@ -185,7 +185,7 @@ export function HandoffDrillPanel({
         {phase === "done" && result && drill && (
           <div className="flex flex-col gap-2">
             {result.multislot ? (
-              <p className="text-center text-xs text-muted">Two pairs went in together — no hand-off to time. Nice, if you meant it.</p>
+              <p className="text-center text-xs text-muted">Two pairs went in together, no hand-off to time. Nice, if you meant it.</p>
             ) : (
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[

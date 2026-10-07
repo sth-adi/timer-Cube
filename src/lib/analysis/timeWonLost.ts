@@ -50,11 +50,11 @@ export function timeWonLost(rows: readonly PostSolvePhaseRow[], baseline: PostSo
     const worst = [...known].sort((a, b) => b.vsUsual! - a.vsUsual!)[0];
     const best = [...known].sort((a, b) => a.vsUsual! - b.vsUsual!)[0];
     if (Math.abs(vsUsualTotal) < NOTABLE_MS) {
-      headline = worst.vsUsual! >= NOTABLE_MS && best.vsUsual! <= -NOTABLE_MS ? `Right on your usual pace — ${best.label} gave back what ${worst.label} cost.` : "Right on your usual pace, step for step.";
+      headline = worst.vsUsual! >= NOTABLE_MS && best.vsUsual! <= -NOTABLE_MS ? `Right on your usual pace, ${best.label} gave back what ${worst.label} cost.` : "Right on your usual pace, step for step.";
     } else if (vsUsualTotal > 0) {
-      headline = `${s1(vsUsualTotal)} slower than your usual${worst.vsUsual! >= NOTABLE_MS ? ` — ${worst.label} cost ${s1(worst.vsUsual!)} (${s1(worst.ms)} vs ${s1(worst.usualMs!)})` : ", spread across the solve"}.`;
+      headline = `${s1(vsUsualTotal)} slower than your usual${worst.vsUsual! >= NOTABLE_MS ? `, ${worst.label} cost ${s1(worst.vsUsual!)} (${s1(worst.ms)} vs ${s1(worst.usualMs!)})` : ", spread across the solve"}.`;
     } else {
-      headline = `${s1(vsUsualTotal)} faster than your usual${best.vsUsual! <= -NOTABLE_MS ? ` — ${best.label} won ${s1(best.vsUsual!)} (${s1(best.ms)} vs ${s1(best.usualMs!)})` : ", a little everywhere"}.`;
+      headline = `${s1(vsUsualTotal)} faster than your usual${best.vsUsual! <= -NOTABLE_MS ? `, ${best.label} won ${s1(best.vsUsual!)} (${s1(best.ms)} vs ${s1(best.usualMs!)})` : ", a little everywhere"}.`;
     }
   }
   return { steps, vsUsualTotal, pbTotalMs, headline };

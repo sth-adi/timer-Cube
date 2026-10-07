@@ -33,14 +33,14 @@ const MODES = [
 type Mode = (typeof MODES)[number]["id"];
 
 const MODE_BLURB: Record<Mode, string> = {
-  plan: "A whole practice session planned from where your solves lose time — gym, recognition, F2L, cross.",
+  plan: "A whole practice session planned from where your solves lose time, gym, recognition, F2L, cross.",
   drill: "Solve timed reps of a single algorithm set until it's automatic.",
-  gym: "OLL/PLL set up on your real cube and timed off its turns — yellow top, green facing you.",
+  gym: "OLL/PLL set up on your real cube and timed off its turns, yellow top, green facing you.",
   cross: "Plan an optimal cross before you touch the cube.",
-  recognize: "Flashcard drill — name the case fast, no algorithm required.",
+  recognize: "Flashcard drill, name the case fast, no algorithm required.",
   daily: "One curated scramble a day, same for everyone.",
   bld: "Voice-guided memo practice for blindfolded attempts.",
-  race: "Live head-to-head, or a room of racers and spectators — free-for-all or bracket.",
+  race: "Live head-to-head, or a room of racers and spectators, free-for-all or bracket.",
   replay: "Watch two solves side by side, synced move for move.",
   library: "Every OLL/PLL/ZBLL case, spaced-repetition review included.",
 };

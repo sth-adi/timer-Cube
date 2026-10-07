@@ -95,11 +95,11 @@ export function buildLuck(metrics: readonly SolveMetrics[]): LuckReport | null {
   const parts: string[] = [];
   parts.push(
     pb.luckMs < -100
-      ? `Your ${s2(pb.totalMs)} PB had ${s2(pb.luckMs)} of scramble luck in it — luck-adjusted it's ${s2(pb.earnedMs)}.`
+      ? `Your ${s2(pb.totalMs)} PB had ${s2(pb.luckMs)} of scramble luck in it, luck-adjusted it's ${s2(pb.earnedMs)}.`
       : `Your ${s2(pb.totalMs)} PB was earned: its scramble was ${pb.luckMs > 100 ? `${s2(pb.luckMs)} harder than average` : "about average"}.`,
   );
-  if (bestEarned.id !== pb.id) parts.push(`Your best-earned solve is a ${s2(bestEarned.totalMs)} — ${s2(bestEarned.earnedMs)} after luck.`);
-  if (Math.abs(recentLuckMs) > 150) parts.push(`Your last 12 scrambles were ${s2(recentLuckMs)} ${recentLuckMs < 0 ? "kinder" : "harsher"} than usual — read your recent average with that in mind.`);
+  if (bestEarned.id !== pb.id) parts.push(`Your best-earned solve is a ${s2(bestEarned.totalMs)}, ${s2(bestEarned.earnedMs)} after luck.`);
+  if (Math.abs(recentLuckMs) > 150) parts.push(`Your last 12 scrambles were ${s2(recentLuckMs)} ${recentLuckMs < 0 ? "kinder" : "harsher"} than usual, read your recent average with that in mind.`);
 
   return { solves, factors, luckSpreadMs, pb, bestEarned, recentLuckMs, byRaw, byEarned, headline: parts.join(" ") };
 }

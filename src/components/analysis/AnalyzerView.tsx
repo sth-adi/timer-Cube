@@ -67,7 +67,7 @@ export function AnalyzerView() {
         </h2>
         <p className="mb-3 text-xs leading-relaxed text-muted">
           Type the moves you actually made. The analyzer replays them on a virtual cube, works out where each
-          phase started and ended, then solves every phase again from the position you were in — so you can see
+          phase started and ended, then solves every phase again from the position you were in, so you can see
           exactly where the moves went.
         </p>
 

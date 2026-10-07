@@ -34,8 +34,6 @@
   --timer-holding: var(--danger);
   --timer-ready: var(--success);
   --timer-running: var(--foreground);
-  /* Blur radius of the accent glow behind the timer digits. */
-  --timer-glow: 26px;
 
   /* Aurora background layer — two drifting blobs tinted per theme. */
   /* Chart palette for the four solve phases (Cross, F2L, OLL, PLL), in that
@@ -44,12 +42,12 @@
   --viz-2: #d95926;
   --viz-3: #199e70;
   --viz-4: #c98500;
-  --aurora-1: rgba(124, 92, 255, 0.30);
-  --aurora-2: rgba(53, 230, 197, 0.20);
+  --aurora-1: rgba(124, 92, 255, 0.14);
+  --aurora-2: rgba(124, 92, 255, 0.07);
   --aurora-opacity: 1;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+  --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.55);
 
   --nav-height: 60px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -69,7 +67,7 @@
   color-scheme: dark;
 }
 
-/* --- Nebula: deep violet glass (default) --- */
+/* --- Nebula: deep violet (default) --- */
 :root[data-theme="nebula"] {
   color-scheme: dark;
 }
@@ -91,8 +89,8 @@
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
-  --aurora-1: rgba(45, 212, 191, 0.22);
-  --aurora-2: rgba(56, 189, 248, 0.16);
+  --aurora-1: rgba(45, 212, 191, 0.12);
+  --aurora-2: rgba(45, 212, 191, 0.06);
   color-scheme: dark;
 }
 
@@ -115,7 +113,6 @@
   --success: #4ade80;
   --warning: #facc15;
   --danger: #f87171;
-  --timer-glow: 0px;
   --aurora-opacity: 0;
   color-scheme: dark;
 }
@@ -139,8 +136,8 @@
   --success: #4ade80;
   --warning: #fbbf24;
   --danger: #ff5470;
-  --aurora-1: rgba(255, 122, 89, 0.26);
-  --aurora-2: rgba(236, 72, 153, 0.20);
+  --aurora-1: rgba(255, 122, 89, 0.13);
+  --aurora-2: rgba(255, 122, 89, 0.06);
   color-scheme: dark;
 }
 
@@ -164,8 +161,8 @@
   --warning: #d9f24f;
   --danger: #ff6b6b;
   --font-sans: var(--font-geist-mono);
-  --aurora-1: rgba(61, 220, 132, 0.16);
-  --aurora-2: rgba(61, 220, 132, 0.08);
+  --aurora-1: rgba(61, 220, 132, 0.10);
+  --aurora-2: rgba(61, 220, 132, 0.05);
   color-scheme: dark;
 }
 
@@ -188,8 +185,8 @@
   --success: #009b48;
   --warning: #ff5800;
   --danger: #c41e3a;
-  --aurora-1: rgba(0, 81, 186, 0.28);
-  --aurora-2: rgba(255, 88, 0, 0.18);
+  --aurora-1: rgba(255, 213, 0, 0.09);
+  --aurora-2: rgba(255, 213, 0, 0.05);
   color-scheme: dark;
 }
 
@@ -213,7 +210,6 @@
   --success: #047857;
   --warning: #a04a07;
   --danger: #c81e1e;
-  --timer-glow: 0px;
   --shadow-sm: 0 1px 2px rgba(15, 17, 25, 0.06);
   --shadow-md: 0 8px 24px rgba(15, 17, 25, 0.08);
   /* Light-surface steps of the same four phase hues. */
@@ -221,8 +217,8 @@
   --viz-2: #eb6834;
   --viz-3: #1baf7a;
   --viz-4: #eda100;
-  --aurora-1: rgba(91, 61, 245, 0.13);
-  --aurora-2: rgba(2, 132, 199, 0.10);
+  --aurora-1: rgba(91, 61, 245, 0.07);
+  --aurora-2: rgba(91, 61, 245, 0.04);
   color-scheme: light;
 }
 
@@ -309,21 +305,17 @@ body {
   scrollbar-color: color-mix(in srgb, var(--foreground) 24%, transparent) transparent;
 }
 
-/* Flat, solid surface — the default card treatment. Blur/glass is reserved
-   for things that actually float above other content (dropdowns, sheets,
-   toasts), not every panel on the page. */
+/* Flat, solid surface — the default card treatment. */
 .card {
-  background: color-mix(in srgb, var(--bg-panel) 82%, transparent);
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(12px);
 }
 
-/* For genuinely floating overlays: menus, sheets, toasts. */
+/* For genuinely floating overlays: menus, sheets, toasts. Solid, with a hairline and a small shadow. */
 .glass-panel {
-  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
-  backdrop-filter: blur(20px);
   box-shadow: var(--shadow-md);
 }
 
@@ -332,12 +324,12 @@ body {
   font-feature-settings: "tnum" 1;
 }
 
-/* The timer digits, with an accent glow themes can dial to zero. */
+/* The timer digits: plain solid type, no glow. */
 .timer-digits {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   letter-spacing: -0.045em;
-  text-shadow: 0 0 var(--timer-glow) color-mix(in srgb, currentColor 45%, transparent);
+  text-shadow: none;
 }
 
 /* Timer digit style variants (independent of theme/background — see
@@ -349,10 +341,7 @@ body {
 
 .timer-digits--gradient {
   text-shadow: none;
-  background: linear-gradient(135deg, var(--accent), var(--cyan));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent);
 }
 
 .timer-digits--outline {
@@ -642,7 +631,7 @@ body {
 }
 
 .wave-b {
-  background: var(--cyan);
+  background: var(--accent);
   bottom: -40vh;
   opacity: 0.12;
   animation-duration: 30s;
@@ -689,8 +678,7 @@ body {
   --play-accent: #b36bff;
   min-height: 100dvh;
   background:
-    radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--play-accent) 22%, transparent), transparent 70%),
-    radial-gradient(800px 500px at 110% 110%, rgba(56, 225, 255, 0.08), transparent 70%),
+    radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--play-accent) 10%, transparent), transparent 70%),
     var(--play-bg);
   color: var(--play-ink);
 }
@@ -709,23 +697,17 @@ body {
 .play-panel {
   background: var(--play-panel);
   border: 1px solid var(--play-line);
-  backdrop-filter: blur(6px);
 }
 
 .play-title {
   font-weight: 900;
   letter-spacing: -0.04em;
   line-height: 0.92;
-  background: linear-gradient(180deg, #fff 10%, var(--play-accent) 130%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--play-ink);
 }
 
 .play-glow {
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--play-accent) 55%, transparent),
-    0 0 32px -6px color-mix(in srgb, var(--play-accent) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--play-accent) 70%, transparent);
 }
 
 .play-btn {
@@ -999,19 +981,14 @@ body {
 :root:not([data-fx-level="off"]) :where(button, a, input, select, textarea, summary, [role="button"], [tabindex]):not([tabindex="-1"]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 /* --- Cards: lit border, pointer spotlight, tilt, scroll reveal --- */
 :root:not([data-fx-level="off"]) .card {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--foreground) 5%, transparent), transparent 46%),
-    color-mix(in srgb, var(--bg-panel) 72%, transparent);
-  box-shadow:
-    var(--shadow-sm),
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 7%, transparent);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sm);
   transition:
     transform 0.22s ease-out,
     box-shadow 0.3s ease,
@@ -1030,9 +1007,8 @@ body {
   background: conic-gradient(
     from var(--fx-angle),
     transparent 0deg,
-    color-mix(in srgb, var(--accent) 75%, transparent) 55deg,
-    color-mix(in srgb, var(--cyan) 65%, transparent) 105deg,
-    transparent 170deg,
+    color-mix(in srgb, var(--accent) 70%, transparent) 70deg,
+    transparent 150deg,
     transparent 360deg
   );
   -webkit-mask:
@@ -1042,10 +1018,8 @@ body {
   mask-composite: exclude;
 }
 :root:not([data-fx-level="off"]) .card:hover {
-  box-shadow:
-    var(--shadow-sm),
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 9%, transparent),
-    0 18px 40px -22px color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
 }
 :root:not([data-fx-level="off"]) .card:hover::before {
   opacity: 0.95;
@@ -1090,10 +1064,7 @@ body {
   }
 }
 :root:not([data-fx-level="off"]) .glass-panel {
-  box-shadow:
-    var(--shadow-md),
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
-    0 0 60px -24px var(--accent);
+  box-shadow: var(--shadow-md);
 }
 
 /* --- Buttons: press, glow, shine --- */
@@ -1113,10 +1084,7 @@ body {
   scale: 0.94;
 }
 :root:not([data-fx-level="off"]) :is(button, a).bg-accent:not(:disabled):hover {
-  filter: brightness(1.12) saturate(1.15);
-  box-shadow:
-    0 0 26px -4px var(--accent),
-    0 8px 22px -10px var(--accent);
+  filter: brightness(1.08);
   background-image: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.38) 50%, transparent 62%);
   background-size: 260% 100%;
   animation: fx-shine 0.9s ease-out;
@@ -1131,12 +1099,12 @@ body {
 }
 :root:not([data-fx-level="off"]) :is(button, a).bg-accent-soft:not(:disabled):hover,
 :root:not([data-fx-level="off"]) button[aria-pressed="true"] {
-  box-shadow: 0 0 18px -6px var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* --- Mobile dock ---------------------------------------------------------
    Effects off: a flat bar on the bottom edge — safe-area padding under the labels, a 3px tick over
-   the active tab, a tint while a tab is pressed. Effects on: a floating glass pill with a sliding
+   the active tab, a tint while a tab is pressed. Effects on: a floating solid pill with a sliding
    active pill. Every item is a >= 44px target (the bar is 60px+, items inset 5px top and bottom). */
 .fx-dock {
   padding-bottom: var(--safe-bottom);
@@ -1187,23 +1155,15 @@ body {
   padding-bottom: 0;
   border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
   border-radius: 24px;
-  /* Mostly opaque: the glass still blurs, but the labels of whatever scrolls behind must not read through. */
-  background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
-  /* Unprefixed only (the compiler adds the -webkit- twin): a hand-written twin AFTER it made the compiler drop this line, so Chrome never blurred the dock. */
-  backdrop-filter: blur(24px) saturate(1.7);
-  box-shadow:
-    0 22px 44px -14px rgba(0, 0, 0, 0.75),
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 10%, transparent),
-    0 0 40px -16px var(--accent);
+  /* Solid: the labels of whatever scrolls behind must not read through. */
+  background: var(--bg-elevated);
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.5);
   transition:
     translate 0.55s cubic-bezier(0.3, 1.2, 0.4, 1),
     opacity 0.4s ease;
 }
 :root[data-theme="paper"]:not([data-fx-level="off"]) .fx-dock {
-  box-shadow:
-    0 14px 32px -12px rgba(15, 17, 25, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 0 0 1px var(--border);
+  box-shadow: 0 6px 16px -6px rgba(15, 17, 25, 0.2);
 }
 /* The pill sits behind the active item: one slot wide (the bar's 4px side padding off the total), moved by transform only. */
 :root:not([data-fx-level="off"]) .fx-dock-glow {
@@ -1221,12 +1181,8 @@ body {
   transition:
     transform 0.42s cubic-bezier(0.3, 1.25, 0.45, 1),
     opacity 0.3s ease;
-  background:
-    radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%),
-    color-mix(in srgb, var(--accent) 10%, transparent);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
-    0 0 18px -8px var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 :root:not([data-fx-level="off"]) .fx-dock-item::before {
   display: none;
@@ -1244,7 +1200,6 @@ body {
 :root:not([data-fx-level="off"]) .fx-dock-item[data-active="true"] svg {
   translate: 0 -1px;
   scale: 1.1;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
 }
 /* Press feedback, links included (the global :active rule only covers buttons). */
 :root:not([data-fx-level="off"]) .fx-dock-item:active svg {
@@ -1260,16 +1215,10 @@ body {
 /* --- Desktop tab pill --- */
 :root:not([data-fx-level="off"]) .fx-pill {
   border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-  background: color-mix(in srgb, var(--bg-panel-2) 70%, transparent);
-  backdrop-filter: blur(16px);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
-    0 0 34px -16px var(--accent);
+  background: var(--bg-panel-2);
 }
 :root:not([data-fx-level="off"]) .fx-pill > .bg-bg-elevated {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent),
-    0 0 20px -5px var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
 /* --- Timer stage: reactor rings + core behind the digits --- */
@@ -1333,7 +1282,7 @@ body {
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
 }
 :root:not([data-fx-level="off"]) .reactor-a::before {
-  background: conic-gradient(transparent 0 28%, var(--rc) 46%, transparent 58% 78%, var(--rc2) 92%, transparent);
+  background: conic-gradient(transparent 0 28%, var(--rc) 46%, transparent 62%);
   animation: fx-turn calc(14s / var(--reactor-speed)) linear infinite;
 }
 :root:not([data-fx-level="off"]) .reactor-b {
@@ -1344,17 +1293,15 @@ body {
   opacity: calc(var(--reactor-o) * 0.75);
 }
 :root:not([data-fx-level="off"]) .reactor-b::before {
-  background: repeating-conic-gradient(color-mix(in srgb, var(--rc2) 70%, transparent) 0 1.6deg, transparent 1.6deg 8deg);
+  background: repeating-conic-gradient(color-mix(in srgb, var(--rc) 70%, transparent) 0 1.6deg, transparent 1.6deg 8deg);
   animation: fx-turn calc(22s / var(--reactor-speed)) linear infinite reverse;
 }
 :root:not([data-fx-level="off"]) .reactor-core {
   width: calc(100% + 40px);
   height: calc(100% + 30px);
   border-radius: 50%;
-  background: radial-gradient(ellipse, color-mix(in srgb, var(--rc) 26%, transparent), transparent 68%);
-  filter: blur(18px);
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--rc) 10%, transparent), transparent 68%);
   opacity: var(--reactor-o);
-  animation: fx-core-pulse 3.2s ease-in-out infinite;
 }
 @keyframes fx-core-pulse {
   0%,
@@ -1395,8 +1342,7 @@ body {
 }
 /* While the clock runs the digits repaint every frame beside the WebGL cube, so every
    decorative layer that would be re-rasterised with them is frozen or flattened: rings
-   stop turning, the blurred core goes, and the double/animated glow becomes one static,
-   tighter shadow. Idle, holding, ready and stopped keep the full look. */
+   stop turning and the core goes. Idle, holding, ready and stopped keep the full look. */
 :root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .reactor-a::before,
 :root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .reactor-b::before {
   animation-play-state: paused;
@@ -1434,14 +1380,10 @@ body {
 
 /* --- Holographic digits --- */
 :root:not([data-fx-level="off"]) .timer-digits:not(.timer-digits--flat):not(.timer-digits--gradient):not(.timer-digits--outline) {
-  text-shadow:
-    0 0 var(--timer-glow) color-mix(in srgb, currentColor 55%, transparent),
-    0 0 calc(var(--timer-glow) * 2.8) color-mix(in srgb, currentColor 24%, transparent);
+  text-shadow: none;
 }
 :root:not([data-fx-level="off"]) .timer-digits--gradient {
-  background-size: 220% 100%;
-  animation: fx-sheen 5s linear infinite;
-  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 55%, transparent));
+  text-shadow: none;
 }
 @keyframes fx-sheen {
   from {
@@ -1450,9 +1392,6 @@ body {
   to {
     background-position: 220% 0;
   }
-}
-:root:not([data-fx-level="off"]) .timer-digits--outline {
-  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 65%, transparent));
 }
 :root:not([data-fx-level="off"]) .timer-digits {
   transition:
@@ -1472,29 +1411,20 @@ body {
   0%,
   100% {
     text-shadow:
-      -2px 0 rgba(255, 40, 110, 0.55),
-      2px 0 rgba(40, 225, 255, 0.55),
-      0 0 var(--timer-glow) color-mix(in srgb, currentColor 50%, transparent);
+      -1px 0 color-mix(in srgb, var(--accent) 60%, transparent),
+      1px 0 color-mix(in srgb, var(--accent) 60%, transparent);
   }
   50% {
     text-shadow:
-      -5px 0 rgba(255, 40, 110, 0.6),
-      5px 0 rgba(40, 225, 255, 0.6),
-      0 0 calc(var(--timer-glow) * 1.4) color-mix(in srgb, currentColor 60%, transparent);
+      -3px 0 color-mix(in srgb, var(--accent) 60%, transparent),
+      3px 0 color-mix(in srgb, var(--accent) 60%, transparent);
   }
 }
 
-/* Running: one static shadow per style (specificity beats the glow/aberration rules above). */
+/* Running: no animation and no shadow (specificity beats the aberration rule above). */
 :root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .timer-digits:not(.timer-digits--flat):not(.timer-digits--gradient):not(.timer-digits--outline) {
   animation: none;
-  text-shadow: 0 0 calc(var(--timer-glow) * 0.6) color-mix(in srgb, currentColor 45%, transparent);
-}
-:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .timer-digits--gradient {
-  animation-play-state: paused;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
-}
-:root:not([data-fx-level="off"]) .timer-stage[data-state="running"] .timer-digits--outline {
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent));
+  text-shadow: none;
 }
 
 /* --- Whole-UI reactions to a live solve --- */
@@ -1506,9 +1436,7 @@ body {
 :root:not([data-fx-level="off"]) .fx-toast {
   position: relative;
   isolation: isolate;
-  box-shadow:
-    0 10px 30px -10px color-mix(in srgb, currentColor 55%, transparent),
-    0 0 26px -8px currentColor;
+  box-shadow: var(--shadow-sm);
 }
 :root:not([data-fx-level="off"]) .fx-toast::before {
   content: "";
@@ -1517,7 +1445,7 @@ body {
   border-radius: inherit;
   padding: 1.5px;
   pointer-events: none;
-  background: conic-gradient(from var(--fx-angle), transparent 0deg, currentColor 70deg, #ffffff 100deg, transparent 160deg, transparent 360deg);
+  background: conic-gradient(from var(--fx-angle), transparent 0deg, currentColor 90deg, transparent 160deg, transparent 360deg);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -1721,7 +1649,7 @@ body {
   width: 60vmax;
   height: 60vmax;
   translate: -50% -50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%);
   animation: fx-core-pulse 6s ease-in-out infinite;
 }
 .fx-star {
@@ -1734,7 +1662,6 @@ body {
   transform-origin: 0 50%;
   opacity: 0;
   background: linear-gradient(90deg, transparent, var(--c));
-  box-shadow: 0 0 8px var(--c);
   animation: fx-warp calc(var(--d) / var(--warp-speed)) cubic-bezier(0.5, 0, 0.9, 0.6) infinite;
   animation-delay: var(--dl);
 }
@@ -1804,7 +1731,6 @@ body {
     background: color-mix(in srgb, var(--bg-panel) 58%, transparent);
     border-color: transparent;
     box-shadow: none;
-    backdrop-filter: none;
     transform: none;
     animation: none;
   }

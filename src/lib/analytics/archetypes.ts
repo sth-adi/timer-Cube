@@ -80,8 +80,8 @@ export function kmeans(points: readonly number[][], k: number, seed = 1): { assi
 
 const NAMES: Record<string, { name: string; blurb: string }> = {
   Cross: { name: "Cross-heavy", blurb: "A bigger share than usual goes on the cross." },
-  F2L: { name: "F2L grind", blurb: "F2L eats more of the solve than usual — pairs found late." },
-  OLL: { name: "OLL stall", blurb: "Unusually long orientation — recognition or a slow alg." },
+  F2L: { name: "F2L grind", blurb: "F2L eats more of the solve than usual, pairs found late." },
+  OLL: { name: "OLL stall", blurb: "Unusually long orientation, recognition or a slow alg." },
   PLL: { name: "PLL stall", blurb: "The last alg takes a bigger bite than usual." },
   pause: { name: "Stop-start", blurb: "Lots of time spent paused, whatever the phase." },
 };
@@ -117,9 +117,9 @@ export function buildArchetypes(metrics: readonly SolveMetrics[]): ArchetypeRepo
     const pauseZ = c[PHASES.length];
     const named =
       idx === flowIdx
-        ? { name: "Flow", blurb: `Your fastest shape${pauseZ < 0 ? " — less pausing than your average solve" : ""}.` }
+        ? { name: "Flow", blurb: `Your fastest shape${pauseZ < 0 ? ", less pausing than your average solve" : ""}.` }
         : idx === typicalIdx
-          ? { name: "Typical", blurb: "Most of your solves look like this — your everyday shape." }
+          ? { name: "Typical", blurb: "Most of your solves look like this, your everyday shape." }
           : (order.map((o) => NAMES[o.l]).find((n) => !used.has(n.name)) ?? NAMES[order[0].l]);
     used.add(named.name);
     const meanMs = meanOf(members);
@@ -144,10 +144,10 @@ export function buildArchetypes(metrics: readonly SolveMetrics[]): ArchetypeRepo
   const growing = [...archetypes].filter((a) => a.name !== "Flow").sort((a, b) => b.shareLate - b.shareEarly - (a.shareLate - a.shareEarly))[0];
   const flow = archetypes.find((a) => a.name === "Flow");
   const parts = [
-    `${Math.round(worst.share * 100)}% of your solves are "${worst.name}" at ${(worst.meanMs / 1000).toFixed(2)}s — the shape costing your average the most.`,
+    `${Math.round(worst.share * 100)}% of your solves are "${worst.name}" at ${(worst.meanMs / 1000).toFixed(2)}s, the shape costing your average the most.`,
   ];
   if (flow) parts.push(`Your "Flow" solves average ${(flow.meanMs / 1000).toFixed(2)}s and are ${Math.round(flow.shareLate * 100)}% of your recent half (${Math.round(flow.shareEarly * 100)}% before).`);
-  if (growing && growing.shareLate - growing.shareEarly > 0.08) parts.push(`"${growing.name}" solves are becoming more common — worth a look.`);
+  if (growing && growing.shareLate - growing.shareEarly > 0.08) parts.push(`"${growing.name}" solves are becoming more common, worth a look.`);
 
   return {
     solves: ordered.length,

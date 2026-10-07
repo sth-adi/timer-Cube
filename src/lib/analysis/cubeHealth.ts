@@ -144,16 +144,16 @@ function adviceFor(f: Omit<FaceHealth, "advice" | "status" | "score">, enoughDat
   const dragging = (f.relativeDrag ?? 1) >= 1.15;
   const wearing = (f.wearTrend ?? 0) >= 0.08;
   if (loose && dragging) {
-    return `The ${name} face both drags and catches — often a dry or snagging piece. Clean it and re-lube before adjusting tension.`;
+    return `The ${name} face both drags and catches, often a dry or snagging piece. Clean it and re-lube before adjusting tension.`;
   }
   if (loose) {
-    return `The ${name} face overshoots and gets corrected ${f.catchesPer100.toFixed(1)}× per 100 turns — likely too loose. Tighten it a quarter turn or use a thicker lube.`;
+    return `The ${name} face overshoots and gets corrected ${f.catchesPer100.toFixed(1)}× per 100 turns, likely too loose. Tighten it a quarter turn or use a thicker lube.`;
   }
   if (dragging) {
-    return `The ${name} face turns ${Math.round(((f.relativeDrag ?? 1) - 1) * 100)}% slower than the rest of the cube mid-flurry — likely too tight or dry. Loosen it slightly or re-lube.`;
+    return `The ${name} face turns ${Math.round(((f.relativeDrag ?? 1) - 1) * 100)}% slower than the rest of the cube mid-flurry, likely too tight or dry. Loosen it slightly or re-lube.`;
   }
   if (wearing) {
-    return `The ${name} face has slowed ${Math.round((f.wearTrend ?? 0) * 100)}% relative to the rest of the cube over your history — it's drying out. Time for a re-lube.`;
+    return `The ${name} face has slowed ${Math.round((f.wearTrend ?? 0) * 100)}% relative to the rest of the cube over your history, it's drying out. Time for a re-lube.`;
   }
   return `The ${name} face is turning cleanly.`;
 }
@@ -216,9 +216,9 @@ export function buildCubeHealthReport(allSolves: readonly HealthSolve[]): CubeHe
   const worst = [...rated].sort((a, b) => a.score - b.score)[0];
   const headline =
     !worst
-      ? "Keep solving — each face needs a few dozen turns before it can be judged."
+      ? "Keep solving, each face needs a few dozen turns before it can be judged."
       : worst.status === "healthy"
-        ? "Your cube is in great shape — every face is turning cleanly."
+        ? "Your cube is in great shape, every face is turning cleanly."
         : `Your ${worst.color.toLowerCase()} face needs attention first.`;
 
   return {

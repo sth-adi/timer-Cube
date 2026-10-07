@@ -49,7 +49,7 @@ export function AchievementsPanel() {
           return (
             <div
               key={a.id}
-              title={`${a.label} — ${a.description}`}
+              title={`${a.label}, ${a.description}`}
               className={cn(
                 "flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-opacity",
                 a.unlocked ? "bg-accent-soft" : "bg-bg-panel-2 opacity-50",

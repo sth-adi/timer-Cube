@@ -120,9 +120,9 @@ export function computeSpinReport(solves: readonly Solve[]): SpinReport | null {
   }
   const worstAxis = [...axes].sort((a, b) => b.diffMs - a.diffMs)[0];
   if (worstAxis && worstAxis.diffMs >= 15) {
-    parts.push(`${worstAxis.slowerFace} is your slowest side of the ${worstAxis.faces.join("/")} axis — ${secs(worstAxis.diffMs)}s/turn behind ${worstAxis.fasterFace}.`);
+    parts.push(`${worstAxis.slowerFace} is your slowest side of the ${worstAxis.faces.join("/")} axis, ${secs(worstAxis.diffMs)}s/turn behind ${worstAxis.fasterFace}.`);
   }
-  if (parts.length === 0) parts.push("No real bias either in turn direction or between opposite faces — your turning is symmetric.");
+  if (parts.length === 0) parts.push("No real bias either in turn direction or between opposite faces, your turning is symmetric.");
 
   return { directions, directionBiasMs, axes, headline: parts.join(" ") };
 }

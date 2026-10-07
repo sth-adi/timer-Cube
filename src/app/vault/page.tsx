@@ -15,11 +15,11 @@ import { cn } from "@/lib/utils/cn";
 const ACCENT = "#ffc53d";
 
 const STRENGTH_COPY: Record<ReturnType<typeof strengthLabel>, { label: string; color: string }> = {
-  none: { label: "No key yet — the solved cube opens anything", color: "#8d88a8" },
-  toy: { label: "Toy lock — a friend could brute-force it", color: "#ff8a1e" },
-  fair: { label: "Fair — nobody's guessing this by hand", color: "#ffd400" },
-  strong: { label: "Strong — beyond any laptop", color: "#3dffa8" },
-  max: { label: "Every state is equally likely — the maximum", color: "#38e1ff" },
+  none: { label: "No key yet, the solved cube opens anything", color: "#8d88a8" },
+  toy: { label: "Toy lock, a friend could brute-force it", color: "#ff8a1e" },
+  fair: { label: "Fair, nobody's guessing this by hand", color: "#ffd400" },
+  strong: { label: "Strong, beyond any laptop", color: "#3dffa8" },
+  max: { label: "Every state is equally likely, the maximum", color: "#38e1ff" },
 };
 
 /**
@@ -45,8 +45,8 @@ export default function VaultPage() {
   const sealed = token ? decodeSealed(token) : null;
 
   return (
-    <PlayShell accent={ACCENT} title="Cube Vault" tagline="Your cube is the password. Twist it into a state, seal a message with it, and send the link — it only opens when someone twists their cube into that exact state.">
-      {!ready ? null : sealed ? <UnlockView sealed={sealed} /> : token ? <p className="text-sm text-red-300">That vault link is damaged — ask for it again.</p> : <LockView />}
+    <PlayShell accent={ACCENT} title="Cube Vault" tagline="Your cube is the password. Twist it into a state, seal a message with it, and send the link, it only opens when someone twists their cube into that exact state.">
+      {!ready ? null : sealed ? <UnlockView sealed={sealed} /> : token ? <p className="text-sm text-red-300">That vault link is damaged, ask for it again.</p> : <LockView />}
     </PlayShell>
   );
 }
@@ -158,7 +158,7 @@ function LockView() {
             setLink(null);
           }}
           maxLength={140}
-          placeholder="Public hint (optional) — e.g. “the scramble from our first race”"
+          placeholder="Public hint (optional), e.g. “the scramble from our first race”"
           className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px] text-white outline-none placeholder:text-white/25 focus:border-[var(--play-accent)]"
         />
       </section>
@@ -167,7 +167,7 @@ function LockView() {
         <Step n={3} title="Seal it" />
         {!link ? (
           <button type="button" disabled={!message.trim() || sealing} onClick={() => void doSeal()} className="play-btn play-glow flex items-center justify-center gap-2 py-3 text-sm">
-            <Lock size={16} /> {sealing ? "Sealing…" : solved ? "Seal (with no key — anyone opens it)" : "Seal with this cube state"}
+            <Lock size={16} /> {sealing ? "Sealing…" : solved ? "Seal (with no key, anyone opens it)" : "Seal with this cube state"}
           </button>
         ) : (
           <div className="flex flex-col gap-2 animate-fade-in-up">
@@ -191,14 +191,14 @@ function LockView() {
               <p className="rounded-lg bg-black/30 p-2 font-mono text-[12px] text-white/90">
                 {keyTurns.join(" ")}
                 <span className="mt-1 block font-sans text-[10.5px] text-[var(--play-dim)]">
-                  From solved (white top, green front), this reaches the key. Tell it to them some other way — never in the same message as the link.
+                  From solved (white top, green front), this reaches the key. Tell it to them some other way, never in the same message as the link.
                 </span>
               </p>
             )}
           </div>
         )}
         <p className="text-[10.5px] leading-snug text-[var(--play-dim)]">
-          The link carries only ciphertext (AES-256-GCM, key stretched from the 54 stickers with 120,000 rounds of PBKDF2). Nothing is uploaded, and nothing — not even this app — can open it without the state.
+          The link carries only ciphertext (AES-256-GCM, key stretched from the 54 stickers with 120,000 rounds of PBKDF2). Nothing is uploaded, and nothing, not even this app, can open it without the state.
         </p>
       </section>
     </div>
@@ -280,7 +280,7 @@ function UnlockView({ sealed }: { sealed: Sealed }) {
       <div key={shake} className={cn("play-panel flex flex-col items-center gap-2 rounded-2xl p-5 text-center", shake > 0 && "play-shake")}>
         <VaultArt className="play-float h-36 w-full" />
         <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--play-accent)]">Sealed</p>
-        {sealed.hint ? <p className="text-[15px] font-semibold">“{sealed.hint}”</p> : <p className="text-[13px] text-[var(--play-dim)]">No hint. You were told the state some other way — or you weren&apos;t.</p>}
+        {sealed.hint ? <p className="text-[15px] font-semibold">“{sealed.hint}”</p> : <p className="text-[13px] text-[var(--play-dim)]">No hint. You were told the state some other way, or you weren&apos;t.</p>}
         <p className="text-[11px] text-[var(--play-dim)]">
           {tries === 0 ? "Waiting for your cube" : `${tries} state${tries === 1 ? "" : "s"} tried`} · the lock never says how close you are
         </p>

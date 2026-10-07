@@ -89,7 +89,7 @@ export function buildStallMap(metrics: readonly SolveMetrics[]): StallMapReport 
   const total = byPhase.reduce((a, b) => a + b, 0);
   const headline = hotspots.length
     ? `You lose the most to pauses at ${hotspots[0].where}: ${(hotspots[0].ms / 1000).toFixed(2)}s per solve on average, of ${(total / 1000).toFixed(2)}s paused in all.`
-    : "Barely any pauses in your recent solves — nothing to map.";
+    : "Barely any pauses in your recent solves, nothing to map.";
 
   return { solves: recent.length, rows, columns, hotspots, byPhase, headline };
 }

@@ -37,7 +37,7 @@ describe("buildCoach", () => {
     // F2L pause gap: median(0..3900) − p25 = 975ms; two-look 400; f2l cases 250; slow-hands 30 is dropped.
     expect(ids).toEqual(["f2l-pauses", "two-look", "f2l-cases"]);
     expect(r.findings[0].msPerSolve).toBeCloseTo(975);
-    expect(r.headline).toMatch(/Your biggest lever: pause less between F2L pairs — about 0\.9[78]s a solve/);
+    expect(r.headline).toMatch(/Your biggest lever: pause less between F2L pairs, about 0\.9[78]s a solve/);
     expect(r.goal).not.toBeNull();
   });
 

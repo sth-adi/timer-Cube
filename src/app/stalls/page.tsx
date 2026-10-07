@@ -47,7 +47,7 @@ function Heatmap({ r }: { r: StallMapReport }) {
           />
         ))}
       </div>
-      <p className="text-[9px] text-muted-2">Average pause time per solve at each point — each phase stretched to the same width.</p>
+      <p className="text-[9px] text-muted-2">Average pause time per solve at each point, each phase stretched to the same width.</p>
       <ChartTip tip={tip} />
     </div>
   );
@@ -65,7 +65,7 @@ export default function StallsPage() {
     <AnalyticsShell
       icon={<Flame size={17} className="text-accent" />}
       title="Stall Map"
-      subtitle="Where in the solve your pauses land, across your recent solves — the spots your lookahead runs dry."
+      subtitle="Where in the solve your pauses land, across your recent solves, the spots your lookahead runs dry."
     >
       {!r ? (
         <NotEnough need={MIN_SOLVES} have={metrics.length} what="The Stall Map" />

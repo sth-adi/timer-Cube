@@ -140,7 +140,7 @@ export function HintPanel() {
                 </p>
                 <p className="mt-1 text-xs text-muted">
                   Verified to solve this scramble. The cross is optimal; the F2L pairs are solved one at a time, so
-                  this is one good way through — not guaranteed to be the shortest CFOP solve.
+                  this is one good way through, not guaranteed to be the shortest CFOP solve.
                 </p>
               </div>
               <div>

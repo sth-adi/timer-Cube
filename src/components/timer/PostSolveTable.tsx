@@ -164,7 +164,7 @@ function AlgLine({ exec, seen, caseRecord }: { exec: AlgExecution; seen: readonl
           </button>
         )}
       </span>
-      {/* The case itself, not the algorithm — two solves of the same case can use two different algs. */}
+      {/* The case itself, not the algorithm, two solves of the same case can use two different algs. */}
       {caseRecord && caseRecord.count >= 2 && (
         <span>
           {caseRecord.count} times so far · case best {secs(caseRecord.bestMs)}s
@@ -179,7 +179,7 @@ function CrossEfficiencyLine({ turns, optimal }: { turns: number; optimal: numbe
   if (turns <= 0) return null;
   return (
     <span className="rc-detail-line">
-      {TURNS(turns)} · optimal {optimal === turns ? "— nice" : `was ${optimal}`}
+      {TURNS(turns)} · optimal {optimal === turns ? "nice" : `was ${optimal}`}
     </span>
   );
 }
@@ -197,7 +197,7 @@ function CrossAdvisorLine({ report }: { report: CrossAdvisorReport | null }) {
   if (gap < 0.3) return null;
   return (
     <Link href="/crosscolor" className="rc-link">
-      a {report.best.colorName} cross usually runs {gap.toFixed(2)} moves shorter for you — Cross Color Advisor
+      a {report.best.colorName} cross usually runs {gap.toFixed(2)} moves shorter for you, Cross Color Advisor
     </Link>
   );
 }

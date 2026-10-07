@@ -86,18 +86,18 @@ export function summarizeRound(format: RoundFormat, results: readonly (number | 
   const compTaxMs = typeof average === "number" && practiceAvgMs !== null ? average - practiceAvgMs : null;
   const label = format.kind === "ao5" ? "average" : "mean";
   const headline = prog.missedCutoff
-    ? `Missed the ${s2(format.cutoffMs!)} cutoff${best !== null ? ` — best single ${s2(best)}` : ""}.`
+    ? `Missed the ${s2(format.cutoffMs!)} cutoff${best !== null ? `, best single ${s2(best)}` : ""}.`
     : average === null
-      ? `DNF ${label}${best !== null ? ` — best single ${s2(best)}` : ""}.`
+      ? `DNF ${label}${best !== null ? `, best single ${s2(best)}` : ""}.`
       : average === undefined
         ? "Round in progress."
         : compTaxMs === null
           ? `${s2(average)} ${label}.`
           : Math.abs(compTaxMs) < 50
-            ? `${s2(average)} ${label} — exactly your practice level.`
+            ? `${s2(average)} ${label}, exactly your practice level.`
             : compTaxMs > 0
-              ? `${s2(average)} ${label} — ${s2(compTaxMs)} slower than your practice average. That's the comp tax to train away.`
-              : `${s2(average)} ${label} — ${s2(-compTaxMs)} faster than practice. Pressure suits you.`;
+              ? `${s2(average)} ${label}, ${s2(compTaxMs)} slower than your practice average. That's the comp tax to train away.`
+              : `${s2(average)} ${label}, ${s2(-compTaxMs)} faster than practice. Pressure suits you.`;
   return { average, best, compTaxMs, headline };
 }
 

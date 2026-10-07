@@ -145,7 +145,7 @@ export default function PortraitsPage() {
         <Sketch />
       ) : !selected ? (
         <div className="play-panel rounded-2xl p-6 text-center text-sm text-[var(--play-dim)]">
-          Portraits are drawn from smart-cube solves (every turn and its timing). Do a solve on a connected cube and it appears here — or try Live sketch to draw with your turns right now.
+          Portraits are drawn from smart-cube solves (every turn and its timing). Do a solve on a connected cube and it appears here, or try Live sketch to draw with your turns right now.
         </div>
       ) : (
         <>

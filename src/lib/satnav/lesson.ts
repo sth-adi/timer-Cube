@@ -25,7 +25,7 @@ export const LESSONS: Record<LessonStage, Lesson> = {
   cross: {
     name: "Cross",
     goal: "Four white edges on the bottom, each lined up with the center beside it.",
-    how: "Find a white edge, look at its other color, and bring it under that color's center. Plan it before you turn — the cross never needs more than 8 turns.",
+    how: "Find a white edge, look at its other color, and bring it under that color's center. Plan it before you turn, the cross never needs more than 8 turns.",
     takeaway: "Solving the cross on the bottom means you can already see the F2L pieces on top while you finish it.",
   },
   f2l: {
@@ -37,20 +37,20 @@ export const LESSONS: Record<LessonStage, Lesson> = {
   oll: {
     name: "Orient last layer",
     goal: "The whole top face yellow.",
-    how: "Look only at the yellow stickers on top — their shape is the case. Turn the top until it matches the algorithm's starting position, then run it.",
+    how: "Look only at the yellow stickers on top, their shape is the case. Turn the top until it matches the algorithm's starting position, then run it.",
     takeaway: "OLL recognition is just the yellow pattern: learn the shapes, not the stickers on the sides.",
   },
   pll: {
     name: "Permute last layer",
     goal: "Every top piece moved to its own spot.",
-    how: "Look for headlights — two corners on one side showing the same color. Where they are (or aren't) tells you the case.",
+    how: "Look for headlights, two corners on one side showing the same color. Where they are (or aren't) tells you the case.",
     takeaway: "Two sides of the top layer are enough to recognize any PLL.",
   },
   auf: {
     name: "Final turn",
     goal: "Line the top layer up with the rest.",
     how: "One turn of the top face finishes it.",
-    takeaway: "Done — that's a full CFOP solve.",
+    takeaway: "Done, that's a full CFOP solve.",
   },
 };
 
@@ -122,7 +122,7 @@ export interface StageRecap {
 /** A one-line verdict on a finished stage. */
 export function recapLine(r: StageRecap): string {
   const extra = r.yourTurns - r.routeTurns;
-  const eff = extra <= 0 ? `in ${r.yourTurns} turns — as short as the Sat-Nav's route` : `in ${r.yourTurns} turns (${extra} more than the route's ${r.routeTurns})`;
+  const eff = extra <= 0 ? `in ${r.yourTurns} turns, as short as the Sat-Nav's route` : `in ${r.yourTurns} turns (${extra} more than the route's ${r.routeTurns})`;
   const help = r.hint === null ? "" : r.hint === 0 ? ", no hints" : r.hint === 1 ? ", with a first-turn hint" : ", with the full route";
   return `${r.label ?? LESSONS[r.stage].name} ${eff}${help}.`;
 }

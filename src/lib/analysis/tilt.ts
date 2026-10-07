@@ -49,10 +49,10 @@ export function aggregateTilt(entries: readonly TiltEntry[]): TiltReport | null 
 
   const rebounds = afterCleanAvgRatio - afterMistakeAvgRatio >= TILT_THRESHOLD;
   const headline = tilts
-    ? `The phase right after a flagged mistake runs ${pct(afterMistakeAvgRatio)} against your own average — versus ${pct(afterCleanAvgRatio)} after a clean phase. You tilt: a slip bleeds into what comes next.`
+    ? `The phase right after a flagged mistake runs ${pct(afterMistakeAvgRatio)} against your own average, versus ${pct(afterCleanAvgRatio)} after a clean phase. You tilt: a slip bleeds into what comes next.`
     : rebounds
-      ? `The phase right after a flagged mistake runs ${pct(afterMistakeAvgRatio)} against your own average — faster than the ${pct(afterCleanAvgRatio)} after a clean phase. No tilt: if anything, a slip sharpens you up.`
-      : `The phase right after a flagged mistake runs ${pct(afterMistakeAvgRatio)} against your own average, barely different from ${pct(afterCleanAvgRatio)} after a clean phase — you recover cleanly and don't carry mistakes forward.`;
+      ? `The phase right after a flagged mistake runs ${pct(afterMistakeAvgRatio)} against your own average, faster than the ${pct(afterCleanAvgRatio)} after a clean phase. No tilt: if anything, a slip sharpens you up.`
+      : `The phase right after a flagged mistake runs ${pct(afterMistakeAvgRatio)} against your own average, barely different from ${pct(afterCleanAvgRatio)} after a clean phase, you recover cleanly and don't carry mistakes forward.`;
 
   return { afterMistakeAvgRatio, afterCleanAvgRatio, sampleSize: afterMistake.length, controlSize: afterClean.length, tilts, headline };
 }

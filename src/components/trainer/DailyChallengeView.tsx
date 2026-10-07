@@ -119,7 +119,7 @@ export function DailyChallengeView() {
             </span>
           ))}
         </div>
-        <p className="mt-2 text-xs text-muted-2">Come back tomorrow for a fresh set — and to keep the streak alive.</p>
+        <p className="mt-2 text-xs text-muted-2">Come back tomorrow for a fresh set, and to keep the streak alive.</p>
 
         {leaderboard && leaderboard.top.length > 0 && (
           <div className="mt-3 w-full max-w-xs rounded-xl bg-bg-panel-2 p-3 text-left">

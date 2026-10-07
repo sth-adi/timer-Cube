@@ -53,35 +53,35 @@ function fmtSec(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-const PB_HEADLINES = ["New personal best — that's the one.", "PB! That solve just rewrote your record.", "Brand new best single. Nice work."] as const;
-const FAST_HEADLINES = ["Well above your usual pace.", "Fast one — clearly on today.", "That was quick, and it shows."] as const;
-const SLOW_HEADLINES = ["Slower than your usual pace.", "A rough one, off your normal rhythm.", "Not your smoothest — worth a look."] as const;
-const STEADY_HEADLINES = ["A solid, on-pace solve.", "Right around your usual pace.", "A typical solve for you — steady."] as const;
+const PB_HEADLINES = ["New personal best, that's the one.", "PB! That solve just rewrote your record.", "Brand new best single. Nice work."] as const;
+const FAST_HEADLINES = ["Well above your usual pace.", "Fast one, clearly on today.", "That was quick, and it shows."] as const;
+const SLOW_HEADLINES = ["Slower than your usual pace.", "A rough one, off your normal rhythm.", "Not your smoothest, worth a look."] as const;
+const STEADY_HEADLINES = ["A solid, on-pace solve.", "Right around your usual pace.", "A typical solve for you, steady."] as const;
 const NO_HISTORY_HEADLINES = ["First real look at this solve.", "Here's how that one broke down."] as const;
 
 /** A pause before a step's first turn shorter than this isn't worth calling a recognition problem. */
 export const RECOGNITION_FLAG_MS = 500;
 
 const BOTTLENECK_OPENERS = [
-  (label: string, ms: number) => `${label} is where the time went — a ${fmtSec(ms)} pause before you started turning.`,
+  (label: string, ms: number) => `${label} is where the time went, a ${fmtSec(ms)} pause before you started turning.`,
   (label: string, ms: number) => `The biggest gap was recognizing ${label}: ${fmtSec(ms)} of just looking before the first move.`,
-  (label: string, ms: number) => `${label}'s recognition took ${fmtSec(ms)} — longer than anywhere else in the solve.`,
+  (label: string, ms: number) => `${label}'s recognition took ${fmtSec(ms)}, longer than anywhere else in the solve.`,
 ] as const;
 
 const BOTTLENECK_ADVICE = [
-  (label: string) => `That's a recognition problem, not a turning-speed one — drilling ${label} case ID will pay off faster than practicing execution.`,
+  (label: string) => `That's a recognition problem, not a turning-speed one, drilling ${label} case ID will pay off faster than practicing execution.`,
   (label: string) => `Since your hands were fine once they started moving, the fix is seeing ${label} faster, not turning it faster.`,
-  (label: string) => `Worth flashcard-drilling ${label} recognition specifically — the execution itself was already quick.`,
+  (label: string) => `Worth flashcard-drilling ${label} recognition specifically, the execution itself was already quick.`,
 ] as const;
 
 const STRENGTH_LINES = [
-  (label: string) => `${label} was clean — barely any hesitation there.`,
+  (label: string) => `${label} was clean, barely any hesitation there.`,
   (label: string) => `${label} went by fast with almost no pause before it.`,
-  (label: string) => `No complaints about ${label} — that part just happened.`,
+  (label: string) => `No complaints about ${label}, that part just happened.`,
 ] as const;
 
-const TPS_FAST = ["Your turning speed itself was excellent — well above a casual pace.", "The turns themselves were fast — that part of your execution is in good shape."] as const;
-const TPS_SLOW = ["Turning speed has room to grow here — the moves themselves, not just recognition, were on the slower side.", "Raw execution speed is the other lever available — the turns were a bit deliberate."] as const;
+const TPS_FAST = ["Your turning speed itself was excellent, well above a casual pace.", "The turns themselves were fast, that part of your execution is in good shape."] as const;
+const TPS_SLOW = ["Turning speed has room to grow here, the moves themselves, not just recognition, were on the slower side.", "Raw execution speed is the other lever available, the turns were a bit deliberate."] as const;
 
 /**
  * Builds the coaching report. Every sentence is derived from `input` — no
@@ -144,7 +144,7 @@ export function generateCoachReport(input: CoachInput): CoachReport {
   }
 
   if (paragraphs.length === 0) {
-    paragraphs.push("Not enough phase detail on this solve to break down further — the overall time is the whole story here.");
+    paragraphs.push("Not enough phase detail on this solve to break down further, the overall time is the whole story here.");
   }
 
   return { headline, paragraphs, focusPhase };

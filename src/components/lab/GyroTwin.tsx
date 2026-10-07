@@ -170,7 +170,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
               >
                 <Crosshair size={12} /> Re-center
               </button>
-              {!calibrated && <span className="text-[10px] text-warning">Uncalibrated — using GAN axes</span>}
+              {!calibrated && <span className="text-[10px] text-warning">Uncalibrated, using GAN axes</span>}
             </div>
           )}
         </div>
@@ -193,12 +193,12 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
       )}
 
       {/* The compact view used inline in the live timer skips the full controls
-          row (no room, and no re-center gesture mid-solve) — but "the twin may
+          row (no room, and no re-center gesture mid-solve), but "the twin may
           not track your real cube's tilt" is worth a line even there, not
           just on the dedicated Lab page. */}
       {!showControls && gyroActive && !calibrated && !navLocked && (
         <Link href="/lab" className="text-[10px] text-warning underline decoration-dotted underline-offset-2">
-          Uncalibrated gyro — calibrate in Lab
+          Uncalibrated gyro, calibrate in Lab
         </Link>
       )}
     </div>

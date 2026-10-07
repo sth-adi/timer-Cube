@@ -56,7 +56,7 @@ export function TriggerHeatmapCard() {
           Trigger heatmap
         </h3>
         <p className="text-xs text-muted-2">
-          Solve a bit more on a smart cube — this reads real per-move timing, which only a live smart-cube capture
+          Solve a bit more on a smart cube, this reads real per-move timing, which only a live smart-cube capture
           carries.
         </p>
       </div>
@@ -73,7 +73,7 @@ export function TriggerHeatmapCard() {
         Trigger heatmap
       </h3>
       <p className="mb-2.5 text-[11px] text-muted-2">
-        Every move-pair you&apos;ve actually turned, colored by average speed — green is fast, red is where your
+        Every move-pair you&apos;ve actually turned, colored by average speed, green is fast, red is where your
         fingers hesitate.
       </p>
 

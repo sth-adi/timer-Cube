@@ -104,7 +104,7 @@ export function buildCoach({ metrics, habits, f2l, alg, look, worstCase }: Coach
       findings.push({
         id: "drill-algs",
         title: "Drill the algorithms you know but don't own yet",
-        detail: `${list(top.map((a) => a.name))} ${top.length === 1 ? "is" : "are"} slower than the rest of your last layer — stops partway, or slow fingers.`,
+        detail: `${list(top.map((a) => a.name))} ${top.length === 1 ? "is" : "are"} slower than the rest of your last layer, stops partway, or slow fingers.`,
         action: "Repeat each until it runs start to finish without a stop.",
         msPerSolve: drill.reduce((x, a) => x + a.lostMsPerSolve, 0),
         href: "/algspeed",
@@ -133,7 +133,7 @@ export function buildCoach({ metrics, habits, f2l, alg, look, worstCase }: Coach
       detail: `A typical solve spends ${s(quantile(f2lPause, 0.5))}s paused during F2L; your better quarter spends ${s(quantile(f2lPause, 0.25))}s.`,
       action:
         look?.verdict === "no-link"
-          ? "You don't look ahead while turning yet — during each pair, find the next one before you finish."
+          ? "You don't look ahead while turning yet, during each pair, find the next one before you finish."
           : "Use the F2L Pause Map drill on the hand-offs that stall you most.",
       msPerSolve: pauseGap,
       href: "/blindspots",
@@ -145,7 +145,7 @@ export function buildCoach({ metrics, habits, f2l, alg, look, worstCase }: Coach
       id: "lookahead",
       title: "Turn F2L pairs a little slower to look ahead",
       detail: look.headline,
-      action: "Practise F2L at a steady, calm pace — no stops.",
+      action: "Practise F2L at a steady, calm pace, no stops.",
       msPerSolve: look.netGainMs * look.handoffsPerSolve,
       href: "/lookahead",
     });
@@ -167,7 +167,7 @@ export function buildCoach({ metrics, habits, f2l, alg, look, worstCase }: Coach
     findings.push({
       id: "worst-case",
       title: `${worstCase.name} is your costliest ${worstCase.group} case`,
-      detail: `${worstCase.count} times across your history — no other case has cost you this much real time.`,
+      detail: `${worstCase.count} times across your history, no other case has cost you this much real time.`,
       action: "Open its history, pick your best version, and lock it in.",
       msPerSolve: worstCase.msPerSolve,
       href: `/cases?case=${encodeURIComponent(worstCase.key)}&group=${worstCase.group}`,
@@ -183,8 +183,8 @@ export function buildCoach({ metrics, habits, f2l, alg, look, worstCase }: Coach
 
   const top3 = ranked.slice(0, 3).reduce((x, f) => x + f.msPerSolve, 0);
   const headline = ranked.length
-    ? `Your biggest lever: ${ranked[0].title.charAt(0).toLowerCase()}${ranked[0].title.slice(1)} — about ${s(ranked[0].msPerSolve)}s a solve.${ranked.length > 1 ? ` Your top ${Math.min(3, ranked.length)} fixes are worth up to ${s(top3)}s together.` : ""}`
-    : "Nothing stands out — every part of your solve is close to your own good-day level. Pick a goal below and push the phase it asks for.";
+    ? `Your biggest lever: ${ranked[0].title.charAt(0).toLowerCase()}${ranked[0].title.slice(1)}, about ${s(ranked[0].msPerSolve)}s a solve.${ranked.length > 1 ? ` Your top ${Math.min(3, ranked.length)} fixes are worth up to ${s(top3)}s together.` : ""}`
+    : "Nothing stands out, every part of your solve is close to your own good-day level. Pick a goal below and push the phase it asks for.";
 
   return { solves: metrics.length, typicalMs, findings: ranked, goal, headline };
 }

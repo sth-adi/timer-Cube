@@ -24,11 +24,11 @@ const STEP_COPY: Record<"home" | "y" | "yx", { title: string; body: string }> = 
   },
   y: {
     title: "Now do a y",
-    body: "Turn the whole cube like a U move — green goes to your left — and hold still.",
+    body: "Turn the whole cube like a U move, green goes to your left, and hold still.",
   },
   yx: {
     title: "Now an x",
-    body: "Without going back: tip the whole cube like an R move — front face comes up to the top — and hold still.",
+    body: "Without going back: tip the whole cube like an R move, front face comes up to the top, and hold still.",
   },
 };
 
@@ -104,7 +104,7 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
         <>
           <Compass size={26} className="text-accent" />
           <p className="max-w-xs text-sm text-muted">
-            Teach the app how your cube&apos;s gyro chip is mounted. Three poses, about ten seconds — each one captures
+            Teach the app how your cube&apos;s gyro chip is mounted. Three poses, about ten seconds, each one captures
             itself once you hold still.
           </p>
           <button type="button" onClick={start} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
@@ -131,9 +131,7 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
 
       {step === "done" && (
         <>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/15">
-            <Check size={20} className="text-success" />
-          </div>
+          <Check size={20} className="text-success" />
           <p className="text-sm font-semibold text-foreground">Calibrated for {protocolName}</p>
           <p className="max-w-xs text-xs text-muted">Saved for every cube using this protocol. The home grip was re-centered too.</p>
           {onClose && (

@@ -166,7 +166,7 @@ export function buildRotationReport(perSolve: readonly (SolveRotations | null)[]
   }
   const front = bySlot.filter((s) => (s.pos === "FL" || s.pos === "FR") && s.pairs >= 4 && s.rotatedRate >= 0.5);
   for (const s of front) {
-    insights.push(`Half or more of your ${SLOT_POS_LABEL[s.pos]} pairs still get a rotation — that slot is solvable from where you're holding it.`);
+    insights.push(`Half or more of your ${SLOT_POS_LABEL[s.pos]} pairs still get a rotation, that slot is solvable from where you're holding it.`);
   }
   const withRot = pairs.filter((p) => p.rotations > 0);
   const without = pairs.filter((p) => p.rotations === 0);
@@ -175,8 +175,8 @@ export function buildRotationReport(perSolve: readonly (SolveRotations | null)[]
   if (a !== null && b !== null && withRot.length >= 4 && without.length >= 4 && a - b > 150) {
     insights.push(`Pairs where you rotate take ${(a / 1000).toFixed(2)}s; pairs without a rotation take ${(b / 1000).toFixed(2)}s.`);
   }
-  if (byPhase.ll >= 0.8) insights.push(`You rotate ${byPhase.ll.toFixed(1)} times per solve in the last layer — an AUF (U) instead of a y usually works, and recognising OLL/PLL from any angle removes most of them.`);
-  if (insights.length === 0) insights.push("No rotation habit stands out — you rotate where it pays.");
+  if (byPhase.ll >= 0.8) insights.push(`You rotate ${byPhase.ll.toFixed(1)} times per solve in the last layer, an AUF (U) instead of a y usually works, and recognising OLL/PLL from any angle removes most of them.`);
+  if (insights.length === 0) insights.push("No rotation habit stands out, you rotate where it pays.");
 
   return {
     solves: n,

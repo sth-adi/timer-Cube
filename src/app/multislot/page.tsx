@@ -29,15 +29,15 @@ export default function MultiSlotPage() {
     <AnalyticsShell
       icon={<Layers size={17} className="text-accent" />}
       title="Multi-Slot Report"
-      subtitle="Pairs solved together vs one at a time — and which is actually faster."
+      subtitle="Pairs solved together vs one at a time, and which is actually faster."
     >
       {!r ? (
         <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
           <p className="text-sm text-muted">
-            Multi-Slot Report needs at least {MIN_EVENTS} tracked F2L pair insertions — you have {eventCount}.
+            Multi-Slot Report needs at least {MIN_EVENTS} tracked F2L pair insertions, you have {eventCount}.
           </p>
           <p className="text-[11px] text-muted-2">
-            An insertion is counted from a solve&apos;s saved reconstruction and move timing, so this can lag behind your total solve count — and if you
+            An insertion is counted from a solve&apos;s saved reconstruction and move timing, so this can lag behind your total solve count, and if you
             always insert one pair at a time, it&apos;ll still report once you clear {MIN_EVENTS}, just with nothing to compare multi-slotting against.
           </p>
         </div>

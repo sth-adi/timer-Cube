@@ -91,7 +91,7 @@ export function cadenceReport(solves: readonly Solve[]): CadenceReport | null {
   const parts: string[] = [];
   parts.push(`Your turning rhythm averages ${Math.round(avgConsistency)}/100 across ${rows.length} timed solves.`);
   if (trendDeltaPts !== null && Math.abs(trendDeltaPts) >= 4) {
-    parts.push(trendDeltaPts > 0 ? `It's gotten steadier lately — up ${Math.round(trendDeltaPts)} points over your recent solves.` : `It's gotten choppier lately — down ${Math.round(-trendDeltaPts)} points over your recent solves.`);
+    parts.push(trendDeltaPts > 0 ? `It's gotten steadier lately, up ${Math.round(trendDeltaPts)} points over your recent solves.` : `It's gotten choppier lately, down ${Math.round(-trendDeltaPts)} points over your recent solves.`);
   }
   parts.push(`Steadiest was ${(best.meanGapMs / 1000).toFixed(2)}s/turn with almost no variation; roughest bounced between fast bursts and stutters.`);
 

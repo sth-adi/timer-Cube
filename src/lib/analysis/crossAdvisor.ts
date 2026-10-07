@@ -89,9 +89,9 @@ export function analyzeCrossOrientations(solves: readonly Solve[]): CrossAdvisor
   const parts: string[] = [];
   parts.push(`Over your last ${usable.length} scrambles, a white cross averages ${current.avgLen.toFixed(2)} moves.`);
   if (best.face !== "U" && current.avgLen - best.avgLen >= 0.3) {
-    parts.push(`A ${best.colorName} cross would have averaged ${best.avgLen.toFixed(2)} — ${(current.avgLen - best.avgLen).toFixed(2)} moves shorter, on these same scrambles.`);
+    parts.push(`A ${best.colorName} cross would have averaged ${best.avgLen.toFixed(2)}, ${(current.avgLen - best.avgLen).toFixed(2)} moves shorter, on these same scrambles.`);
   } else {
-    parts.push("White is already at or near the shortest option for you — no color is meaningfully better.");
+    parts.push("White is already at or near the shortest option for you, no color is meaningfully better.");
   }
 
   return { current, best, all, headline: parts.join(" ") };

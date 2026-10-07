@@ -49,13 +49,6 @@ export function VaultArt({ className }: { className?: string }) {
   // A cube whose right face is a vault door: dial in the middle, bolts around it.
   return (
     <svg viewBox="0 0 200 150" className={className} aria-hidden>
-      <defs>
-        <radialGradient id="vg" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="#ffc53d" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#ffc53d" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="112" cy="80" r="70" fill="url(#vg)" />
       <IsoCube x={100} y={75} s={52} top={[C.w, C.r, C.b, C.g, C.w, C.o, C.y, C.b, C.r]} left={[C.g, C.y, C.o, C.r, C.g, C.w, C.b, C.o, C.g]} right={fill("#2a2334")} />
       <g transform="translate(122.5,88) skewY(-30)">
         <circle r="17" fill="#15111c" stroke="#ffc53d" strokeWidth="2.5" />
@@ -151,16 +144,7 @@ export function PortraitArt({ className }: { className?: string }) {
   const { scale, ox, oy } = fitTransform(SAMPLE.bounds, 200, 150, 0.1);
   return (
     <svg viewBox="0 0 200 150" className={className} aria-hidden>
-      <defs>
-        <filter id="pglow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2.4" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <g filter="url(#pglow)">
+      <g>
         {SAMPLE.segs.map((s, i) => (
           <line
             key={i}
@@ -183,13 +167,6 @@ export function WakeArt({ className }: { className?: string }) {
   const face = [C.r, C.w, C.b, C.y, C.o, C.g, C.w, C.r, C.y];
   return (
     <svg viewBox="0 0 200 150" className={className} aria-hidden>
-      <defs>
-        <radialGradient id="wk" cx="0.5" cy="0.4" r="0.6">
-          <stop offset="0" stopColor="#ff7a45" stopOpacity="0.5" />
-          <stop offset="1" stopColor="#ff7a45" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="100" cy="78" r="72" fill="url(#wk)" />
       <circle cx="68" cy="36" r="15" fill="#ff7a45" />
       <circle cx="132" cy="36" r="15" fill="#ff7a45" />
       <rect x="96" y="20" width="8" height="12" rx="2" fill="#ff7a45" />
@@ -221,13 +198,6 @@ export function EchoArt({ className }: { className?: string }) {
   ];
   return (
     <svg viewBox="0 0 200 150" className={className} aria-hidden>
-      <defs>
-        <radialGradient id="ec" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="#3dffb0" stopOpacity="0.45" />
-          <stop offset="1" stopColor="#3dffb0" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="100" cy="76" r="72" fill="url(#ec)" />
       {[58, 44, 30].map((r, i) => (
         <circle key={r} cx="100" cy="76" r={r} fill="none" stroke="#3dffb0" strokeOpacity={0.1 + i * 0.12} strokeWidth="2" />
       ))}
@@ -250,13 +220,6 @@ export function GolfArt({ className }: { className?: string }) {
   // A green with a flag in the hole, and a cube sitting where the ball would be.
   return (
     <svg viewBox="0 0 200 150" className={className} aria-hidden>
-      <defs>
-        <radialGradient id="gf" cx="0.5" cy="0.7" r="0.6">
-          <stop offset="0" stopColor="#7dff6a" stopOpacity="0.4" />
-          <stop offset="1" stopColor="#7dff6a" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="100" cy="92" r="74" fill="url(#gf)" />
       <ellipse cx="108" cy="118" rx="80" ry="22" fill="#10230f" stroke="#7dff6a" strokeOpacity="0.45" />
       <ellipse cx="146" cy="116" rx="11" ry="4" fill="#050b05" />
       <line x1="146" y1="116" x2="146" y2="52" stroke="#e9ffe5" strokeWidth="3" strokeLinecap="round" />

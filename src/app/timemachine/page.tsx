@@ -141,7 +141,7 @@ function TimeMachine() {
                 )}
               </p>
               <RouteChips display={rewind.route} turns={rewind.route} position={rewind.position} partial={rewind.partial} variant="color" />
-              <p className="text-[10px] text-muted-2">Each square is the center to turn — ↻ clockwise looking at that face, ↺ counter-clockwise.</p>
+              <p className="text-[10px] text-muted-2">Each square is the center to turn, ↻ clockwise looking at that face, ↺ counter-clockwise.</p>
             </>
           )}
         </div>
@@ -197,7 +197,7 @@ function TimeMachine() {
 
       <div className="flex flex-col gap-1.5">
         <p className="px-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">Moments</p>
-        {reversed.length <= 1 && <p className="px-1 text-xs text-muted">Turn the cube — every pause becomes a moment you can jump back to.</p>}
+        {reversed.length <= 1 && <p className="px-1 text-xs text-muted">Turn the cube, every pause becomes a moment you can jump back to.</p>}
         {reversed.slice(0, 60).map((m) => (
           <button
             key={m.count}
@@ -275,7 +275,7 @@ export default function TimeMachinePage() {
               <History size={17} className="text-accent" /> Cube Time Machine
             </h1>
             <p className="text-[11px] text-muted-2">
-              An undo button for your physical cube — and a what-if lab for any solve you&apos;ve saved: fork it, play it differently, see how it
+              An undo button for your physical cube, and a what-if lab for any solve you&apos;ve saved: fork it, play it differently, see how it
               ends.
             </p>
           </div>

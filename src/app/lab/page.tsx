@@ -113,7 +113,7 @@ type LabCategory = "start" | "time" | "algs" | "technique" | "drills" | "live" |
 const CATEGORIES: { key: Exclude<LabCategory, "start">; icon: React.ComponentType<{ size?: number; className?: string }>; label: string; blurb: string }[] = [
   { key: "time", icon: Clock, label: "Where time goes", blurb: "Which phase, case or moment is actually costing you." },
   { key: "algs", icon: BookOpen, label: "Algorithms & recognition", blurb: "Speed and consistency on your OLLs, PLLs and F2L cases." },
-  { key: "technique", icon: Wrench, label: "Technique & turning", blurb: "How you turn — bias, economy, the handoff between pairs." },
+  { key: "technique", icon: Wrench, label: "Technique & turning", blurb: "How you turn, bias, economy, the handoff between pairs." },
   { key: "drills", icon: Swords, label: "Drills & challenges", blurb: "Structured practice: timed, scored, set up on your cube." },
   { key: "live", icon: Navigation, label: "Live solving aids", blurb: "Help while the timer's running, or replaying after." },
   { key: "picture", icon: Layers, label: "The big picture", blurb: "Zoomed-out views across your whole history." },
@@ -121,56 +121,56 @@ const CATEGORIES: { key: Exclude<LabCategory, "start">; icon: React.ComponentTyp
 
 const TOOLS = [
   { href: "/coach", icon: GraduationCap, title: "Coach", blurb: "Where your time goes, ranked by what fixing it is worth.", category: "start" },
-  { href: "/goal", icon: Flag, title: "Goal Planner", blurb: "Pick a target time — get a phase budget from your own good days.", category: "start" },
-  { href: "/journey", icon: Route, title: "Training Journey", blurb: "A target and a deadline as a week-by-week road — are you on pace?", category: "start" },
+  { href: "/goal", icon: Flag, title: "Goal Planner", blurb: "Pick a target time, get a phase budget from your own good days.", category: "start" },
+  { href: "/journey", icon: Route, title: "Training Journey", blurb: "A target and a deadline as a week-by-week road, are you on pace?", category: "start" },
   { href: "/progress", icon: TrendingUp, title: "Progress Forecast", blurb: "Learning curves per phase, plateaus, and your next goal's ETA.", category: "start" },
 
-  { href: "/lookahead", icon: Binoculars, title: "Lookahead Tradeoff", blurb: "Does turning F2L calmer shorten your next pause — and is it worth it?", category: "time" },
+  { href: "/lookahead", icon: Binoculars, title: "Lookahead Tradeoff", blurb: "Does turning F2L calmer shorten your next pause, and is it worth it?", category: "time" },
   { href: "/stalls", icon: Flame, title: "Stall Map", blurb: "A heatmap of where in each phase your pauses land.", category: "time" },
   { href: "/autopsy", icon: Scale, title: "Fast vs Slow Autopsy", blurb: "What separates your good solves from your bad ones.", category: "time" },
   { href: "/consistency", icon: Sigma, title: "Consistency Lab", blurb: "Which phase your spread comes from, and what fixing it is worth.", category: "time" },
   { href: "/stamina", icon: Thermometer, title: "Warm-up & Fatigue", blurb: "How long you take to warm up, and when you start to fade.", category: "time" },
   { href: "/rotations", icon: Rotate3d, title: "Rotation Audit", blurb: "Which slots make you rotate, and what it costs (gyro).", category: "time" },
   { href: "/auf", icon: RefreshCcw, title: "AUF Audit", blurb: "Time and turns lost adjusting the last layer.", category: "time" },
-  { href: "/blindspots", icon: Crosshair, title: "F2L Pause Map", blurb: "Which hand-off between pairs stalls you — and a drill from those exact positions.", category: "time" },
-  { href: "/cadence", icon: Activity, title: "Cadence", blurb: "How steady your turn-to-turn spacing is — smooth stream or stutters.", category: "time" },
+  { href: "/blindspots", icon: Crosshair, title: "F2L Pause Map", blurb: "Which hand-off between pairs stalls you, and a drill from those exact positions.", category: "time" },
+  { href: "/cadence", icon: Activity, title: "Cadence", blurb: "How steady your turn-to-turn spacing is, smooth stream or stutters.", category: "time" },
   { href: "/tilt", icon: AlertTriangle, title: "Tilt Meter", blurb: "Does a mistake early in a solve bleed into the phase right after?", category: "time" },
   { href: "/momentum", icon: Zap, title: "Momentum Meter", blurb: "Do fast solves cluster together, or is every solve independent of the last?", category: "time" },
   { href: "/coldstart", icon: Snowflake, title: "Cold Start Tax", blurb: "Are your first few turns after a pause slower than your steady speed?", category: "time" },
   { href: "/bottleneck", icon: SlidersHorizontal, title: "Bottleneck Report", blurb: "Is each slow case costing you recognition time, or execution time?", category: "time" },
   { href: "/economy", icon: Minimize2, title: "Move Economy Trend", blurb: "A learning curve for your move count, not your time.", category: "time" },
 
-  { href: "/algspeed", icon: Hourglass, title: "Alg Speed Check", blurb: "Which OLLs and PLLs are slow — a second look, a stop, or slow fingers.", category: "algs" },
+  { href: "/algspeed", icon: Hourglass, title: "Alg Speed Check", blurb: "Which OLLs and PLLs are slow, a second look, a stop, or slow fingers.", category: "algs" },
   { href: "/f2lcases", icon: Puzzle, title: "F2L Case Consistency", blurb: "Your best turn count on each F2L case against your usual one.", category: "algs" },
-  { href: "/cases", icon: Shapes, title: "Case History", blurb: "Every OLL, PLL and F2L case you've had — how often, and recognise vs execute.", category: "algs" },
+  { href: "/cases", icon: Shapes, title: "Case History", blurb: "Every OLL, PLL and F2L case you've had, how often, and recognise vs execute.", category: "algs" },
   { href: "/gym", icon: Dumbbell, title: "Alg Gym", blurb: "OLL/PLL drills set up on your cube, timed and checked.", category: "algs" },
-  { href: "/algid", icon: Fingerprint, title: "Alg Identifier", blurb: "Do any sequence — find out exactly what it is.", category: "algs" },
+  { href: "/algid", icon: Fingerprint, title: "Alg Identifier", blurb: "Do any sequence, find out exactly what it is.", category: "algs" },
 
   { href: "/spin", icon: RotateCw, title: "Spin", blurb: "Clockwise vs counter-clockwise, and which side of each axis is slower.", category: "technique" },
   { href: "/crosscolor", icon: Palette, title: "Cross Color Advisor", blurb: "How long your cross would have been on every other color.", category: "technique" },
-  { href: "/multislot", icon: Layers, title: "Multi-Slot Report", blurb: "Pairs solved together vs one at a time — and which is actually faster.", category: "technique" },
+  { href: "/multislot", icon: Layers, title: "Multi-Slot Report", blurb: "Pairs solved together vs one at a time, and which is actually faster.", category: "technique" },
 
-  { href: "/xcross", icon: Target, title: "X-Cross Hunter", blurb: "Scrambles with a hidden x-cross — can you find it?", category: "drills" },
-  { href: "/rematch", icon: Swords, title: "Rematch & Ghost Race", blurb: "Race any real solve on its scramble — yours, a friend's, or a pasted recon.", category: "drills" },
+  { href: "/xcross", icon: Target, title: "X-Cross Hunter", blurb: "Scrambles with a hidden x-cross, can you find it?", category: "drills" },
+  { href: "/rematch", icon: Swords, title: "Rematch & Ghost Race", blurb: "Race any real solve on its scramble, yours, a friend's, or a pasted recon.", category: "drills" },
   { href: "/comp", icon: Gavel, title: "Comp Sim", blurb: "A full competition round: judge calls, cutoff, official average, comp tax.", category: "drills" },
   { href: "/mistakes", icon: Bandage, title: "Mistake Drills", blurb: "Your costliest mistakes, set back up on your cube to redo properly.", category: "drills" },
-  { href: "/blindcross", icon: EyeClosed, title: "Blind Cross", blurb: "Inspect, close your eyes, solve the cross — graded turn by turn.", category: "drills" },
+  { href: "/blindcross", icon: EyeClosed, title: "Blind Cross", blurb: "Inspect, close your eyes, solve the cross, graded turn by turn.", category: "drills" },
   { href: "/pacer", icon: Gauge, title: "Split Pacer", blurb: "Hear ahead / behind at every milestone of a solve.", category: "drills" },
-  { href: "/tempo", icon: Metronome, title: "Tempo Trainer", blurb: "Solve to a metronome — every turn scored on the beat.", category: "drills" },
+  { href: "/tempo", icon: Metronome, title: "Tempo Trainer", blurb: "Solve to a metronome, every turn scored on the beat.", category: "drills" },
   { href: "/bld", icon: Stethoscope, title: "BLD Doctor", blurb: "Blindfolded attempts, and exactly why a DNF happened.", category: "drills" },
   { href: "/inspection", icon: Eye, title: "Inspection Grade", blurb: "Your inspection graded from how the cross came out.", category: "drills" },
 
   { href: "/satnav", icon: Navigation, title: "Solve Sat-Nav", blurb: "Turn-by-turn directions that recalculate when you go off-route.", category: "live" },
   { href: "/timemachine", icon: History, title: "Time Machine", blurb: "Rewind your physical cube to any moment since you connected.", category: "live" },
-  { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve — or your week's best — into a video.", category: "live" },
+  { href: "/reel", icon: Clapperboard, title: "Solve Reel", blurb: "Turn a solve, or your week's best, into a video.", category: "live" },
   { href: "/ar", icon: Glasses, title: "Cube AR", blurb: "Your cube's live twin pinned onto it through the camera.", category: "live" },
 
   { href: "/myalgs", icon: BookMarked, title: "My Algs", blurb: "Your real algorithms per case, detected from your solves and used everywhere.", category: "picture" },
-  { href: "/duel", icon: Swords, title: "DNA Duel", blurb: "Your Cube DNA against a friend's — send a link, compare everything.", category: "picture" },
+  { href: "/duel", icon: Swords, title: "DNA Duel", blurb: "Your Cube DNA against a friend's, send a link, compare everything.", category: "picture" },
   { href: "/wrapped", icon: Gift, title: "Cube Wrapped", blurb: "Your month or year of cubing as a shareable story.", category: "picture" },
   { href: "/quests", icon: Sparkles, title: "Quests & Levels", blurb: "XP for everything you practise, and three quests a week aimed at you.", category: "picture" },
-  { href: "/experiments", icon: FlaskConical, title: "Experiments", blurb: "Log a change — new cube, new alg — and test whether it really helped.", category: "picture" },
-  { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up — and your golds.", category: "picture" },
+  { href: "/experiments", icon: FlaskConical, title: "Experiments", blurb: "Log a change, new cube, new alg, and test whether it really helped.", category: "picture" },
+  { href: "/sob", icon: Medal, title: "Sum of Best", blurb: "Your best cross, pairs, OLL and PLL added up, and your golds.", category: "picture" },
   { href: "/luck", icon: Clover, title: "Luck Meter", blurb: "How much each solve was the scramble, and your luck-free leaderboard.", category: "picture" },
   { href: "/archetypes", icon: Shapes, title: "Solve Archetypes", blurb: "The shapes your solves come in, clustered, and what each costs.", category: "picture" },
   { href: "/eventmix", icon: Shuffle, title: "Event Mix", blurb: "Every puzzle and category you do, ranked against your ordinary 3x3.", category: "picture" },
@@ -183,24 +183,24 @@ const BY_CATEGORY = new Map(CATEGORIES.map((c) => [c.key, GRID_TOOLS.filter((t) 
 
 function ToolGrid({ tools, usage }: { tools: readonly (typeof TOOLS)[number][]; usage: ReturnType<typeof parseUsage> }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <ul className="flex flex-col divide-y divide-border">
       {tools.map((tool) => (
-        <Link
-          key={tool.href}
-          href={tool.href}
-          className="card flex flex-col gap-1 rounded-xl p-3 transition-colors hover:bg-bg-panel-2/60"
-        >
-          <tool.icon size={18} className="text-accent" />
-          <span className="text-xs font-semibold text-foreground">{tool.title}</span>
-          <span className="text-[10px] leading-snug text-muted-2">{tool.blurb}</span>
-          {usage[tool.href] && (
-            <span className="mt-auto text-[10px] tabular-nums text-muted">
-              opened {usage[tool.href].count}×
+        <li key={tool.href}>
+          <Link href={tool.href} className="flex items-start gap-2.5 py-2.5 transition-colors hover:bg-bg-panel-2/60">
+            <tool.icon size={16} className="mt-0.5 shrink-0 text-accent" />
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-xs font-semibold text-foreground">{tool.title}</span>
+              <span className="text-[11px] leading-snug text-muted-2">{tool.blurb}</span>
             </span>
-          )}
-        </Link>
+            {usage[tool.href] && (
+              <span className="shrink-0 pt-0.5 text-[10px] tabular-nums text-muted">
+                opened {usage[tool.href].count}×
+              </span>
+            )}
+          </Link>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -231,7 +231,7 @@ function CategorySection({
         <ChevronDown size={15} className={cn("shrink-0 text-muted-2 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="border-t border-border p-3 pt-3">
+        <div className="border-t border-border px-3 py-1">
           <ToolGrid tools={tools} usage={usage} />
         </div>
       )}
@@ -353,7 +353,7 @@ export default function LabPage() {
                 <div className="card flex flex-col gap-2 rounded-xl p-4">
                   <Link href="/coach" className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-accent">
                     <GraduationCap size={15} className="text-accent" />
-                    Coach — start here
+                    Coach, start here
                   </Link>
                   <p className="text-[12px] leading-relaxed text-foreground">{coach.headline}</p>
                   <ol className="flex flex-col gap-0.5">
@@ -379,30 +379,36 @@ export default function LabPage() {
                 <Link href="/coach" className="card flex items-center gap-2 rounded-xl p-4 transition-colors hover:bg-bg-panel-2/60">
                   <GraduationCap size={15} className="text-accent" />
                   <p className="text-[12px] text-muted">
-                    Coach — start here once you have {GOAL_MIN_SOLVES} smart-cube solves ({allSolves.length} so far).
+                    Coach, start here once you have {GOAL_MIN_SOLVES} smart-cube solves ({allSolves.length} so far).
                   </p>
                   <ChevronRight size={13} className="ml-auto shrink-0 text-muted-2" />
                 </Link>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <Link href="/goal" className="card flex flex-col gap-1.5 rounded-xl p-3">
-                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                    <Flag size={13} className="text-accent" /> Goal
-                  </span>
-                  <span className="text-[11px] leading-snug text-muted">
-                    {goal ? goal.headline : `Needs ${GOAL_MIN_SOLVES} solves — ${allSolves.length} so far.`}
-                  </span>
-                </Link>
-                <Link href="/progress" className="card flex flex-col gap-1.5 rounded-xl p-3">
-                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                    <TrendingUp size={13} className="text-accent" /> Progress
-                  </span>
-                  <span className="text-[11px] leading-snug text-muted">
-                    {progress ? progress.headline : `Needs ${PROGRESS_MIN_SOLVES} solves — ${allSolves.length} so far.`}
-                  </span>
-                </Link>
-              </div>
+              <ul className="flex flex-col divide-y divide-border border-y border-border">
+                <li>
+                  <Link href="/goal" className="flex items-start gap-2.5 py-2.5 transition-colors hover:bg-bg-panel-2/60">
+                    <Flag size={16} className="mt-0.5 shrink-0 text-accent" />
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-xs font-semibold text-foreground">Goal</span>
+                      <span className="text-[11px] leading-snug text-muted">
+                        {goal ? goal.headline : `Needs ${GOAL_MIN_SOLVES} solves, ${allSolves.length} so far.`}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/progress" className="flex items-start gap-2.5 py-2.5 transition-colors hover:bg-bg-panel-2/60">
+                    <TrendingUp size={16} className="mt-0.5 shrink-0 text-accent" />
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-xs font-semibold text-foreground">Progress</span>
+                      <span className="text-[11px] leading-snug text-muted">
+                        {progress ? progress.headline : `Needs ${PROGRESS_MIN_SOLVES} solves, ${allSolves.length} so far.`}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              </ul>
 
               {used.length > 0 && (
                 <>
@@ -443,7 +449,7 @@ export default function LabPage() {
               <Section
                 icon={<Compass size={15} className="text-accent" />}
                 title="Gyro Twin"
-                subtitle="A live 3D copy of the cube in your hands — stickers and orientation. Whole-cube rotations are named as they happen and written into your reconstructions, and every solve's recap maps which sides you actually looked at during inspection."
+                subtitle="A live 3D copy of the cube in your hands, stickers and orientation. Whole-cube rotations are named as they happen and written into your reconstructions, and every solve's recap maps which sides you actually looked at during inspection."
               >
                 {!connected ? (
                   <div className="flex flex-col items-center gap-2 py-4">
@@ -458,7 +464,7 @@ export default function LabPage() {
                       {supported === false ? "Web Bluetooth unavailable" : connecting ? "Connecting…" : "Connect smart cube"}
                     </button>
                     <p className="max-w-xs text-center text-[11px] text-muted-2">
-                      Hold it yellow top, green front while it connects — that grip is the gyro&apos;s home. Any state is fine for most cubes.
+                      Hold it yellow top, green front while it connects, that grip is the gyro&apos;s home. Any state is fine for most cubes.
                     </p>
                   </div>
                 ) : calibrating ? (
@@ -480,7 +486,7 @@ export default function LabPage() {
                       </button>
                     ) : (
                       <p className="max-w-xs text-center text-[11px] text-muted-2">
-                        This cube isn&apos;t streaming orientation. Gyro needs a GAN Gen2+ or MoYu AI cube — stickers still mirror live.
+                        This cube isn&apos;t streaming orientation. Gyro needs a GAN Gen2+ or MoYu AI cube, stickers still mirror live.
                       </p>
                     )}
                   </div>
@@ -506,7 +512,7 @@ export default function LabPage() {
                 </label>
                 <GestureLegend />
                 <p className="text-center text-[11px] text-muted-2">
-                  {connected ? (gesturesOn ? "Try one now — it lights up below." : "Turn gestures on to practice them here.") : "Connect a cube to practice."}
+                  {connected ? (gesturesOn ? "Try one now, it lights up below." : "Turn gestures on to practice them here.") : "Connect a cube to practice."}
                 </p>
                 <GestureToast toast={toast} />
               </Section>
@@ -514,7 +520,7 @@ export default function LabPage() {
               <Section
                 icon={<Radar size={15} className="text-accent" />}
                 title="Mistake Radar"
-                subtitle="Every smart-cube solve replayed move by move: knocked-out pairs, broken crosses, extra OLL/PLL looks, and wasted turns — priced in seconds."
+                subtitle="Every smart-cube solve replayed move by move: knocked-out pairs, broken crosses, extra OLL/PLL looks, and wasted turns, priced in seconds."
               >
                 <MistakeHistory solves={allSolves} />
               </Section>
@@ -522,7 +528,7 @@ export default function LabPage() {
               <Section
                 icon={<HeartPulse size={15} className="text-accent" />}
                 title="Cube Health"
-                subtitle="Diagnostics for the hardware itself, per physical face: overshoot catches, drag mid-flurry, and wear over time — with what to adjust."
+                subtitle="Diagnostics for the hardware itself, per physical face: overshoot catches, drag mid-flurry, and wear over time, with what to adjust."
               >
                 <CubeHealthPanel report={health} />
               </Section>

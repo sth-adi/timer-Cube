@@ -87,8 +87,8 @@ export function summarizeColdStart(classifications: readonly GapClassification[]
   const parts = [`Your first ${COLD_WINDOW} turns after a look average ${Math.round(coldAvgMs)}ms/turn, versus ${Math.round(warmAvgMs)}ms/turn once you're warmed back up.`];
   parts.push(
     hasColdStart
-      ? `That's a real cold-start tax — about ${Math.round(taxShare * 100)}% slower right out of a pause.`
-      : "That's within noise of your normal turning speed — no real cold start.",
+      ? `That's a real cold-start tax, about ${Math.round(taxShare * 100)}% slower right out of a pause.`
+      : "That's within noise of your normal turning speed, no real cold start.",
   );
 
   return { coldAvgMs, warmAvgMs, taxMs, taxShare, coldSamples: cold.length, warmSamples: warm.length, hasColdStart, headline: parts.join(" ") };

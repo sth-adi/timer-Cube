@@ -213,7 +213,7 @@ function CubeAttempt({ scramble, limitMs, voice, onDone }: { scramble: string; l
             {flow.pendingPenalty === "dnf" ? "DNF" : flow.pendingPenalty === "plus2" ? "+2" : Math.ceil(flow.inspectionRemainingMs / 1000)}
           </span>
         ) : (
-          <span className="text-sm text-muted">Scramble your cube to match — inspection starts the moment it does</span>
+          <span className="text-sm text-muted">Scramble your cube to match, inspection starts the moment it does</span>
         )}
       </div>
       {call && <p className="animate-pulse text-sm font-bold text-warning">Judge: “{call}”</p>}
@@ -398,7 +398,7 @@ function CompSim() {
           <button type="button" onClick={() => void start()} disabled={stage === "loading"} className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
             {stage === "loading" ? <Loader2 size={14} className="animate-spin" /> : <Gavel size={14} />} Start the round
           </button>
-          {practice !== null && <p className="text-center text-[11px] text-muted-2">Your practice Ao5 is about {formatTime(practice)} — the round is judged against it.</p>}
+          {practice !== null && <p className="text-center text-[11px] text-muted-2">Your practice Ao5 is about {formatTime(practice)}, the round is judged against it.</p>}
         </div>
 
         {rounds.length > 0 && (
@@ -485,8 +485,8 @@ function CompSim() {
                 {fmt(attemptResult(pending, format))}
                 {pending.penalty === "plus2" ? "+" : ""}
               </p>
-              {attemptResult(pending, format) === null && pending.penalty !== "dnf" && <p className="text-xs text-danger">Over the time limit — the judge stopped the attempt.</p>}
-              <p className="text-[11px] text-muted">Judge&apos;s call — sign the scorecard:</p>
+              {attemptResult(pending, format) === null && pending.penalty !== "dnf" && <p className="text-xs text-danger">Over the time limit, the judge stopped the attempt.</p>}
+              <p className="text-[11px] text-muted">Judge&apos;s call, sign the scorecard:</p>
               <div className="flex gap-2">
                 {(["none", "plus2", "dnf"] as Penalty[]).map((p) => (
                   <button
@@ -535,7 +535,7 @@ export default function CompPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Gavel size={17} className="text-accent" /> Comp Sim
             </h1>
-            <p className="text-[11px] text-muted-2">A full competition round at home — judge calls, cutoff, time limit, official average, and what nerves cost you.</p>
+            <p className="text-[11px] text-muted-2">A full competition round at home, judge calls, cutoff, time limit, official average, and what nerves cost you.</p>
           </div>
           <CompSim />
         </div>

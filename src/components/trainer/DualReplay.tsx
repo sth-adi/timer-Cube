@@ -147,14 +147,14 @@ export function DualReplay() {
           Dual replay
         </h2>
         <p className="mb-3 text-xs leading-relaxed text-muted">
-          Race two of your own solves against each other, side by side, synced to a shared start — great for seeing
+          Race two of your own solves against each other, side by side, synced to a shared start, great for seeing
           exactly where a slow solve lost time against a fast one.
         </p>
 
         {candidates.length < 2 ? (
           <p className="text-xs text-muted-2">
             Needs at least two solves with a saved reconstruction. Analyze a solve (Analyze tab) and use &ldquo;Save
-            to solve&rdquo; to add one — do that for a couple of solves and they&apos;ll show up here.
+            to solve&rdquo; to add one, do that for a couple of solves and they&apos;ll show up here.
           </p>
         ) : (
           <>

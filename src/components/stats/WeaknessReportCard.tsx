@@ -90,7 +90,7 @@ export function WeaknessReportCard() {
           {report.phases.length === 0 ? (
             <p className="text-xs text-success">
               Nothing stands out across the last {report.analyzedCount} analyzed solve
-              {report.analyzedCount === 1 ? "" : "s"} — clean.
+              {report.analyzedCount === 1 ? "" : "s"}, clean.
             </p>
           ) : (
             <div className="space-y-3">

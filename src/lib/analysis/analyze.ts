@@ -173,7 +173,7 @@ export function analyzeSolve(input: AnalyzeInput): AnalyzeResult {
   const rawStates = walkStates(scrambleAlg, userMoves);
   if (!rawStates[rawStates.length - 1].isSolved()) {
     return fail(
-      "These moves don't solve that scramble. Check for a missed or mistyped move — " +
+      "These moves don't solve that scramble. Check for a missed or mistyped move, " +
         "the analyzer replays the solve on a virtual cube, so it has to finish solved.",
     );
   }
@@ -380,7 +380,7 @@ function buildFindings(ctx: FindingContext): Finding[] {
         detail:
           `The shortest cross here was ${cross.model.moves.join(" ")}. ` +
           "Every cross on a 3x3 can be done in 8 moves or fewer, and you get 15 seconds of inspection " +
-          "to find it — planning the whole cross before you start is the single cheapest time save there is.",
+          "to find it, planning the whole cross before you start is the single cheapest time save there is.",
       });
     }
   }
@@ -397,7 +397,7 @@ function buildFindings(ctx: FindingContext): Finding[] {
         title: `F2L cost ${f2lStm - f2lModel} extra moves across the four slots`,
         detail:
           `You used ${f2lStm} moves where ${f2lModel} would have done. Spread over four pairs that's usually ` +
-          "not one bad insertion but a habit — rebuilding a pair you could have inserted directly, or " +
+          "not one bad insertion but a habit, rebuilding a pair you could have inserted directly, or " +
           "taking the long route because you didn't spot the piece until you needed it.",
       });
     }
@@ -442,7 +442,7 @@ function buildFindings(ctx: FindingContext): Finding[] {
         detail:
           `You had ${phase.caseName} and played ${phase.moves.join(" ")}. The one-look algorithm is ` +
           `${phase.caseAlg}. A gap this size usually means the case was solved in two looks, or with an ` +
-          "algorithm learned for a different angle — both cost real time even when they work.",
+          "algorithm learned for a different angle, both cost real time even when they work.",
       });
     } else if (phase.caseAlgMoves && phase.metrics.stm <= reference) {
       findings.push({
@@ -487,7 +487,7 @@ function buildFindings(ctx: FindingContext): Finding[] {
         severity: "medium",
         title: `Efficient but slow: ${ctx.tps.toFixed(1)} turns per second`,
         detail:
-          "Your move count is close to optimal, so the time isn't going into wasted turns — it's going into " +
+          "Your move count is close to optimal, so the time isn't going into wasted turns, it's going into " +
           "pauses. That's a lookahead problem: practise solving slowly enough that you never stop moving.",
       });
     } else if (ctx.tps >= 5 && !efficient) {
@@ -537,7 +537,7 @@ function buildSummary(ctx: {
     parts.push(
       extra <= 0
         ? "which is as short as this solve could reasonably have been"
-        : `against about ${ctx.modelStm} available — ${extra} spare`,
+        : `against about ${ctx.modelStm} available, ${extra} spare`,
     );
   }
   if (ctx.tps !== undefined) parts.push(`at ${ctx.tps.toFixed(1)} turns per second`);

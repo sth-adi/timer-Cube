@@ -35,7 +35,7 @@ export function FindingsList({ findings }: { findings: Finding[] }) {
             </li>
           );
         })}
-        {findings.length === 0 && <li className="text-[12px] leading-5 text-muted">Nothing stands out — this was a clean solve.</li>}
+        {findings.length === 0 && <li className="text-[12px] leading-5 text-muted">Nothing stands out, this was a clean solve.</li>}
       </ul>
     </div>
   );

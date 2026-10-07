@@ -5,14 +5,13 @@ import { ArrowUpRight } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { CubeStatus } from "@/components/play/PlayShell";
 import { EchoArt, GolfArt, MazeArt, PortraitArt, TwistrisArt, VaultArt, WakeArt } from "@/components/play/Art";
-import { cn } from "@/lib/utils/cn";
 
 const GAMES = [
   {
     href: "/vault",
     name: "Cube Vault",
     hook: "Your cube is the password.",
-    body: "Twist it into any state and seal a message with it. The link only opens when someone's cube reaches that exact state — 43 quintillion to choose from.",
+    body: "Twist it into any state and seal a message with it. The link only opens when someone's cube reaches that exact state, 43 quintillion to choose from.",
     accent: "#ffc53d",
     Art: VaultArt,
     needs: "Any cube",
@@ -21,7 +20,7 @@ const GAMES = [
     href: "/maze",
     name: "Tilt Maze",
     hook: "Your cube is the board.",
-    body: "Tilt it to roll a marble through a labyrinth. Turn a face to open the gate of its color — for a few seconds.",
+    body: "Tilt it to roll a marble through a labyrinth. Turn a face to open the gate of its color, for a few seconds.",
     accent: "#3de8ff",
     Art: MazeArt,
     needs: "Gyro cube · or phone tilt",
@@ -39,7 +38,7 @@ const GAMES = [
     href: "/portraits",
     name: "Solve Portraits",
     hook: "Your solves are art.",
-    body: "Every solve you've done, drawn as its own glowing piece — then draw live with your turns.",
+    body: "Every solve you've done, drawn as a small piece of art, then draw live with your turns.",
     accent: "#b36bff",
     Art: PortraitArt,
     needs: "Your solve history",
@@ -66,12 +65,14 @@ const GAMES = [
     href: "/golf",
     name: "Cube Golf",
     hook: "Your cube is the course.",
-    body: "Scramble a few turns, then solve it in as few as you can. Par is the shortest solution that exists — worked out exactly, and revealed after every hole.",
+    body: "Scramble a few turns, then solve it in as few as you can. Par is the shortest solution that exists, worked out exactly, and revealed after every hole.",
     accent: "#7dff6a",
     Art: GolfArt,
     needs: "Any cube",
   },
 ] as const;
+
+const [LEAD, ...REST] = GAMES;
 
 /**
  * Play: things a smart cube was never meant to do. Its own destination —
@@ -94,37 +95,45 @@ export default function PlayHub() {
             Seven things your smart cube was never meant to do. No cube handy? Every one works with the keyboard or the on-screen pad too.
           </p>
         </header>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {GAMES.map((g, i) => (
-            <Link
-              key={g.href}
-              href={g.href}
-              className={cn(
-                "group relative flex overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] transition-transform duration-200 hover:-translate-y-0.5",
-                i === 0 ? "flex-col sm:col-span-2 sm:flex-row" : "flex-col",
-              )}
-              style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 60px -40px ${g.accent}` }}
-            >
-              <div
-                className={cn("relative flex items-center justify-center", i === 0 ? "h-48 sm:h-auto sm:w-1/2" : "h-40")}
-                style={{ background: `radial-gradient(circle at 50% 60%, ${g.accent}26, transparent 70%)` }}
-              >
-                <g.Art className="h-full w-full max-w-[280px] p-2 transition-transform duration-300 group-hover:scale-105" />
-              </div>
-              <div className={cn("flex flex-col gap-1.5 p-4 pt-1", i === 0 && "sm:justify-center sm:p-6")}>
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-[22px] font-black tracking-tight" style={{ color: g.accent }}>
+        <Link
+          href={LEAD.href}
+          className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 sm:flex-row"
+        >
+          <div className="flex h-48 items-center justify-center sm:h-auto sm:w-1/2" style={{ background: `${LEAD.accent}1a` }}>
+            <LEAD.Art className="h-full w-full max-w-[280px] p-2 transition-transform duration-300 group-hover:scale-105" />
+          </div>
+          <div className="flex flex-col gap-1.5 p-4 sm:justify-center sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-[22px] font-black tracking-tight" style={{ color: LEAD.accent }}>
+                {LEAD.name}
+              </h2>
+              <ArrowUpRight size={18} className="text-white/30 transition-colors group-hover:text-white" />
+            </div>
+            <p className="text-[15px] font-bold leading-tight text-white">{LEAD.hook}</p>
+            <p className="text-[12.5px] leading-snug text-[var(--play-dim)]">{LEAD.body}</p>
+            <span className="mt-1 self-start text-[10px] font-semibold uppercase tracking-wider text-white/45">{LEAD.needs}</span>
+          </div>
+        </Link>
+        <ul className="flex flex-col divide-y divide-white/10 border-y border-white/10">
+          {REST.map((g) => (
+            <li key={g.href}>
+              <Link href={g.href} className="group flex items-center gap-4 py-3 transition-colors hover:bg-white/[0.03]">
+                <div className="flex h-20 w-24 shrink-0 items-center justify-center rounded-lg" style={{ background: `${g.accent}14` }}>
+                  <g.Art className="h-full w-full p-1" />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <h2 className="text-[18px] font-black tracking-tight" style={{ color: g.accent }}>
                     {g.name}
                   </h2>
-                  <ArrowUpRight size={18} className="text-white/30 transition-colors group-hover:text-white" />
+                  <p className="text-[14px] font-bold leading-tight text-white">{g.hook}</p>
+                  <p className="text-[12.5px] leading-snug text-[var(--play-dim)]">{g.body}</p>
+                  <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">{g.needs}</span>
                 </div>
-                <p className="text-[15px] font-bold leading-tight text-white">{g.hook}</p>
-                <p className="text-[12.5px] leading-snug text-[var(--play-dim)]">{g.body}</p>
-                <span className="mt-1 self-start rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">{g.needs}</span>
-              </div>
-            </Link>
+                <ArrowUpRight size={18} className="shrink-0 text-white/30 transition-colors group-hover:text-white" />
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   );

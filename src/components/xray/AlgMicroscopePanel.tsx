@@ -64,7 +64,7 @@ function VariantBlock({ v, bestMean }: { v: VariantProfile; bestMean: number }) 
       <TimingStrip tokens={v.tokens} gaps={v.meanGaps} stallIndex={v.stall?.index} />
       {v.stall && (
         <p className="text-[10px] text-danger">
-          Stall on turn {v.stall.index + 1} ({v.stall.token}): {Math.round(v.stall.ms)} ms — {v.stall.ratio.toFixed(1)}× your pace
+          Stall on turn {v.stall.index + 1} ({v.stall.token}): {Math.round(v.stall.ms)} ms, {v.stall.ratio.toFixed(1)}× your pace
           through the rest of it.
         </p>
       )}

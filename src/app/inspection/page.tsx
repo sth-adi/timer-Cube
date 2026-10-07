@@ -100,12 +100,12 @@ export default function InspectionPage() {
                 )}
                 <p className="text-[11px] text-muted">
                   {history.fullyPlannedRate < 0.5
-                    ? "Most crosses stall part-way — in inspection, trace every edge to its slot before you start, not just the first two or three."
+                    ? "Most crosses stall part-way, in inspection, trace every edge to its slot before you start, not just the first two or three."
                     : history.avgExtraTurns > 1.5
-                      ? "You plan your crosses fully, but they run long — spend part of inspection looking for a shorter one."
+                      ? "You plan your crosses fully, but they run long, spend part of inspection looking for a shorter one."
                       : history.xcrossRate < 0.1
                         ? "Planned and efficient. Next step: find an F2L pair you can build into the cross."
-                        : "Excellent inspection — planned, efficient, and building x-crosses."}
+                        : "Excellent inspection, planned, efficient, and building x-crosses."}
                 </p>
               </div>
 

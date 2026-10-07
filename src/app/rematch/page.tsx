@@ -177,7 +177,7 @@ function GhostPicker({ onPick }: { onPick: (g: Ghost) => void }) {
     setError(null);
     const sh = await fetchSharedSolve(id);
     setLoading(false);
-    if (!sh.ok) return setError(sh.reason === "not-found" ? "Couldn't find that shared solve." : sh.reason === "offline" ? "You're offline — try again once you're connected." : "Couldn't reach the server — try again.");
+    if (!sh.ok) return setError(sh.reason === "not-found" ? "Couldn't find that shared solve." : sh.reason === "offline" ? "You're offline, try again once you're connected." : "Couldn't reach the server, try again.");
     const g = ghostFromShared(sh.solve);
     if ("error" in g) setError(g.error);
     else onPick(g);
@@ -213,7 +213,7 @@ function GhostPicker({ onPick }: { onPick: (g: Ghost) => void }) {
       </div>
       {source === "mine" &&
         (candidates.length === 0 ? (
-          <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on your smart cube first — every solve you finish can be raced here.</div>
+          <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on your smart cube first, every solve you finish can be raced here.</div>
         ) : (
           <div className="card flex flex-col gap-1 rounded-xl p-2">
             {candidates.map((s) => (
@@ -410,9 +410,9 @@ function Rematch() {
 
       {phase === "ready" && (
         <div className="card flex flex-col items-center gap-2 rounded-xl p-6 text-center">
-          <Radio size={20} className="animate-pulse text-accent" />
+          <Radio size={20} className="text-accent" />
           <p className="text-sm font-semibold text-foreground">Same scramble. Inspect, then go.</p>
-          <p className="text-[11px] text-muted">The clock — and the ghost — start on your first turn; the clock stops when your cube is solved.</p>
+          <p className="text-[11px] text-muted">The clock, and the ghost, start on your first turn; the clock stops when your cube is solved.</p>
         </div>
       )}
 
@@ -460,7 +460,7 @@ export default function RematchPage() {
               <Swords size={17} className="text-accent" /> Rematch &amp; Ghost Race
             </h1>
             <p className="text-[11px] text-muted-2">
-              Race a real solve on the same scramble — yours, a friend&apos;s shared link, or any reconstruction — its turns playing beside you at their
+              Race a real solve on the same scramble, yours, a friend&apos;s shared link, or any reconstruction, its turns playing beside you at their
               real pace.
             </p>
           </div>

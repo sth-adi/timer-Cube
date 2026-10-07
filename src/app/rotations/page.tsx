@@ -72,7 +72,7 @@ export default function RotationsPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Rotate3d size={17} className="text-accent" /> Rotation Audit
             </h1>
-            <p className="text-[11px] text-muted-2">Why you turn the whole cube, and what it costs — from every gyro-cube solve.</p>
+            <p className="text-[11px] text-muted-2">Why you turn the whole cube, and what it costs, from every gyro-cube solve.</p>
           </div>
 
           {!report ? (

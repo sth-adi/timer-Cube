@@ -188,16 +188,16 @@ export function compareCards(me: DuelCard, them: DuelCard): DuelReport {
   if (Math.abs(gap) < me.averageMs * 0.01) headline = `Dead even: ${s2(me.averageMs)}s against ${s2(them.averageMs)}s.`;
   else {
     // "x of it" only when the phase gap really is a part of the total; otherwise just name the biggest gap.
-    const where = (d: number, p: PhaseName) => (d <= Math.abs(gap) ? ` — ${s2(d)}s of it in ${p}` : ` — the biggest gap is ${p}, ${s2(d)}s`);
+    const where = (d: number, p: PhaseName) => (d <= Math.abs(gap) ? `, ${s2(d)}s of it in ${p}` : `, the biggest gap is ${p}, ${s2(d)}s`);
     if (gap > 0) headline = `${them.name} is ${s2(gap)}s faster on average${theyWin[0] ? where(theyWin[0].d, theyWin[0].p) : ""}.`;
     else headline = `You're ${s2(-gap)}s faster on average${iWin[0] ? where(-iWin[0].d, iWin[0].p) : ""}.`;
   }
 
-  const steal = theyWin.map((g) => `${g.p}: theirs is ${s2(g.d)}s faster (${s2(them.phases[g.p]!)}s vs your ${s2(me.phases[g.p]!)}s) — ${PHASE_DRILLS[g.p]} close that gap.`);
-  if (me.tps !== null && them.tps !== null && them.tps > me.tps * 1.08) steal.push(`They turn at ${them.tps.toFixed(1)} TPS to your ${me.tps.toFixed(1)} — the Tempo Trainer pushes your hands.`);
+  const steal = theyWin.map((g) => `${g.p}: theirs is ${s2(g.d)}s faster (${s2(them.phases[g.p]!)}s vs your ${s2(me.phases[g.p]!)}s), ${PHASE_DRILLS[g.p]} close that gap.`);
+  if (me.tps !== null && them.tps !== null && them.tps > me.tps * 1.08) steal.push(`They turn at ${them.tps.toFixed(1)} TPS to your ${me.tps.toFixed(1)}, the Tempo Trainer pushes your hands.`);
   const style = alignedStyle(me.axes, them.axes);
-  if (style && style.d < -10) steal.push(`Their ${style.label} score is ${-style.d} points higher on the DNA — ${style.label === "Consistency" ? "fewer bad solves, which the Consistency Lab and Tilt Meter work on" : "worth a look at what they do differently"}.`);
-  const teach = iWin.map((g) => `${g.p}: yours is ${s2(-g.d)}s faster — you've got something to show them.`);
+  if (style && style.d < -10) steal.push(`Their ${style.label} score is ${-style.d} points higher on the DNA, ${style.label === "Consistency" ? "fewer bad solves, which the Consistency Lab and Tilt Meter work on" : "worth a look at what they do differently"}.`);
+  const teach = iWin.map((g) => `${g.p}: yours is ${s2(-g.d)}s faster, you've got something to show them.`);
   if (!phaseGaps.length) steal.push("Phase-by-phase comparison needs smart-cube solves on both cards.");
   return { rows, headline, steal, teach };
 }

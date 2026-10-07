@@ -121,7 +121,7 @@ export function liveCoach(history: readonly Solve[], sitting: readonly Solve[], 
     cards.push({
       kind: "warmup",
       title: "New sitting",
-      line: profile && w > 1 ? `Your first ${w - 1} solve${w === 2 ? "" : "s"} usually run ${pct(profile.coldPenalty)} — warm up before you judge anything.` : "Fresh start. Ease into it.",
+      line: profile && w > 1 ? `Your first ${w - 1} solve${w === 2 ? "" : "s"} usually run ${pct(profile.coldPenalty)}, warm up before you judge anything.` : "Fresh start. Ease into it.",
       tone: "info",
     });
     return { profile, n, vsTypical, cards };
@@ -136,7 +136,7 @@ export function liveCoach(history: readonly Solve[], sitting: readonly Solve[], 
     if (typeof need === "number") cards.push({ kind: "pb", title: "PB average on", line: `A ${s2(need)} or better on the next solve beats your best ao5 (${s2(opts.bestAo5Ms)}).`, tone: "good" });
     else if (need === "locked") {
       const ao = wcaAverage([...finals.slice(-4), null], "ao5");
-      cards.push({ kind: "pb", title: "PB average locked in", line: `Finish this one — even a DNF leaves a new best ao5${ao ? ` (${s2(ao)})` : ""}.`, tone: "good" });
+      cards.push({ kind: "pb", title: "PB average locked in", line: `Finish this one, even a DNF leaves a new best ao5${ao ? ` (${s2(ao)})` : ""}.`, tone: "good" });
     }
   }
 
@@ -144,15 +144,15 @@ export function liveCoach(history: readonly Solve[], sitting: readonly Solve[], 
     cards.push({
       kind: "warmup",
       title: `Warm-up ${n} of ${profile.warmupSolves - 1}`,
-      line: `Your early solves usually run ${pct(profile.coldPenalty)}. ${lastRel > 0.05 ? "This is normal — keep going." : "Already sharp today."}`,
+      line: `Your early solves usually run ${pct(profile.coldPenalty)}. ${lastRel > 0.05 ? "This is normal, keep going." : "Already sharp today."}`,
       tone: "info",
     });
   }
 
   if (lastRel >= BAD && (!profile || n >= profile.warmupSolves)) {
     if (profile?.tilter)
-      cards.push({ kind: "tilt", title: "Don't let it carry", line: `After a bad solve your next one usually runs ${pct(profile.afterBadRel!)}. Put the cube down, breathe, reset your grip — then go.`, tone: "warn" });
-    else cards.push({ kind: "bounce", title: "Shake it off", line: `${last === null ? "A DNF" : `${s2(last)}`} — but you usually bounce straight back. Next one.`, tone: "info" });
+      cards.push({ kind: "tilt", title: "Don't let it carry", line: `After a bad solve your next one usually runs ${pct(profile.afterBadRel!)}. Put the cube down, breathe, reset your grip, then go.`, tone: "warn" });
+    else cards.push({ kind: "bounce", title: "Shake it off", line: `${last === null ? "A DNF" : `${s2(last)}`}, but you usually bounce straight back. Next one.`, tone: "info" });
   }
 
   const tail = finals.slice(-3);
@@ -160,7 +160,7 @@ export function liveCoach(history: readonly Solve[], sitting: readonly Solve[], 
     cards.push({
       kind: "hot",
       title: "On a run",
-      line: profile?.hasMomentum ? "Three fast in a row — and your fast solves cluster. Keep the rhythm; don't rush the gap between solves." : "Three fast in a row. Stay loose and keep solving.",
+      line: profile?.hasMomentum ? "Three fast in a row, and your fast solves cluster. Keep the rhythm; don't rush the gap between solves." : "Three fast in a row. Stay loose and keep solving.",
       tone: "good",
     });
   }
@@ -174,7 +174,7 @@ export function liveCoach(history: readonly Solve[], sitting: readonly Solve[], 
       cards.push({
         kind: "fading",
         title: "You're fading",
-        line: `Your last five are ${pct(recent / peak - 1)} on this sitting's best stretch${fadeDue ? ` — right about where you usually tire (solve ${profile!.fadeFrom})` : ""}. Five minutes off resets it.`,
+        line: `Your last five are ${pct(recent / peak - 1)} on this sitting's best stretch${fadeDue ? `, right about where you usually tire (solve ${profile!.fadeFrom})` : ""}. Five minutes off resets it.`,
         tone: "warn",
       });
     }

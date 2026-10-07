@@ -123,7 +123,7 @@ export function buildProgress(metrics: readonly SolveMetrics[]): ProgressReport 
   if (stalled.length && stalled.length < 4) {
     const names = stalled.map((s) => s.phase);
     const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
-    parts.push(`${list} ${stalled.length === 1 ? "has" : "have"} stalled — that's where new practice goes.`);
+    parts.push(`${list} ${stalled.length === 1 ? "has" : "have"} stalled, that's where new practice goes.`);
   }
 
   return {

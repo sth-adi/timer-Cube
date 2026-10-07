@@ -24,7 +24,7 @@ describe("generateCoachReport", () => {
     expect(report.paragraphs.length).toBeGreaterThan(0);
   });
 
-  it("is deterministic — the same input always produces the same report", () => {
+  it("is deterministic, the same input always produces the same report", () => {
     const a = generateCoachReport(baseInput());
     const b = generateCoachReport(baseInput());
     expect(a).toEqual(b);
@@ -95,7 +95,7 @@ describe("generateCoachReport", () => {
 
   it("picks a PB headline whenever isNewPB is true, regardless of pace vs. average", () => {
     const report = generateCoachReport(baseInput({ isNewPB: true, totalMs: 20000, sessionMeanMs: 10000 }));
-    expect(["New personal best — that's the one.", "PB! That solve just rewrote your record.", "Brand new best single. Nice work."]).toContain(
+    expect(["New personal best, that's the one.", "PB! That solve just rewrote your record.", "Brand new best single. Nice work."]).toContain(
       report.headline,
     );
   });
@@ -115,7 +115,7 @@ describe("generateCoachReport", () => {
 
   it("falls back to a single generic paragraph when there's no phase data at all", () => {
     const report = generateCoachReport(baseInput({ phases: [], sessionMeanMs: null, tps: null }));
-    expect(report.paragraphs).toEqual(["Not enough phase detail on this solve to break down further — the overall time is the whole story here."]);
+    expect(report.paragraphs).toEqual(["Not enough phase detail on this solve to break down further, the overall time is the whole story here."]);
   });
 });
 

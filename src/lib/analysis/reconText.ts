@@ -79,7 +79,7 @@ export function reconstruction(b: SolveBreakdown, scramble: string, opts: { tota
     ...steps.map((s, k) => {
       const what = s.caseName ? `${s.label}: ${s.caseName}` : s.label;
       // Two pairs in on one turn: the second has no turns of its own.
-      if (!s.moves.length && k > 0) return `// ${what} — came in with ${steps[k - 1].label}`;
+      if (!s.moves.length && k > 0) return `// ${what}, came in with ${steps[k - 1].label}`;
       return `${s.moves.join(" ") || "—"} // ${what} (${secs(s.ms)}s, ${s.moves.length} turn${s.moves.length === 1 ? "" : "s"})`;
     }),
     `// ${secs(opts.totalMs)}s · ${turns} turns · ${(turns / Math.max(0.001, opts.totalMs / 1000)).toFixed(2)} TPS`,

@@ -33,11 +33,11 @@ export default function LookaheadPage() {
   const maxPause = Math.max(1, ...rows.map((x) => x.pause));
 
   return (
-    <AnalyticsShell icon={<Binoculars size={17} className="text-accent" />} title="Lookahead Tradeoff" subtitle="Does turning F2L calmer shorten your next pause — and is it worth it?">
+    <AnalyticsShell icon={<Binoculars size={17} className="text-accent" />} title="Lookahead Tradeoff" subtitle="Does turning F2L calmer shorten your next pause, and is it worth it?">
       {!r ? (
         <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
           <p className="text-sm text-muted">Lookahead Tradeoff needs at least {MIN_HANDOFFS} back-to-back F2L pair hand-offs.</p>
-          <p className="text-[11px] text-muted-2">Each smart-cube solve adds up to three — keep going and this fills in.</p>
+          <p className="text-[11px] text-muted-2">Each smart-cube solve adds up to three, keep going and this fills in.</p>
         </div>
       ) : (
         <>

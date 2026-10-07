@@ -156,14 +156,14 @@ export function buildAufReport(perSolve: readonly (SolveAuf | null)[]): AufRepor
   const final = stages[2];
   if (final.avgWaitMs !== null && final.avgWaitMs > 250) {
     insights.push(
-      `You pause ${(final.avgWaitMs / 1000).toFixed(2)}s before the final AUF. Which way it goes is decided before your PLL ends — watch one side block during the alg and flow straight into it.`,
+      `You pause ${(final.avgWaitMs / 1000).toFixed(2)}s before the final AUF. Which way it goes is decided before your PLL ends, watch one side block during the alg and flow straight into it.`,
     );
   }
   const allNeeded = stages.reduce((s, x) => s + x.samples * x.neededRate, 0);
   const allWasted = stages.reduce((s, x) => s + x.samples * x.neededRate * x.wastedRate, 0);
   if (allNeeded >= 5 && allWasted / allNeeded > 0.12) {
     insights.push(
-      `${Math.round((allWasted / allNeeded) * 100)}% of your AUFs take extra turns — U U U instead of U', or overshooting and coming back. Decide the direction before you turn.`,
+      `${Math.round((allWasted / allNeeded) * 100)}% of your AUFs take extra turns, U U U instead of U', or overshooting and coming back. Decide the direction before you turn.`,
     );
   }
   const prePll = stages[1];

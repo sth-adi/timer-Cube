@@ -18,23 +18,23 @@ const NOT_A_FAILURE = /cancel+ed|user gesture|abort/i;
 const REWORDINGS: readonly { test: RegExp; message: string }[] = [
   {
     test: /timed out waiting for cube data/i,
-    message: "The cube didn't answer with that Bluetooth address — check it's the right one (letters and numbers, six pairs) and try again.",
+    message: "The cube didn't answer with that Bluetooth address, check it's the right one (letters and numbers, six pairs) and try again.",
   },
   {
     test: /mac address/i,
-    message: "Couldn't identify this cube's Bluetooth address — move it closer and try again, or forget and re-pair it in your OS Bluetooth settings.",
+    message: "Couldn't identify this cube's Bluetooth address, move it closer and try again, or forget and re-pair it in your OS Bluetooth settings.",
   },
   {
     test: /unsupported cube device model|doesn't match any registered smartcube protocol|no smartcube protocols registered/i,
-    message: "This doesn't look like a supported smart cube (GAN, GiiKER, GoCube, QiYi, or MoYu) — check you picked the right device in the pairing list.",
+    message: "This doesn't look like a supported smart cube (GAN, GiiKER, GoCube, QiYi, or MoYu), check you picked the right device in the pairing list.",
   },
   {
     test: /gatt connection timeout|gatt unavailable/i,
-    message: "Couldn't establish a stable Bluetooth connection — make sure the cube is awake (give it a turn) and try again.",
+    message: "Couldn't establish a stable Bluetooth connection, make sure the cube is awake (give it a turn) and try again.",
   },
   {
     test: /cannot find required characteristic|can't find target ble services/i,
-    message: "Connected, but this cube didn't respond the way its protocol expects — try reconnecting, or check for a firmware update if that keeps happening.",
+    message: "Connected, but this cube didn't respond the way its protocol expects, try reconnecting, or check for a firmware update if that keeps happening.",
   },
   {
     test: /bluetooth adapter (is )?(not available|unavailable|off|disabled|powered off)|bluetooth (is )?(turned |switched )?(off|disabled)|adapter (is )?powered off/i,

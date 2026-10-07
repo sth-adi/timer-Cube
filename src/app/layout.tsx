@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   icons: { apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Cube", statusBarStyle: "black-translucent" },
-  title: "Cube — the speedcubing timer",
+  title: "Cube, the speedcubing timer",
   description:
     "A fast, aesthetic speedcubing timer with random-state 3x3 scrambles, session stats, and hidden cross/CFOP solve hints.",
 };

@@ -81,7 +81,7 @@ export default function GolfPage() {
   };
 
   return (
-    <PlayShell accent={ACCENT} title="Cube Golf" tagline="Scramble a few turns, then solve it in as few as you can. Par is the shortest possible — you can tie it, never beat it.">
+    <PlayShell accent={ACCENT} title="Cube Golf" tagline="Scramble a few turns, then solve it in as few as you can. Par is the shortest possible, you can tie it, never beat it.">
       {game.phase === "menu" && (
         <div className="play-panel play-glow flex flex-col gap-3 rounded-3xl p-5" data-testid="golf-menu">
           <p className="text-sm leading-snug text-white/80">
@@ -135,7 +135,7 @@ export default function GolfPage() {
               <p className="text-base font-bold">Scramble it</p>
               {guideView.undo.length > 0 || guideView.fix ? (
                 <div className="flex flex-col items-center gap-2 rounded-xl bg-warning/10 px-3 py-2 ring-1 ring-warning/40">
-                  <p className="text-xs font-semibold text-warning">{guideView.fix ? `Not quite — turn ${guideView.fix} to fix step ${guideView.index + 1}` : `Wrong turn — undo ${guideView.undo.length === 1 ? "this" : `these ${guideView.undo.length}`}`}</p>
+                  <p className="text-xs font-semibold text-warning">{guideView.fix ? `Not quite, turn ${guideView.fix} to fix step ${guideView.index + 1}` : `Wrong turn, undo ${guideView.undo.length === 1 ? "this" : `these ${guideView.undo.length}`}`}</p>
                   <RouteChips display={guideView.fix ? [guideView.fix] : guideView.undo} turns={guideView.fix ? [guideView.fix] : guideView.undo} position={0} size="lg" />
                 </div>
               ) : null}
@@ -147,7 +147,7 @@ export default function GolfPage() {
 
           {game.phase === "play" && hole && (
             <div className="flex flex-col items-center gap-3 py-2" data-testid="golf-play">
-              <p className="text-base font-bold">Solve it — par is {hole.par}</p>
+              <p className="text-base font-bold">Solve it, par is {hole.par}</p>
               <p className="text-[56px] font-black leading-none" data-testid="golf-strokes">
                 {countStrokes(game.playTurns)}
               </p>
@@ -221,7 +221,7 @@ export default function GolfPage() {
 
       <TurnPad onTurn={(g) => press(g)} />
       <p className="text-center text-[11px] text-[var(--play-dim)]">
-        {connected ? "Turn your cube — it's read live." : "No cube connected — use the pad above or the keyboard; every hole starts from a fresh virtual cube."}
+        {connected ? "Turn your cube, it's read live." : "No cube connected, use the pad above or the keyboard; every hole starts from a fresh virtual cube."}
       </p>
     </PlayShell>
   );

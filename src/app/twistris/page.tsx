@@ -173,7 +173,7 @@ export default function TwistrisPage() {
         <div className="relative">
           <canvas ref={canvas} width={COLS * 24} height={ROWS * 24} className="block h-auto w-[216px] rounded-xl border border-white/10 bg-[#0d0612] sm:w-[240px]" />
           {(!started || game.over || paused) && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/70 p-4 text-center backdrop-blur-[2px]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/80 p-4 text-center">
               <p className="text-2xl font-black tracking-tight">{game.over && started ? "Topped out" : paused ? "Paused" : "Ready?"}</p>
               {game.over && started && <p className="text-sm text-[var(--play-dim)]">{game.score.toLocaleString()} points</p>}
               {paused && started && !game.over ? (
@@ -231,7 +231,7 @@ export default function TwistrisPage() {
       <p className="text-[11px] leading-snug text-[var(--play-dim)]">
         {connected
           ? gyroActive
-            ? `Controls follow your grip via the gyro${grip ? ` — now ${grip}` : ""}.`
+            ? `Controls follow your grip via the gyro${grip ? `, now ${grip}` : ""}.`
             : "Controls assume the home grip: yellow top, green front."
           : "No cube? csTimer keys work (I/K right, D/E left, J/F spin, S/L down, H/G slam, W/O hold), and so do the arrows, Space and C."}
       </p>

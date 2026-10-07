@@ -43,7 +43,7 @@ function NextTurn() {
 
 function Bubble({ text, sub, swatch }: { text: string; sub?: string; swatch?: string }) {
   return (
-    <div className="flex flex-col items-center rounded-xl bg-black/70 px-3 py-1.5 text-white shadow-lg backdrop-blur">
+    <div className="flex flex-col items-center rounded-xl bg-black/85 px-3 py-1.5 text-white shadow-lg">
       <span className="flex items-center gap-1.5 font-mono text-2xl font-black">
         {swatch && <span className="h-3 w-3 rounded-sm ring-1 ring-white/40" style={{ background: swatch }} />}
         {text}
@@ -262,7 +262,7 @@ function CubeAR() {
           <FaceletNet facelets={facelets} className="w-full" />
         </div>
         <p className="text-[11px] text-muted">
-          All six faces, live — including the ones facing away from you. Hold the cube yellow on top, green toward you, and tap Re-center in the Lab if
+          All six faces, live, including the ones facing away from you. Hold the cube yellow on top, green toward you, and tap Re-center in the Lab if
           the twin&apos;s angle drifts.
         </p>
       </div>
@@ -286,7 +286,7 @@ export default function ARPage() {
               <Glasses size={17} className="text-accent" /> Cube AR
             </h1>
             <p className="text-[11px] text-muted-2">
-              The Gyro Twin, pinned onto your real cube through the camera — found by its stickers, turned by its gyro. Nothing leaves your device.
+              The Gyro Twin, pinned onto your real cube through the camera, found by its stickers, turned by its gyro. Nothing leaves your device.
             </p>
           </div>
           <ConnectGate blurb="Cube AR draws your smart cube's live twin over the camera view, so it needs one connected.">

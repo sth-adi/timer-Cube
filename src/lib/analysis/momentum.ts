@@ -81,8 +81,8 @@ export function summarizeMomentum(sittings: readonly RelSolve[][]): MomentumRepo
   const parts = [`The solve right after a faster-than-usual one averages ${pct(afterFastAvgRel)} vs its own sitting's median, versus ${pct(afterSlowAvgRel)} after a slower one.`];
   parts.push(
     hasMomentum
-      ? "Fast solves tend to cluster — you carry momentum from one into the next."
-      : "That's close enough to call each solve independent of the last — no real momentum either way.",
+      ? "Fast solves tend to cluster, you carry momentum from one into the next."
+      : "That's close enough to call each solve independent of the last, no real momentum either way.",
   );
 
   return { pairs, afterFastAvgRel, afterSlowAvgRel, gapPts, hasMomentum, headline: parts.join(" ") };

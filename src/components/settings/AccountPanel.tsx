@@ -129,7 +129,7 @@ export function AccountPanel() {
           {needsConfirmNotice && (
             <p className="mt-1.5 text-[11px] leading-relaxed text-danger">
               Account created, but this Supabase project still has &quot;Confirm email&quot; turned on in
-              Authentication settings — turn it off (these accounts don&apos;t use real addresses, so it can never be
+              Authentication settings, turn it off (these accounts don&apos;t use real addresses, so it can never be
               confirmed) and try signing in again.
             </p>
           )}
@@ -181,7 +181,7 @@ export function AccountPanel() {
           )}
           {status === "error" && error && <p className="text-[11px] leading-relaxed text-danger">{error}</p>}
           {status === "offline" && !ownerConflict && (
-            <p className="text-[11px] leading-relaxed text-muted-2">Offline — will sync once you&apos;re back online.</p>
+            <p className="text-[11px] leading-relaxed text-muted-2">Offline, will sync once you&apos;re back online.</p>
           )}
 
           <button

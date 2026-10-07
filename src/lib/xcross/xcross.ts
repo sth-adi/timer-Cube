@@ -107,12 +107,12 @@ export function gradeXCross(scramble: string, rawMoves: readonly string[], optio
     detail =
       best && mine && mine.pair !== best.pair && mine.moves.length > best.moves.length
         ? `You went for ${mine.label} (${mine.moves.length} at best); ${best.label} was ${best.moves.length}.`
-        : `Planned in inspection and executed in one go — ${PAIR_LABELS[donePair!]} went in with the cross.`;
+        : `Planned in inspection and executed in one go, ${PAIR_LABELS[donePair!]} went in with the cross.`;
   } else if (crossPair === undefined) {
     verdict = "The cross didn't get finished.";
     detail = best ? `The ${best.label} x-cross was ${best.moves.length} turns.` : "";
   } else {
-    verdict = "Cross first, pair after — not an x-cross.";
+    verdict = "Cross first, pair after, not an x-cross.";
     detail = best ? `The ${best.label} x-cross was there in ${best.moves.length} turns.` : "";
   }
   return { hit, turns, pair: donePair !== null ? PAIR_LABELS[donePair] : null, best, moves, verdict, detail };

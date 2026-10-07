@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils/cn";
 export function BatteryBadge({ level, onRefresh }: { level: number | null; onRefresh: () => void }) {
   if (level === null) {
     return (
-      <button type="button" onClick={onRefresh} className="flex items-center gap-1 text-muted-2 hover:text-muted" aria-label="Battery level unknown — tap to refresh">
+      <button type="button" onClick={onRefresh} className="flex items-center gap-1 text-muted-2 hover:text-muted" aria-label="Battery level unknown, tap to refresh">
         <BatteryWarning size={13} />
         <span className="text-[11px]">…</span>
       </button>
@@ -39,7 +39,7 @@ export function BatteryBadge({ level, onRefresh }: { level: number | null; onRef
       type="button"
       onClick={onRefresh}
       title="Tap to refresh"
-      aria-label={`Battery ${level}% — tap to refresh`}
+      aria-label={`Battery ${level}%, tap to refresh`}
       className={cn("flex items-center gap-1 tabular-nums", colorClass)}
     >
       <Icon size={13} />
@@ -130,7 +130,7 @@ export function SolveHeader({
                 onDisconnect(true);
               }}
               className="-my-3 flex h-10 items-center rounded-full bg-danger/15 px-3.5 text-[11px] font-semibold text-danger"
-              title="Disconnect the cube. This solve is dropped — nothing is saved."
+              title="Disconnect the cube. This solve is dropped, nothing is saved."
               data-testid="disconnect-confirm-yes"
             >
               Disconnect
@@ -147,7 +147,7 @@ export function SolveHeader({
               type="button"
               onClick={() => setConfirming(true)}
               className="-my-3 flex h-10 items-center px-2 text-[11px] text-muted underline hover:text-foreground"
-              aria-label="Disconnect the cube (asks first — this drops the solve)"
+              aria-label="Disconnect the cube (asks first, this drops the solve)"
               data-testid="disconnect"
             >
               Disconnect
@@ -188,7 +188,7 @@ export function SolveHeader({
         onClick={onToggleFreestyle}
         aria-pressed={freestyle}
         className={cn("flex items-center gap-1 hover:underline", freestyle ? "text-accent" : "text-muted-2")}
-        title="Freestyle: scramble the cube any way you like — its state becomes the scramble, instead of following a generated one."
+        title="Freestyle: scramble the cube any way you like, its state becomes the scramble, instead of following a generated one."
       >
         <Shuffle size={12} /> Freestyle{freestyle ? ": on" : ""}
       </button>

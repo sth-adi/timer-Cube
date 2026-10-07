@@ -50,13 +50,11 @@ function MacForm({ deviceName, onSubmit }: { deviceName: string | null; onSubmit
         }}
       >
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft text-accent">
-            <Bluetooth size={16} />
-          </span>
+          <Bluetooth size={16} className="shrink-0 text-accent" />
           <h2 className="text-base font-semibold text-foreground">{deviceName ? `${deviceName} needs its address` : "This cube needs its address"}</h2>
         </div>
         <p className="text-xs leading-relaxed text-muted">
-          Your browser won&apos;t tell this app the cube&apos;s Bluetooth address, and it&apos;s needed to read the cube. Type it in once — it&apos;s remembered after that. You can find it in the cube&apos;s own app (look for device info), or in your phone&apos;s Bluetooth details for the cube.
+          Your browser won&apos;t tell this app the cube&apos;s Bluetooth address, and it&apos;s needed to read the cube. Type it in once, it&apos;s remembered after that. You can find it in the cube&apos;s own app (look for device info), or in your phone&apos;s Bluetooth details for the cube.
         </p>
         <label className="flex flex-col gap-1">
           <span className="text-[11px] uppercase tracking-wide text-muted-2">Bluetooth address</span>

@@ -362,7 +362,7 @@ function LiveRoom() {
             onClick={() => setRole(me.role === "racer" ? "spectator" : "racer")}
             className="rounded-full bg-bg-panel-2 px-2.5 py-1 font-semibold text-foreground"
           >
-            {me.role === "racer" ? "racing" : "spectating"} — switch
+            {me.role === "racer" ? "racing" : "spectating"}, switch
           </button>
         </div>
       )}
@@ -487,7 +487,7 @@ function LiveRoom() {
         </div>
       )}
       <p className="text-center text-[10px] text-muted-2">
-        Clocks start on a shared {COUNTDOWN_MS / 1000}s countdown. Rooms are live only — nothing is saved once everyone leaves.
+        Clocks start on a shared {COUNTDOWN_MS / 1000}s countdown. Rooms are live only, nothing is saved once everyone leaves.
       </p>
     </div>
   );

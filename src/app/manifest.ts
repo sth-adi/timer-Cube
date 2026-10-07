@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Cube — speedcubing timer",
+    name: "Cube, speedcubing timer",
     short_name: "Cube",
     description: "A fast, aesthetic WCA-legal 3x3 speedcubing timer with session stats and solve hints.",
     id: "/",

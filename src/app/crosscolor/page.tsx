@@ -63,7 +63,7 @@ export default function CrossColorPage() {
               ));
             })()}
             <p className="text-[10px] text-muted-2">
-              Each bar is the average optimal cross length on those same scrambles, rotated so that color starts up — a lookup, not a real search per solve.
+              Each bar is the average optimal cross length on those same scrambles, rotated so that color starts up, a lookup, not a real search per solve.
             </p>
           </div>
         </>

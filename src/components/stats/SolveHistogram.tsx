@@ -48,7 +48,7 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
   return (
     <div ref={setWrap}>
       <div className="relative" style={{ height: HEADER_H + PLOT_H }}>
-        {/* the header strip is the readout: the median's name when idle, the touched bucket otherwise — never under the finger */}
+        {/* the header strip is the readout: the median's name when idle, the touched bucket otherwise, never under the finger */}
         {activeBucket && active !== null ? (
           <div
             className="pointer-events-none absolute top-0 flex items-baseline gap-1.5 whitespace-nowrap rounded-lg border border-border-strong bg-bg-panel-2 px-2 py-0.5 text-[11px] shadow-lg"

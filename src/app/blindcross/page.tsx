@@ -264,7 +264,7 @@ function BlindCross() {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black">
         <EyeClosed size={40} className="text-white/30" />
-        <p className="text-sm font-medium text-white/50">Eyes closed — solve the {level === "xcross" ? "x-cross" : "cross"}</p>
+        <p className="text-sm font-medium text-white/50">Eyes closed, solve the {level === "xcross" ? "x-cross" : "cross"}</p>
         <p className="tabular-timer text-5xl font-bold text-white/80">{Math.max(0, (now - blindStart) / 1000).toFixed(1)}</p>
         <button type="button" onClick={finish} className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/70">
           Done
@@ -316,7 +316,7 @@ function BlindCross() {
             </p>
           )}
           {level === "cross" && summary && summary.attempts >= 10 && summary.recentRate >= 0.8 && (
-            <p className="text-[11px] font-medium text-success">8+ of your last 10 blind crosses worked — time to try X-Cross.</p>
+            <p className="text-[11px] font-medium text-success">8+ of your last 10 blind crosses worked, time to try X-Cross.</p>
           )}
           <button
             type="button"
@@ -325,7 +325,7 @@ function BlindCross() {
           >
             {phase === "done" ? <RotateCcw size={14} /> : <Play size={14} />} {phase === "done" ? "Next scramble" : "Start"}
           </button>
-          {gyroActive && <p className="text-center text-[10px] text-muted-2">Gyro on — your inspection gaze will be mapped too.</p>}
+          {gyroActive && <p className="text-center text-[10px] text-muted-2">Gyro on, your inspection gaze will be mapped too.</p>}
         </div>
       )}
 
@@ -378,7 +378,7 @@ export default function BlindCrossPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <EyeClosed size={17} className="text-accent" /> Blind Cross
             </h1>
-            <p className="text-[11px] text-muted-2">Inspect, close your eyes, solve the cross — graded turn by turn by the cube itself.</p>
+            <p className="text-[11px] text-muted-2">Inspect, close your eyes, solve the cross, graded turn by turn by the cube itself.</p>
           </div>
           <ConnectGate blurb="Blind Cross sets up the scramble on your cube and follows every turn you make with your eyes closed, so it needs a connected smart cube.">
             <BlindCross />

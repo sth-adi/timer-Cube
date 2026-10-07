@@ -2,7 +2,6 @@
 
 import { Heart, HeartCrack, Loader2 } from "lucide-react";
 import { useHeartRateStore } from "@/lib/store/heartRateStore";
-import { cn } from "@/lib/utils/cn";
 
 /**
  * A standard BLE Heart Rate strap (chest straps, most fitness watches) —
@@ -34,10 +33,10 @@ export function HeartRateWidget() {
     <button
       type="button"
       onClick={disconnect}
-      title={`${deviceName} — click to disconnect`}
+      title={`${deviceName}, click to disconnect`}
       className="flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-[11px] font-medium text-danger"
     >
-      <Heart size={11} className={cn(bpm !== null && "animate-pulse")} fill="currentColor" />
+      <Heart size={11} fill="currentColor" />
       {bpm ?? "…"} bpm
     </button>
   );

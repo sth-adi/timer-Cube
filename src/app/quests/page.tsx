@@ -86,7 +86,7 @@ export default function QuestsPage() {
         return (
           <div key={q.id} className={cn("card flex flex-col gap-2 rounded-xl p-4", q.done && !isClaimed && "ring-1 ring-accent")}>
             <div className="flex items-start gap-3">
-              <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", q.done ? "bg-success/15 text-success" : "bg-accent/15 text-accent")}>
+              <span className={cn("mt-0.5 shrink-0", q.done ? "text-success" : "text-accent")}>
                 {q.done ? <Check size={15} /> : <Icon size={15} />}
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -124,7 +124,7 @@ export default function QuestsPage() {
             <div key={a.id} className="flex items-center gap-2 text-xs">
               <span className="text-base">{a.icon}</span>
               <span className="flex-1 truncate text-foreground">
-                {a.label} <span className="text-muted-2">— {a.description}</span>
+                {a.label} <span className="text-muted-2">: {a.description}</span>
               </span>
               <span className="tabular-nums text-muted">{Math.round(pct * 100)}%</span>
             </div>

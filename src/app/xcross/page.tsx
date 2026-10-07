@@ -81,7 +81,7 @@ function Report({ attempt }: { attempt: Attempt }) {
               <TurnChips moves={o.moves} />
             </div>
           ))}
-          <p className="text-[10px] text-muted-2">Each chip is the center that turns — ↻ clockwise facing it, ↺ counter-clockwise. Pairs not listed need more turns.</p>
+          <p className="text-[10px] text-muted-2">Each chip is the center that turns, ↻ clockwise facing it, ↺ counter-clockwise. Pairs not listed need more turns.</p>
         </div>
       </div>
     </div>
@@ -234,7 +234,7 @@ function Hunter() {
             </div>
           ) : (
             <p className="text-[11px] text-muted">
-              Every scramble here is hand-picked to have an x-cross in {maxDepth} turns or fewer. You get 15 seconds of inspection to find it — then
+              Every scramble here is hand-picked to have an x-cross in {maxDepth} turns or fewer. You get 15 seconds of inspection to find it, then
               solve the cross and a pair together. The attempt ends the moment both are in.
             </p>
           )}
@@ -260,7 +260,7 @@ function Hunter() {
 
       {phase === "setup" && (
         <div className="card flex flex-col items-center gap-3 rounded-xl p-4 text-center">
-          <p className="text-sm font-semibold text-foreground">Found one — scramble your cube</p>
+          <p className="text-sm font-semibold text-foreground">Found one, scramble your cube</p>
           <p className="max-w-xs text-[11px] text-muted">Follow the turns. Inspection starts the moment it matches.</p>
           {route ? <RouteChips display={route.turns} turns={route.turns} position={route.position} partial={route.partial} variant="color" /> : <Loader2 size={16} className="animate-spin text-accent" />}
         </div>
@@ -276,7 +276,7 @@ function Hunter() {
 
       {phase === "solving" && (
         <div className="card flex flex-col items-center gap-3 rounded-xl p-6 text-center">
-          <Target size={26} className="animate-pulse text-accent" />
+          <Target size={26} className="text-accent" />
           <p className="text-sm font-semibold text-foreground">Cross + pair…</p>
           <button
             type="button"
@@ -306,7 +306,7 @@ export default function XCrossPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Target size={17} className="text-accent" /> X-Cross Hunter
             </h1>
-            <p className="text-[11px] text-muted-2">Scrambles picked for a short x-cross, set up on your cube — can you see it in 15 seconds?</p>
+            <p className="text-[11px] text-muted-2">Scrambles picked for a short x-cross, set up on your cube, can you see it in 15 seconds?</p>
           </div>
           <ConnectGate blurb="X-Cross Hunter sets each scramble up on your cube and checks your cross and pair turn by turn, so it needs a connected smart cube.">
             <Hunter />

@@ -161,7 +161,7 @@ export function computeCoachTip(solves: readonly Solve[]): CoachTip | null {
   if (lookahead && lookahead.sampleSize >= 3 && lookahead.avgPauseMs > 600) {
     tips.push({
       title: "Work on last-layer lookahead",
-      detail: `You're averaging a ${(lookahead.avgPauseMs / 1000).toFixed(1)}s pause right as F2L and OLL finish, before the next phase's first move — try spotting the next case while finishing the current one instead of after.`,
+      detail: `You're averaging a ${(lookahead.avgPauseMs / 1000).toFixed(1)}s pause right as F2L and OLL finish, before the next phase's first move, try spotting the next case while finishing the current one instead of after.`,
     });
   }
 
@@ -172,7 +172,7 @@ export function computeCoachTip(solves: readonly Solve[]): CoachTip | null {
     if (slowest.turnCount >= 20 && fastest.turnCount >= 20 && fastest.avgGapMs > 0 && slowest.avgGapMs > fastest.avgGapMs * 1.4) {
       tips.push({
         title: `${slowest.face} turns are your slowest to execute`,
-        detail: `Mid-flow (pauses to look left out), ${slowest.face} moves average ${Math.round(slowest.avgGapMs)}ms versus ${Math.round(fastest.avgGapMs)}ms for your fastest face (${fastest.face}) — a few minutes of ${slowest.face}-turn fingertricks on an empty cube should show up fast.`,
+        detail: `Mid-flow (pauses to look left out), ${slowest.face} moves average ${Math.round(slowest.avgGapMs)}ms versus ${Math.round(fastest.avgGapMs)}ms for your fastest face (${fastest.face}), a few minutes of ${slowest.face}-turn fingertricks on an empty cube should show up fast.`,
       });
     }
   }

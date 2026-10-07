@@ -238,7 +238,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
           <>
             <Dumbbell size={28} className="text-accent" />
             <p className="max-w-xs text-xs text-muted">
-              The gym sets each case up on your cube, then times you recognizing and solving it — and tells you if you did the wrong
+              The gym sets each case up on your cube, then times you recognizing and solving it, and tells you if you did the wrong
               algorithm. Hold it yellow on top, green facing you, the whole way through. Weak and slow cases come up more.
             </p>
             <button type="button" onClick={next} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
@@ -269,7 +269,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
           <>
             <Eye size={26} className="text-accent" />
             <p className="text-2xl font-black text-foreground">{phase === "go" ? "Go!" : "…"}</p>
-            <p className="text-[11px] text-muted">Yellow on top, green facing you — recognize the {current?.group} and solve it. The clock is already running.</p>
+            <p className="text-[11px] text-muted">Yellow on top, green facing you, recognize the {current?.group} and solve it. The clock is already running.</p>
           </>
         )}
 

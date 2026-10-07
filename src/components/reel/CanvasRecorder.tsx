@@ -238,10 +238,10 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
       </div>
       {mode === "recording" && (
         <p className="flex items-center gap-1.5 text-xs text-danger">
-          <Loader2 size={12} className="animate-spin" /> Recording in real time — keep this tab in front
+          <Loader2 size={12} className="animate-spin" /> Recording in real time, keep this tab in front
         </p>
       )}
-      {!supported && <p className="text-xs text-muted-2">This browser can&apos;t record canvas video — preview still works.</p>}
+      {!supported && <p className="text-xs text-muted-2">This browser can&apos;t record canvas video, preview still works.</p>}
       {video && !busy && (
         <div className="flex gap-2">
           <a

@@ -132,6 +132,6 @@ export function compareSnapshots(from: DnaSnapshot, to: DnaSnapshot): DnaEvoluti
           ? `Average ${(-meanDeltaMs / 1000).toFixed(2)}s faster`
           : `Average ${(meanDeltaMs / 1000).toFixed(2)}s slower`;
   const parts = [pace, up ? `${up.label} up ${Math.round(up.delta)}` : "", down ? `${down.label} down ${Math.round(-down.delta)}` : ""].filter(Boolean);
-  const traitShift = from.trait.name !== to.trait.name ? ` — from ${from.trait.name} to ${to.trait.name}` : "";
+  const traitShift = from.trait.name !== to.trait.name ? `, from ${from.trait.name} to ${to.trait.name}` : "";
   return { changes, meanDeltaMs, headline: `${parts.join(", ") || "Much the same shape"} since ${from.label}${traitShift}.` };
 }

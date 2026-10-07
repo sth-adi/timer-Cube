@@ -144,7 +144,7 @@ export default function ProgressPage() {
     <AnalyticsShell
       icon={<TrendingUp size={17} className="text-accent" />}
       title="Progress Forecast"
-      subtitle="Learning curves fitted to your own solves — what's improving, what's stalled, and when you'll hit your next goal."
+      subtitle="Learning curves fitted to your own solves, what's improving, what's stalled, and when you'll hit your next goal."
     >
       {!r ? (
         <NotEnough need={MIN_SOLVES} have={metrics.length} what="The forecast" />
@@ -160,7 +160,7 @@ export default function ProgressPage() {
             <Hero
               value={secs(r.overall.current)}
               label="your current average of 12"
-              sub={f ? `At the current rate the curve isn't heading for sub-${secs(f.goalMs, 0)} — something in your practice has to change.` : undefined}
+              sub={f ? `At the current rate the curve isn't heading for sub-${secs(f.goalMs, 0)}, something in your practice has to change.` : undefined}
             />
           )}
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>

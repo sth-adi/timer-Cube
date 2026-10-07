@@ -53,7 +53,7 @@ function PhaseDetail({ phase }: { phase: PhaseAnalysis }) {
         {phase.caseName && <span className="min-w-0 truncate rc-t-link">{phase.caseName}</span>}
       </div>
       <p className="break-words font-mono text-[12px] leading-5 text-foreground/90 [overflow-wrap:anywhere]">
-        {phase.moves.length ? phase.moves.join(" ") : <span className="font-sans italic text-muted-2">no moves — skipped</span>}
+        {phase.moves.length ? phase.moves.join(" ") : <span className="font-sans italic text-muted-2">no moves, skipped</span>}
       </p>
       {phase.model && (phase.lost ?? 0) > 0 && (
         <p className="mt-2 break-words font-mono text-[12px] leading-5 rc-t-good [overflow-wrap:anywhere]">
@@ -93,7 +93,7 @@ export function PhaseBreakdownCards({ phases }: { phases: PhaseAnalysis[] }) {
         <p className="rc-note mt-4">
           Green is what the phase needed from the position you were in; the hatched bar and the + number are what it
           cost on top. A grey bar means the search couldn&apos;t find a reference for that phase, so there&apos;s
-          nothing to compare against — not that it was efficient.
+          nothing to compare against, not that it was efficient.
         </p>
       </div>
 

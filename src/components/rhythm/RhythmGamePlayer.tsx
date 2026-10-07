@@ -115,7 +115,7 @@ export function RhythmGamePlayer({ reconstruction, moveTimestamps }: RhythmGameP
     return (
       <div className="flex flex-col items-center gap-4 py-10">
         <p className="text-center text-sm text-muted">
-          {track.notes.length} moves · {track.hasRealTiming ? "your real solve timing" : "estimated pacing — no smart-cube timing on this solve"}
+          {track.notes.length} moves · {track.hasRealTiming ? "your real solve timing" : "estimated pacing, no smart-cube timing on this solve"}
         </p>
         <p className="max-w-xs text-center text-xs text-muted-2">Tap or press any key exactly when each move lands on the line.</p>
         <button type="button" onClick={start} className="tap-target rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-fg">

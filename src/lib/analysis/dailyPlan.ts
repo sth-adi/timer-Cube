@@ -89,8 +89,8 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
             : "Today's 5-scramble challenge is waiting",
         detail:
           dailyChallengeStreak > 0
-            ? "One attempt, five scrambles, an ao5 at the end — miss a day and the streak resets."
-            : "Same scrambles all day, one shot at an ao5 — come back tomorrow for a fresh set.",
+            ? "One attempt, five scrambles, an ao5 at the end, miss a day and the streak resets."
+            : "Same scrambles all day, one shot at an ao5, come back tomorrow for a fresh set.",
         target: "trainer-daily" as const,
         targetLabel: "Take the challenge",
         // A streak on the line outranks almost everything else — losing it
@@ -104,7 +104,7 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
       ? {
           id: "due-review",
           title: `Review ${dueAlgCount} due algorithm${dueAlgCount === 1 ? "" : "s"}`,
-          detail: "Spaced-repetition reviews are queued and ready — a few minutes now beats relearning them cold later.",
+          detail: "Spaced-repetition reviews are queued and ready, a few minutes now beats relearning them cold later.",
           target: "trainer-review" as const,
           targetLabel: "Review now",
           priority: Math.min(dueAlgCount, 30) * 2,
@@ -130,7 +130,7 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
       inconsistentPhase = {
         id: "inconsistent-phase",
         title: `Tighten up your ${worst.label}`,
-        detail: `Averaging ${formatTime(worst.meanMs)} but you've hit ${formatTime(worst.bestMs)} — that gap is the biggest easy win in your last ${phaseSampleSize} phase-timed solves.`,
+        detail: `Averaging ${formatTime(worst.meanMs)} but you've hit ${formatTime(worst.bestMs)}, that gap is the biggest easy win in your last ${phaseSampleSize} phase-timed solves.`,
         target: "timer",
         targetLabel: "Back to timer",
         priority: (worstRatio - 1) * 40,
@@ -152,7 +152,7 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
     trainerBalance = {
       id: "try-f2l",
       title: "You've never drilled F2L",
-      detail: "F2L is usually the biggest single chunk of your solve time — worth at least as much dedicated practice as OLL/PLL.",
+      detail: "F2L is usually the biggest single chunk of your solve time, worth at least as much dedicated practice as OLL/PLL.",
       target: "trainer-f2l",
       targetLabel: "Drill F2L",
       priority: 14,
@@ -161,7 +161,7 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
     trainerBalance = {
       id: "balance-pll",
       title: "PLL recognition is lagging behind OLL",
-      detail: `${ollN} OLL reps vs. just ${pllN} PLL — recognition speed only comes from reps, and PLL is due for some.`,
+      detail: `${ollN} OLL reps vs. just ${pllN} PLL, recognition speed only comes from reps, and PLL is due for some.`,
       target: "trainer-pll",
       targetLabel: "Drill PLL",
       priority: 12,
@@ -170,7 +170,7 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
     trainerBalance = {
       id: "balance-oll",
       title: "OLL recognition is lagging behind PLL",
-      detail: `${pllN} PLL reps vs. just ${ollN} OLL — recognition speed only comes from reps, and OLL is due for some.`,
+      detail: `${pllN} PLL reps vs. just ${ollN} OLL, recognition speed only comes from reps, and OLL is due for some.`,
       target: "trainer-oll",
       targetLabel: "Drill OLL",
       priority: 12,
@@ -179,7 +179,7 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
     trainerBalance = {
       id: "try-zbll",
       title: "Ready to skip two-look last layer?",
-      detail: "You've got real reps in OLL and PLL — ZBLL solves orientation and permutation in one algorithm instead of two. Worth a look.",
+      detail: "You've got real reps in OLL and PLL, ZBLL solves orientation and permutation in one algorithm instead of two. Worth a look.",
       target: "trainer-zbll",
       targetLabel: "Try ZBLL",
       priority: 8,
@@ -204,7 +204,7 @@ export function buildDailyPlan(input: DailyPlanInput): PlanItem[] {
       ? {
           id: "try-variety",
           title: "Only ever timed 3x3?",
-          detail: "Start a 2x2 or 4x4 session for a change of pace — same timer, a genuinely different puzzle.",
+          detail: "Start a 2x2 or 4x4 session for a change of pace, same timer, a genuinely different puzzle.",
           target: "timer" as const,
           targetLabel: "New session",
           priority: 1,

@@ -105,7 +105,7 @@ function Result({ id, onSave, saved }: { id: AlgIdentity; onSave: () => void; sa
 
       <p className="text-[11px] text-muted">
         Repeat it <span className="font-semibold text-foreground">{id.order}×</span> and you&apos;re back where you started.
-        {id.layer && id.kind !== "identity" && " Everything it changes stays in one layer — F2L survives."}
+        {id.layer && id.kind !== "identity" && " Everything it changes stays in one layer, F2L survives."}
       </p>
 
       {effect.movedCount > 0 && (
@@ -217,7 +217,7 @@ function AlgIdentifier() {
           {phase === "idle" ? (
             <>
               <p className="max-w-xs text-xs text-muted">
-                Press record, then do any sequence — a new alg from a video, a trick you found, anything. Recording stops by itself when you
+                Press record, then do any sequence, a new alg from a video, a trick you found, anything. Recording stops by itself when you
                 pause for {AUTO_STOP_MS / 1000}s. Start from any state: only what the sequence <em>does</em> matters.
               </p>
               <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-full bg-danger px-5 py-2.5 text-sm font-semibold text-white">
@@ -227,7 +227,7 @@ function AlgIdentifier() {
           ) : (
             <>
               <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
-                <Circle size={9} fill="currentColor" className="animate-pulse" /> Recording · {tokens.length} turns
+                <Circle size={9} fill="currentColor" /> Recording · {tokens.length} turns
               </p>
               {tokens.length > 0 && <RouteChips display={tokens} turns={tokens} position={tokens.length} variant="color" />}
               <button type="button" onClick={stop} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
@@ -255,7 +255,7 @@ function AlgIdentifier() {
       )}
       {phase === "done" && !identity && (
         <button type="button" onClick={start} className="rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
-          Nothing recorded — try again
+          Nothing recorded, try again
         </button>
       )}
 

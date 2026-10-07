@@ -80,9 +80,9 @@ export function inspectionReport(scramble: string, moves: readonly string[], tim
 
   const score = Math.round(Math.min(100, 45 * plannedFraction + 30 * efficiency + (pauses === 0 ? 15 : pauses === 1 ? 6 : 0) + (xcross ? 10 : 0)));
   const notes: string[] = [];
-  if (pauses === 0) notes.push(`Whole cross in one burst — fully planned.`);
+  if (pauses === 0) notes.push(`Whole cross in one burst, fully planned.`);
   else notes.push(`Planned ${plannedTurns} of ${crossTurns} cross turns, then paused ${pauses === 1 ? "once" : `${pauses} times`} to find the rest.`);
-  if (crossTurns > optimalTurns + 1) notes.push(`${crossTurns} turns where ${optimalTurns} were enough — look for a shorter cross in inspection.`);
+  if (crossTurns > optimalTurns + 1) notes.push(`${crossTurns} turns where ${optimalTurns} were enough, look for a shorter cross in inspection.`);
   else if (crossTurns > 0) notes.push(crossTurns <= optimalTurns ? "Optimal cross." : "Within a turn of optimal.");
   if (xcross) notes.push("X-cross: you built a pair into it.");
 

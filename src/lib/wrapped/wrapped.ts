@@ -166,7 +166,7 @@ export function wrappedSlides(w: WrappedData): Slide[] {
       kicker: "You solved",
       big: String(w.solves),
       count: { to: w.solves, decimals: 0 },
-      line: `${hours >= 1 ? `${hours.toFixed(1)} hours` : `${Math.round(hours * 60)} minutes`} of pure solving, across ${w.days} day${w.days === 1 ? "" : "s"}${w.longestStreak > 1 ? ` — a ${w.longestStreak}-day streak at best` : ""}.`,
+      line: `${hours >= 1 ? `${hours.toFixed(1)} hours` : `${Math.round(hours * 60)} minutes`} of pure solving, across ${w.days} day${w.days === 1 ? "" : "s"}${w.longestStreak > 1 ? `, a ${w.longestStreak}-day streak at best` : ""}.`,
     },
   ];
   if (w.best) {
@@ -183,7 +183,7 @@ export function wrappedSlides(w: WrappedData): Slide[] {
       kicker: faster ? "You got faster" : "A tougher stretch",
       big: `${faster ? "−" : "+"}${s2(Math.abs(w.improvement.deltaMs))}s`,
       count: { to: Math.abs(w.improvement.deltaMs) / 1000, decimals: 2, suffix: "s" },
-      line: faster ? `On average, against ${w.improvement.against}.` : `Slower on average than ${w.improvement.against} — every plateau ends.`,
+      line: faster ? `On average, against ${w.improvement.against}.` : `Slower on average than ${w.improvement.against}, every plateau ends.`,
     });
   }
   if (w.sharpest) slides.push({ kicker: "You're sharpest", big: w.sharpest.slot, line: `Averaging ${s2(w.sharpest.meanMs)} then.` });
@@ -199,7 +199,7 @@ export function wrappedSlides(w: WrappedData): Slide[] {
       kicker: "You turned",
       big: w.turns.toLocaleString(),
       count: { to: w.turns, decimals: 0 },
-      line: `faces on your smart cube${w.tps ? ` — ${w.tps.toFixed(2)} turns a second, pauses and all` : ""}.`,
+      line: `faces on your smart cube${w.tps ? `, ${w.tps.toFixed(2)} turns a second, pauses and all` : ""}.`,
     });
   }
   slides.push({ kicker: "Your trait", big: w.trait.name, line: w.trait.line });

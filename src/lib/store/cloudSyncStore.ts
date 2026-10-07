@@ -72,13 +72,13 @@ function errorMessage(err: unknown): string {
 }
 
 function friendlyErrorMessage(err: unknown): string {
-  if (err instanceof SyncTimeoutError) return "Couldn't reach the server — retrying automatically…";
+  if (err instanceof SyncTimeoutError) return "Couldn't reach the server, retrying automatically…";
   const raw = errorMessage(err);
   // "Failed to fetch" (and its Safari/Firefox equivalents) is the raw
   // TypeError a browser throws for any network-level failure — dropped
   // connection, DNS hiccup, offline — not something a user can act on as
   // written, so it gets the same friendly wording as an explicit timeout.
-  if (/fetch|network/i.test(raw)) return "Couldn't reach the server — retrying automatically…";
+  if (/fetch|network/i.test(raw)) return "Couldn't reach the server, retrying automatically…";
   return raw;
 }
 

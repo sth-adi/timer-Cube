@@ -199,7 +199,7 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <Link href="/experiments" className="mt-1 block py-3 text-center text-xs font-medium text-accent">
-          Testing a specific change? Run it as an Experiment — with a real significance test →
+          Testing a specific change? Run it as an Experiment, with a real significance test →
         </Link>
       </div>
     </div>

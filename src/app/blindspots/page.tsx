@@ -25,7 +25,7 @@ import { HandoffDrillPanel } from "@/components/pausemap/HandoffDrillPanel";
 const HISTORY = 200;
 
 const METRICS: { key: Metric; label: string; blurb: string }[] = [
-  { key: "findMs", label: "Finding", blurb: "the pause before your first turn on the pair — pure lookahead" },
+  { key: "findMs", label: "Finding", blurb: "the pause before your first turn on the pair, pure lookahead" },
   { key: "execMs", label: "Solving", blurb: "from your first turn on the pair until it's in" },
   { key: "totalMs", label: "Total", blurb: "finding plus solving" },
 ];
@@ -96,7 +96,7 @@ export default function BlindSpotsPage() {
               <PauseCircle size={17} className="text-accent" /> F2L Pause Map
             </h1>
             <p className="text-[11px] text-muted-2">
-              Where your F2L stops: each hand-off between pairs split into finding the next pair, stalling inside it, and turning — and a drill
+              Where your F2L stops: each hand-off between pairs split into finding the next pair, stalling inside it, and turning, and a drill
               built from the exact positions where you stalled.
             </p>
           </div>
@@ -171,15 +171,15 @@ export default function BlindSpotsPage() {
               <div className="card flex flex-col gap-2 rounded-xl p-4">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Your blind spots</p>
                 {report.insights.length === 0 ? (
-                  <p className="text-[11px] text-muted">No situation stands out yet — every kind of pair costs you about the same. That&apos;s a well-rounded F2L.</p>
+                  <p className="text-[11px] text-muted">No situation stands out yet, every kind of pair costs you about the same. That&apos;s a well-rounded F2L.</p>
                 ) : (
                   report.insights.slice(0, 4).map((i) => (
                     <div key={i.label + i.metric} className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2 px-3 py-2">
                       <p className="text-xs font-semibold text-foreground">{i.label}</p>
                       <p className="text-[11px] text-muted">
                         {i.metric === "findMs"
-                          ? `Takes ${secs(i.ms)} to find, vs ${secs(i.baselineMs)} on average — your eyes aren't tracking these pieces during the previous pair.`
-                          : `Takes ${secs(i.ms)} to solve once found, vs ${secs(i.baselineMs)} on average — worth drilling this case's insertions.`}{" "}
+                          ? `Takes ${secs(i.ms)} to find, vs ${secs(i.baselineMs)} on average, your eyes aren't tracking these pieces during the previous pair.`
+                          : `Takes ${secs(i.ms)} to solve once found, vs ${secs(i.baselineMs)} on average, worth drilling this case's insertions.`}{" "}
                         <span className="text-muted-2">({i.count} pairs)</span>
                       </p>
                     </div>

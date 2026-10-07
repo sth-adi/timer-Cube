@@ -123,9 +123,9 @@ function Report({ report }: { report: TempoReport }) {
 
       <p className="text-[11px] text-muted">
         {report.suggestedBpm > report.bpm
-          ? `Smooth at ${report.bpm} BPM — try ${report.suggestedBpm} next.`
+          ? `Smooth at ${report.bpm} BPM, try ${report.suggestedBpm} next.`
           : report.suggestedBpm < report.bpm
-            ? `Too many missed beats — drop to ${report.suggestedBpm} BPM until you can keep turning through every look.`
+            ? `Too many missed beats, drop to ${report.suggestedBpm} BPM until you can keep turning through every look.`
             : `Stay at ${report.bpm} BPM until nearly every beat has a turn.`}
       </p>
     </div>
@@ -230,7 +230,7 @@ function TempoTrainer() {
               />
             </div>
             <p className="max-w-xs text-center text-[11px] text-muted">
-              Scramble your cube, then start. After a 4-click count-in, make one turn on every click — no stopping to look. Ends by
+              Scramble your cube, then start. After a 4-click count-in, make one turn on every click, no stopping to look. Ends by
               itself when the cube is solved.
             </p>
             <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
@@ -276,7 +276,7 @@ export default function TempoPage() {
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Metronome size={17} className="text-accent" /> Tempo Trainer
             </h1>
-            <p className="text-[11px] text-muted-2">Solve to a metronome — every turn scored on the beat, every silence traced to its phase.</p>
+            <p className="text-[11px] text-muted-2">Solve to a metronome, every turn scored on the beat, every silence traced to its phase.</p>
           </div>
           <ConnectGate blurb="The Tempo Trainer times every turn against the click, so it needs a connected smart cube.">
             <TempoTrainer />

@@ -77,7 +77,7 @@ export default function LuckPage() {
     <AnalyticsShell
       icon={<Clover size={17} className="text-accent" />}
       title="Luck Meter"
-      subtitle="How much of each solve was the scramble — and your solves ranked by the part you earned."
+      subtitle="How much of each solve was the scramble, and your solves ranked by the part you earned."
     >
       {!r ? (
         <NotEnough need={MIN_SOLVES} have={metrics.length} what="The Luck Meter" />

@@ -41,7 +41,7 @@ export function LookaheadScoreCard({ solves }: { solves: Solve[] }) {
       </div>
       <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2">
         Time between the last move of a phase and the first move of the next, right at the F2L→OLL and OLL→PLL
-        transitions — lower means you spotted the next case before you needed it. It doesn&apos;t cover the hand-offs
+        transitions, lower means you spotted the next case before you needed it. It doesn&apos;t cover the hand-offs
         between F2L pairs; the F2L pause map does. Across your last{" "}
         {recent.length} smart-cube solve{recent.length === 1 ? "" : "s"}.
       </p>

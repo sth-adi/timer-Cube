@@ -153,11 +153,11 @@ export function buildStamina(metrics: readonly SolveMetrics[]): StaminaReport | 
   const parts: string[] = [];
   parts.push(
     warmupSolves === 0
-      ? "You start sittings at full speed — no warm-up needed."
-      : `Your first ${warmupSolves === 5 ? "5+" : warmupSolves} solve${warmupSolves === 1 ? " runs" : "s run"} about ${Math.round(coldPenalty * 100)}% slow — warm up with ${warmupSolves === 5 ? "5 or more" : warmupSolves} before anything that counts.`,
+      ? "You start sittings at full speed, no warm-up needed."
+      : `Your first ${warmupSolves === 5 ? "5+" : warmupSolves} solve${warmupSolves === 1 ? " runs" : "s run"} about ${Math.round(coldPenalty * 100)}% slow, warm up with ${warmupSolves === 5 ? "5 or more" : warmupSolves} before anything that counts.`,
   );
-  if (coldestPhase && coldestPhase.ms > 100) parts.push(`${coldestPhase.phase} is the coldest phase — ${(coldestPhase.ms / 1000).toFixed(2)}s slower in your first three solves.`);
-  if (fatigue !== null && fatigue > 0.03) parts.push(`After 30 solves you fade by ${Math.round(fatigue * 100)}% — shorter sittings, or a break, would help.`);
+  if (coldestPhase && coldestPhase.ms > 100) parts.push(`${coldestPhase.phase} is the coldest phase, ${(coldestPhase.ms / 1000).toFixed(2)}s slower in your first three solves.`);
+  if (fatigue !== null && fatigue > 0.03) parts.push(`After 30 solves you fade by ${Math.round(fatigue * 100)}%, shorter sittings, or a break, would help.`);
 
   return {
     sittings: usable.length,

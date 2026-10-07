@@ -111,7 +111,7 @@ export function ScrambleGuidePanel() {
       {offTrack ? (
         <div className="flex w-full max-w-md flex-col items-center gap-2 rounded-xl bg-warning/10 px-3 py-3 text-center ring-1 ring-warning/40">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-warning">
-            <Undo2 size={15} /> Wrong turn — undo {view.undo.length === 1 ? "this" : `these ${view.undo.length}`}
+            <Undo2 size={15} /> Wrong turn, undo {view.undo.length === 1 ? "this" : `these ${view.undo.length}`}
           </p>
           <RouteChips display={view.undo} turns={view.undo} position={0} size="lg" />
           <p className="text-[11px] text-muted">
@@ -125,7 +125,7 @@ export function ScrambleGuidePanel() {
       ) : view.fix ? (
         <div className="flex w-full max-w-md flex-col items-center gap-2 rounded-xl bg-warning/10 px-3 py-3 text-center ring-1 ring-warning/40">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-warning">
-            <AlertTriangle size={15} /> Not quite — turn this to fix step {view.index + 1}
+            <AlertTriangle size={15} /> Not quite, turn this to fix step {view.index + 1}
           </p>
           <RouteChips display={[view.fix]} turns={[view.fix]} position={0} size="lg" />
         </div>
@@ -134,7 +134,7 @@ export function ScrambleGuidePanel() {
           <CheckCircle2 size={15} /> Scrambled
         </p>
       ) : (
-        <p className="min-h-4 text-xs text-muted">{view.partial && "Half done — same way again"}</p>
+        <p className="min-h-4 text-xs text-muted">{view.partial && "Half done, same way again"}</p>
       )}
 
       {total > 0 && (
@@ -159,7 +159,7 @@ export function ScrambleGuidePanel() {
 
       {rerouted && (
         <p className="max-w-xs text-center text-[10px] text-muted-2">
-          These turns take your cube from where it is to the scramble — it wasn&apos;t solved when you started, or it went too far off to undo.
+          These turns take your cube from where it is to the scramble, it wasn&apos;t solved when you started, or it went too far off to undo.
         </p>
       )}
     </div>

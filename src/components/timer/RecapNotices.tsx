@@ -45,7 +45,7 @@ export function RecapNotices({ turnLoss, learnedSolveDate }: { turnLoss: SolveRe
       <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
         {turnLoss && (
           <Chip open={open === "turns"} onToggle={() => toggle("turns")} controls={`${id}-turns`} tone="warning" icon={<TriangleAlert size={12} className="shrink-0" aria-hidden />}>
-            {repaired ? "Turn put back — recap rebuilt" : "Turns lost — no move-by-move recap"}
+            {repaired ? "Turn put back, recap rebuilt" : "Turns lost, no move-by-move recap"}
           </Chip>
         )}
         {learnedCount > 0 && (
@@ -62,9 +62,9 @@ export function RecapNotices({ turnLoss, learnedSolveDate }: { turnLoss: SolveRe
             <span>
               {repaired
                 ? repaired.change.kind === "inserted"
-                  ? `The cube never reported ${repaired.change.tokens.join(" ")} — it's put back where the cube's state says it happened, so this recap is rebuilt, not recorded.`
-                  : `The cube reported ${repaired.change.tokens.join(" ")} twice — the echo is removed, so this recap is rebuilt, not recorded.`
-                : "Turns went missing over Bluetooth in more than one place, so they couldn't be put back — the time is saved, the move-by-move recap isn't."}
+                  ? `The cube never reported ${repaired.change.tokens.join(" ")}, it's put back where the cube's state says it happened, so this recap is rebuilt, not recorded.`
+                  : `The cube reported ${repaired.change.tokens.join(" ")} twice, the echo is removed, so this recap is rebuilt, not recorded.`
+                : "Turns went missing over Bluetooth in more than one place, so they couldn't be put back, the time is saved, the move-by-move recap isn't."}
             </span>
           </p>
         </Collapse>

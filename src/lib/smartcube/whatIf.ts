@@ -90,7 +90,7 @@ export function verdict(original: Remainder, branchTurns: number, msPerTurn: num
     turnDelta === 0
       ? "Same length as what you did."
       : turnDelta < 0
-        ? `${-turnDelta} turn${turnDelta === -1 ? "" : "s"} shorter — about ${secs}s faster at your pace.`
-        : `${turnDelta} turn${turnDelta === 1 ? "" : "s"} longer — about ${secs}s slower at your pace.`;
+        ? `${-turnDelta} turn${turnDelta === -1 ? "" : "s"} shorter, about ${secs}s faster at your pace.`
+        : `${turnDelta} turn${turnDelta === 1 ? "" : "s"} longer, about ${secs}s slower at your pace.`;
   return { turnDelta, msDelta, line };
 }

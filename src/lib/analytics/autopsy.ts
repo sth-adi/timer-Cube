@@ -92,12 +92,12 @@ export function buildAutopsy(metrics: readonly SolveMetrics[]): Autopsy | null {
   const pauseShare = gapMs > 0 ? (pauseGap.slow - pauseGap.fast) / gapMs : 0;
 
   const headline =
-    `Your slowest quarter averages ${s2(slowMean)} against ${s2(fastMean)} for your fastest — a ${s2(gapMs)} gap, ` +
+    `Your slowest quarter averages ${s2(slowMean)} against ${s2(fastMean)} for your fastest, a ${s2(gapMs)} gap, ` +
     `${Math.round((worstPhase.ms / Math.max(1, gapMs)) * 100)}% of it in ${worstPhase.phase}. ` +
     (pauseShare >= 0.5
       ? `${Math.round(pauseShare * 100)}% of the gap is extra pausing, not slower hands.`
       : pauseShare <= 0.25
-        ? `Most of it isn't pausing — slow solves are longer or turned slower.`
+        ? `Most of it isn't pausing, slow solves are longer or turned slower.`
         : `About ${Math.round(pauseShare * 100)}% of it is extra pausing.`);
 
   const luck = factors.filter((f) => f.family === "luck");
@@ -106,7 +106,7 @@ export function buildAutopsy(metrics: readonly SolveMetrics[]): Autopsy | null {
     ? `The scramble plays a part: ${bigLuck
         .map((f) => `${f.label.toLowerCase()} ${f.format(f.fast)} → ${f.format(f.slow)}`)
         .join("; ")} (fast → slow).`
-    : "Scramble luck barely differs between the two groups — the gap is how you solved them, which means it's trainable.";
+    : "Scramble luck barely differs between the two groups, the gap is how you solved them, which means it's trainable.";
 
   return { groupSize: k, fastMean, slowMean, gapMs, phaseGap, factors, headline, luckVerdict };
 }

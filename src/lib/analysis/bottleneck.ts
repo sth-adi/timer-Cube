@@ -80,14 +80,14 @@ export function summarizeBottlenecks(cases: readonly CaseBottleneck[]): Bottlene
   if (recognitionBound.length && executionBound.length) {
     parts.push(`${recognitionBound.length} of your ${cases.length} tracked cases are recognition-bound, ${executionBound.length} are execution-bound.`);
   } else if (recognitionBound.length) {
-    parts.push("Your slow cases are almost all recognition-bound — the algorithms are fine, seeing the case is what costs you.");
+    parts.push("Your slow cases are almost all recognition-bound, the algorithms are fine, seeing the case is what costs you.");
   } else if (executionBound.length) {
-    parts.push("Your slow cases are almost all execution-bound — you see them fine, the fingers are the bottleneck.");
+    parts.push("Your slow cases are almost all execution-bound, you see them fine, the fingers are the bottleneck.");
   } else {
-    parts.push("No case leans hard either way — recognition and execution cost you about the same across the board.");
+    parts.push("No case leans hard either way, recognition and execution cost you about the same across the board.");
   }
   const worst = cases[0];
-  parts.push(`${worst.name} costs you the most overall — ${secs(worst.totalMs)}s × ${worst.count} times — and it's ${worst.kind === "balanced" ? "split evenly" : `mostly ${worst.kind}`}.`);
+  parts.push(`${worst.name} costs you the most overall, ${secs(worst.totalMs)}s × ${worst.count} times, and it's ${worst.kind === "balanced" ? "split evenly" : `mostly ${worst.kind}`}.`);
 
   return { cases: [...cases], recognitionBound, executionBound, headline: parts.join(" ") };
 }

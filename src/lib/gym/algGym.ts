@@ -67,11 +67,11 @@ export function explainMiss(target: GymCase, executed: readonly string[]): strin
   if (executed.length === 0) return "No turns made.";
   const id = identifyAlg(executed);
   if ((id.kind === "oll" || id.kind === "pll") && id.caseName && id.caseName !== target.name) {
-    return `That was the ${id.caseName} algorithm — this case is ${target.name}.`;
+    return `That was the ${id.caseName} algorithm, this case is ${target.name}.`;
   }
   if (id.kind === "auf") return "Only the top layer turned.";
-  if (id.kind === "other") return "That broke F2L — the algorithm went off track partway.";
-  return `Not quite ${target.name} — check the algorithm.`;
+  if (id.kind === "other") return "That broke F2L, the algorithm went off track partway.";
+  return `Not quite ${target.name}, check the algorithm.`;
 }
 
 export interface GymCaseStats {

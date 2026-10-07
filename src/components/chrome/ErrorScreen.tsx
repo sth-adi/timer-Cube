@@ -34,7 +34,7 @@ export function ErrorScreen({ error, onRetry }: { error: Error & { digest?: stri
       <AlertTriangle size={32} className="text-danger" aria-hidden />
       <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
       <p className="max-w-sm text-sm leading-snug text-muted">
-        Your solves are safe on this device — they&apos;re stored locally and this error doesn&apos;t touch them.
+        Your solves are safe on this device, they&apos;re stored locally and this error doesn&apos;t touch them.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <button type="button" onClick={onRetry} className="chrome-btn chrome-btn--lg chrome-btn--primary">
@@ -56,7 +56,7 @@ export function ErrorScreen({ error, onRetry }: { error: Error & { digest?: stri
       </div>
       <p role="status" className="min-h-5 text-xs text-muted-2">
         {backup === "done" && "Backup downloaded."}
-        {backup === "failed" && <span className="text-danger">Couldn&apos;t make a backup — storage may be blocked.</span>}
+        {backup === "failed" && <span className="text-danger">Couldn&apos;t make a backup, storage may be blocked.</span>}
       </p>
     </main>
   );

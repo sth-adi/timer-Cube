@@ -195,7 +195,7 @@ export default function ReelPage() {
               <Clapperboard size={17} className="text-accent" /> Solve Reel
             </h1>
             <p className="text-[11px] text-muted-2">
-              Turn smart-cube solves into video — one solve, or an auto-cut highlight reel of your best, with a soundtrack played off your
+              Turn smart-cube solves into video, one solve, or an auto-cut highlight reel of your best, with a soundtrack played off your
               actual turns.
             </p>
           </div>

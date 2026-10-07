@@ -71,7 +71,7 @@ export default function SumOfBestPage() {
         <NotEnough need={MIN_SOLVES} have={metrics.length} what="Sum of Best" />
       ) : (
         <>
-          <Hero value={secs(r.sumOfBestMs)} label="sum of your best stretches" sub={`PB ${secs(r.pbMs)} — ${secs(r.headroomMs)} of proven headroom`} />
+          <Hero value={secs(r.sumOfBestMs)} label="sum of your best stretches" sub={`PB ${secs(r.pbMs)}, ${secs(r.headroomMs)} of proven headroom`} />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
           <div className="card flex flex-col gap-3 rounded-xl p-4">
@@ -96,7 +96,7 @@ export default function SumOfBestPage() {
           </div>
 
           <div className="card flex flex-col gap-2 rounded-xl p-4">
-            <SectionTitle>Golds — a stretch faster than ever before</SectionTitle>
+            <SectionTitle>Golds, a stretch faster than ever before</SectionTitle>
             <GoldTimeline golds={r.goldsPerSolve} />
             <p className="text-[11px] text-muted">
               {r.goldsPerSolve.reduce((a, b) => a + b, 0)} golds over {r.solves} solves

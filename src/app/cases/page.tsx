@@ -153,7 +153,7 @@ function CasesPageInner() {
 
       {stats.length === 0 ? (
         <div className="card rounded-xl p-6 text-center text-sm text-muted">
-          No {group} cases yet — solve on a connected smart cube and each one is logged here automatically.
+          No {group} cases yet, solve on a connected smart cube and each one is logged here automatically.
         </div>
       ) : (
         <>

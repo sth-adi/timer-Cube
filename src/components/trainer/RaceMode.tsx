@@ -198,7 +198,7 @@ function RaceLeaderboardPanel() {
             </p>
           )}
           {!loading && board && board.top.length === 0 && (
-            <p className="text-[11px] text-muted-2">No rated races yet — sign in and race someone to start the board.</p>
+            <p className="text-[11px] text-muted-2">No rated races yet, sign in and race someone to start the board.</p>
           )}
           {!loading && board && board.top.length > 0 && (
             <>
@@ -381,7 +381,7 @@ export function RaceMode() {
         {mode === "idle" && (
           <>
             <p className="mb-3 text-xs leading-relaxed text-muted">
-              Race someone directly, browser to browser — no account. Quick Match pairs you with anyone else looking
+              Race someone directly, browser to browser, no account. Quick Match pairs you with anyone else looking
               for a race right now; hosting gets you a short code to share with someone specific.
             </p>
             {quickConnectAvailable && (
@@ -576,7 +576,7 @@ export function RaceMode() {
                     </p>
                   ) : myHasSmartCube ? (
                     <div className="flex h-32 w-full flex-col items-center justify-center gap-1.5 rounded-xl bg-bg-panel-2">
-                      <Bluetooth size={20} className="animate-pulse text-accent" />
+                      <Bluetooth size={20} className="text-accent" />
                       <p className="text-[11px] text-muted-2">solving on your cube…</p>
                     </div>
                   ) : (

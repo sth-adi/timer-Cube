@@ -65,7 +65,7 @@ export function ChallengeLinkBanner({ onRace }: { onRace?: () => void }) {
     <div className="mx-4 mb-2 flex items-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-xs">
       <Swords size={14} className="shrink-0 text-accent" />
       <span className="min-w-0 flex-1 truncate text-foreground/90">
-        Someone sent you a scramble to race — <span className="font-mono text-accent">{pending}</span>
+        Someone sent you a scramble to race, <span className="font-mono text-accent">{pending}</span>
       </span>
       <button
         type="button"

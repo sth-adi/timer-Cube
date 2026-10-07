@@ -24,7 +24,7 @@ function CaseCard({ algCase, onOpen }: { algCase: AlgCase; onOpen: () => void })
     <button
       type="button"
       onClick={onOpen}
-      className="card flex flex-col items-start gap-1.5 rounded-lg p-3 text-left transition-colors hover:bg-bg-panel-2"
+      className="flex flex-col items-start gap-1.5 rounded-lg p-2 text-left transition-colors hover:bg-bg-panel-2"
     >
       <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={algCase.group} className="w-full" />
       <div className="flex w-full items-center justify-between">

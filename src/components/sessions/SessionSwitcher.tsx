@@ -298,7 +298,7 @@ export function SessionSwitcher() {
                   ))}
                 </div>
                 <p className="mt-1 max-w-64 px-2 text-[11px] leading-snug text-muted-2">
-                  Only 3x3 scrambles are WCA-style random-state. 2x2, 4x4 and 5x5 use random-move scrambles — fine for practice, not
+                  Only 3x3 scrambles are WCA-style random-state. 2x2, 4x4 and 5x5 use random-move scrambles, fine for practice, not
                   competition-grade.
                 </p>
               </div>

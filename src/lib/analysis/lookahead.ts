@@ -93,10 +93,10 @@ export function summarizeLookahead(handoffs: readonly Handoff[], solveCount: num
   const s = (ms: number) => (ms / 1000).toFixed(2);
   const headline =
     verdict === "slow-down"
-      ? `After a pair you turn calmly, you pause ${s(pauseSaved)}s less before the next one — more than the ${s(slowdownCostMs)}s the calmer turning costs. Slowing down to look ahead would net you about ${s(netGainMs * handoffsPerSolve)}s a solve.`
+      ? `After a pair you turn calmly, you pause ${s(pauseSaved)}s less before the next one, more than the ${s(slowdownCostMs)}s the calmer turning costs. Slowing down to look ahead would net you about ${s(netGainMs * handoffsPerSolve)}s a solve.`
       : verdict === "keep-pace"
-        ? `Turning calmly does shorten your next pause (by ${s(pauseSaved)}s), but it costs ${s(slowdownCostMs)}s to do — for you, it doesn't pay yet. Work on spotting the next pair while turning at your normal pace.`
-        : `Your pause before the next pair is about the same (${s(pauseAfterSlowMs)}s vs ${s(pauseAfterFastMs)}s) whether you rushed the pair before it or not — you aren't looking ahead while turning, at any speed. That's the habit to build.`;
+        ? `Turning calmly does shorten your next pause (by ${s(pauseSaved)}s), but it costs ${s(slowdownCostMs)}s to do, for you, it doesn't pay yet. Work on spotting the next pair while turning at your normal pace.`
+        : `Your pause before the next pair is about the same (${s(pauseAfterSlowMs)}s vs ${s(pauseAfterFastMs)}s) whether you rushed the pair before it or not, you aren't looking ahead while turning, at any speed. That's the habit to build.`;
 
   return { handoffs: handoffs.length, fastMsPerTurn, slowMsPerTurn, pauseAfterFastMs, pauseAfterSlowMs, slowdownCostMs, netGainMs, handoffsPerSolve, verdict, headline };
 }

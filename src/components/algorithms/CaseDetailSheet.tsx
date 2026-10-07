@@ -140,7 +140,7 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
         </div>
         {progress?.bestRecallMs !== undefined && (
           <p className="mt-2 text-center text-[11px] text-muted-2">
-            Best recall: <span className="text-foreground/80">{formatTime(progress.bestRecallMs)}</span> — time to
+            Best recall: <span className="text-foreground/80">{formatTime(progress.bestRecallMs)}</span>, time to
             reveal the algorithm in review, not physical turning speed
           </p>
         )}

@@ -55,7 +55,7 @@ function CaseRow({ c }: { c: AlgCase }) {
           Save
         </button>
       </div>
-      {bad && <p className="text-[11px] text-danger">That doesn&apos;t solve this case — check the notation (yellow top, green front).</p>}
+      {bad && <p className="text-[11px] text-danger">That doesn&apos;t solve this case, check the notation (yellow top, green front).</p>}
     </div>
   );
 }
@@ -84,7 +84,7 @@ export default function MyAlgsPage() {
   const mineCount = Object.keys(chosen).length;
 
   return (
-    <AnalyticsShell icon={<BookMarked size={17} className="text-accent" />} title="My Algs" subtitle="Your algorithms, not the book's — learned from your one-look solves, used everywhere.">
+    <AnalyticsShell icon={<BookMarked size={17} className="text-accent" />} title="My Algs" subtitle="Your algorithms, not the book's, learned from your one-look solves, used everywhere.">
       <div className="print:hidden flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
@@ -106,7 +106,7 @@ export default function MyAlgsPage() {
         <p className="px-1 text-[11px] text-muted">
           {mineCount ? `${mineCount} case${mineCount === 1 ? " uses" : "s use"} your own algorithm. ` : ""}
           {seen.length
-            ? `${seen.length} ${group} cases seen done in one look on your smart cube${yoursCount ? ` — ${yoursCount} with an algorithm of your own` : ""}.`
+            ? `${seen.length} ${group} cases seen done in one look on your smart cube${yoursCount ? `, ${yoursCount} with an algorithm of your own` : ""}.`
             : `No one-look ${group} algorithms read from your smart-cube solves yet.`}
           {reading > 0 && (
             <span className="ml-1 inline-flex items-center gap-1 text-muted-2">
