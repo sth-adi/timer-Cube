@@ -5,7 +5,7 @@
  * moment, and where the CFOP phase boundaries fall on the slider.
  */
 
-/** Fixed visual duration for one turn's animation — only the pause *before* a move varies with the real gap. */
+/** Visual duration for one turn's animation (shorter only when the real gap was) — the pause *before* a move varies with the real gap. */
 export const TURN_MS = 150;
 /** Under prefers-reduced-motion a turn snaps (a sliver of time, so the timeline stays valid) instead of animating. */
 export const SNAP_TURN_MS = 16;
@@ -20,23 +20,41 @@ export interface ReplayTimeline {
   durationMs: number;
 }
 
+/** No turn is drawn shorter than this, so the player never gets a zero-length animation. */
+export const MIN_TURN_MS = 12;
+
 /**
  * Lays moves out on a timeline from the real gap before each one (ms since the
  * previous move; the first from the solve's start). A move's turn takes
- * `turnMs`; whatever is left of its gap is idle time, which by default is
- * capped at IDLE_CAP_MS so a three-second recognition pause isn't three
- * seconds of nothing. `realPauses` keeps the true gaps.
+ * `turnMs`, or the whole gap when the cuber was quicker than that (at 8+ turns
+ * a second the gap is shorter than a turn, and giving every turn its full
+ * length would make the replay run longer than the solve was). Whatever is
+ * left of a gap is idle time, which by default is capped at IDLE_CAP_MS so a
+ * three-second recognition pause isn't three seconds of nothing. `realPauses`
+ * keeps the true gaps, so each turn then ends at its recorded timestamp and
+ * the replay lasts exactly as long as the solve.
+ *
+ * A gap too short to hold even MIN_TURN_MS (two halves of a slice turn
+ * arriving together) borrows the difference from the next idle time, so the
+ * replay doesn't drift away from the clock the solve ran on.
  */
 export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: boolean; turnMs?: number; idleCapMs?: number } = {}): ReplayTimeline {
-  const turnMs = opts.turnMs ?? TURN_MS;
+  const turnMax = opts.turnMs ?? TURN_MS;
+  const turnMin = Math.min(MIN_TURN_MS, turnMax);
   const cap = opts.idleCapMs ?? IDLE_CAP_MS;
   const starts: number[] = [];
   const ends: number[] = [];
   let end = 0;
+  let debt = 0;
   for (const raw of gapsMs) {
-    const idle = Math.max(0, Math.max(0, raw) - turnMs);
+    const gap = Math.max(0, raw);
+    const turn = Math.max(turnMin, Math.min(turnMax, gap));
+    let idle = Math.max(0, gap - turn);
+    const repaid = Math.min(debt, idle);
+    idle -= repaid;
+    debt += Math.max(0, turn - gap) - repaid;
     const start = end + (opts.realPauses ? idle : Math.min(idle, cap));
-    end = start + turnMs;
+    end = start + turn;
     starts.push(start);
     ends.push(end);
   }

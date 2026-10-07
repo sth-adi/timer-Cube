@@ -37,12 +37,22 @@ describe("buildTimeline", () => {
     expect(buildTimeline(g, { realPauses: false })).toEqual(buildTimeline(g, { realPauses: true }));
   });
 
-  it("never lets a gap shorter than a turn push moves backwards or overlap", () => {
-    const t = buildTimeline([0, 10, 0, 149]);
+  it("lasts exactly as long as the solve even when moves come faster than a turn", () => {
+    const fast = [90, 110, 100, 120, 95, 105];
+    const t = buildTimeline(fast, { realPauses: true });
+    expect(t.durationMs).toBe(fast.reduce((a, b) => a + b, 0));
+    // a quick move's turn fills its gap, ending at that move's recorded time
+    expect(t.ends).toEqual([90, 200, 300, 420, 515, 620]);
+  });
+
+  it("never lets a gap shorter than a turn push moves backwards or overlap, and gives back what it borrowed", () => {
+    const t = buildTimeline([0, 10, 0, 149, 400], { realPauses: true });
     for (let i = 0; i < t.starts.length; i++) {
-      expect(t.ends[i]).toBe(t.starts[i] + TURN_MS);
+      expect(t.ends[i]).toBeGreaterThan(t.starts[i]);
       if (i > 0) expect(t.starts[i]).toBeGreaterThanOrEqual(t.ends[i - 1]);
     }
+    // the 400ms gap pays the borrowed time back, so the end is the true 559ms
+    expect(t.durationMs).toBe(559);
   });
 
   it("snaps turns for reduced motion while real pauses still total the true time", () => {
