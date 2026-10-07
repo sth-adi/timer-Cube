@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
+import "@/styles/twin.css";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { STICKERS, turnGeometry, type TurnSpec, type Vec3 } from "@/lib/cube-engine/stickerTurns";
 
@@ -10,7 +11,6 @@ export interface TurnState {
   progress: number;
 }
 
-const BODY = "#0b0b0e";
 /** Fixed brightness per facing, baked into the sticker colour like a faint material difference — reads as depth from any angle. */
 const SHADE: Record<string, number> = { "0,-1,0": 1.08, "1,0,0": 0.96, "0,0,1": 1, "0,1,0": 0.82, "-1,0,0": 0.9, "0,0,-1": 0.88 };
 
@@ -69,13 +69,13 @@ const CUBIES: CubieInfo[] = (() => {
   return [...map.values()];
 })();
 
-function Cubie({ info, facelets, s }: { info: CubieInfo; facelets: string; s: number }) {
+function Cubie({ info, facelets, s, lit }: { info: CubieInfo; facelets: string; s: number; lit: boolean }) {
   const h = s / 2;
   const [x, y, z] = info.cubie;
   const inset = Math.max(1.5, s * 0.07);
   return (
     <div
-      className="absolute"
+      className={lit ? "tc-lit absolute" : "absolute"}
       style={{ left: (x + 1) * s, top: (y + 1) * s, width: s, height: s, transformStyle: "preserve-3d", transform: `translateZ(${z * s}px)` }}
     >
       {NORMALS.map((n) => {
@@ -84,13 +84,13 @@ function Cubie({ info, facelets, s }: { info: CubieInfo; facelets: string; s: nu
         return (
           <div
             key={nk}
-            className="absolute left-0 top-0"
-            style={{ width: s, height: s, background: BODY, borderRadius: s * 0.1, transform: FACE_TRANSFORM[nk](h), backfaceVisibility: "hidden" }}
+            className="tc-face absolute left-0 top-0"
+            style={{ width: s, height: s, borderRadius: s * 0.1, transform: FACE_TRANSFORM[nk](h), backfaceVisibility: "hidden" }}
           >
             {idx !== undefined && (
               <div
-                className="absolute"
-                style={{ inset, borderRadius: s * 0.1, background: shaded(FACELET_COLORS[facelets[idx]] ?? "#555555", SHADE[nk]) }}
+                className="tc-sticker absolute"
+                style={{ inset, borderRadius: s * 0.1, backgroundColor: shaded(FACELET_COLORS[facelets[idx]] ?? "#555555", SHADE[nk]) }}
               />
             )}
           </div>
@@ -116,8 +116,9 @@ export const TurnCube = memo(function TurnCube({ facelets, turning, size }: { fa
     const still: React.ReactNode[] = [];
     const moving: React.ReactNode[] = [];
     for (const info of CUBIES) {
-      const el = <Cubie key={info.key} info={info} facelets={facelets} s={s} />;
-      if (geo && info.cubie[geo.axis] === geo.layer) moving.push(el);
+      const isMoving = !!geo && info.cubie[geo.axis] === geo.layer;
+      const el = <Cubie key={info.key} info={info} facelets={facelets} s={s} lit={isMoving} />;
+      if (isMoving) moving.push(el);
       else still.push(el);
     }
     return { still, moving };

@@ -124,7 +124,7 @@ export function TrainerView() {
         type="button"
         onClick={() => resetStats(mode)}
         disabled={times.length === 0}
-        className="flex items-center gap-1.5 text-xs text-muted-2 hover:text-muted disabled:opacity-40"
+        className="hit-y flex items-center gap-1.5 text-xs text-muted-2 hover:text-muted disabled:opacity-40"
       >
         <RotateCcw size={11} />
         {times.length} practiced — reset

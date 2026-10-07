@@ -11,9 +11,14 @@ import { buildDirectorsCut } from "@/lib/replay/directorsCut";
 import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { ReplayGyroTwin } from "./ReplayGyroTwin";
+import { ReplayPlaceholder } from "@/components/lab/CubeStage";
+
+/** The cube's box: sized once here, so the placeholder and the real player agree. */
+const CUBE_BOX = "mx-auto h-64 w-full max-w-xs";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
+  loading: () => <ReplayPlaceholder className={CUBE_BOX} />,
 });
 
 const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string }> = {
@@ -138,8 +143,8 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
     : findings.filter((f) => !f.phase).slice(0, 2);
 
   return (
-    <div className="card animate-fade-in-up rounded-xl p-3">
-      <div className="mb-2.5 flex items-center justify-between gap-2">
+    <div className="card animate-fade-in-up rounded-xl p-3.5">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-2">
           <Play size={12} className="text-accent" />
           Watch it back
@@ -151,9 +156,9 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
               onClick={() => setVoice((v) => !v)}
               aria-pressed={voice}
               aria-label={voice ? "Captions only" : "Read the commentary aloud"}
-              className="flex items-center justify-center rounded-full bg-bg-panel-2 p-1.5 text-muted hover:text-foreground"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-muted hover:text-foreground"
             >
-              {voice ? <Mic size={11} /> : <MicOff size={11} />}
+              {voice ? <Mic size={13} /> : <MicOff size={13} />}
             </button>
           )}
           <button
@@ -164,22 +169,22 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
             }}
             aria-pressed={director}
             className={cn(
-              "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors",
+              "flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors",
               director ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >
-            <Clapperboard size={11} /> Director&apos;s Cut
+            <Clapperboard size={12} /> Director&apos;s Cut
           </button>
         </div>
       </div>
 
-      <div className="mb-2.5 flex flex-wrap gap-1.5">
+      <div className="mb-3 flex flex-wrap gap-1.5">
         <button
           type="button"
           onClick={() => pick(-1)}
           aria-pressed={isWhole}
           className={cn(
-            "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+            "h-8 rounded-full px-3 text-xs font-medium transition-colors",
             isWhole ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
           )}
         >
@@ -196,7 +201,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
             aria-pressed={selected === i}
             disabled={p.moves.length === 0}
             className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors disabled:opacity-35",
+              "h-8 rounded-full px-3 text-xs font-medium transition-colors disabled:opacity-35",
               selected === i ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >
@@ -215,7 +220,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         setupAlg={setupAlg}
         gapsMs={gaps}
         hasRealTiming={hasRealTiming}
-        className="mx-auto h-64 w-full max-w-xs"
+        className={CUBE_BOX}
         cues={isWhole ? cues : undefined}
         marks={marks}
         voice={voice}
@@ -238,28 +243,28 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
       />
 
       {phase?.model && phase.model.moves.length > 0 && (phase.lost ?? 0) > 0 && (
-        <div className="mt-2 flex justify-center">
+        <div className="mt-3 flex justify-center">
           <button
             type="button"
             onClick={() => setAltTake((v) => !v)}
             aria-pressed={altTake}
             className={cn(
-              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
+              "flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
               altTake ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >
-            <Film size={11} />
+            <Film size={12} />
             {altTake ? `Back to your take · ${phase.moves.length} turns` : `Alternate take · ${phase.model.moves.length} turns instead of ${phase.moves.length}`}
           </button>
         </div>
       )}
 
-      <p className="mt-1.5 break-words text-center font-mono text-[11px] leading-relaxed text-muted">
+      <p className="mt-3 break-words rounded-xl bg-bg-panel-2/60 px-3 py-2 text-center font-mono text-xs leading-relaxed text-muted">
         {fullAlg || "nothing to play"}
       </p>
 
       {/* The commentary — what this component exists for, not the video. */}
-      <div className="mt-3 space-y-2 border-t border-border pt-2.5">
+      <div className="mt-3 space-y-2.5 border-t border-border pt-3">
         {captions.length > 0 ? (
           captions.map((f) => {
             const style = SEVERITY_STYLE[f.severity];

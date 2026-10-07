@@ -85,6 +85,7 @@ import { TimeWonLostCard } from "@/components/recap/TimeWonLostCard";
 import { cn } from "@/lib/utils/cn";
 import { PHASE_LABELS_4 } from "@/components/timer/phaseRibbonMath";
 import { PhaseRibbon } from "@/components/timer/PhaseRibbon";
+import { LiveDigits } from "@/components/timer/LiveDigits";
 import { CaseBadges } from "@/components/timer/CaseBadges";
 import { SolveHeader } from "@/components/timer/SolveHeader";
 import { DroppedSolveView } from "@/components/timer/DisconnectBanner";
@@ -1185,14 +1186,12 @@ export function SmartCubeTimer() {
                 // The clock child: only these digits re-render each frame.
                 <LiveElapsed active={!hideTimeWhileSolving} startedAtMs={startedAtMs} lastMoveMs={lastMoveMs}>
                   {(liveMs) => (
-                    <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>
-                      {hideTimeWhileSolving ? "solving" : formatTime(liveMs)}
-                    </p>
+                    <LiveDigits text={hideTimeWhileSolving ? "solving" : formatTime(liveMs)} styleClass={timerStyle !== "glow" ? `timer-digits--${timerStyle}` : undefined} />
                   )}
                 </LiveElapsed>
               ) : (
                 (armed || finished) && (
-                  <p className={cn("timer-digits text-center text-6xl font-bold", timerStyle !== "glow" && `timer-digits--${timerStyle}`)}>{formatTime(elapsedMs)}</p>
+                  <LiveDigits text={formatTime(elapsedMs)} styleClass={timerStyle !== "glow" ? `timer-digits--${timerStyle}` : undefined} />
                 )
               )
             )}
@@ -1364,6 +1363,7 @@ export function SmartCubeTimer() {
           <>
             <RecapHero finalMs={savedSolve ? solveFinalMs(savedSolve) : elapsedMs} priorBestMs={priorBestMs}>
               <PhaseRibbon
+                entrance
                 durations={durations}
                 currentPhaseIndex={currentPhaseIndex}
                 liveCurrentMs={null}

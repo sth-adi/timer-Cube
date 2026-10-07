@@ -34,7 +34,7 @@ export function PhaseSplitsCard() {
         </span>
       </div>
 
-      <div className="mb-3 flex h-3 overflow-hidden rounded-full bg-bg-panel-2">
+      <div className="mb-3 flex h-3 gap-0.5 overflow-hidden rounded-full">
         {summary.phases.map((phase, i) => (
           <div
             key={phase.label}
@@ -81,7 +81,7 @@ function Sparkline({ values }: { values: readonly number[] }) {
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0 overflow-visible text-muted-2" role="img" aria-label={`This step's time over your last ${values.length} solves`}>
       <title>{`Last ${values.length} solves: ${formatTime(values[0])} → ${formatTime(values[values.length - 1])}`}</title>
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -107,18 +107,20 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
         </span>
       </div>
 
-      <div className="mb-3 flex h-3 overflow-hidden rounded-full bg-bg-panel-2">
+      <div className="mb-3 flex h-3 gap-0.5 overflow-hidden rounded-full">
         {steps.map((st, i) => (
           <div key={st.label} className={PHASE_TINTS[i]} style={{ width: `${st.share * 100}%` }} title={`${st.label} — ${Math.round(st.share * 100)}%`} />
         ))}
       </div>
 
       <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-2">
+        <span className="w-2 shrink-0" />
         <span className="flex-1">Step</span>
         <span className="w-12 text-right">Mean</span>
         <span className="w-12 text-right">ao12</span>
         <span className="w-12 text-right">Best</span>
         {sittings && <span className="w-14 text-right">vs last</span>}
+        <span className="w-14 shrink-0" />
       </div>
       <div className="space-y-2">
         {steps.map((st, i) => {

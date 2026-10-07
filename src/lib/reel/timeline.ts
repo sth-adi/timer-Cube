@@ -4,6 +4,7 @@ import { recognizeOll, recognizePll, toLibraryFrame } from "@/lib/analysis/recog
 import { HOME_ORIENTATION, mul, quatToMat, slerpQuat, tokenMatrix, viewerMove, type Mat3, type Quat } from "@/lib/gyro/orientation";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { crossSolved } from "@/lib/xray/common";
+import { buildViewTrack, type ViewTrack } from "./viewTrack";
 
 /**
  * Everything a Solve Reel frame needs, precomputed once per solve: the
@@ -52,6 +53,8 @@ export interface ReelTimeline {
   rotations: ReelRotation[];
   /** The continuous gyro stream, when this solve has one — takes over the camera from `rotations` (strictly richer: it captures the same regrips as smooth motion, plus the natural wobble in between). Null for a solve recorded before this existed, or one with no gyro fix. */
   gyroStream: GyroStreamData | null;
+  /** The gyro stream resampled at 60 Hz and smoothed (zero lag) — what the reel's camera actually reads each frame. Null without a stream. */
+  viewTrack: ViewTrack | null;
   /** The grip orientation in effect *during* each move (index-aligned with `moves`) — sampled from gyroStream when there is one, else every regrip before it composed. */
   gripAt: Mat3[];
   /** Turns and regrips merged into one time-ordered stream, for a ticker that narrates both. */
@@ -101,6 +104,8 @@ function streamViewAt(stream: GyroStreamData, t: number): Mat3 {
  * regrip as a synthetic swing — same idea as `frameAt`'s mid-turn state,
  * but for the whole cube instead of one layer.
  */
+const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
 export function viewAt(tl: ReelTimeline, t: number): { view: Mat3; rotating: { token: string; progress: number } | null } {
   if (tl.gyroStream) return { view: streamViewAt(tl.gyroStream, t), rotating: null };
   let acc = HOME_ORIENTATION;
@@ -109,7 +114,8 @@ export function viewAt(tl: ReelTimeline, t: number): { view: Mat3; rotating: { t
     if (r.atMs > t) break;
     const elapsed = t - r.atMs;
     if (elapsed < ROTATE_MS) {
-      acc = mul(tokenMatrix(r.token, elapsed / ROTATE_MS), acc);
+      // Eased, so a regrip leaves and lands softly instead of moving at a constant speed.
+      acc = mul(tokenMatrix(r.token, easeInOut(elapsed / ROTATE_MS)), acc);
       rotating = { token: r.token, progress: elapsed / ROTATE_MS };
     } else {
       acc = mul(tokenMatrix(r.token), acc);
@@ -194,6 +200,7 @@ export function buildReelTimeline(
     phases,
     rotations: sortedRotations,
     gyroStream,
+    viewTrack: gyroStream ? buildViewTrack(gyroStream) : null,
     gripAt,
     ticker,
   };
@@ -224,5 +231,24 @@ export function frameAt(tl: ReelTimeline, t: number): ReelFrame {
 
 /** Turns per second over the second leading up to `t`. */
 export function rollingTps(tl: ReelTimeline, t: number): number {
-  return tl.timesMs.filter((m) => m <= t && m > t - 1000).length;
+  let n = 0;
+  for (let i = tl.timesMs.length - 1; i >= 0; i--) {
+    const m = tl.timesMs[i];
+    if (m > t) continue;
+    if (m <= t - 1000) break;
+    n++;
+  }
+  return n;
+}
+
+/** How many ticker events (turns and regrips) have happened by `t` — the ticker is time-ordered, so this is a binary search. */
+export function tickerCountAt(tl: ReelTimeline, t: number): number {
+  let lo = 0;
+  let hi = tl.ticker.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (tl.ticker[mid].atMs <= t) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }

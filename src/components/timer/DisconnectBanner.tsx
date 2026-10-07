@@ -4,6 +4,7 @@ import { BluetoothOff, Loader2 } from "lucide-react";
 import type { SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { LiveCubeMimic } from "@/components/timer/LiveCubeMimic";
 import { formatTime } from "@/lib/utils/time";
+import "@/styles/recap.css";
 
 /** The banner's line while the store is getting the cube back: wording only, the store owns the attempt count. */
 export function cubeLostText(attempt: number, trying: boolean): string {
@@ -30,10 +31,11 @@ export function DisconnectBanner({
     <div
       role="status"
       data-testid="auto-reconnect"
-      className="flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-0.5 rounded-xl bg-danger/10 px-3 py-1.5 text-[11px] font-medium text-danger ring-1 ring-danger/30"
+      className="rc-banner flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-0 !py-1"
+      data-tone="danger"
     >
-      <span className="flex items-center gap-1.5">
-        {trying ? <Loader2 size={13} className="animate-spin motion-reduce:animate-none" /> : <BluetoothOff size={13} />}
+      <span className="flex items-center gap-2 py-1">
+        {trying ? <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <BluetoothOff size={14} aria-hidden="true" />}
         {cubeLostText(attempt, trying)}
       </span>
       <span className="flex items-center gap-1">
@@ -41,13 +43,13 @@ export function DisconnectBanner({
           <button
             type="button"
             onClick={onTryNow}
-            className="-my-2.5 flex h-10 items-center px-2 font-semibold text-foreground underline"
+            className="flex h-11 items-center px-3 font-semibold text-foreground underline underline-offset-2"
             data-testid="auto-reconnect-now"
           >
             Try now
           </button>
         )}
-        <button type="button" onClick={onCancel} className="-my-2.5 flex h-10 items-center px-2 text-muted underline hover:text-foreground" data-testid="auto-reconnect-cancel">
+        <button type="button" onClick={onCancel} className="flex h-11 items-center px-3 text-muted underline underline-offset-2 hover:text-foreground" data-testid="auto-reconnect-cancel">
           Cancel
         </button>
       </span>
@@ -92,7 +94,7 @@ export function DroppedSolveView({
           <LiveCubeMimic scramble={scramble} moves={moves} className="h-full w-full" />
         </div>
       </div>
-      <p className="max-w-xs text-center text-[11px] text-muted">
+      <p className="max-w-xs text-center text-[12px] leading-4 text-muted">
         The Bluetooth link dropped{moveCount ? ` ${moveCount} move${moveCount === 1 ? "" : "s"} into your solve` : ""} — not a step you missed, the connection itself. That solve can&apos;t be saved; once the cube is back, start the scramble again.
       </p>
     </div>

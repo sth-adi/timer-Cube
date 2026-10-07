@@ -24,23 +24,23 @@ export function RecapActionBar({ onReplay, onAnalyze, onDone, className }: { onR
       <button
         type="button"
         onClick={onReplay}
-        className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-accent px-3 text-sm font-semibold text-accent-fg"
+        className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-3 text-sm font-semibold text-accent-fg"
         data-testid="recap-replay"
       >
-        <Play size={14} /> Replay
+        <Play size={16} aria-hidden="true" /> Replay
       </button>
       <button
         type="button"
         onClick={onAnalyze}
-        className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-bg-panel-2 px-3 text-sm font-medium text-muted hover:text-foreground"
+        className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-bg-panel-2 px-3 text-sm font-medium text-foreground/80 hover:text-foreground"
         data-testid="recap-analyze"
       >
-        <Wand2 size={14} /> Analyze
+        <Wand2 size={16} aria-hidden="true" /> Analyze
       </button>
       <button
         type="button"
         onClick={onDone}
-        className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-bg-panel-2 px-3 text-sm font-medium text-muted hover:text-foreground"
+        className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-bg-panel-2 px-3 text-sm font-medium text-foreground/80 hover:text-foreground"
         data-testid="recap-done"
       >
         Done

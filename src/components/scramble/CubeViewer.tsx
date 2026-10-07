@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Compass } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import "@/styles/twin.css";
+import { recolorPlayer } from "./cubeColors";
 import { planLiveUpdate, tempoScaleFor } from "./liveTurns";
 
 export interface CubeViewerHandle {
@@ -208,6 +210,8 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
       player.style.touchAction = "pan-y";
       container.appendChild(player);
       playerRef.current = player;
+      // Same sticker colours as the twin and the nets (cubing.js paints its own, more saturated ones).
+      void recolorPlayer(player);
       setPlayerReady(true);
       onReady?.({
         play: () => playerRef.current?.play(),
@@ -392,17 +396,28 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
 
   return (
     <div className="relative h-full w-full">
+      {/* The same soft ground shadow the Gyro Twin floats over, sized from the box so it sits under the cube at any aspect. */}
+      <div className="cv-floor" aria-hidden="true">
+        <span className="cv-ground" />
+      </div>
       <div
         ref={containerRef}
-        className={cn(className, "outline-none focus-visible:ring-2 focus-visible:ring-accent")}
+        className={cn(className, "cv-stage outline-none focus-visible:ring-2 focus-visible:ring-accent")}
+        data-ready={playerReady ? "true" : "false"}
         style={{ overflow: "hidden" }}
         tabIndex={0}
         role="group"
         aria-label="3D cube view — use arrow keys to rotate"
         onKeyDown={onKeyDown}
       />
-      {!playerReady && (fallback || loadFailed) && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 p-2" data-testid="cube-viewer-fallback">
+      {(fallback || (loadFailed && !playerReady)) && (
+        // Stays mounted and fades out once the player is up, so the flat net hands over to the 3D cube without a blink.
+        <div
+          className="cv-fallback pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 p-2"
+          data-testid="cube-viewer-fallback"
+          data-ready={playerReady ? "true" : "false"}
+          aria-hidden={playerReady ? true : undefined}
+        >
           {fallback}
           {loadFailed && (
             <p className="pointer-events-auto text-center text-[11px] text-muted" role="status">
@@ -429,7 +444,7 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
           aria-label={gyroOn ? "Turn off tilt-to-rotate" : "Turn on tilt-to-rotate"}
           title={gyroDenied ? "Motion access denied — check your browser's site permissions" : "Tilt phone to rotate"}
           className={cn(
-            "absolute bottom-1.5 right-1.5 flex items-center justify-center rounded-full p-1.5 transition-colors",
+            "hit absolute bottom-1.5 right-1.5 flex items-center justify-center rounded-full p-1.5 transition-colors",
             gyroOn ? "bg-accent text-accent-fg" : "bg-bg-panel-2/80 text-muted hover:text-foreground",
           )}
         >

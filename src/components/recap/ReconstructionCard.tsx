@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronRight, Copy, ExternalLink, ScrollText, TriangleAlert } from "lucide-react";
 import type { Reconstruction } from "@/lib/analysis/reconText";
 import type { Mistake } from "@/lib/analysis/mistakeRadar";
-import { cn } from "@/lib/utils/cn";
+import { Collapse, RecapCard, CardTitle, secs2 } from "./RecapParts";
 
 /**
  * The solve written out step by step in your own grip — cross, each pair,
@@ -32,55 +32,57 @@ export function ReconstructionCard({ recon, stepMistakes }: { recon: Reconstruct
   };
   const copied = copy === "copied";
   return (
-    <div className="w-full rounded-xl bg-bg-panel-2 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-2">
-          <ScrollText size={11} className="text-accent" /> Reconstruction
-        </p>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => void copyText()} className="flex items-center gap-1 rounded-full bg-bg-elevated px-2.5 py-1 text-[11px] font-medium text-foreground hover:text-accent">
-            {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />} {copied ? "Copied" : copy === "failed" ? "Couldn't copy" : "Copy"}
+    <RecapCard>
+      <div className="flex items-center justify-between gap-2">
+        <CardTitle icon={<ScrollText size={12} aria-hidden="true" />}>Reconstruction</CardTitle>
+        <div className="flex shrink-0 items-center gap-2">
+          <button type="button" onClick={() => void copyText()} className="rc-pill-btn hit-y">
+            {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />} {copied ? "Copied" : copy === "failed" ? "Couldn't copy" : "Copy"}
           </button>
           <span role="status" aria-live="polite" className="sr-only">
             {copied ? "Copied" : copy === "failed" ? "Couldn't copy, the text is selectable" : ""}
           </span>
-          <a href={recon.twizzleUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-full bg-bg-elevated px-2.5 py-1 text-[11px] font-medium text-foreground hover:text-accent">
-            <ExternalLink size={11} /> Twizzle
+          <a href={recon.twizzleUrl} target="_blank" rel="noreferrer" className="rc-pill-btn hit-y">
+            <ExternalLink size={12} aria-hidden="true" /> Twizzle
           </a>
         </div>
       </div>
-      <p className="mb-1.5 text-[11px] text-muted">
+      <p className="mt-2 text-[12px] leading-4 text-muted">
         {recon.rotation ? <span className="font-mono text-foreground">{recon.rotation}</span> : "No rotation"} — held {recon.gripLabel}
-        {copy === "failed" && <span className="text-warning"> · Couldn&apos;t copy, the text is selectable</span>}
+        {copy === "failed" && <span className="rc-t-slow"> · Couldn&apos;t copy, the text is selectable</span>}
       </p>
-      <div className="flex flex-col gap-1">
+      <div className="rc-steps mt-4">
         {recon.steps.map((s, k) => {
           const hits = stepMistakes?.get(k);
+          const flagged = !!hits && hits.length > 0;
+          const none = s.moves.length === 0;
           return (
             <div key={s.label}>
-              <div className="grid grid-cols-[4.5rem_1fr_auto] items-baseline gap-2 text-[11px]">
-                <span className="flex items-center gap-1 truncate font-semibold text-foreground" title={s.caseName ?? undefined}>
-                  {s.label}
-                  {hits && hits.length > 0 && (
-                    <TriangleAlert size={10} aria-hidden="true" className="shrink-0 text-warning">
-                      <title>{hits.map((m) => m.title).join("; ")}</title>
-                    </TriangleAlert>
-                  )}
-                </span>
-                <span className="min-w-0 break-words font-mono text-muted">
-                  {s.moves.join(" ") || (k > 0 ? <span className="font-sans italic text-muted-2">came in with {recon.steps[k - 1].label}</span> : "—")}
-                  {s.caseName && <span className="ml-1.5 font-sans text-[10px] text-muted-2">{s.caseName}</span>}
-                </span>
-                <span className="shrink-0 tabular-nums text-muted-2">
-                  {(s.ms / 1000).toFixed(2)} · {s.moves.length}
+              <div className="rc-step-head">
+                <span className="shrink-0 font-semibold text-foreground">{s.label}</span>
+                {s.caseName && (
+                  <span className="min-w-0 flex-1 truncate text-muted" title={s.caseName}>
+                    {s.caseName}
+                  </span>
+                )}
+                {flagged && (
+                  <TriangleAlert size={12} aria-hidden="true" className="shrink-0 rc-t-slow">
+                    <title>{hits.map((m) => m.title).join("; ")}</title>
+                  </TriangleAlert>
+                )}
+                <span className="rc-num ml-auto shrink-0 text-muted">
+                  {secs2(s.ms)} · {s.moves.length} {s.moves.length === 1 ? "turn" : "turns"}
                 </span>
               </div>
-              {hits && hits.length > 0 && <StepMistakes hits={hits} />}
+              <p className="rc-step-moves" data-empty={none}>
+                {none ? (k > 0 ? `came in with ${recon.steps[k - 1].label}` : "no turns") : s.moves.join(" ")}
+              </p>
+              {flagged && <StepMistakes hits={hits} />}
             </div>
           );
         })}
       </div>
-    </div>
+    </RecapCard>
   );
 }
 
@@ -95,26 +97,28 @@ function StepMistakes({ hits }: { hits: Mistake[] }) {
   const listId = useId();
   const more = hits.length - 1;
   return (
-    <div className="ml-[5rem] mt-0.5 text-[10px]">
+    <div className="mt-1 pl-[10px] text-[12px] leading-4">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => setOpen((v) => !v)}
         title={hits.map((m) => m.title).join("; ")}
-        className="flex max-w-full items-center gap-0.5 rounded text-left text-warning focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+        className="hit-y rc-t-slow flex min-h-6 max-w-full items-center gap-1 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
       >
-        <ChevronRight size={10} aria-hidden="true" className={cn("shrink-0 transition-transform", open && "rotate-90")} />
+        <ChevronRight size={12} aria-hidden="true" className="rc-chev shrink-0" style={{ transform: open ? "rotate(90deg)" : undefined }} />
         <span className="min-w-0 truncate">{hits[0].title}</span>
         {more > 0 && <span className="shrink-0 text-muted-2">+{more} more</span>}
       </button>
-      <ul id={listId} hidden={!open} className={cn("mt-0.5 flex-col gap-0.5 pl-3 text-muted", open ? "flex" : "hidden")}>
-        {hits.map((m, i) => (
-          <li key={i}>
-            <span className="font-medium text-foreground">{m.title}</span> — {m.detail}
-          </li>
-        ))}
-      </ul>
+      <Collapse open={open} id={listId}>
+        <ul className="flex flex-col gap-1 pb-1 pl-4 pt-1 text-muted">
+          {hits.map((m, i) => (
+            <li key={i}>
+              <span className="font-medium text-foreground">{m.title}</span> — {m.detail}
+            </li>
+          ))}
+        </ul>
+      </Collapse>
     </div>
   );
 }

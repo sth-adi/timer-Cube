@@ -170,6 +170,13 @@ export function CaseIcon({ setupAlg, kind, className }: CaseIconProps) {
   return (
     <svg viewBox={`0 0 ${VB} ${VB}`} className={className} role="img" aria-label={`${kind} case diagram`}>
       <defs>
+        {/* The Gyro Twin's specular: a soft light from the top-left across each sticker. */}
+        <linearGradient id="caseIconGloss" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity={0.26} />
+          <stop offset="0.4" stopColor="#fff" stopOpacity={0.06} />
+          <stop offset="0.58" stopColor="#fff" stopOpacity={0} />
+          <stop offset="1" stopColor="#000" stopOpacity={0.14} />
+        </linearGradient>
         <marker id="arrowheadCorner" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 Z" fill="#111" />
         </marker>
@@ -177,9 +184,17 @@ export function CaseIcon({ setupAlg, kind, className }: CaseIconProps) {
           <path d="M0,0 L10,5 L0,10 Z" fill="#111" />
         </marker>
       </defs>
+      {/* The U face sits on a black plate like the twin's cubies; the side strips are bars flush against it. */}
+      <rect x={UNIT - GAP / 2} y={UNIT - GAP / 2} width={3 * UNIT} height={3 * UNIT} rx={2.2} fill="#0b0b0e" />
       {stickers.map((s) => {
         const { x, y, width, height } = stickerRect(s);
-        return <rect key={s.key} x={x} y={y} width={width} height={height} rx={1} fill={s.color} stroke="rgba(0,0,0,0.35)" strokeWidth={0.5} />;
+        const rx = s.strip ? 1 : 1.6;
+        return (
+          <g key={s.key}>
+            <rect x={x} y={y} width={width} height={height} rx={rx} fill={s.color} />
+            <rect x={x} y={y} width={width} height={height} rx={rx} fill="url(#caseIconGloss)" />
+          </g>
+        );
       })}
       {diagram.arrows.map((a, i) => (
         <ArrowLine key={i} arrow={a} cornerSlot={cornerSlot} edgeSlot={edgeSlot} />

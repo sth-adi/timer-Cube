@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { Undo2 } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { isModalOpen } from "@/lib/store/modalBus";
@@ -49,11 +49,11 @@ export function UndoToast() {
   const n = removed.solves.length;
   const depth = stack.length;
   return (
-    <div className="pointer-events-none fixed inset-x-0 z-[70] flex justify-center px-4" style={{ bottom: "calc(var(--nav-height) + var(--safe-bottom) + 64px)" }}>
-      <div role="status" className="card pointer-events-auto flex items-center gap-3 rounded-full px-4 py-2 text-sm shadow-lg" data-testid="undo-toast">
-        <span className="text-foreground">{n === 1 ? "Solve deleted" : `${n} solves deleted`}</span>
-        <button type="button" onClick={() => void undo()} className="hit-y flex items-center gap-1 font-semibold text-accent hover:underline" data-testid="undo-button">
-          <Undo2 size={14} /> Undo{depth > 1 ? ` (${depth})` : ""}
+    <div className="chrome-toast-wrap" style={{ "--slot": 1 } as CSSProperties}>
+      <div role="status" className="chrome-toast glass-panel" data-testid="undo-toast">
+        <span>{n === 1 ? "Solve deleted" : `${n} solves deleted`}</span>
+        <button type="button" onClick={() => void undo()} className="chrome-toast__action hit-y" data-testid="undo-button">
+          <Undo2 size={14} aria-hidden="true" /> Undo{depth > 1 ? ` (${depth})` : ""}
         </button>
       </div>
     </div>

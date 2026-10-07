@@ -1,0 +1,71 @@
+/* Loading placeholders (components/ui/Skeleton.tsx).
+   A skeleton is a flat, quiet block in the same footprint as the content that replaces it, so nothing moves when the
+   real thing arrives. The only motion is a slow highlight sweeping across (transform on a pseudo-element, so no layout
+   or paint per frame) and a short fade-in with a small delay, which keeps a fast load from flashing a placeholder at all.
+   Everything is scoped to .sk / .sk-group and works from the theme tokens, so dark and paper both read correctly. */
+
+.sk {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.sk-round {
+  border-radius: 9999px;
+}
+
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--foreground) 8%, transparent) 50%, transparent);
+  animation: sk-sweep 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.sk-group {
+  animation: sk-in 0.22s ease-out both;
+  animation-delay: var(--sk-delay, 0ms);
+}
+
+/* A quick opacity fade for content that swaps in place (a trainer mode, a result replacing its placeholder). Opacity only. */
+.sk-reveal {
+  animation: sk-in 0.18s ease-out both;
+}
+
+@keyframes sk-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sk-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Flat and still: reduced motion, and the "off" effects level (which is meant to stay cheap). */
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    display: none;
+  }
+  .sk-group,
+  .sk-reveal {
+    animation: none;
+  }
+}
+
+:root[data-fx-level="off"] .sk::after {
+  display: none;
+}
+
+:root[data-fx-level="off"] .sk-group,
+:root[data-fx-level="off"] .sk-reveal {
+  animation: none;
+}

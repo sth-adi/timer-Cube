@@ -1,6 +1,7 @@
 "use client";
 
 import type { DnaAxis } from "@/lib/stats/dna";
+import "@/styles/stats-charts.css";
 
 const SIZE = 240;
 const CENTER = SIZE / 2;
@@ -33,7 +34,7 @@ export function RadarChart({ axes, ghost, rival, className }: { axes: DnaAxis[];
   const rivalPoints = rivalScores?.every((x) => x !== undefined) ? polygonPoints(rivalScores.map((x) => (x! / 100) * MAX_RADIUS)) : null;
 
   return (
-    <svg viewBox={`-40 -4 ${SIZE + 80} ${SIZE + 8}`} className={className} role="img" aria-label="Solving-style radar chart">
+    <svg viewBox={`-64 -4 ${SIZE + 128} ${SIZE + 8}`} className={className} role="img" aria-label="Solving-style radar chart">
       {RINGS.map((r) => (
         <polygon
           key={r}
@@ -49,14 +50,22 @@ export function RadarChart({ axes, ghost, rival, className }: { axes: DnaAxis[];
       })}
 
       {ghostPoints && (
-        <polygon points={ghostPoints} fill="none" stroke="var(--muted-2)" strokeWidth={1.25} strokeDasharray="3 3" strokeLinejoin="round" />
+        <polygon points={ghostPoints} fill="none" stroke="var(--muted)" strokeWidth={2} strokeDasharray="3 3" strokeLinejoin="round" />
       )}
-      {rivalPoints && <polygon points={rivalPoints} fill="var(--warning)" fillOpacity={0.18} stroke="var(--warning)" strokeWidth={2} strokeLinejoin="round" />}
-      <polygon points={dataPoints} fill="var(--accent)" fillOpacity={0.22} stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
-      {axes.map((a, i) => {
-        const p = polar((a.score / 100) * MAX_RADIUS, (i / n) * Math.PI * 2);
-        return <circle key={a.label} cx={p.x} cy={p.y} r={2.75} fill="var(--accent)" />;
-      })}
+      <g className="sc-fade">
+        {rivalPoints && <polygon points={rivalPoints} fill="var(--warning)" fillOpacity={0.14} stroke="var(--warning)" strokeWidth={2} strokeDasharray="6 3" strokeLinejoin="round" />}
+        {rivalScores?.every((x) => x !== undefined) &&
+          rivalScores.map((sc, i) => {
+            const p = polar((sc! / 100) * MAX_RADIUS, (i / n) * Math.PI * 2);
+            // squares for the rival, circles for you: the two shapes differ in more than colour
+            return <rect key={`r-${i}`} x={p.x - 4} y={p.y - 4} width={8} height={8} rx={1.5} fill="var(--warning)" stroke="var(--bg-panel)" strokeWidth={2} />;
+          })}
+        <polygon points={dataPoints} fill="var(--accent)" fillOpacity={0.16} stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
+        {axes.map((a, i) => {
+          const p = polar((a.score / 100) * MAX_RADIUS, (i / n) * Math.PI * 2);
+          return <circle key={a.label} cx={p.x} cy={p.y} r={4} fill="var(--accent)" stroke="var(--bg-panel)" strokeWidth={2} />;
+        })}
+      </g>
 
       {axes.map((a, i) => {
         const angle = (i / n) * Math.PI * 2;
@@ -72,7 +81,7 @@ export function RadarChart({ axes, ghost, rival, className }: { axes: DnaAxis[];
             y={p.y}
             textAnchor={anchor}
             dominantBaseline="middle"
-            className="fill-muted-2 text-[10px] font-medium uppercase tracking-wide"
+            className="fill-muted-2 text-[11px] font-medium uppercase tracking-wide"
           >
             {a.label}
           </text>

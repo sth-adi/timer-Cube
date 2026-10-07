@@ -27,6 +27,7 @@ import { GhostPaceBar } from "./GhostPaceBar";
 import { PostSolveActions } from "./PostSolveActions";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { predictSolveTime } from "@/lib/analysis/prediction";
+import "@/styles/moments.css";
 import { paceFromRatio, resetPerformanceAura, setPerformanceAura } from "@/lib/store/performanceAuraBus";
 
 const PHASE_COLOR: Record<string, string> = {
@@ -136,6 +137,12 @@ export function TimerView() {
   });
 
   const removeSolve = useSessionStore((s) => s.removeSolve);
+  // A new single best raised by the solve that just stopped tints the finish sweep gold.
+  const newSingleBest = useSessionStore((s) => s.lastPB?.kind === "single");
+  // Held until the next attempt: the toast clearing must not flip the sweep back to white (that would replay it).
+  const [goldFinish, setGoldFinish] = useState(false);
+  if (goldFinish && phase !== "stopped") setGoldFinish(false);
+  else if (!goldFinish && phase === "stopped" && newSingleBest) setGoldFinish(true);
   const solves = useSessionStore((s) => s.solves);
   // Which finished attempt the quick-delete button already removed (keyed by its result object, so the next attempt gets a fresh button).
   const [deletedResult, setDeletedResult] = useState<unknown>(null);
@@ -240,8 +247,8 @@ export function TimerView() {
   }, [phase, lastResult]);
 
   // A text cue (and a short buzz where supported) for the moment the hold arms,
-  // so "ready" isn't carried by the red→green change alone. There's no haptics
-  // setting in the app today; vibrate() is already a no-op where unsupported.
+  // so "ready" isn't carried by the red→green change alone. vibrate() honours the
+  // haptics level in Settings (Off / Light / Full) and is a no-op where unsupported.
   const prevReadyPhaseRef = useRef(phase);
   useEffect(() => {
     if (phase === "ready" && prevReadyPhaseRef.current !== "ready") vibrate(10);
@@ -299,7 +306,9 @@ export function TimerView() {
       </p>
       <InspectionRing remainingMs={inspectionRemainingMs} active={showInspection} />
 
-      {showInspection && (
+      {/* The digits sit in the middle of the column and never move: what belongs above them hangs up from them, what belongs below hangs down (equal flexible halves), so a result, a penalty or a button row appearing at the stop cannot shift the number. */}
+      <div className="flex min-h-0 w-full flex-1 basis-0 flex-col items-center justify-end gap-6">
+        {showInspection && (
         // Past 15s the countdown is replaced by the penalty a start would now
         // earn — WCA: +2 until 17s, DNF after.
         <p className={cn("tabular-timer text-2xl font-medium", inspectionRemainingMs < 5000 || pendingPenalty !== "none" ? "text-danger" : "text-muted")}>
@@ -311,18 +320,24 @@ export function TimerView() {
           {EVENT_TAGS.find((t) => t.id === pendingEvent)?.label}
         </p>
       )}
+      </div>
       <TimerStage state={phase}>
         <p
           className={cn(
             "timer-digits font-bold transition-colors duration-100",
             "text-[19vw] leading-none sm:text-[9.5rem]",
+            // The finish: digits settle and one band of light crosses them (styles/moments.css).
+            phase === "stopped" && "moment-stop",
             timerStyle !== "glow" && `timer-digits--${timerStyle}`,
             PHASE_COLOR[phase],
           )}
+          data-text={phase === "stopped" ? formatTime(displayMs) : undefined}
+          data-gold={phase === "stopped" && goldFinish ? "true" : undefined}
         >
           {hideTimeWhileSolving && phase === "running" ? "solving" : formatTime(displayMs)}
         </p>
       </TimerStage>
+      <div className="flex min-h-0 w-full flex-1 basis-0 flex-col items-center justify-start gap-6">
       {(phase === "running" || phase === "stopped") && (
         <GhostPaceBar
           phase={phase}
@@ -376,6 +391,7 @@ export function TimerView() {
       )}
       {phase === "stopped" && <p className="text-muted-2 text-sm">{coarsePointer ? "touch for next scramble" : "space for next scramble"}</p>}
       {(phase === "idle" || phase === "stopped") && <LiveSessionCoach />}
+      </div>
     </div>
   );
 }

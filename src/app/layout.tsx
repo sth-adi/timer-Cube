@@ -8,6 +8,8 @@ import { ClientEnv } from "@/components/chrome/ClientEnv";
 import { UpdateToast } from "@/components/chrome/UpdateToast";
 import { MacPromptDialog } from "@/components/smartcube/MacPromptDialog";
 import { PAINT_SETTINGS_SCRIPT } from "@/lib/theme/paintScript";
+import { DEFAULT_THEME_COLOR, THEME_COLOR_SCRIPT } from "@/lib/theme/themeColor";
+import { ThemeColorSync } from "@/components/chrome/ThemeColorSync";
 import { AccountDataPrompt } from "@/components/chrome/AccountDataPrompt";
 
 const geistSans = Geist({
@@ -29,7 +31,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0b0f",
+  // The default theme's page background; the saved theme's colour replaces it before first paint (THEME_COLOR_SCRIPT) and ThemeColorSync follows changes.
+  themeColor: DEFAULT_THEME_COLOR,
   width: "device-width",
   initialScale: 1,
 };
@@ -45,6 +48,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: PAINT_SETTINGS_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <script dangerouslySetInnerHTML={{ __html: THEME_COLOR_SCRIPT }} />
+        <ThemeColorSync />
         <UsageTracker />
         {children}
         <FxLayer />

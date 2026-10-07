@@ -61,8 +61,10 @@ export function AlgorithmLibrary({ onStartReview }: { onStartReview: () => void 
     <div className="flex w-full max-w-2xl flex-col gap-3">
       <div className="card flex items-center justify-between rounded-xl p-4">
         <div>
-          <p className="text-sm font-medium">{due.length} due for review</p>
-          <p className="text-muted-2 text-xs">across {ALL_CASES_COUNT} PLL + OLL cases</p>
+          <p className="text-sm font-medium">{due.length === 0 ? "Nothing due right now" : `${due.length} due for review`}</p>
+          <p className="text-muted-2 text-xs">
+            {due.length === 0 ? "Cases you practice come back here when they're due" : `across ${ALL_CASES_COUNT} PLL + OLL cases`}
+          </p>
         </div>
         <button
           type="button"
@@ -80,6 +82,7 @@ export function AlgorithmLibrary({ onStartReview }: { onStartReview: () => void 
             key={g}
             type="button"
             onClick={() => setGroup(g)}
+            aria-pressed={group === g}
             className={cn(
               "rounded-full px-4 py-2 text-sm font-medium transition-colors",
               group === g ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",

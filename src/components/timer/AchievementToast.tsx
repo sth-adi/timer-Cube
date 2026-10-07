@@ -1,39 +1,42 @@
 "use client";
 
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { vibrate } from "@/lib/utils/haptics";
+import { MomentToast } from "./MomentToast";
+
+export const ACHIEVEMENT_TOAST_MS = 3200;
 
 export function AchievementToast() {
   const achievementToast = useSessionStore((s) => s.achievementToast);
   const clearAchievementToast = useSessionStore((s) => s.clearAchievementToast);
+  // A new best raised by the same save is announced first; the milestone follows it into the same
+  // spot instead of stacking over the recap (the splits and the Replay bar sit right behind it).
+  const pbShowing = useSessionStore((s) => s.lastPB !== null);
+  const shown = achievementToast !== null && !pbShowing;
 
   useEffect(() => {
-    if (!achievementToast) return;
+    if (!shown) return;
     vibrate([30, 40, 30, 40, 60]);
-    const t = setTimeout(() => clearAchievementToast(), 3200);
+    const t = setTimeout(() => clearAchievementToast(), ACHIEVEMENT_TOAST_MS);
     return () => clearTimeout(t);
-  }, [achievementToast, clearAchievementToast]);
+  }, [shown, achievementToast, clearAchievementToast]);
 
   return (
-    <div
-      className="pointer-events-none fixed inset-x-0 z-50 flex justify-center"
-      style={{ bottom: "calc(var(--nav-height) + var(--safe-bottom) + 72px)" }}
-    >
+    <div className="moment-toast-wrap">
       <AnimatePresence>
-        {achievementToast && (
-          <motion.div
+        {shown && achievementToast && (
+          <MomentToast
             key={achievementToast.toastId}
-            initial={{ opacity: 0, y: -16, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="fx-toast flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-4 py-2 text-sm font-medium text-accent shadow-lg backdrop-blur"
+            tone="accent"
+            icon={<span>{achievementToast.icon}</span>}
+            eyebrow="Milestone unlocked"
+            durationMs={ACHIEVEMENT_TOAST_MS}
+            spoken={`Milestone unlocked: ${achievementToast.label}`}
           >
-            <span className="text-base leading-none">{achievementToast.icon}</span>
-            Milestone unlocked: {achievementToast.label}
-          </motion.div>
+            <span className="moment-toast__label">{achievementToast.label}</span>
+          </MomentToast>
         )}
       </AnimatePresence>
     </div>

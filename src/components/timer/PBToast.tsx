@@ -1,60 +1,56 @@
 "use client";
 
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { formatTime } from "@/lib/utils/time";
 import { vibrate } from "@/lib/utils/haptics";
 import { playPBChime } from "@/lib/utils/sound";
-import { fireConfetti } from "@/lib/utils/confetti";
 import { fxImpact } from "@/lib/fx/fxBus";
+import { MomentToast } from "./MomentToast";
 
 const LABEL: Record<string, string> = {
-  single: "New personal best!",
-  ao5: "New best ao5!",
-  ao12: "New best ao12!",
+  single: "New personal best",
+  ao5: "New best ao5",
+  ao12: "New best ao12",
 };
+
+export const PB_TOAST_MS = 2800;
 
 export function PBToast() {
   const lastPB = useSessionStore((s) => s.lastPB);
   const clearPB = useSessionStore((s) => s.clearPB);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
-  const fxLevel = useSettingsStore((s) => s.fxLevel);
 
   useEffect(() => {
     if (!lastPB) return;
     vibrate(lastPB.kind === "single" ? [40, 60, 80] : 50);
     if (soundEnabled) playPBChime();
-    // "insane" celebrates through the FX layer (shockwave rings, sparks, shards, shake); lower levels keep the classic confetti.
-    if (lastPB.kind === "single") {
-      if (fxLevel === "insane") fxImpact("pb");
-      else fireConfetti();
-    }
-    const t = setTimeout(() => clearPB(), 2800);
+    // The FX layer decides how much a best gets: nothing when flat, a gold wash and a few sparks at
+    // Spicy, the full shockwave at Insane (and nothing that moves under reduced motion).
+    if (lastPB.kind === "single") fxImpact("pb");
+    const t = setTimeout(() => clearPB(), PB_TOAST_MS);
     return () => clearTimeout(t);
+    // Only a new best should fire this — flipping the sound setting while one is up must not replay it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastPB, clearPB]);
 
   return (
-    <div
-      className="pointer-events-none fixed inset-x-0 z-50 flex justify-center"
-      style={{ bottom: "calc(var(--nav-height) + var(--safe-bottom) + 16px)" }}
-    >
+    <div className="moment-toast-wrap">
       <AnimatePresence>
         {lastPB && (
-          <motion.div
+          <MomentToast
             key={lastPB.id}
-            initial={{ opacity: 0, y: -16, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="fx-toast fx-toast-gold flex items-center gap-2 rounded-full border border-warning/30 bg-warning/10 px-4 py-2 text-sm font-medium text-warning shadow-lg backdrop-blur"
+            tone="gold"
+            icon={<Trophy size={18} strokeWidth={2.4} />}
+            eyebrow={LABEL[lastPB.kind]}
+            durationMs={PB_TOAST_MS}
+            spoken={`${LABEL[lastPB.kind]}: ${formatTime(lastPB.ms)}`}
           >
-            <Trophy size={15} />
-            {LABEL[lastPB.kind]} {formatTime(lastPB.ms)}
-          </motion.div>
+            <span className="moment-toast__value">{formatTime(lastPB.ms)}</span>
+          </MomentToast>
         )}
       </AnimatePresence>
     </div>

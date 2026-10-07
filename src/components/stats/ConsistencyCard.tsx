@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { Solve } from "@/types";
 import { computeSessionStats } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
+import { StatTile } from "./StatTile";
 
 function pct(n: number, total: number): string {
   return total > 0 ? `${((n / total) * 100).toFixed(0)}%` : "—";
@@ -19,18 +20,9 @@ export function ConsistencyCard({ solves }: { solves: Solve[] }) {
 
   return (
     <div className="grid grid-cols-3 gap-1.5">
-      <div className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-2">Std dev</span>
-        <span className="tabular-timer text-base font-semibold">{stats.stdDev !== null ? formatTime(stats.stdDev) : "—"}</span>
-      </div>
-      <div className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-2">DNF rate</span>
-        <span className="tabular-timer text-base font-semibold">{pct(stats.dnfCount, stats.count)}</span>
-      </div>
-      <div className="flex flex-col gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-2">+2 rate</span>
-        <span className="tabular-timer text-base font-semibold">{pct(plus2Count, stats.count)}</span>
-      </div>
+      <StatTile label="Std dev" value={stats.stdDev !== null ? formatTime(stats.stdDev) : "—"} />
+      <StatTile label="DNF rate" value={pct(stats.dnfCount, stats.count)} />
+      <StatTile label="+2 rate" value={pct(plus2Count, stats.count)} />
     </div>
   );
 }

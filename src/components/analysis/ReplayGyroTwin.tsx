@@ -2,6 +2,7 @@
 
 import { GYRO_TWIN_CAMERA } from "@/components/lab/GyroTwin";
 import { TurnCube } from "@/components/lab/TurnCube";
+import { TwinStage } from "@/components/lab/TwinStage";
 import { parseTurn } from "@/lib/cube-engine/stickerTurns";
 import { cssMatrix3d, quatToMat } from "@/lib/gyro/orientation";
 import { solveMsAtPosition, streamQuatAt } from "@/lib/gyro/replayGyro";
@@ -50,7 +51,7 @@ export function ReplayGyroTwin({
   if (!q || !facelets) return null;
   return (
     <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-panel/60 p-1 backdrop-blur-sm" aria-hidden="true" data-testid="replay-gyro-twin">
-      <div className="flex items-center justify-center" style={{ width: size * 1.7, height: size * 1.7, perspective: size * 7 }}>
+      <TwinStage size={size} box={1.7} drop={0.8}>
         <div
           className="relative"
           style={{
@@ -58,11 +59,11 @@ export function ReplayGyroTwin({
             height: size,
             transformStyle: "preserve-3d",
             transform: `${GYRO_TWIN_CAMERA} ${cssMatrix3d(quatToMat(q))}`,
-                      }}
+          }}
         >
           <TurnCube facelets={facelets} turning={turning} size={size} />
         </div>
-      </div>
+      </TwinStage>
       <span className="text-[9px] font-medium uppercase tracking-wide text-muted-2">Gyro</span>
     </div>
   );

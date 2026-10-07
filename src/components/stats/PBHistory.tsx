@@ -27,7 +27,7 @@ export function PBHistory({ solves }: { solves: Solve[] }) {
             aria-hidden
             className={cn(
               "absolute -left-5 flex h-3.5 w-3.5 items-center justify-center rounded-full ring-2 ring-bg-panel",
-              i === 0 ? "bg-warning text-black" : "bg-bg-panel-2 text-muted-2",
+              i === 0 ? "bg-warning text-bg-panel" : "bg-muted-2/50 text-muted-2",
             )}
           >
             {i === 0 && <Trophy size={8} />}

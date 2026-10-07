@@ -9,6 +9,8 @@ import { computeSessionStats, normalSolves, type SessionStats } from "@/lib/stat
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import { useModalLayer } from "@/hooks/useModalLayer";
+import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
+import { skeletonWidth } from "@/components/ui/skeletonWidths";
 
 const ROWS: { key: keyof SessionStats; label: string; lowerIsBetter: boolean }[] = [
   { key: "ao5", label: "ao5", lowerIsBetter: true },
@@ -47,6 +49,26 @@ function SessionPicker({
         </option>
       ))}
     </select>
+  );
+}
+
+/** The comparison's own footprint (names row, then one row per stat) while the two sessions' solves are read. */
+function CompareSkeleton() {
+  return (
+    <SkeletonGroup label="Loading comparison" delayMs={80} className="space-y-1">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 pb-1">
+        <Skeleton className="h-2.5 w-16" />
+        <span />
+        <Skeleton className="ml-auto h-2.5 w-16" />
+      </div>
+      {ROWS.map((row, i) => (
+        <div key={row.key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 py-1.5">
+          <Skeleton className="h-4" style={{ width: skeletonWidth(i, 35, 55) }} />
+          <span className="w-8 text-center text-[11px] text-muted-2">{row.label}</span>
+          <Skeleton className="ml-auto h-4" style={{ width: skeletonWidth(i + 2, 35, 55) }} />
+        </div>
+      ))}
+    </SkeletonGroup>
   );
 }
 
@@ -139,7 +161,7 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
         {leftId === rightId ? (
           <p className="py-6 text-center text-xs text-muted">Pick two different sessions to compare.</p>
         ) : !leftStats || !rightStats ? (
-          <p className="py-6 text-center text-xs text-muted">Loading…</p>
+          <CompareSkeleton />
         ) : (
           <div className="space-y-1">
             {!sameEvent && (

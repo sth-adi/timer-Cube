@@ -1,0 +1,176 @@
+/*
+ * The "stage" around the big replay cube (see components/lab/CubeStage.tsx) and the scrubber
+ * of the replay player. Everything is scoped to the .cube-stage / .replay-* class names, and
+ * only transform/opacity ever animate. Shared cube recipe (same as the Gyro Twin): a soft
+ * ground shadow squashed to ~12% height just under the cube, a drop-shadow on the cube itself
+ * and a very faint accent glow behind it.
+ */
+
+.cube-stage {
+  position: relative;
+  isolation: isolate;
+  --stage-shadow: 0.38;
+  --stage-drop: 0.45;
+}
+:root[data-theme="paper"] .cube-stage {
+  --stage-shadow: 0.2;
+  --stage-drop: 0.26;
+}
+
+/* Faint accent glow, behind everything. */
+.cube-stage::before {
+  content: "";
+  position: absolute;
+  inset: 4% 6% 10%;
+  z-index: -2;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 14%, transparent), transparent);
+}
+
+/* Ground shadow: an ellipse ~12% of the stage's height, a few px under the cube. */
+.cube-stage::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 1%;
+  width: 62%;
+  height: 12%;
+  z-index: -1;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgb(0 0 0 / var(--stage-shadow)), transparent);
+}
+
+.cube-stage__cube {
+  filter: drop-shadow(0 10px 18px rgb(0 0 0 / var(--stage-drop)));
+}
+
+/* FX off stays flat and cheap: no glow, no filter on the live canvas; just the plain ground shadow. */
+:root[data-fx-level="off"] .cube-stage::before {
+  display: none;
+}
+:root[data-fx-level="off"] .cube-stage__cube {
+  filter: none;
+}
+
+/* The placeholder / failure cube, shown until cubing.js has drawn the real one. */
+.cube-stage__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.cube-stage__fallback svg {
+  width: min(52%, 9.5rem);
+  height: auto;
+  filter: drop-shadow(0 8px 12px rgb(0 0 0 / var(--stage-drop)));
+}
+.cube-stage[data-state="loading"] .cube-stage__fallback svg {
+  opacity: 0.55;
+  animation: cube-stage-pulse 1.6s ease-in-out infinite;
+}
+.cube-stage[data-state="failed"] .cube-stage__fallback svg {
+  opacity: 0.4;
+  filter: grayscale(0.6) drop-shadow(0 8px 12px rgb(0 0 0 / var(--stage-drop)));
+}
+@keyframes cube-stage-pulse {
+  50% {
+    opacity: 0.85;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cube-stage[data-state="loading"] .cube-stage__fallback svg {
+    animation: none;
+  }
+}
+:root[data-fx-level="off"] .cube-stage__fallback svg {
+  filter: none;
+  animation: none !important;
+}
+
+/* Skeleton bars that hold the controls' place while the player loads. */
+.replay-skel {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+/* --- Scrubber: a slim track with an accent fill and a round thumb. --p is the fill's end, set inline. --- */
+.replay-scrub {
+  --p: 0px;
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.replay-scrub:focus {
+  outline: none;
+}
+.replay-scrub::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--p), color-mix(in srgb, var(--foreground) 16%, transparent) var(--p));
+}
+.replay-scrub::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+.replay-scrub::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.replay-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-panel);
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.45);
+  transition: transform 0.12s ease;
+}
+.replay-scrub::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-panel);
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.45);
+  transition: transform 0.12s ease;
+}
+.replay-scrub:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+.replay-scrub:active::-moz-range-thumb {
+  transform: scale(1.25);
+}
+.replay-scrub:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.replay-scrub:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .replay-scrub::-webkit-slider-thumb,
+  .replay-scrub::-moz-range-thumb {
+    transition: none;
+  }
+}
+:root[data-fx-level="off"] .replay-scrub::-webkit-slider-thumb,
+:root[data-fx-level="off"] .replay-scrub::-moz-range-thumb {
+  box-shadow: none;
+  transition: none;
+}

@@ -94,7 +94,7 @@ export default function SolvesPage() {
       <AppBootstrap />
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <Link href="/" className="hit-y flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <TimerIcon size={16} className="text-accent" />
           Cube
         </Link>
@@ -151,7 +151,7 @@ export default function SolvesPage() {
           </div>
 
           {presentTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 px-1">
+            <div className="flex animate-fade-in-up flex-wrap gap-1.5 px-1">
               <button
                 type="button"
                 onClick={() => setSelected(null)}
@@ -184,7 +184,7 @@ export default function SolvesPage() {
           )}
 
           {smart && (
-            <div className="flex flex-wrap items-center gap-1.5 px-1" aria-label="Filter and sort solves">
+            <div className="flex animate-fade-in-up flex-wrap items-center gap-1.5 px-1" aria-label="Filter and sort solves">
               <PillSelect label="Sort" value={sort} onChange={(v) => setSort(v as SolveSort)} options={SORTS} />
               {cubes.length > 0 && (
                 <PillSelect

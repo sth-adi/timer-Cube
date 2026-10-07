@@ -20,14 +20,19 @@ function focusablesIn(root: HTMLElement): HTMLElement[] {
  * `ref` should point at the dialog element, which gets tabIndex={-1} so it can
  * take focus itself. Escape is skipped when something inside already handled
  * it (defaultPrevented), and only the topmost open layer answers it.
+ *
+ * `active` (default true) lets a sheet that plays an exit animation hand the
+ * keyboard back the moment it starts closing, while it is still mounted:
+ * pass false then and the layer closes and focus is restored right away.
  */
-export function useModalLayer(ref: RefObject<HTMLElement | null>, onClose: () => void): void {
+export function useModalLayer(ref: RefObject<HTMLElement | null>, onClose: () => void, active: boolean = true): void {
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
+    if (!active) return;
     const root = ref.current;
     const layer = openModalLayer();
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -70,5 +75,5 @@ export function useModalLayer(ref: RefObject<HTMLElement | null>, onClose: () =>
       layer.close();
       if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
-  }, [ref]);
+  }, [ref, active]);
 }

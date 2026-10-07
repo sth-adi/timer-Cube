@@ -56,7 +56,7 @@ export function ConnectionPill() {
   if (!online) {
     return (
       <div
-        className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
+        className="chrome-pill bg-warning/15 text-warning"
         title={
           userId
             ? "No connection. Everything still works and is saved on this device; solves sync to your account when you're back online."
@@ -72,7 +72,7 @@ export function ConnectionPill() {
   }
   if (userId && status === "syncing" && pending > 0) {
     return (
-      <div className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-1 text-[11px] font-medium text-accent" role="status">
+      <div className="chrome-pill bg-accent-soft text-accent" role="status">
         <CloudUpload size={12} className="shrink-0 animate-pulse" />
         <span className="tabular-nums">Syncing {pending}</span>
       </div>
@@ -84,7 +84,7 @@ export function ConnectionPill() {
     <button
       type="button"
       onClick={() => void syncNow()}
-      className="hit-y flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
+      className="chrome-pill hit-y bg-warning/15 text-warning"
       title={title}
       aria-label={`${label}. ${title}`}
     >
@@ -97,7 +97,7 @@ export function ConnectionPill() {
       <button
         type="button"
         onClick={openOwnerPrompt}
-        className="hit-y flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning"
+        className="chrome-pill hit-y bg-warning/15 text-warning"
         title="This device has solves from another account, so sync is paused. Tap to choose what to do with them."
         aria-label="Sync paused. This device has solves from another account; tap to choose what to do with them."
       >

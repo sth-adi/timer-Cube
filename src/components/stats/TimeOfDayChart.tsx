@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Solve } from "@/types";
 import { computeHourOfDay } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import { slotIndex } from "./chartMath";
+import { useDismissOutside } from "./chartKit";
+import "@/styles/stats-charts.css";
 
 // Collapse into 6 four-hour blocks — 24 individual bars is too noisy at this size.
 const BLOCKS = [
@@ -16,9 +19,15 @@ const BLOCKS = [
   { label: "8–12a", hours: [20, 21, 22, 23] },
 ];
 
+const BAR_AREA = 84;
+const BAR_MAX_W = 28;
+
 export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
-  const [hover, setHover] = useState<number | null>(null);
+  const [active, setActive] = useState<number | null>(null);
+  const [el, setEl] = useState<HTMLElement | null>(null);
   const hourly = useMemo(() => computeHourOfDay(solves), [solves]);
+  const dismiss = useCallback(() => setActive(null), []);
+  useDismissOutside(el, active !== null, dismiss);
 
   const blocks = BLOCKS.map((b) => {
     let sum = 0;
@@ -42,45 +51,75 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
   const best = Math.min(...means);
   const worst = Math.max(...means);
   const span = worst - best || 1;
+  const bestBlock = blocks.find((b) => b.mean === best)!;
+  const shown = active !== null ? blocks[active] : null;
+
+  const pick = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setActive(slotIndex(e.clientX - rect.left, rect.width, blocks.length));
+  };
 
   return (
-    <div className="flex h-24 items-end gap-2">
-      {blocks.map((b, i) => {
-        const heightPct = b.mean === null ? 0 : 22 + (1 - (b.mean - best) / span) * 78;
-        const isBest = b.mean === best;
-        return (
-          <div
-            key={b.label}
-            role="img"
-            aria-label={b.mean === null ? `${b.label}: no solves` : `${b.label}: ${formatTime(b.mean)} average over ${b.count} solve${b.count === 1 ? "" : "s"}`}
-            title={b.mean === null ? `${b.label}: no solves` : `${b.label}: ${formatTime(b.mean)} avg · ${b.count}`}
-            className="flex flex-1 flex-col items-center gap-1"
-            onPointerEnter={() => setHover(i)}
-            onClick={() => setHover(i)}
-            onMouseLeave={() => setHover((h) => (h === i ? null : h))}
-          >
-            <div className="relative flex h-16 w-full items-end">
+    <div ref={setEl}>
+      <div
+        className="flex touch-pan-y select-none items-end border-b border-border-strong"
+        onPointerDown={pick}
+        onPointerMove={(e) => {
+          if (e.pointerType === "mouse" || e.buttons > 0 || e.pointerType === "touch") pick(e);
+        }}
+        onPointerLeave={(e) => {
+          if (e.pointerType === "mouse") setActive(null);
+        }}
+      >
+        {blocks.map((b, i) => {
+          const isBest = b.mean === best;
+          const h = b.mean === null ? 2 : Math.round(BAR_AREA * (0.22 + (1 - (b.mean - best) / span) * 0.78));
+          return (
+            <div
+              key={b.label}
+              role="img"
+              aria-label={b.mean === null ? `${b.label}: no solves` : `${b.label}: ${formatTime(b.mean)} average over ${b.count} solve${b.count === 1 ? "" : "s"}`}
+              className="flex flex-1 flex-col items-center justify-end gap-1 px-px"
+            >
+              <span className={cn("tabular-timer text-[11px] leading-none", isBest ? "font-semibold text-foreground" : "text-muted-2")}>
+                {b.mean === null ? "—" : formatTime(b.mean)}
+              </span>
+              {/* one series, one colour: the fastest block is the solid accent, the rest are the same hue stepped back */}
               <div
-                className="w-full rounded-t-[4px] transition-opacity"
+                className={cn("sc-bar sc-rise w-full rounded-t-[4px]", active !== null && active !== i && "sc-dim")}
                 style={{
-                  height: b.mean === null ? "2px" : `${heightPct}%`,
-                  background: b.mean === null ? "var(--border)" : isBest ? "var(--accent)" : "var(--accent)",
-                  opacity: b.mean === null ? 1 : isBest || hover === i ? 1 : 0.38,
+                  maxWidth: BAR_MAX_W,
+                  height: h,
+                  background: b.mean === null ? "var(--border-strong)" : isBest ? "var(--accent)" : "color-mix(in srgb, var(--accent) 62%, var(--bg-panel))",
+                  ["--sc-delay" as string]: `${i * 40}ms`,
                 }}
               />
-              {isBest && hover !== i && b.mean !== null && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 whitespace-nowrap text-[11px] font-semibold text-accent tabular-timer">{formatTime(b.mean)}</span>
-              )}
-              {hover === i && b.mean !== null && (
-                <div className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-bg-panel-2 border border-border-strong px-2 py-1 text-[11px] tabular-timer shadow-lg">
-                  {formatTime(b.mean)} avg · {b.count}
-                </div>
-              )}
             </div>
-            <span className={cn("whitespace-nowrap text-[11px]", isBest ? "font-semibold text-foreground" : "text-muted-2")}>{b.label}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      <div className="flex">
+        {blocks.map((b) => (
+          <span key={b.label} className={cn("flex-1 whitespace-nowrap pt-1.5 text-center text-[11px]", b.mean === best ? "font-semibold text-foreground" : "text-muted-2")}>
+            {b.label}
+          </span>
+        ))}
+      </div>
+      <p className="tabular-timer mt-2 min-h-4 text-[11px] text-muted-2">
+        {shown ? (
+          shown.mean === null ? (
+            `${shown.label}: no solves yet`
+          ) : (
+            <>
+              <span className="whitespace-nowrap font-semibold text-foreground">{shown.label}</span> · {formatTime(shown.mean)} average · {shown.count} solve{shown.count === 1 ? "" : "s"}
+            </>
+          )
+        ) : (
+          <>
+            Taller bar = faster · quickest at <span className="whitespace-nowrap font-medium text-foreground">{bestBlock.label}</span>
+          </>
+        )}
+      </p>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { useMyAlgsStore } from "@/lib/store/myAlgsStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { peekWeakCases, solvesRevision, weakCasesFor, type WeakCases } from "@/components/timer/weakCases";
 import { cn } from "@/lib/utils/cn";
+import "@/styles/moments.css";
 
 /** Runs `fn` when the browser is idle (or soon after, where there is no idle callback), and returns how to cancel it. */
 function whenIdle(fn: () => void): () => void {
@@ -50,7 +51,7 @@ function CaseRow({ group, name, weak, chosen }: { group: "OLL" | "PLL"; name: st
       // Always in the layout (a fixed-height row), so a case appearing never moves anything; only its opacity changes.
       className={cn(
         "flex h-7 w-full items-center gap-1.5 overflow-hidden rounded-lg px-2 text-[11px] font-medium transition-opacity duration-300 motion-reduce:transition-none",
-        name ? "bg-accent-soft text-accent opacity-100" : "opacity-0",
+        name ? "moment-glint bg-accent-soft text-accent opacity-100 ring-1 ring-inset ring-accent/20" : "opacity-0",
       )}
       aria-hidden={name ? undefined : true}
       data-testid={`case-badge-${group.toLowerCase()}`}

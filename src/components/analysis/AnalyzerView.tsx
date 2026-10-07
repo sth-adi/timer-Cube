@@ -11,6 +11,7 @@ import { SolveReplay } from "./SolveReplay";
 import { PhaseBreakdownCards } from "./PhaseBreakdown";
 import { FindingsList } from "./FindingsList";
 import { cn } from "@/lib/utils/cn";
+import { AnalyzerEmptyState, AnalyzerResultSkeleton } from "./AnalyzerSkeleton";
 
 export function AnalyzerView() {
   const { scramble, reconstruction, result, errors, loading, solveId, moveTimestamps, timeMs, setScramble, setReconstruction, setTimeMs, run } =
@@ -146,6 +147,9 @@ export function AnalyzerView() {
           </ul>
         </div>
       )}
+
+      {loading && !result && <AnalyzerResultSkeleton />}
+      {!loading && !result && errors.length === 0 && <AnalyzerEmptyState />}
 
       {result && (
         <>

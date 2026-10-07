@@ -2,12 +2,15 @@
 
 import { useMemo } from "react";
 import { scrambleToFacelets, FACELET_COLORS } from "@/lib/cube-engine/facelets";
+import "@/styles/twin.css";
+import { cn } from "@/lib/utils/cn";
 
 // Classic unfolded cross net: U above F, D below F, L-F-R-B in a row.
 // faceOrigin gives the (col, row) of each face's top-left sticker in a
 // 12(col) x 9(row) grid; face letters index into the facelet string in
 // blocks of 9 (U,R,F,D,L,B), each read row-major.
 const FACE_BLOCK_START: Record<string, number> = { U: 0, R: 9, F: 18, D: 27, L: 36, B: 45 };
+const FACE_ORDER = Object.keys(FACE_BLOCK_START);
 const FACE_ORIGIN: Record<string, { col: number; row: number }> = {
   U: { col: 3, row: 0 },
   L: { col: 0, row: 3 },
@@ -71,34 +74,38 @@ export function FaceletNet({
 }) {
   const stickers = useMemo(() => buildStickers(facelets), [facelets]);
 
+  // Like the Gyro Twin, each face is a black plate with rounded, softly glossed stickers inset in it
+  // (see styles/twin.css), so the net and the 3D cube read as the same object.
   return (
-    <div
-      className={className}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(12, 1fr)",
-        gridTemplateRows: "repeat(9, 1fr)",
-        gap: "2px",
-        aspectRatio: "12 / 9",
-        maxWidth: 360,
-        margin: "0 auto",
-      }}
-    >
-      {stickers.map((s) => (
+    <div className={cn("net-grid", className)}>
+      {FACE_ORDER.map((face) => (
         <div
-          key={s.key}
+          key={face}
+          className="net-plate"
           style={{
-            gridColumn: s.col + 1,
-            gridRow: s.row + 1,
-            background: s.color,
-            borderRadius: 2,
-            border: "1px solid rgba(0,0,0,0.35)",
-            opacity: dimFaces?.includes(s.face) ? 0.25 : 1,
-            outline: ringFacelets?.includes(s.index) ? "2px solid var(--danger)" : undefined,
-            outlineOffset: 1,
-            zIndex: ringFacelets?.includes(s.index) ? 1 : undefined,
+            gridColumn: `${FACE_ORIGIN[face].col + 1} / span 3`,
+            gridRow: `${FACE_ORIGIN[face].row + 1} / span 3`,
+            opacity: dimFaces?.includes(face) ? 0.25 : 1,
           }}
-        />
+        >
+          {stickers
+            .filter((s) => s.face === face)
+            .map((s) => {
+              const ringed = ringFacelets?.includes(s.index);
+              return (
+                <div
+                  key={s.key}
+                  className="net-sticker"
+                  style={{
+                    backgroundColor: s.color,
+                    outline: ringed ? "2px solid var(--danger)" : undefined,
+                    outlineOffset: 1,
+                    zIndex: ringed ? 1 : undefined,
+                  }}
+                />
+              );
+            })}
+        </div>
       ))}
     </div>
   );

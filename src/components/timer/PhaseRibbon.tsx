@@ -1,8 +1,10 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
-import { PHASE_LABELS_4, isSlow, ribbonSegments, segmentFill } from "@/components/timer/phaseRibbonMath";
+import { PHASE_LABELS_4, fillOffsetPct, isSlow, ribbonSegments, segmentFill, segmentState } from "@/components/timer/phaseRibbonMath";
 import { cn } from "@/lib/utils/cn";
+import "@/styles/live-solve.css";
 
 const RIBBON_TINT = [
   { solid: "bg-accent", soft: "bg-accent/20" },
@@ -24,6 +26,10 @@ const PAIR_NOTCHES = [12.5, 37.5, 62.5, 87.5] as const;
  * the same line the split chips use. F2L carries four notches that light as pairs go in, and every
  * segment is labelled with its letter (plus a tick mark when done, a star for a new best) so the
  * strip never relies on colour alone. The height is fixed whatever the values do.
+ *
+ * Motion is transform-only (styles/live-solve.css): the fill slides rather than resizes, the phase
+ * being timed carries a bright leading edge, and a phase boundary landing makes that segment swell
+ * and settle. `entrance` (the recap) fills the strip in once, left to right, instead.
  */
 export function PhaseRibbon({
   durations,
@@ -33,6 +39,7 @@ export function PhaseRibbon({
   bests,
   f2lPairCount,
   gold,
+  entrance = false,
 }: {
   durations: (number | null)[];
   currentPhaseIndex: number;
@@ -43,6 +50,8 @@ export function PhaseRibbon({
   f2lPairCount: number;
   /** Steps that just set a new best — marked with a star. */
   gold: readonly boolean[];
+  /** Fill the strip in once on mount (the recap) rather than appearing already full. */
+  entrance?: boolean;
 }) {
   const segments = ribbonSegments(
     PHASE_LABELS_4.map((_, i) => baseline?.phases[i]?.medianMs ?? null),
@@ -52,7 +61,7 @@ export function PhaseRibbon({
   const valueText = currentPhaseIndex >= 0 && currentPhaseIndex < 4 ? `${PHASE_LABELS_4[currentPhaseIndex]} in progress, ${doneCount} of 4 done` : "All four phases done";
   return (
     <div
-      className="flex w-full max-w-xs gap-[3px]"
+      className={cn("phase-ribbon flex w-full max-w-xs gap-[3px]", entrance && "phase-ribbon--entrance")}
       role="progressbar"
       aria-label="Solve progress"
       aria-valuemin={0}
@@ -63,19 +72,31 @@ export function PhaseRibbon({
       {PHASE_LABELS_4.map((label, i) => {
         const seg = segments[i];
         const doneMs = durations[i];
-        const done = doneMs !== null;
-        const current = i === currentPhaseIndex && !done;
-        const ms = done ? doneMs : current ? (liveCurrentMs ?? 0) : 0;
+        const state = segmentState(doneMs, i, currentPhaseIndex);
+        const done = state === "done";
+        const current = state === "current";
+        const ms = done ? (doneMs ?? 0) : current ? (liveCurrentMs ?? 0) : 0;
         const fill = done || current ? segmentFill(ms, seg) : 0;
         const slow = (done || current) && isSlow(ms, seg);
         const tint = RIBBON_TINT[i];
         return (
-          <div key={label} className="flex min-w-0 flex-col gap-1" style={{ flexGrow: seg.spanMs, flexBasis: 0 }} data-slow={slow || undefined} title={label}>
-            <div className={cn("relative h-2 overflow-hidden rounded-full", tint.soft, current && "ring-1 ring-foreground/15")}>
+          <div
+            key={label}
+            className="phase-ribbon-seg flex min-w-0 flex-col gap-1.5"
+            style={{ flexGrow: seg.spanMs, flexBasis: 0, "--ribbon-i": i } as CSSProperties}
+            data-slow={slow || undefined}
+            data-done={done || undefined}
+            data-current={current || undefined}
+            title={label}
+          >
+            <div className={cn("phase-ribbon-track relative h-2.5 overflow-hidden rounded-full", tint.soft)}>
               <div
-                className={cn("h-full rounded-full transition-[width] duration-200 ease-out motion-reduce:transition-none", slow ? "bg-warning" : tint.solid, !done && !current && "opacity-0")}
-                style={{ width: `${fill}%` }}
+                className={cn("phase-ribbon-fill absolute inset-0 rounded-full", slow ? "bg-warning" : tint.solid)}
+                style={{ transform: `translate3d(${fillOffsetPct(fill)}%,0,0)` }}
               />
+              {current && fill > 0.5 && (
+                <div aria-hidden className="phase-ribbon-head absolute inset-0" style={{ transform: `translate3d(${fillOffsetPct(fill) + 100}%,0,0)` }} />
+              )}
               {seg.tickPct !== null && (
                 <span
                   aria-hidden
@@ -90,19 +111,22 @@ export function PhaseRibbon({
                     key={p}
                     aria-hidden
                     data-lit={f2lPairCount > k || undefined}
-                    className={cn("absolute top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full", f2lPairCount > k ? "bg-foreground" : "bg-foreground/30")}
+                    className={cn("phase-ribbon-notch absolute top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full", f2lPairCount > k ? "bg-foreground" : "bg-foreground/30")}
                     style={{ left: `${p}%` }}
                   />
                 ))}
             </div>
             <span
               className={cn(
-                "flex items-center justify-center gap-0.5 text-[10px] font-semibold uppercase leading-none tracking-wider",
+                "phase-ribbon-label flex items-center justify-center gap-0.5 text-[11px] font-semibold uppercase leading-none tracking-wider",
                 gold[i] ? "text-warning" : slow ? "text-warning" : current ? "text-foreground" : done ? "text-muted" : "text-muted-2",
               )}
             >
-              <span aria-hidden>{gold[i] ? "★" : done ? "✓" : ""}</span>
-              <span aria-hidden>{PHASE_LETTER[i]}</span>
+              {/* The letter stays dead centre; the mark hangs off its left so nothing shifts when a phase lands. */}
+              <span aria-hidden className="relative">
+                {(gold[i] || done) && <span className="phase-ribbon-mark absolute right-full top-1/2 mr-[3px] -translate-y-1/2">{gold[i] ? "★" : "✓"}</span>}
+                {PHASE_LETTER[i]}
+              </span>
               <span className="sr-only">
                 {label}
                 {done ? ", done" : current ? ", in progress" : ""}

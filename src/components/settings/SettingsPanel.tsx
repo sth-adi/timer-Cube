@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 import { Download, Upload, X } from "lucide-react";
 import { BackupPanel } from "./BackupPanel";
 import { SmartCubeSettings } from "./SmartCubeSettings";
+import { HapticsSettings } from "./HapticsSettings";
 import { BACKGROUND_STYLES, FX_LEVELS, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
@@ -15,6 +16,8 @@ import { AccountPanel } from "./AccountPanel";
 import { OfflinePanel } from "./OfflinePanel";
 import { cn } from "@/lib/utils/cn";
 import { useModalLayer } from "@/hooks/useModalLayer";
+import { useSheetDrag } from "@/components/motion";
+import "@/styles/motion.css";
 
 export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -44,11 +47,17 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
   );
 }
 
-export function SettingsPanel({ onClose }: { onClose: () => void }) {
+/**
+ * `closing` is set by the parent while the exit animation plays (it keeps the panel mounted until then, see
+ * components/motion/usePresence): the keyboard and focus are handed back at once and the panel stops taking taps.
+ */
+export function SettingsPanel({ onClose, closing = false }: { onClose: () => void; closing?: boolean }) {
   // Dialog behaviour: timer keys stand down while open, Esc closes, focus moves in and is restored, Tab stays inside.
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  useModalLayer(dialogRef, onClose);
+  useModalLayer(dialogRef, onClose, !closing);
+  const handleDrag = useSheetDrag(dialogRef, onClose);
+  const motion = closing ? "exit" : "enter";
   const practiceMode = useScrambleStore((s) => s.practiceMode);
   const setPracticeMode = useScrambleStore((s) => s.setPracticeMode);
   const practiceLength = useScrambleStore((s) => s.practiceLength);
@@ -117,7 +126,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="mo-overlay fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" data-mo={motion} onClick={onClose}>
+      <div aria-hidden="true" className="mo-backdrop absolute inset-0 bg-black/50" data-mo={motion} />
       <div
         ref={dialogRef}
         role="dialog"
@@ -125,12 +135,15 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] supports-[height:1dvh]:max-h-[88dvh] overflow-y-auto",
-          "sm:max-w-sm sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
+          "mo-sheet glass-panel relative w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] max-h-[88vh] supports-[height:1dvh]:max-h-[88dvh] overflow-y-auto",
+          "sm:max-w-sm sm:rounded-2xl sm:pb-5",
         )}
+        data-mo={motion}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
+        <div {...handleDrag} className="-mx-5 -mt-5 mb-0 flex touch-none justify-center pt-5 pb-3 sm:hidden">
+          <span className="h-1 w-9 rounded-full bg-border-strong" />
+        </div>
         <div className="mb-3 flex items-center justify-between">
           <h2 id={titleId} className="text-base font-semibold">Settings</h2>
           <button
@@ -243,6 +256,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <SmartCubeSettings />
+        <HapticsSettings />
 
         <div className="mt-4 border-t border-border pt-3">
           <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Phase splits</p>

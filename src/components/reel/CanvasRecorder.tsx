@@ -5,6 +5,7 @@ import { Circle, Download, Loader2, Music, Play, Share2, Square, VolumeX } from 
 import { REEL_H, REEL_W } from "@/lib/reel/renderFrame";
 import type { SoundCue } from "@/lib/reel/highlights";
 import { newAudioContext, playSoundtrack } from "@/lib/reel/soundtrack";
+import { readReelTheme } from "@/lib/reel/theme";
 import { cn } from "@/lib/utils/cn";
 
 const MIME_CANDIDATES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
@@ -14,10 +15,9 @@ function pickMime(): string | null {
   return MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m)) ?? null;
 }
 
+/** The theme's accent, lifted if need be so it reads on the reel's dark card (Paper's violet is too deep as it is). */
 export function themeAccent(): string {
-  if (typeof document === "undefined") return "#7c5cff";
-  const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
-  return /^#[0-9a-f]{6}$/i.test(v) ? v : "#7c5cff";
+  return readReelTheme().accent;
 }
 
 type Mode = "idle" | "playing" | "recording";
@@ -45,6 +45,7 @@ interface CanvasRecorderProps {
  */
 export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, fileName, ariaLabel }: CanvasRecorderProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const scrubRef = useRef<HTMLInputElement | null>(null);
   const rafRef = useRef(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
@@ -59,6 +60,8 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
     (t: number) => {
       const ctx = canvasRef.current?.getContext("2d");
       if (ctx) draw(ctx, t);
+      // The scrubber follows the clock directly (no React render per frame).
+      if (scrubRef.current) scrubRef.current.value = String(Math.round(t));
     },
     [draw],
   );
@@ -162,14 +165,31 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
   };
 
   const busy = mode !== "idle";
+  // Dragging the scrubber shows any moment of the reel (idle only — during playback it just follows the clock).
+  const scrub = (v: number) => {
+    cancelAnimationFrame(rafRef.current);
+    paint(Math.min(toT, Math.max(fromT, v)));
+  };
   return (
     <div className="flex flex-col items-center gap-3">
       <canvas
         ref={canvasRef}
         width={REEL_W}
         height={REEL_H}
-        className="w-full max-w-sm rounded-2xl shadow-2xl ring-1 ring-white/10"
+        className="w-full max-w-sm rounded-2xl shadow-2xl ring-1 ring-[var(--border-strong)]"
         aria-label={ariaLabel ?? title}
+      />
+      <input
+        ref={scrubRef}
+        type="range"
+        min={fromT}
+        max={toT}
+        step={1}
+        defaultValue={posterT}
+        disabled={busy}
+        onChange={(e) => scrub(Number(e.target.value))}
+        aria-label="Scrub reel"
+        className="h-5 w-full max-w-sm cursor-pointer accent-accent disabled:cursor-default disabled:opacity-60"
       />
       <div className="flex flex-wrap items-center justify-center gap-2">
         {busy ? (

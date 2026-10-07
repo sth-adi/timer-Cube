@@ -38,6 +38,8 @@ import { useSettingsStore, type TimerMode } from "@/lib/store/settingsStore";
 import { isModalOpen } from "@/lib/store/modalBus";
 import { getFxPhase } from "@/lib/fx/fxBus";
 import { cn } from "@/lib/utils/cn";
+import { usePresence, useTabMotion } from "@/components/motion";
+import "@/styles/motion.css";
 
 /**
  * The Timer tab's mode, remembered across launches in settingsStore. The
@@ -53,6 +55,10 @@ function useTimerMode(): TimerMode {
     () => "keyboard",
   );
 }
+
+/** Left-to-right order of the in-page tabs, which decides which way a pane slides in. */
+const PANE_ORDER = ["timer", "trainer", "analyze", "stats"] as const;
+type PaneId = (typeof PANE_ORDER)[number];
 
 export default function Home() {
   return (
@@ -124,6 +130,14 @@ function HomeInner() {
   );
 
   const mainPaneActive = tab === "timer" || tab === "trainer" || tab === "analyze";
+
+  // Short slide+fade when the visible screen changes. Timer <-> Stats swaps the main pane and the aside, which only
+  // happens on phones (beside each other on desktop, where the main pane keeps showing the Timer), so that change
+  // animates below the lg breakpoint only.
+  const paneMotion = useTabMotion<PaneId>(tab === "solves" ? "timer" : tab, PANE_ORDER);
+  const mobileOnlyMotion = (tab === "stats" && paneMotion.from === "timer") || (tab === "timer" && paneMotion.from === "stats");
+  const asideMotion = useTabMotion<PaneId>(mainPaneActive ? "timer" : "stats", PANE_ORDER);
+  const settingsSheet = usePresence(settingsOpen);
 
   // Global nav shortcuts: 1-5 jump straight to a tab, "?" toggles the
   // shortcuts reference in Settings — on top of the timer's own Space/Esc/
@@ -262,6 +276,8 @@ function HomeInner() {
 
         <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 px-3 sm:px-4 lg:grid-cols-[1fr_360px] lg:pb-4">
           <div
+            data-mo-pane={paneMotion.motion}
+            data-mo-mobile-only={mobileOnlyMotion ? "" : undefined}
             className={cn(
               // No justify-center here: combined with overflow-y-auto, centering
               // pushes overflow content into negative (unreachable) scroll space
@@ -288,6 +304,8 @@ function HomeInner() {
           </div>
 
           <aside
+            data-mo-pane={asideMotion.motion}
+            data-mo-mobile-only=""
             className={cn(
               "relative min-h-0 flex-col gap-3 overflow-y-auto pb-[calc(var(--nav-height)+var(--safe-bottom)+1rem)] lg:pb-2",
               !mainPaneActive ? "flex" : "hidden",
@@ -314,7 +332,7 @@ function HomeInner() {
                   </span>
                   <Link
                     href="/solves"
-                    className="flex items-center gap-0.5 text-[11px] font-medium text-accent hover:brightness-110"
+                    className="hit-y flex items-center gap-0.5 text-[11px] font-medium text-accent hover:brightness-110"
                   >
                     View all <ChevronRight size={12} />
                   </Link>
@@ -347,7 +365,7 @@ function HomeInner() {
 
       <BottomNav active={tab} onChange={setTab} />
 
-      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+      {settingsSheet.present && <SettingsPanel closing={!settingsOpen} onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }

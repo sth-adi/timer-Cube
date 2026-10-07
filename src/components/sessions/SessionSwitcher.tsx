@@ -7,6 +7,7 @@ import { summarizeSessions } from "@/lib/sessions/activeSession";
 import { planTidy, type TidyPlan } from "@/lib/sessions/tidy";
 import { WCA_EVENTS, type Session } from "@/types";
 import { cn } from "@/lib/utils/cn";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { SessionCompareSheet } from "./SessionCompareSheet";
 
 function lastUsed(at: number | null): string {
@@ -232,7 +233,15 @@ export function SessionSwitcher() {
         className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/90 hover:bg-bg-panel-2 transition-colors"
         aria-expanded={open}
       >
-        <span className="max-w-[9rem] truncate">{active?.name ?? "Session"}</span>
+        {active ? (
+          <span className="max-w-[9rem] truncate">{active.name}</span>
+        ) : (
+          // The sessions are still being read: hold the name's width instead of printing a word that is about to change.
+          <>
+            <span className="sr-only">Session</span>
+            <Skeleton className="h-3.5 w-[4.5rem]" />
+          </>
+        )}
         {active && <span className="text-[11px] font-normal tabular-nums text-muted-2">{countOf(active.id)}</span>}
         {active && active.event !== "333" && (
           <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">

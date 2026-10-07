@@ -1,0 +1,494 @@
+/* ===========================================================
+   The post-solve recap: one small system shared by the step
+   table, "where the time went", the reconstruction, the notices
+   and the analyzer cards. Every selector is a `.rc-*` class so
+   nothing here can touch a bare element; custom properties are
+   `--rc-*`. Unlayered, so scope tightly and never restyle tags.
+   Spacing is a 4/8px grid; numbers are tabular.
+   =========================================================== */
+
+:root {
+  /* Text-safe versions of the semantic colours: a little of the foreground is mixed in, which lifts
+     contrast on every theme (darker on the light "paper" theme, lighter on the dark ones). Fills keep
+     the raw --success / --warning. */
+  --rc-good: color-mix(in srgb, var(--success) 74%, var(--foreground));
+  --rc-slow: color-mix(in srgb, var(--warning) 74%, var(--foreground));
+  --rc-link: color-mix(in srgb, var(--accent) 74%, var(--foreground));
+  --rc-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---- Cards: one radius, one padding, one heading ---- */
+.rc-card {
+  width: 100%;
+  border-radius: 16px;
+  background: var(--bg-panel-2);
+  padding: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 640px) {
+  .rc-card {
+    padding: 16px;
+  }
+}
+
+.rc-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rc-card-title > svg {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
+.rc-note {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--muted-2);
+}
+
+.rc-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---- Faster / slower: sign + arrow + position, never colour alone ---- */
+.rc-delta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.rc-delta > svg {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+}
+.rc-delta[data-dir="fast"] {
+  color: var(--rc-good);
+}
+.rc-delta[data-dir="slow"] {
+  color: var(--rc-slow);
+}
+.rc-delta[data-dir="flat"] > svg {
+  opacity: 0.6;
+}
+
+/* ---- Step rows (PostSolveTable) ---- */
+.rc-rows {
+  display: flex;
+  flex-direction: column;
+}
+.rc-row + .rc-row {
+  border-top: 1px solid var(--border);
+}
+.rc-head {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  margin: 0;
+  border-radius: 12px;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease;
+}
+.rc-head:hover,
+.rc-head:active {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.rc-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.rc-icon {
+  display: grid;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+}
+.rc-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+.rc-title {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 16px;
+}
+.rc-title-label {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.rc-title-case {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.rc-meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rc-time {
+  display: flex;
+  width: 64px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+.rc-time-value {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+.rc-time .rc-delta {
+  font-size: 11px;
+  line-height: 16px;
+}
+.rc-chev {
+  flex-shrink: 0;
+  color: var(--muted-2);
+  transition: transform 0.22s var(--rc-ease);
+}
+.rc-head[aria-expanded="true"] .rc-chev {
+  transform: rotate(180deg);
+}
+
+/* The bar: looking (soft) then turning (solid); the tick is where you usually finish. */
+.rc-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+.rc-fill {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.rc-tick {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--foreground);
+  box-shadow: 0 0 0 1.5px var(--bg-panel-2);
+}
+
+.rc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.rc-chip > svg {
+  flex-shrink: 0;
+}
+.rc-chip[data-tone="good"] {
+  color: var(--rc-good);
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+}
+.rc-chip[data-tone="warn"] {
+  color: var(--rc-slow);
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+}
+
+/* ---- Expand / collapse: height via grid rows, plus opacity. No layout thrash on the contents. ---- */
+.rc-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.24s var(--rc-ease),
+    opacity 0.18s ease,
+    visibility 0s linear 0.24s;
+}
+.rc-collapse[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+.rc-collapse > .rc-collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-collapse,
+  .rc-chev,
+  .rc-head {
+    transition: none;
+  }
+}
+:root[data-fx-level="off"] .rc-collapse,
+:root[data-fx-level="off"] .rc-chev,
+:root[data-fx-level="off"] .rc-head {
+  transition: none;
+}
+
+/* What sits behind a row's chevron: indented under the label, a quiet rule on the left. */
+.rc-detail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 8px 60px;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--border-strong);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+}
+.rc-detail-line {
+  display: block;
+  color: var(--muted);
+}
+.rc-detail-line[data-tone="warn"] {
+  color: var(--rc-slow);
+}
+.rc-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  color: var(--rc-link);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.rc-link:hover {
+  text-decoration-style: solid;
+}
+.rc-pill-btn {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rc-link);
+  background: var(--accent-soft);
+}
+
+/* Legend swatches under the table */
+.rc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 16px;
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--muted-2);
+}
+.rc-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.rc-swatch {
+  display: block;
+  width: 16px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--foreground);
+}
+
+/* ---- "Where the time went": a diverging bar around a centre line ---- */
+.rc-diverge {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+.rc-diverge::after {
+  /* the centre line: your usual */
+  content: "";
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--foreground) 55%, transparent);
+}
+.rc-diverge-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 4px;
+}
+/* Faster: solid, grows left of the line. Slower: striped, grows right. The stripes and the side say it without colour. */
+.rc-diverge-bar[data-dir="fast"] {
+  right: 50%;
+  border-radius: 999px 0 0 999px;
+  background: var(--success);
+}
+.rc-diverge-bar[data-dir="slow"] {
+  left: 50%;
+  border-radius: 0 999px 999px 0;
+  background: repeating-linear-gradient(-45deg, var(--warning) 0 3px, color-mix(in srgb, var(--warning) 45%, var(--bg-elevated)) 3px 6px);
+}
+
+/* ---- Reconstruction ---- */
+.rc-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rc-step-head {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+.rc-step-moves {
+  margin: 4px 0 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--border-strong);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+  word-spacing: 0.12em;
+}
+.rc-step-moves[data-empty="true"] {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-style: italic;
+  word-spacing: normal;
+  color: var(--muted-2);
+}
+
+/* ---- Notices ---- */
+.rc-notice {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rc-slow);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+.rc-notice > svg {
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+.rc-notice-chip {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+.rc-notice-chip[data-tone="warning"] {
+  color: var(--rc-slow);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+.rc-notice-chip[data-tone="accent"] {
+  color: var(--rc-link);
+  background: var(--accent-soft);
+}
+
+/* Text colours for inline notes */
+.rc-t-good {
+  color: var(--rc-good);
+}
+.rc-t-slow {
+  color: var(--rc-slow);
+}
+
+/* ---- Status banners (low battery, reconnected, cube dropped): one calm strip, any number of lines ---- */
+:root {
+  --rc-bad: color-mix(in srgb, var(--danger) 74%, var(--foreground));
+}
+.rc-banner {
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: left;
+}
+.rc-banner[data-tone="warning"] {
+  color: var(--rc-slow);
+  background: color-mix(in srgb, var(--warning) 11%, transparent);
+}
+.rc-banner[data-tone="danger"] {
+  color: var(--rc-bad);
+  background: color-mix(in srgb, var(--danger) 11%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 28%, transparent);
+}
+
+/* Hatched fill: "this part was wasted" reads by pattern, not only by hue. */
+.rc-hatch {
+  background: repeating-linear-gradient(-45deg, var(--warning) 0 3px, color-mix(in srgb, var(--warning) 40%, var(--bg-elevated)) 3px 6px);
+}
+.rc-t-link {
+  color: var(--rc-link);
+}
+.rc-t-bad {
+  color: var(--rc-bad);
+}

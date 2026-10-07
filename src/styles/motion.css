@@ -1,0 +1,87 @@
+/* Screen-to-screen motion: tab panes and sheets/dialogs.
+   Transform + opacity only, short, and never blocking: nothing here delays
+   input or unmounts anything, and nothing uses fill-mode on a pane, so an
+   interrupted animation can never leave a half-faded screen behind.
+   Helpers: src/components/motion (useTabMotion, usePresence, useSheetDrag).
+   Off entirely under prefers-reduced-motion and data-fx-level="off". */
+
+:root {
+  --mo-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --mo-ease-in: cubic-bezier(0.4, 0, 0.9, 0.6);
+  --mo-pane: 180ms;
+  --mo-enter: 220ms;
+  --mo-exit: 180ms;
+}
+
+/* --- Tab panes: a short slide from the side the tab sits on ------------- */
+@keyframes mo-pane-fwd-a {
+  from { opacity: 0; transform: translate3d(16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes mo-pane-fwd-b {
+  from { opacity: 0; transform: translate3d(16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes mo-pane-back-a {
+  from { opacity: 0; transform: translate3d(-16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes mo-pane-back-b {
+  from { opacity: 0; transform: translate3d(-16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+[data-mo-pane="fwd-a"] { animation: mo-pane-fwd-a var(--mo-pane) var(--mo-ease-out); }
+[data-mo-pane="fwd-b"] { animation: mo-pane-fwd-b var(--mo-pane) var(--mo-ease-out); }
+[data-mo-pane="back-a"] { animation: mo-pane-back-a var(--mo-pane) var(--mo-ease-out); }
+[data-mo-pane="back-b"] { animation: mo-pane-back-b var(--mo-pane) var(--mo-ease-out); }
+
+/* The Stats aside only swaps with the main pane on phones; beside it on desktop it stays put. */
+@media (min-width: 1024px) {
+  [data-mo-pane][data-mo-mobile-only] { animation: none; }
+}
+
+/* --- Sheets and dialogs -------------------------------------------------- */
+@keyframes mo-fade-in {
+  from { opacity: 0; }
+}
+@keyframes mo-fade-out {
+  to { opacity: 0; }
+}
+/* No "from" on the exit keyframes: they start wherever the sheet is now (a dragged sheet leaves from the finger). */
+@keyframes mo-sheet-in {
+  from { transform: translate3d(0, 100%, 0); }
+}
+@keyframes mo-sheet-out {
+  to { transform: translate3d(0, 100%, 0); }
+}
+@keyframes mo-dialog-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.985); }
+}
+@keyframes mo-dialog-out {
+  to { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.985); }
+}
+
+.mo-backdrop[data-mo="enter"] { animation: mo-fade-in var(--mo-enter) ease-out; }
+.mo-backdrop[data-mo="exit"] { animation: mo-fade-out var(--mo-exit) ease-in forwards; }
+
+.mo-sheet[data-mo="enter"] { animation: mo-sheet-in var(--mo-enter) var(--mo-ease-out); }
+.mo-sheet[data-mo="exit"] { animation: mo-sheet-out var(--mo-exit) var(--mo-ease-in) forwards; }
+
+@media (min-width: 640px) {
+  .mo-sheet[data-mo="enter"] { animation: mo-dialog-in var(--mo-enter) var(--mo-ease-out); }
+  .mo-sheet[data-mo="exit"] { animation: mo-dialog-out var(--mo-exit) var(--mo-ease-in) forwards; }
+}
+
+/* A closing sheet must not eat taps meant for the screen underneath. */
+.mo-overlay[data-mo="exit"] { pointer-events: none; }
+.mo-sheet { overscroll-behavior: contain; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-mo-pane], .mo-backdrop, .mo-sheet { animation: none !important; }
+}
+:root[data-fx-level="off"] [data-mo-pane],
+:root[data-fx-level="off"] .mo-backdrop,
+:root[data-fx-level="off"] .mo-sheet {
+  animation: none !important;
+}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown, TriangleAlert } from "lucide-react";
 import type { PostSolvePhaseRow } from "@/lib/analysis/postSolveTable";
 import type { SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { findCase } from "@/lib/algorithms/caseLookup";
@@ -27,6 +27,7 @@ import type { F2lCaseStat } from "@/lib/analysis/f2lCaseStats";
 import type { RecognitionStat } from "@/lib/analysis/caseHistory";
 import { NO_HISTORY, scheduleHistoryStats, type HistoryStats } from "@/lib/analysis/historyStats";
 import { solveCrossOptimal } from "@/lib/solvers/cross";
+import { Collapse, Delta, RecapCard } from "@/components/recap/RecapParts";
 import type { CrossAdvisorReport } from "@/lib/analysis/crossAdvisor";
 
 const secs = (ms: number) => (ms / 1000).toFixed(2);
@@ -41,6 +42,8 @@ function cubeAt(scramble: string, moves: SmartCubeMove[], atMs: number | null): 
 }
 
 const ICON = "h-10 w-10 shrink-0";
+
+const TURNS = (n: number) => `${n} turn${n === 1 ? "" : "s"}`;
 
 /** The cross, drawn flat in the colour you built it on. */
 function CrossGlyph({ color = CROSS_FACE_HEX.U }: { color?: string }) {
@@ -125,8 +128,6 @@ function tintIndex(row: PostSolvePhaseRow): number {
   return row.group === "OLL" ? 2 : 3;
 }
 
-const PACE_CLASS = { fast: "text-success", normal: "text-foreground", slow: "text-warning" } as const;
-
 /**
  * Under an OLL/PLL row: the algorithm you actually did, whether it took two
  * looks, and how this execution compares with every other time you've done
@@ -144,34 +145,28 @@ function AlgLine({ exec, seen, caseRecord }: { exec: AlgExecution; seen: readonl
   // from the recap, instead of a separate trip to set it there.
   const offerMain = exec.oneLook && norm !== null && (!mainAlg || !sameAlg(mainAlg, exec.mergedAlg));
   return (
-    <span className="mt-0.5 flex min-w-0 flex-col text-[10px] leading-tight">
-      <span className="truncate font-mono text-muted" title={exec.mergedAlg}>
-        {exec.mergedAlg}
-      </span>
-      <span className="flex flex-wrap items-center gap-x-1.5">
+    <span className="flex min-w-0 flex-col gap-1">
+      <span className="break-words font-mono text-[12px] leading-5 text-foreground/90">{exec.mergedAlg}</span>
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         {!exec.oneLook ? (
-          <span className="font-semibold text-warning">two looks</span>
+          <span className="font-semibold rc-t-slow">two looks</span>
         ) : mine ? (
-          <span className="text-muted-2">{mine.book ? "book alg" : "your alg"}</span>
+          <span>{mine.book ? "book alg" : "your alg"}</span>
         ) : null}
         {pb ? (
-          <span className="font-semibold text-success">best execution yet</span>
+          <span className="font-semibold rc-t-good">best execution yet</span>
         ) : mine && mine.count >= 2 ? (
-          <span className="text-muted-2">usually {secs(mine.meanExecMs)}s to execute</span>
+          <span>usually {secs(mine.meanExecMs)}s to execute</span>
         ) : null}
         {offerMain && (
-          <button
-            type="button"
-            onClick={() => choose(key, exec.mergedAlg)}
-            className="rounded-full bg-accent-soft px-1.5 py-[1px] font-medium text-accent hover:brightness-110"
-          >
+          <button type="button" onClick={() => choose(key, exec.mergedAlg)} className="rc-pill-btn hit-y">
             Use as main alg
           </button>
         )}
       </span>
       {/* The case itself, not the algorithm — two solves of the same case can use two different algs. */}
       {caseRecord && caseRecord.count >= 2 && (
-        <span className="text-muted-2">
+        <span>
           {caseRecord.count} times so far · case best {secs(caseRecord.bestMs)}s
         </span>
       )}
@@ -183,8 +178,8 @@ function AlgLine({ exec, seen, caseRecord }: { exec: AlgExecution; seen: readonl
 function CrossEfficiencyLine({ turns, optimal }: { turns: number; optimal: number }) {
   if (turns <= 0) return null;
   return (
-    <span className="mt-0.5 block text-[10px] leading-tight text-muted-2">
-      {turns} turn{turns === 1 ? "" : "s"} · optimal {optimal === turns ? "— nice" : `was ${optimal}`}
+    <span className="rc-detail-line">
+      {TURNS(turns)} · optimal {optimal === turns ? "— nice" : `was ${optimal}`}
     </span>
   );
 }
@@ -201,7 +196,7 @@ function CrossAdvisorLine({ report }: { report: CrossAdvisorReport | null }) {
   const gap = report.current.avgLen - report.best.avgLen;
   if (gap < 0.3) return null;
   return (
-    <Link href="/crosscolor" className="mt-0.5 block text-[10px] leading-tight text-muted-2 underline decoration-dotted underline-offset-2 hover:text-accent">
+    <Link href="/crosscolor" className="rc-link">
       a {report.best.colorName} cross usually runs {gap.toFixed(2)} moves shorter for you — Cross Color Advisor
     </Link>
   );
@@ -217,8 +212,8 @@ function F2lEfficiencyLine({ turns, stat }: { turns: number; stat?: F2lCaseStat 
   if (turns <= 0 || !stat || stat.count < 3) return null;
   const extra = turns - stat.meanTurns;
   return (
-    <span className={cn("mt-0.5 block text-[10px] leading-tight", extra >= 2 ? "text-warning" : "text-muted-2")}>
-      {turns} turn{turns === 1 ? "" : "s"} · you usually take {stat.meanTurns.toFixed(1)} for this
+    <span className="rc-detail-line" data-tone={extra >= 2 ? "warn" : undefined}>
+      {TURNS(turns)} · you usually take {stat.meanTurns.toFixed(1)} for this
     </span>
   );
 }
@@ -234,7 +229,7 @@ function RecognitionLine({ pausedMs, stat }: { pausedMs: number; stat?: Recognit
   if (pausedMs <= 0 || !stat || stat.count < 3) return null;
   const extraMs = pausedMs - stat.meanMs;
   return (
-    <span className={cn("mt-0.5 block text-[10px] leading-tight", extraMs >= 500 ? "text-warning" : "text-muted-2")}>
+    <span className="rc-detail-line" data-tone={extraMs >= 500 ? "warn" : undefined}>
       recognised in {secs(pausedMs)}s · usually {secs(stat.meanMs)}s for this
     </span>
   );
@@ -311,8 +306,8 @@ export function PostSolveTable({
   const maxWithMedians = Math.max(max, ...rows.map((_, i) => baseline?.segments[i]?.medianMs ?? 0));
 
   return (
-    <div className="w-full rounded-2xl bg-bg-panel-2 p-3">
-      <div className="flex flex-col divide-y divide-border/60">
+    <RecapCard>
+      <div className="rc-rows">
         {views.map(({ row, icon, caseName, f2lKey, f2lTurns, caseLink }, i) => {
           const look = row.recognitionMs ?? 0;
           const turn = row.executionMs ?? row.totalMs ?? 0;
@@ -336,110 +331,100 @@ export function PostSolveTable({
           }
 
           const delta = row.totalMs !== null && seg && seg.medianMs > 0 ? row.totalMs - seg.medianMs : null;
+          const showDelta = delta !== null && Math.abs(delta) >= 50;
           const isOpen = open.has(row.label);
           const detailId = `pst-${i}`;
+          const hasDetail = !!exec || row.label === "Cross" || !!caseLink || !!caseName;
           return (
-            <div key={row.label} className="py-2.5 first:pt-1 last:pb-1">
-              <div className="flex items-center gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-bg-elevated/70">{icon}</span>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <div className="flex min-w-0 items-baseline gap-2">
-                    <span className={cn("shrink-0 text-[13px] font-semibold leading-none", row.totalMs !== null ? "text-foreground" : "text-muted-2")}>{row.label}</span>
-                    {caseName &&
-                      (caseLink ? (
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/cases?case=${encodeURIComponent(caseLink.key)}&group=${caseLink.group}`)}
-                          className="min-w-0 truncate text-left text-[11px] leading-none text-muted-2 underline decoration-dotted underline-offset-2 hover:text-accent"
-                          title={`See every time you've had ${caseName}`}
-                        >
-                          {caseName}
-                        </button>
-                      ) : (
-                        <span className="min-w-0 truncate text-[11px] leading-none text-muted-2">{caseName}</span>
-                      ))}
-                  </div>
+            <div key={row.label} className="rc-row">
+              <button
+                type="button"
+                onClick={() => toggle(row.label)}
+                aria-expanded={isOpen}
+                aria-controls={detailId}
+                aria-label={`${isOpen ? "Hide" : "Show"} details for ${row.label}`}
+                aria-describedby={`${detailId}-time`}
+                className="rc-head"
+              >
+                <span className="rc-icon">{icon}</span>
+                <span className="rc-main">
+                  <span className="rc-title">
+                    <span className={cn("rc-title-label", row.totalMs === null && "!text-muted-2")}>{row.label}</span>
+                    {caseName && <span className="rc-title-case">{caseName}</span>}
+                  </span>
                   {/* look (soft) then turn (solid) in this step's own hue; the tick is where you usually finish it */}
-                  <div className="relative h-1.5 rounded-full bg-bg-elevated">
-                    <div className="flex h-full overflow-hidden rounded-full">
-                      <div className={cn("h-full", tint.soft)} style={{ width: `${(look / maxWithMedians) * 100}%` }} />
-                      <div className={cn("h-full", tint.solid)} style={{ width: `${(turn / maxWithMedians) * 100}%` }} />
-                    </div>
+                  <span className="rc-track" aria-hidden="true">
+                    <span className="rc-fill">
+                      <span className={cn("block h-full", tint.soft)} style={{ width: `${(look / maxWithMedians) * 100}%` }} />
+                      <span className={cn("block h-full", tint.solid)} style={{ width: `${(turn / maxWithMedians) * 100}%` }} />
+                    </span>
                     {seg && seg.medianMs > 0 && (
                       <span
-                        aria-hidden
                         title={`Your usual: ${formatTime(seg.medianMs)}`}
-                        className="absolute -top-0.5 h-2.5 w-0.5 rounded-full bg-foreground/60"
+                        className="rc-tick"
                         style={{ left: `calc(${(Math.min(seg.medianMs, maxWithMedians) / maxWithMedians) * 100}% - 1px)` }}
                       />
                     )}
-                  </div>
-                  <p className="flex min-w-0 items-center gap-1.5 text-[10px] leading-none tabular-nums text-muted-2">
-                    {turns !== null && turns > 0 && <span>{turns} turn{turns === 1 ? "" : "s"}</span>}
+                  </span>
+                  <span className="rc-meta">
+                    {turns !== null && turns > 0 && <span className="whitespace-nowrap">{TURNS(turns)}</span>}
                     {row.recognitionMs !== null && row.executionMs !== null && (
-                      <span>
-                        · look {secs(row.recognitionMs)} · turn {secs(row.executionMs)}
-                      </span>
+                      <>
+                        <span className="whitespace-nowrap">look {secs(row.recognitionMs)}</span>
+                        <span className="whitespace-nowrap">turn {secs(row.executionMs)}</span>
+                      </>
                     )}
                     {note && (
-                      <span className={cn("rounded-full px-1.5 py-[2px] font-semibold", note.tone === "good" ? "bg-success/12 text-success" : "bg-warning/12 text-warning")}>{note.text}</span>
+                      <span className="rc-chip" data-tone={note.tone}>
+                        {note.tone === "good" ? <Check size={11} aria-hidden="true" strokeWidth={3} /> : <TriangleAlert size={11} aria-hidden="true" />}
+                        {note.text}
+                      </span>
                     )}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <div className="w-14 text-right">
-                    <p
-                      className={cn("text-[15px] font-semibold leading-none tabular-nums", row.totalMs === null ? "text-muted-2" : pace ? PACE_CLASS[pace] : "text-foreground")}
-                      title={pace === "fast" ? "One of your better ones for this step" : pace === "slow" ? "Slower than usual for this step" : undefined}
-                    >
-                      {row.totalMs === null ? "—" : formatTime(row.totalMs)}
-                    </p>
-                    {delta !== null && Math.abs(delta) >= 50 && (
-                      <p className={cn("mt-1 text-[10px] leading-none tabular-nums", delta < 0 ? "text-success" : "text-muted-2")}>
-                        {delta < 0 ? "−" : "+"}
-                        {(Math.abs(delta) / 1000).toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggle(row.label)}
-                    aria-expanded={isOpen}
-                    aria-controls={detailId}
-                    aria-label={`${isOpen ? "Hide" : "Show"} details for ${row.label}`}
-                    className="grid h-7 w-6 place-items-center rounded-md text-muted-2 hover:bg-bg-elevated hover:text-foreground"
-                  >
-                    <ChevronDown size={14} className={cn("transition-transform", isOpen && "rotate-180")} />
-                  </button>
-                </div>
-              </div>
-              {isOpen && (
-                <div id={detailId} className="ml-14 mt-2 flex min-w-0 flex-col gap-0.5 border-l border-border pl-3 text-xs">
+                  </span>
+                </span>
+                <span
+                  id={`${detailId}-time`}
+                  className="rc-time"
+                  title={pace === "fast" ? "One of your better ones for this step" : pace === "slow" ? "Slower than usual for this step" : undefined}
+                >
+                  <span className={cn("rc-time-value", row.totalMs === null && "!text-muted-2")}>{row.totalMs === null ? "—" : formatTime(row.totalMs)}</span>
+                  {showDelta && <Delta ms={delta} dir={pace === "fast" ? "fast" : pace === "slow" ? "slow" : "flat"} />}
+                </span>
+                <ChevronDown size={16} className="rc-chev" aria-hidden="true" />
+              </button>
+              <Collapse open={isOpen} id={detailId}>
+                <div className="rc-detail">
+                  {caseLink && caseName && (
+                    <button type="button" onClick={() => router.push(`/cases?case=${encodeURIComponent(caseLink.key)}&group=${caseLink.group}`)} className="rc-link text-left" title={`See every time you've had ${caseName}`}>
+                      {caseName} · every time you&apos;ve had it
+                    </button>
+                  )}
+                  {!caseLink && caseName && <span className="rc-detail-line">{caseName}</span>}
                   {exec && <AlgLine exec={exec} seen={seen[myAlgKey(exec.step, exec.caseName)]} caseRecord={caseName ? caseHistory.get(caseName) : undefined} />}
                   {row.label === "Cross" && crossTurns !== null && crossOptimal !== null && <CrossEfficiencyLine turns={crossTurns} optimal={crossOptimal} />}
                   {row.label === "Cross" && <CrossAdvisorLine report={crossAdvisor} />}
                   {f2lKey && f2lTurns !== null && <F2lEfficiencyLine turns={f2lTurns} stat={f2lStat} />}
                   {caseLink && row.recognitionMs !== null && <RecognitionLine pausedMs={row.recognitionMs} stat={recogStat} />}
-                  {!exec && !caseLink && row.label !== "Cross" && <span className="text-[10px] text-muted-2">Nothing more to say about this one.</span>}
+                  {!hasDetail && <span className="rc-detail-line">Nothing more to say about this one.</span>}
                 </div>
-              )}
+              </Collapse>
             </div>
           );
         })}
       </div>
-      <p className="mt-2 flex items-center justify-center gap-3 text-[10px] text-muted-2">
-        <span className="flex items-center gap-1">
-          <span className="h-1.5 w-3 rounded-full bg-foreground/30" /> looking
+      <p className="rc-legend">
+        <span>
+          <span className="rc-swatch" style={{ opacity: 0.35 }} /> looking
         </span>
-        <span className="flex items-center gap-1">
-          <span className="h-1.5 w-3 rounded-full bg-foreground/80" /> turning
+        <span>
+          <span className="rc-swatch" /> turning
         </span>
         {baseline && (
-          <span className="flex items-center gap-1">
-            <span className="h-2.5 w-0.5 rounded-full bg-foreground/60" /> your usual
+          <span>
+            <span className="rc-swatch" style={{ width: 2, height: 14, borderRadius: 1 }} /> your usual
           </span>
         )}
       </p>
-    </div>
+    </RecapCard>
   );
 }

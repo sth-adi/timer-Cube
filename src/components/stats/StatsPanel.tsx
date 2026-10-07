@@ -12,31 +12,7 @@ import { EVENT_TAGS, type EventTag } from "@/types";
 import { solveFinalMs } from "@/types";
 import { cn } from "@/lib/utils/cn";
 import { SolveTrendChart } from "./SolveTrendChart";
-
-/** A small tile: label over value, with an optional "jump" action. */
-function Stat({ label, value, note, onClick }: { label: string; value: string; note?: string; onClick?: () => void }) {
-  const body = (
-    <>
-      <span className="flex items-center gap-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-2 group-hover:text-accent">
-        {label}
-        {onClick && <ArrowUpRight size={10} className="opacity-0 transition-opacity group-hover:opacity-100" />}
-      </span>
-      <span className="flex flex-wrap items-baseline gap-x-1">
-        <span className="tabular-timer text-base font-semibold text-foreground group-hover:text-accent">{value}</span>
-        {note && <span className="text-[11px] font-normal text-muted-2">{note}</span>}
-      </span>
-    </>
-  );
-  const cls = "group flex flex-col items-start gap-0.5 rounded-lg bg-bg-panel-2/70 px-2.5 py-2 text-left max-lg:bg-transparent max-lg:px-1 max-lg:py-1";
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} title="Jump to this solve's reconstruction" className={cn(cls, "transition-colors hover:bg-bg-panel-2")}>
-        {body}
-      </button>
-    );
-  }
-  return <div className={cls}>{body}</div>;
-}
+import { StatTile } from "./StatTile";
 
 /** The last stretch of the ao5 line, drawn small beside the headline number. A null is a DNF window: the line breaks there. */
 function Sparkline({ values }: { values: (number | null)[] }) {
@@ -62,7 +38,7 @@ function Sparkline({ values }: { values: (number | null)[] }) {
   const last = lastValue === null ? null : pt(lastValue, values.length - 1).split(",");
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-9 w-[7.5rem] shrink-0" aria-hidden>
-      <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.9} />
+      <path d={d} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.9} />
       {last && <circle cx={last[0]} cy={last[1]} r={3} fill="var(--accent)" stroke="var(--bg-panel)" strokeWidth={1.5} />}
     </svg>
   );
@@ -208,18 +184,18 @@ export function StatsPanel() {
         <Sparkline values={ao5Trail} />
       </div>
 
-      <div className="mt-2 grid grid-cols-3 gap-x-1.5 gap-y-0.5 lg:mt-3 lg:gap-1.5">
-        <Stat label="best" value={fmt(stats.best)} onClick={onJumpToBest} />
-        <Stat label="ao12" value={fmt(stats.ao12, stats.ao12Dnf)} />
-        <Stat label="ao100" value={fmt(stats.ao100, stats.ao100Dnf)} />
-        <Stat label="mean" value={fmt(stats.mean)} />
-        <Stat label="best ao5" value={fmt(stats.bestAo5, stats.bestAo5Dnf)} />
-        <Stat label="best ao12" value={fmt(stats.bestAo12, stats.bestAo12Dnf)} />
-        <Stat label="worst" value={fmt(stats.worst)} />
-        <Stat label="solves" value={String(stats.count)} note={scope === "all" ? "· all sessions" : undefined} />
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <StatTile label="best" value={fmt(stats.best)} onClick={onJumpToBest} title={onJumpToBest ? "Jump to this solve's reconstruction" : undefined} />
+        <StatTile label="ao12" value={fmt(stats.ao12, stats.ao12Dnf)} />
+        <StatTile label="ao100" value={fmt(stats.ao100, stats.ao100Dnf)} />
+        <StatTile label="mean" value={fmt(stats.mean)} />
+        <StatTile label="best ao5" value={fmt(stats.bestAo5, stats.bestAo5Dnf)} />
+        <StatTile label="best ao12" value={fmt(stats.bestAo12, stats.bestAo12Dnf)} />
+        <StatTile label="worst" value={fmt(stats.worst)} />
+        <StatTile label="solves" value={String(stats.count)} sub={scope === "all" ? "all sessions" : undefined} />
       </div>
       {solves.length >= 2 && (
-        <div className="mt-2 border-t border-border/60 pt-2 lg:mt-4 lg:pt-3">
+        <div className="mt-3 border-t border-border/60 pt-3 lg:mt-4">
           <SolveTrendChart solves={solves} />
         </div>
       )}

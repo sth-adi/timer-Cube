@@ -1,0 +1,109 @@
+/* Stats charts: first-mount draw-in and the small shared bits (components/stats/*).
+   Everything is scoped to .sc-* classes. Motion is transform / opacity / stroke-dashoffset only, runs once when a
+   chart first mounts (a CSS animation never replays on a data update), and is off under prefers-reduced-motion and
+   data-fx-level="off" so the flat mode stays flat. */
+
+.sc-draw {
+  stroke-dasharray: 1; /* with pathLength={1} on the <path>: dash = the whole line */
+  animation: sc-draw 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
+@keyframes sc-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.sc-fade {
+  animation: sc-fade 0.55s ease-out both;
+  animation-delay: var(--sc-delay, 0ms);
+}
+@keyframes sc-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Bars grow from their baseline. */
+.sc-rise {
+  transform-origin: 50% 100%;
+  animation: sc-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--sc-delay, 0ms);
+}
+@keyframes sc-rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* The goal ring fills from empty to its value (--sc-from is the empty dash offset). */
+.sc-ring {
+  animation: sc-ring 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
+@keyframes sc-ring {
+  from {
+    stroke-dashoffset: var(--sc-from);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-draw {
+    animation: none;
+    stroke-dasharray: none;
+  }
+  .sc-fade,
+  .sc-rise,
+  .sc-ring {
+    animation: none;
+  }
+}
+:root[data-fx-level="off"] .sc-draw {
+  animation: none;
+  stroke-dasharray: none;
+}
+:root[data-fx-level="off"] :is(.sc-fade, .sc-rise, .sc-ring) {
+  animation: none;
+}
+
+/* A chart you can drive from the keyboard shows a focus ring only for keyboard focus. */
+.sc-focusable {
+  outline: none;
+  border-radius: 0.5rem;
+}
+.sc-focusable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The idle readout hint says "Hover" for a mouse and "Tap or drag" for a finger. */
+.sc-hint-touch {
+  display: none;
+}
+@media (pointer: coarse) {
+  .sc-hint-touch {
+    display: inline;
+  }
+  .sc-hint-mouse {
+    display: none;
+  }
+}
+
+/* Selected / hovered marks lift; the rest recede a little (no layout, opacity only). */
+.sc-dim {
+  opacity: 0.5;
+}
+.sc-bar {
+  transition: opacity 0.12s ease-out;
+}
+
+/* The ao12 context line: a neutral (muted ink) dashed line. Where muted ink is too close to the accent to tell apart at a glance
+   (palette validator, normal-vision floor ΔE >= 15), it steps up to full foreground ink. */
+:root {
+  --sc-ao12: var(--muted);
+}
+:root[data-theme="terminal"],
+:root[data-theme="sunset"] {
+  --sc-ao12: var(--foreground);
+}

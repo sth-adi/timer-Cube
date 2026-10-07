@@ -14,9 +14,14 @@ import { useModalLayer } from "@/hooks/useModalLayer";
 import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { ReplayGyroTwin } from "./ReplayGyroTwin";
+import { ReplayPlaceholder } from "@/components/lab/CubeStage";
+
+/** The cube's box: sized once here, so the placeholder and the real player agree. */
+const CUBE_BOX = "mx-auto h-60 w-full max-w-md sm:h-72 [@media(orientation:landscape)_and_(max-height:32rem)]:h-44";
 
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
+  loading: () => <ReplayPlaceholder className={CUBE_BOX} />,
 });
 
 interface InstantReplaySheetProps {
@@ -73,17 +78,17 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
 
   const moveText = (active: number) => {
     if (display.length === 0) {
-      return <p className="mt-2 break-words text-center font-mono text-[11px] leading-relaxed text-foreground/80">no reconstruction captured</p>;
+      return <p className="w-full break-words rounded-xl bg-bg-panel-2/60 px-3 py-2 text-center font-mono text-xs leading-relaxed text-muted">no reconstruction captured</p>;
     }
     const current = displayIndexForMove(display, active);
     return (
-      <p className="mt-2 break-words text-center font-mono text-[11px] leading-relaxed text-foreground/80">
+      <p className="w-full break-words rounded-xl bg-bg-panel-2/60 px-3 py-2 text-center font-mono text-xs leading-[1.9] text-foreground/80">
         {display.map((d, i) => (
           <span key={i}>
             {i > 0 && " "}
             <span
               aria-current={i === current ? "step" : undefined}
-              className={cn("rounded px-0.5", i === current && "bg-accent-soft font-semibold text-accent")}
+              className={cn("rounded px-1 py-0.5 transition-colors", i === current && "bg-accent-soft font-semibold text-accent")}
             >
               {d.token}
             </span>
@@ -109,14 +114,14 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
-        <div className="mb-3 flex items-center justify-between">
-          <h2 id={titleId} className="text-base font-semibold">Replay</h2>
+        <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-border-strong sm:hidden" />
+        <div className="mb-2 flex items-center justify-between">
+          <h2 id={titleId} className="text-base font-semibold tracking-tight">Replay</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="tap-target -mr-2 text-muted hover:text-foreground"
+            className="tap-target -mr-2.5 rounded-full text-muted hover:text-foreground"
           >
             <X size={18} />
           </button>
@@ -124,12 +129,12 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
 
         <div className="[@media(orientation:landscape)_and_(max-height:32rem)]:grid [@media(orientation:landscape)_and_(max-height:32rem)]:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:32rem)]:items-start [@media(orientation:landscape)_and_(max-height:32rem)]:gap-x-5">
           <div>
-            <p className="mb-2 flex items-baseline gap-2">
-              <span className="tabular-timer text-2xl font-bold text-foreground">{formatResult(solveFinalMs({ timeMs, penalty }), penalty)}</span>
-              <span className="text-xs text-muted-2">{display.length} moves</span>
+            <p className="mb-2.5 flex items-baseline gap-2">
+              <span className="tabular-timer text-3xl font-bold leading-none tracking-tight text-foreground">{formatResult(solveFinalMs({ timeMs, penalty }), penalty)}</span>
+              <span className="text-xs text-muted">{display.length} moves</span>
             </p>
 
-            <p className="mb-2 break-words rounded-lg bg-bg-panel-2 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-muted">
+            <p className="mb-3 break-words rounded-xl bg-bg-panel-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
               {scramble}
             </p>
           </div>
@@ -157,7 +162,7 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
                   )
                 : undefined
             }
-            className="mx-auto h-64 w-full max-w-md sm:h-72 [@media(orientation:landscape)_and_(max-height:32rem)]:h-44"
+            className={CUBE_BOX}
           />
         </div>
       </div>

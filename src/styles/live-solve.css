@@ -1,0 +1,172 @@
+/* The live solve screen of a smart-cube attempt: phase ribbon, big digits, readouts.
+   Everything here moves on transform/opacity/scale only (the compositor, never layout), and
+   all of it is off under prefers-reduced-motion and data-fx-level="off": the fill still
+   reports progress, it just stops animating. Selectors are scoped to the classes below. */
+
+/* --- Phase ribbon -------------------------------------------------------------------------- */
+
+.phase-ribbon-track {
+  /* A hairline edge so a dim tint (blue on near-black, amber on paper) still reads as a track in every theme. */
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 9%, transparent);
+}
+
+.phase-ribbon-fill {
+  transition:
+    transform 150ms cubic-bezier(0.25, 0.7, 0.3, 1),
+    background-color 220ms ease;
+}
+
+/* The bright leading edge of the phase being timed: a short fade into the fill, riding its end. */
+.phase-ribbon-head {
+  pointer-events: none;
+}
+.phase-ribbon-head::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 100%;
+  width: 18px;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, white 60%, transparent));
+}
+:root[data-theme="paper"] .phase-ribbon-head::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, white 45%, transparent));
+}
+
+.phase-ribbon-label {
+  transition: color 200ms ease;
+}
+
+.phase-ribbon-notch {
+  transition:
+    background-color 200ms ease,
+    scale 200ms cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+.phase-ribbon-notch[data-lit] {
+  scale: 1.5;
+}
+
+@keyframes phase-ribbon-settle {
+  0% {
+    transform: scaleY(1);
+  }
+  38% {
+    transform: scaleY(1.55);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes phase-ribbon-mark {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes phase-ribbon-fill-in {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+/* A phase boundary landing: the finished track swells for a beat and settles, its tick pops in. */
+.phase-ribbon-seg[data-done] .phase-ribbon-track {
+  animation: phase-ribbon-settle 430ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.phase-ribbon-seg[data-done] .phase-ribbon-mark {
+  animation: phase-ribbon-mark 320ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* The recap ribbon fills in once, left to right, then each segment settles in turn. */
+.phase-ribbon--entrance .phase-ribbon-fill {
+  animation: phase-ribbon-fill-in 560ms cubic-bezier(0.25, 0.7, 0.3, 1) backwards;
+  animation-delay: calc(var(--ribbon-i, 0) * 110ms);
+}
+.phase-ribbon--entrance .phase-ribbon-seg[data-done] .phase-ribbon-track {
+  animation-delay: calc(var(--ribbon-i, 0) * 110ms + 420ms);
+}
+.phase-ribbon--entrance .phase-ribbon-seg[data-done] .phase-ribbon-mark {
+  animation-delay: calc(var(--ribbon-i, 0) * 110ms + 480ms);
+}
+
+/* --- The big digits ------------------------------------------------------------------------- */
+
+/* Digits sit on a baseline of their own width: tabular figures, no kerning games, and the
+   fraction a step quieter while the clock runs so the eye follows the seconds, not the blur. */
+.live-digits {
+  font-kerning: none;
+  white-space: nowrap;
+}
+.live-digits__frac {
+  transition: opacity 260ms ease;
+}
+.timer-stage[data-state="running"] .live-digits__frac {
+  opacity: 0.7;
+}
+
+/* Stopping: the number lands (a small overshoot back to size) while its colour relaxes from the accent. */
+@keyframes live-digits-settle {
+  0% {
+    scale: 1.06;
+    color: var(--accent);
+  }
+  100% {
+    scale: 1;
+  }
+}
+:root:not([data-fx-level="off"]) .timer-stage[data-state="stopped"] .live-digits {
+  animation: live-digits-settle 520ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* --- Quiet readouts under the digits ---------------------------------------------------------- */
+
+.live-readout {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* --- Flat and still ----------------------------------------------------------------------------- */
+
+:root[data-fx-level="off"] .phase-ribbon-fill,
+:root[data-fx-level="off"] .phase-ribbon-label,
+:root[data-fx-level="off"] .phase-ribbon-notch,
+:root[data-fx-level="off"] .live-digits__frac {
+  transition: none;
+}
+:root[data-fx-level="off"] .phase-ribbon-seg .phase-ribbon-track,
+:root[data-fx-level="off"] .phase-ribbon-seg .phase-ribbon-mark,
+:root[data-fx-level="off"] .phase-ribbon .phase-ribbon-fill {
+  animation: none;
+}
+:root[data-fx-level="off"] .phase-ribbon-head::before {
+  display: none;
+}
+:root[data-fx-level="off"] .phase-ribbon-notch[data-lit] {
+  scale: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-ribbon-fill,
+  .phase-ribbon-label,
+  .phase-ribbon-notch,
+  .live-digits__frac {
+    transition: none;
+  }
+  .phase-ribbon-seg .phase-ribbon-track,
+  .phase-ribbon-seg .phase-ribbon-mark,
+  .phase-ribbon .phase-ribbon-fill,
+  .live-digits {
+    animation: none !important;
+  }
+  .phase-ribbon-notch[data-lit] {
+    scale: 1;
+  }
+}

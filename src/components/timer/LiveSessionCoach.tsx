@@ -92,7 +92,7 @@ export function LiveSessionCoach() {
                 </div>
               );
             })}
-          <button type="button" onClick={() => setOpen((v) => !v)} className="-m-1.5 self-end p-1.5 text-[10px] font-medium text-muted-2 hover:text-foreground">
+          <button type="button" onClick={() => setOpen((v) => !v)} className="hit-y -m-1.5 self-end p-1.5 text-[11px] font-medium text-muted-2 hover:text-foreground">
             {open ? "less" : `+${rest.length} more`}
           </button>
         </>

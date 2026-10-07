@@ -45,3 +45,22 @@ export function segmentFill(ms: number, segment: RibbonSegment): number {
 export function isSlow(ms: number | null, segment: RibbonSegment): boolean {
   return ms !== null && segment.slowAtMs !== null && ms > segment.slowAtMs;
 }
+
+/**
+ * Where a segment's fill sits, as a translate (% of the segment's own width): 0 is full, -100 is
+ * empty. The ribbon slides a full-width, rounded bar instead of resizing it, so a frame never
+ * triggers layout and the bar's rounded end stays round however far along it is. Rounded to 0.05%
+ * (a hundredth of a pixel on the widest segment) so a steady phase doesn't rewrite its style for noise.
+ */
+export function fillOffsetPct(fillPct: number): number {
+  const f = Math.min(100, Math.max(0, Number.isFinite(fillPct) ? fillPct : 0));
+  return Math.round((f - 100) * 20) / 20;
+}
+
+/** Whether a segment is finished, being timed right now, or not reached yet. */
+export type SegmentState = "done" | "current" | "pending";
+
+export function segmentState(durationMs: number | null, index: number, currentPhaseIndex: number): SegmentState {
+  if (durationMs !== null) return "done";
+  return index === currentPhaseIndex ? "current" : "pending";
+}

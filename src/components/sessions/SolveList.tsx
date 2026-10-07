@@ -14,12 +14,15 @@ import { cn } from "@/lib/utils/cn";
 import { useModalLayer } from "@/hooks/useModalLayer";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Check, CheckSquare, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Square, Trash2, TriangleAlert, Wand2, X } from "lucide-react";
+import { Check, CheckSquare, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Square, Timer as TimerIcon, Trash2, TriangleAlert, Wand2, X } from "lucide-react";
 import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveSummary, type SolveSummary } from "@/lib/analysis/solveFilter";
 import { CROSS_FACE_COLOR, CROSS_FACE_HEX } from "@/lib/smartcube/crossFrame";
 import { PHASE_TINTS } from "@/components/stats/phaseTints";
 import { SolveRecapSheet } from "@/components/recap/SolveRecapSheet";
+import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
+import { skeletonWidth } from "@/components/ui/skeletonWidths";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 
 /** How many rows the full list draws at first, and each "Show more" adds — hundreds of live rows make every edit janky. */
 const PAGE_SIZE = 100;
@@ -354,7 +357,7 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
             if (e.key === "Enter") void submit();
             if (e.key === "Escape") onDone();
           }}
-          placeholder="1234, 12.34 or 1:02.34"
+          placeholder="12.34 or 1:02.34"
           className={cn(
             "min-h-10 min-w-0 flex-1 rounded-md bg-bg-panel-2 border px-2 py-1 text-[16px] tabular-timer sm:min-h-0 sm:text-xs text-foreground placeholder:text-muted-2 focus:outline-none",
             error !== null ? "border-danger" : "border-border focus:border-accent",
@@ -385,7 +388,7 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
                 type="button"
                 onClick={() => void removeSolve(x.id)}
                 aria-label={`Delete ${formatTime(x.ms)}`}
-                className="grid h-5 w-5 place-items-center rounded-full text-muted-2 hover:bg-danger/15 hover:text-danger"
+                className="hit grid h-5 w-5 place-items-center rounded-full text-muted-2 hover:bg-danger/15 hover:text-danger"
               >
                 <Trash2 size={11} />
               </button>
@@ -393,6 +396,57 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * What stands in for the rows until the history has been read from the device: the same row footprint as a real
+ * one (number, time, step bar, and the delete column when rows are detailed), so the rows land without moving.
+ */
+function SolveListSkeleton({ rows, detailed }: { rows: number; detailed: boolean }) {
+  return (
+    <SkeletonGroup label="Loading solves" className={cn("flex flex-col gap-0.5", detailed && "max-h-[55vh] overflow-hidden pr-1")}>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center" data-testid="solve-row-skeleton">
+          <div className="flex min-h-9 min-w-0 flex-1 items-center rounded-lg px-2.5 py-0.5 lg:min-h-0 lg:py-2.5">
+            <span className="flex h-5 w-6 items-center justify-end">
+              <Skeleton className="h-3 w-4" />
+            </span>
+            <span className="ml-2 flex h-5 w-16 shrink-0 items-center">
+              <Skeleton className="h-3.5" style={{ width: skeletonWidth(i, 60, 95) }} />
+            </span>
+            {detailed && (
+              <span className="ml-1 flex min-w-0 flex-1 items-center gap-2 pl-1">
+                <Skeleton round className="h-1.5 w-16 shrink-0 sm:w-24" />
+                <Skeleton className="h-2.5" style={{ width: skeletonWidth(i + 3, 15, 35) }} />
+              </span>
+            )}
+          </div>
+          {detailed && <span className="ml-0.5 h-9 w-11 shrink-0" aria-hidden="true" />}
+        </div>
+      ))}
+    </SkeletonGroup>
+  );
+}
+
+/** Nothing to list: say why and what to do, centred, with room to breathe. `filtered` = there are solves, none match. */
+function EmptySolves({ filtered, compact, addByHand }: { filtered: boolean; compact: boolean; addByHand: boolean }) {
+  const touch = useCoarsePointer();
+  const hint = filtered
+    ? "Try a different filter, or clear it to see them all."
+    : addByHand
+      ? "Solve with the timer, or tap + to add a time by hand."
+      : touch
+        ? "Touch and hold the timer to start."
+        : "Hit space to start.";
+  return (
+    <div className={cn("flex flex-col items-center gap-1 px-4 text-center", compact ? "py-5" : "py-10")} data-testid="solves-empty">
+      <span className={cn("mb-1.5 grid place-items-center rounded-full bg-accent-soft text-accent", compact ? "h-8 w-8" : "h-11 w-11")}>
+        <TimerIcon size={compact ? 15 : 20} aria-hidden="true" />
+      </span>
+      <p className="text-sm font-medium text-foreground">{filtered ? "No solves match" : "No solves yet"}</p>
+      <p className="max-w-[16rem] text-balance text-xs leading-relaxed text-muted-2">{hint}</p>
     </div>
   );
 }
@@ -421,6 +475,10 @@ interface SolveListProps {
 
 export function SolveList({ solves: solvesProp, limit, hideHeader, view, selection }: SolveListProps = {}) {
   const sessionSolves = useSessionStore((s) => s.solves);
+  // The history is read from the device on first open: until then an empty list means "not loaded yet", not "no solves".
+  // (If the storage can't be opened at all it never loads, so that case falls through to the empty state.)
+  const loaded = useSessionStore((s) => s.loaded);
+  const openFailed = useSessionStore((s) => s.saveError?.kind === "open");
   const solves = solvesProp ?? sessionSolves;
   const [manualOpen, setManualOpen] = useState(false);
 
@@ -462,10 +520,12 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
 
       {!hideHeader && manualOpen && <ManualEntry onDone={() => setManualOpen(false)} />}
 
-      {shown.length === 0 ? (
-        <p className="text-muted-2 text-sm text-center py-8">{view && solves.length ? "No solves match." : "No solves yet — hit space to start."}</p>
+      {!loaded && !openFailed ? (
+        <SolveListSkeleton rows={limit ?? 12} detailed={limit === undefined} />
+      ) : shown.length === 0 ? (
+        <EmptySolves filtered={!!view && solves.length > 0} compact={limit !== undefined} addByHand={!hideHeader} />
       ) : (
-        <div className={cn("flex flex-col gap-0.5", limit === undefined && "max-h-[55vh] overflow-y-auto pr-1")}>
+        <div className={cn("flex animate-fade-in-up flex-col gap-0.5", limit === undefined && "max-h-[55vh] overflow-y-auto pr-1")}>
           {shown.map((solve) => {
             const t = comparableTime(solve);
             return (

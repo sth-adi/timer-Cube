@@ -11,6 +11,7 @@ import { normalSolves, solvesForEvent } from "@/lib/stats/stats";
 import { solveFinalMs, type EventTag } from "@/types";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+import "@/styles/live-solve.css";
 
 /**
  * Live projection during a smart-cube solve: from the moment the scramble
@@ -115,14 +116,18 @@ export function LiveProjection({
   return (
     <div
       className={cn(
-        "flex min-h-[3rem] w-[18rem] max-w-full flex-col items-center justify-center rounded-xl px-3 py-1.5 text-center",
-        current.pbPace ? "bg-success/15 text-success" : current.headline === "PB in reach" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-foreground",
+        "live-readout flex min-h-[2.75rem] w-[18rem] max-w-full flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-1.5 text-center ring-1 ring-inset transition-colors duration-300 motion-reduce:transition-none",
+        current.pbPace
+          ? "bg-success/10 text-success ring-success/25"
+          : current.headline === "PB in reach"
+            ? "bg-accent-soft text-accent ring-accent/25"
+            : "bg-bg-panel-2/60 text-foreground/90 ring-foreground/10",
       )}
     >
-      <p className="text-sm font-bold tabular-nums">
-        {current.headline} · ~{formatProjectedMs(current.projectedMs)} <span className="text-[11px] font-medium opacity-70">±{(current.errMs / 1000).toFixed(1)}</span>
+      <p className="text-[13px] font-semibold leading-tight">
+        {current.headline} · ~{formatProjectedMs(current.projectedMs)} <span className="text-[11px] font-medium opacity-60">±{(current.errMs / 1000).toFixed(1)}</span>
       </p>
-      <p className="text-[10px] opacity-80">{current.detail}</p>
+      <p className="text-[11px] leading-tight opacity-80">{current.detail}</p>
     </div>
   );
 }

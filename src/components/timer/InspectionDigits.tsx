@@ -3,6 +3,8 @@
 import { INSPECTION_MS } from "@/lib/timer/timerMachine";
 import type { Penalty } from "@/types";
 import { cn } from "@/lib/utils/cn";
+import { fillOffsetPct } from "@/components/timer/phaseRibbonMath";
+import "@/styles/live-solve.css";
 import {
   INSPECTION_DANGER_AT_MS,
   INSPECTION_WARN_AT_MS,
@@ -39,7 +41,7 @@ export function InspectionDigits({ remainingMs, penalty, styleClass }: { remaini
   return (
     <p
       className={cn(
-        "timer-digits text-center text-6xl font-bold transition-[color,scale] duration-300 motion-reduce:transition-none",
+        "timer-digits live-digits text-center text-6xl font-bold transition-[color,scale] duration-300 motion-reduce:transition-none",
         DIGIT_COLOR[tone],
         pulsing && "scale-110 motion-reduce:scale-100",
         styleClass,
@@ -67,7 +69,8 @@ export function InspectionTicks({ remainingMs, penalty }: { remainingMs: number;
   return (
     <div className="relative h-6 w-44 shrink-0" data-testid="inspection-ticks">
       <div aria-hidden className="absolute inset-x-0 top-0 h-1 overflow-hidden rounded-full bg-bg-panel-2">
-        <div className={cn("h-full rounded-full", FILL_COLOR[tone])} style={{ width: `${(elapsed / INSPECTION_MS) * 100}%` }} />
+        {/* Slid, not resized: a frame never touches layout, and the rounded end stays round. */}
+        <div className={cn("h-full w-full rounded-full transition-colors duration-300 motion-reduce:transition-none", FILL_COLOR[tone])} style={{ transform: `translate3d(${fillOffsetPct((elapsed / INSPECTION_MS) * 100)}%,0,0)` }} />
       </div>
       {MARKS.map((m) => {
         const passed = elapsed >= m.atMs;

@@ -6,7 +6,10 @@ import { Clapperboard, Sparkles, Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { ReelPlayer } from "@/components/reel/ReelPlayer";
-import { CanvasRecorder, themeAccent } from "@/components/reel/CanvasRecorder";
+import { CanvasRecorder } from "@/components/reel/CanvasRecorder";
+import { useReelTheme } from "@/components/reel/useReelTheme";
+import { useAuthStore } from "@/lib/store/authStore";
+import { displayUsername } from "@/lib/auth/username";
 import { PERIOD_LABEL, buildMontage, montageSoundtrack, pickHighlights, type HighlightPeriod } from "@/lib/reel/highlights";
 import { renderHighlightFrame } from "@/lib/reel/renderHighlights";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -25,6 +28,12 @@ import { cn } from "@/lib/utils/cn";
  * card. Rendered on a canvas and recorded straight to a video file in the
  * browser.
  */
+/** The watermark on the card: the signed-in username when there is one, else the app's name. */
+function useReelCredit(): string {
+  const user = useAuthStore((s) => s.user);
+  return user ? displayUsername(user) : "Cube";
+}
+
 function HighlightReel() {
   const allSolves = useSessionStore((s) => s.allSolves);
   const [period, setPeriod] = useState<HighlightPeriod>("week");
@@ -36,10 +45,10 @@ function HighlightReel() {
   const montage = useMemo(() => (highlights.length && status === "ready" ? buildMontage(highlights, stored) : null), [highlights, stored, status]);
   const soundtrack = useMemo(() => (montage ? montageSoundtrack(montage) : []), [montage]);
   const subtitle = PERIOD_LABEL[period];
-  const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, t: number) => montage && renderHighlightFrame(ctx, montage, t, { accent: themeAccent(), title: "Highlights", subtitle }),
-    [montage, subtitle],
-  );
+  const theme = useReelTheme();
+  const credit = useReelCredit();
+  const style = useMemo(() => ({ ...theme, title: "Highlights", subtitle, credit }), [theme, subtitle, credit]);
+  const draw = useCallback((ctx: CanvasRenderingContext2D, t: number) => montage && renderHighlightFrame(ctx, montage, t, style), [montage, style]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -103,6 +112,7 @@ function SingleReel() {
         .sort((a, b) => b.date - a.date),
     [allSolves],
   );
+  const credit = useReelCredit();
   const [pickedId, setPickedId] = useState<string | null>(null);
   const selected = candidates.find((s) => s.id === pickedId) ?? candidates[0] ?? null;
   // The stream is read from the database (the store's rows carry none); the reel waits for it.
@@ -159,6 +169,7 @@ function SingleReel() {
                   title="Solve Reel"
                   subtitle={new Date(selected.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                   fileName={`solve-${formatTime(selected.timeMs).replace(/[:.]/g, "-")}`}
+                  credit={credit}
                 />
               )}
             </>

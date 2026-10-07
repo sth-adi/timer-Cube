@@ -3,15 +3,19 @@
 import { useState } from "react";
 import { Share2 } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { PHASE_LABELS, type PhaseCount } from "@/lib/store/settingsStore";
 import { useStatsSolves } from "@/hooks/useStatsSolves";
-import { computeSessionStats } from "@/lib/stats/stats";
-import { drawShareCard, canvasToBlob } from "@/lib/share/shareCard";
+import { comparableTime, computePhaseSplits, computeSessionStats } from "@/lib/stats/stats";
+import { displayUsername } from "@/lib/auth/username";
+import { renderShareCard, canvasToBlob } from "@/lib/share/shareCard";
 
 export function ShareCardButton() {
   // Same list the insights panel shows: Stats scope, 2-handed solves only.
   const { solves } = useStatsSolves();
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const user = useAuthStore((s) => s.user);
   const [busy, setBusy] = useState(false);
 
   const sessionName = sessions.find((s) => s.id === activeSessionId)?.name ?? "Session";
@@ -20,7 +24,16 @@ export function ShareCardButton() {
     setBusy(true);
     try {
       const stats = computeSessionStats(solves);
-      const canvas = drawShareCard({ sessionName, stats });
+      // Oldest first, so the trend reads left to right; a DNF is Infinity here and a gap on the card.
+      const recent = [...solves].sort((a, b) => a.date - b.date).slice(-40).map(comparableTime);
+      const split = computePhaseSplits(solves, (n) => PHASE_LABELS[n as PhaseCount] ?? []);
+      const canvas = await renderShareCard({
+        sessionName,
+        stats,
+        recent,
+        phases: split?.phases.map((p) => ({ label: p.label, share: p.share, meanMs: p.meanMs })),
+        username: user ? displayUsername(user) : null,
+      });
       const blob = await canvasToBlob(canvas);
       if (!blob) return;
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BatteryWarning, BluetoothConnected, TriangleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import "@/styles/recap.css";
 
 /** A cube at or below this battery level gets the low-battery warning. */
 export const LOW_BATTERY_PERCENT = 12;
@@ -39,23 +40,23 @@ export function StatusBanners({ state, onDismissReconnect }: { state: BannerStat
   return (
     <>
       {state.lowBatteryLevel !== null && (
-        <p className="flex items-center gap-1 rounded-full bg-danger/10 px-2.5 py-0.5 text-[11px] font-medium text-danger">
-          <BatteryWarning size={12} /> {lowBatteryText(state.lowBatteryLevel)}
+        <p className="rc-banner flex max-w-full items-start gap-2 [&>svg]:mt-0.5 [&>svg]:shrink-0" data-tone="danger">
+          <BatteryWarning size={14} aria-hidden="true" /> <span className="min-w-0">{lowBatteryText(state.lowBatteryLevel)}</span>
         </p>
       )}
 
       {state.reconnectNotice && (
-        <p className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning" role="status" data-testid="reconnect-notice">
-          <BluetoothConnected size={12} /> {reconnectText(state.reconnectNotice.lostMoves)}
-          <button type="button" onClick={onDismissReconnect} aria-label="Dismiss" className="ml-0.5 rounded-full hover:text-foreground">
-            <X size={11} />
+        <p className="rc-banner flex max-w-full items-start gap-2 [&>svg]:mt-0.5 [&>svg]:shrink-0" data-tone="warning" role="status" data-testid="reconnect-notice">
+          <BluetoothConnected size={14} aria-hidden="true" /> <span className="min-w-0">{reconnectText(state.reconnectNotice.lostMoves)}</span>
+          <button type="button" onClick={onDismissReconnect} aria-label="Dismiss" className="hit -my-1 -mr-2 ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full hover:text-foreground">
+            <X size={14} aria-hidden="true" />
           </button>
         </p>
       )}
 
       {state.faceletsUnreliable && (
-        <p className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning" title={UNRELIABLE_HINT}>
-          <TriangleAlert size={12} /> {UNRELIABLE_TEXT}
+        <p className="rc-banner flex max-w-full items-start gap-2 [&>svg]:mt-0.5 [&>svg]:shrink-0" data-tone="warning" title={UNRELIABLE_HINT}>
+          <TriangleAlert size={14} aria-hidden="true" /> <span className="min-w-0">{UNRELIABLE_TEXT}</span>
         </p>
       )}
     </>
@@ -86,12 +87,12 @@ export function StatusDot({ state }: { state: BannerState }) {
         aria-label={label}
         aria-expanded={open}
         title={label}
-        className={cn("flex h-5 w-5 items-center justify-center rounded-full", severe ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning")}
+        className={cn("hit flex h-5 w-5 items-center justify-center rounded-full", severe ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning")}
       >
         <span aria-hidden className={cn("h-2 w-2 rounded-full", severe ? "bg-danger" : "bg-warning")} />
       </button>
       {open && (
-        <span role="status" className="absolute right-0 top-full z-30 mt-1 flex w-64 flex-col gap-1 rounded-lg bg-bg-panel-2 p-2 text-left text-[11px] font-normal leading-snug text-foreground shadow-lg">
+        <span role="status" className="absolute right-0 top-full z-30 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-border-strong bg-bg-panel-2 p-3 text-left text-[12px] font-normal leading-4 text-foreground shadow-lg">
           {messages.map((m) => (
             <span key={m} className="block whitespace-normal">
               {m}

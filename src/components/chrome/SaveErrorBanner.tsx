@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { downloadBackup } from "@/lib/backup/restore";
 
@@ -24,9 +24,9 @@ export function SaveErrorBanner() {
 
   if (!saveError) return null;
   return (
-    <div className="mx-3 mt-1 flex items-center gap-2 rounded-xl bg-danger/15 px-3 py-2 text-xs sm:mx-4" role="alert" data-testid="save-error-banner">
-      <AlertTriangle size={14} className="shrink-0 text-danger" />
-      <p className="min-w-0 flex-1 leading-snug text-foreground">
+    <div className="chrome-banner chrome-banner--danger" role="alert" data-testid="save-error-banner">
+      <AlertTriangle size={16} className="shrink-0 text-danger" aria-hidden="true" />
+      <p className="chrome-banner__text">
         {COPY[saveError.kind]}
         {exportFailed && <span className="text-danger"> The backup failed too.</span>}
       </p>
@@ -37,13 +37,13 @@ export function SaveErrorBanner() {
             setExportFailed(false);
             downloadBackup().then(clear, () => setExportFailed(true));
           }}
-          className="hit-y shrink-0 rounded-full bg-accent px-3 py-1 font-semibold text-accent-fg"
+          className="chrome-btn chrome-btn--primary hit-y"
         >
           Export backup
         </button>
       )}
-      <button type="button" onClick={clear} className="hit-y shrink-0 px-1 text-muted-2 hover:text-muted" aria-label="Dismiss">
-        ✕
+      <button type="button" onClick={clear} className="chrome-dismiss hit" aria-label="Dismiss">
+        <X size={15} aria-hidden="true" />
       </button>
     </div>
   );

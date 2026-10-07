@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { LayoutGrid } from "lucide-react";
 import type { Solve } from "@/types";
+import { StatTile } from "./StatTile";
 import { STAT_TILES, type StatTileResult } from "@/lib/stats/statTiles";
 
 interface ResolvedTile {
@@ -58,11 +59,7 @@ export function StatTilesGrid({ solves, rawSolves }: { solves: Solve[]; rawSolve
             {/* Columns by the card's own width, not the screen's: in the desktop sidebar this card is narrow. */}
             <div className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-1.5">
               {categoryTiles.map((tile) => (
-                <div key={tile.id} className="rounded-lg bg-bg-panel-2/70 px-2.5 py-2 transition-colors hover:bg-bg-panel-2">
-                  <p className="text-[11px] leading-snug text-muted-2">{tile.label}</p>
-                  <p className="tabular-nums text-[15px] font-semibold leading-tight text-foreground">{tile.result.value}</p>
-                  {tile.result.sub && <p className="text-[11px] leading-snug text-muted-2">{tile.result.sub}</p>}
-                </div>
+                <StatTile key={tile.id} label={tile.label} value={tile.result.value} sub={tile.result.sub} />
               ))}
             </div>
           </div>

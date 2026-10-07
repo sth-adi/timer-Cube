@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Clapperboard, Clock, Gauge, Pause, Play, Volume2, VolumeX } from "lucide-react";
-import { CAMERA_LATITUDE, CAMERA_LONGITUDE } from "@/components/scramble/CubeViewer";
+import { CAMERA_LATITUDE, CAMERA_LONGITUDE, loadCubing } from "@/components/scramble/CubeViewer";
+import { recolorPlayer } from "@/components/scramble/cubeColors";
+import { CubeStage, ReplayControlsSkeleton } from "@/components/lab/CubeStage";
 import { cn } from "@/lib/utils/cn";
 import { formatTime } from "@/lib/utils/time";
 import { readingMs, type Cue } from "@/lib/replay/directorsCut";
@@ -83,6 +85,8 @@ function speak(line: string): Promise<void> {
 const SPEEDS = [0.5, 1, 2, 4] as const;
 /** Slider thumb width the tick marks are inset by, so they line up with where the thumb actually stops. */
 const THUMB_PX = 16;
+/** Sticker size relative to its cubie (cubing.js defaults to 0.85). */
+const FACELET_SCALE = 0.8;
 const REAL_PAUSES_KEY = "replay-real-pauses";
 
 function prefersReducedMotion(): boolean {
@@ -131,6 +135,9 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
+  // cubing.js (or the player) failed to load: the stage says so and offers a Retry instead of an empty box.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   // Both timings are laid out once, from the gaps this player was mounted with
   // (see the init effect): the default one with idle pauses capped, and the
   // true one. Turns snap under prefers-reduced-motion.
@@ -173,19 +180,29 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     const container = containerRef.current;
     const initialTimeline = realPauses ? timelines.real : timelines.capped;
     (async () => {
-      const [{ TwistyPlayer }, { Alg }] = await Promise.all([import("cubing/twisty"), import("cubing/alg")]);
-      if (cancelled || !container) return;
-
-      const player = new TwistyPlayer({
-        puzzle: "3x3x3",
-        experimentalSetupAlg: setupAlg,
-        background: "none",
-        controlPanel: "none",
-        hintFacelets: "none",
-        experimentalDragInput: "auto",
-        cameraLatitude: CAMERA_LATITUDE,
-        cameraLongitude: CAMERA_LONGITUDE,
-      });
+      let loaded: Awaited<ReturnType<typeof loadCubing>>;
+      let player: InstanceType<(typeof import("cubing/twisty"))["TwistyPlayer"]>;
+      try {
+        loaded = await loadCubing();
+        if (cancelled || !container) return;
+        player = new loaded.twisty.TwistyPlayer({
+          puzzle: "3x3x3",
+          experimentalSetupAlg: setupAlg,
+          background: "none",
+          controlPanel: "none",
+          hintFacelets: "none",
+          experimentalDragInput: "auto",
+          // Slightly smaller stickers leave more of the black cubie body showing between them: closer to
+          // the beveled Gyro Twin than cubing.js's near-flush default (0.85).
+          experimentalFaceletScale: FACELET_SCALE,
+          cameraLatitude: CAMERA_LATITUDE,
+          cameraLongitude: CAMERA_LONGITUDE,
+        });
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+        return;
+      }
+      const { Alg } = loaded.alg;
       player.style.width = "100%";
       player.style.height = "100%";
       // See CubeViewer.tsx's CAMERA_LATITUDE doc comment: this camera+flip
@@ -201,6 +218,8 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       player.style.touchAction = "pan-y";
       container.appendChild(player);
       playerRef.current = player;
+      // Same sticker colours and solid body as the twin, the nets and the trainer's cube.
+      void recolorPlayer(player);
 
       // Assigned after mount (mirrors cubing.js's own documented pattern for
       // animationTimelineLeavesRequest) so the leaves below are guaranteed to
@@ -233,7 +252,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     // the parent remounts this component (via a `key`) on phase change.
     // Only the timing mode is re-authored on a live player (onToggleRealPauses).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     if (playerRef.current) playerRef.current.tempoScale = speed;
@@ -458,17 +477,28 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   const activeMove = durationMs > 0 ? activeLeaf(timeline.starts, shownPos) : -1;
   const segments = useMemo(() => (marks && timelineOk ? markSegments(marks, timeline) : []), [marks, timelineOk, timeline]);
 
+  // The scrubber's filled part ends under the thumb's centre, not at the raw percentage (the thumb never reaches the track's ends).
+  const frac = durationMs > 0 ? shownPos / durationMs : 0;
+  const scrubFill = `calc(${frac * 100}% + ${(0.5 - frac) * THUMB_PX}px)`;
+
   return (
-    <div ref={wrapRef} className="flex flex-col items-center gap-1.5">
-      <div className={cn("relative", className)}>
-        <div ref={containerRef} className="h-full w-full" />
+    <div ref={wrapRef} className="flex w-full flex-col items-center gap-3">
+      <CubeStage
+        className={className}
+        state={loadFailed ? "failed" : ready ? "ready" : "loading"}
+        onRetry={() => {
+          setLoadFailed(false);
+          setLoadAttempt((n) => n + 1);
+        }}
+      >
+        <div ref={containerRef} className="cube-stage__cube h-full w-full" />
         {overlay && ready && timelineOk && (
           <div className="pointer-events-none absolute left-1 top-1">{overlay({ positionMs: shownPos, activeMove, timeline })}</div>
         )}
-      </div>
+      </CubeStage>
 
       {cues && cues.length > 0 && (
-        <div className="flex min-h-[3.25rem] w-full flex-col items-center justify-center rounded-lg bg-bg-panel-2 px-3 py-1.5 text-center" aria-live="polite">
+        <div className="flex min-h-[3.5rem] w-full flex-col items-center justify-center rounded-xl bg-bg-panel-2 px-3 py-2 text-center" aria-live="polite">
           {caption ? (
             <>
               <p className={cn("text-[11px] font-bold uppercase tracking-wide", CUE_TONE[caption.tone])}>{caption.title}</p>
@@ -482,18 +512,20 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
         </div>
       )}
 
+      {!ready && !loadFailed && <ReplayControlsSkeleton withTicks={!!marks && marks.length > 1} />}
+
       {ready && durationMs > 0 && (
-        <div className="flex w-full flex-col items-center gap-1.5">
+        <div className="flex w-full flex-col items-center gap-2">
           <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
               onClick={onPlayPause}
-              className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+              className="flex h-10 min-w-[5.5rem] items-center justify-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-fg shadow-sm"
             >
-              {playing ? <Pause size={12} /> : <Play size={12} />}
+              {playing ? <Pause size={14} /> : <Play size={14} />}
               {atEnd ? "Replay" : playing ? "Pause" : "Play"}
             </button>
-            <div className="flex items-center gap-1 rounded-full bg-bg-panel-2 p-0.5">
+            <div className="flex h-10 items-center gap-0.5 rounded-full bg-bg-panel-2 p-1">
               {SPEEDS.map((s) => (
                 <button
                   key={s}
@@ -501,7 +533,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                   onClick={() => setSpeed(s)}
                   aria-pressed={speed === s}
                   className={cn(
-                    "rounded-full px-2 py-1 text-[10px] font-medium tabular-nums transition-colors",
+                    "h-8 min-w-9 rounded-full px-2 text-xs font-medium tabular-nums transition-colors",
                     speed === s ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
                   )}
                 >
@@ -515,15 +547,15 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
               aria-pressed={soundOn}
               aria-label={soundOn ? "Mute move sounds" : "Play a click on every move"}
               className={cn(
-                "flex items-center justify-center rounded-full p-1.5 transition-colors",
+                "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
                 soundOn ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
               )}
             >
-              {soundOn ? <Volume2 size={12} /> : <VolumeX size={12} />}
+              {soundOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
             </button>
           </div>
 
-          <div className="flex w-full max-w-xs items-start gap-2">
+          <div className="flex w-full max-w-sm items-start gap-3">
             <div className="min-w-0 flex-1">
               <div className="relative">
                 <input
@@ -533,7 +565,8 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                   step={1}
                   value={shownPos}
                   onChange={(e) => onScrub(Number(e.target.value))}
-                  className="relative block w-full accent-accent"
+                  className="replay-scrub"
+                  style={{ "--p": scrubFill } as CSSProperties}
                   aria-label="Scrub through the moves"
                   aria-valuetext={`${formatTime(shownPos)} of ${formatTime(durationMs)}`}
                 />
@@ -542,13 +575,13 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                     key={`${seg.label}-${seg.endMs}`}
                     aria-hidden
                     title={`${seg.label} done`}
-                    className="pointer-events-none absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground/45"
+                    className="pointer-events-none absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 rounded-full bg-foreground/50"
                     style={{ left: `calc(${(seg.endMs / durationMs) * 100}% + ${(0.5 - seg.endMs / durationMs) * THUMB_PX}px - 1px)` }}
                   />
                 ))}
               </div>
               {segments.length > 1 && (
-                <div className="flex px-2 text-[9px] font-medium uppercase tracking-wide text-muted-2" aria-hidden>
+                <div className="flex h-3.5 px-2 text-[10px] font-medium uppercase leading-3.5 tracking-wide text-muted-2" aria-hidden>
                   {segments.map((seg) => {
                     const w = (seg.endMs - seg.startMs) / durationMs;
                     return (
@@ -560,20 +593,20 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 </div>
               )}
             </div>
-            <p className="w-[5.75rem] shrink-0 pt-0.5 text-right text-[10px] tabular-nums text-muted" aria-hidden>
-              <span className="text-foreground">{formatTime(shownPos)}</span> / {formatTime(durationMs)}
+            <p className="h-7 w-[5.5rem] shrink-0 text-right text-xs leading-7 tabular-nums text-muted" aria-hidden>
+              <span className="font-medium text-foreground">{formatTime(shownPos)}</span> / {formatTime(durationMs)}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-            <p className="flex items-center gap-1 text-[10px] text-muted-2">
+          <div className="flex min-h-7 flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-2">
               {hasRealTiming ? (
                 <>
-                  <Clock size={11} className="text-accent" /> {realPauses || !canToggleRealPauses ? "Timed exactly as solved" : "Real move timing, long pauses shortened"}
+                  <Clock size={12} className="text-accent" /> {realPauses || !canToggleRealPauses ? "Timed exactly as solved" : "Real move timing, long pauses shortened"}
                 </>
               ) : (
                 <>
-                  <Gauge size={11} /> Estimated pacing — no capture timing for this solve
+                  <Gauge size={12} /> Estimated pacing — no capture timing for this solve
                 </>
               )}
             </p>
@@ -584,7 +617,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 aria-pressed={realPauses}
                 title="Off: pauses over about 0.6s are shortened. On: every pause plays at its true length."
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors",
+                  "hit-y h-7 rounded-full px-3 text-[11px] font-medium transition-colors",
                   realPauses ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >

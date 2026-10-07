@@ -15,6 +15,7 @@ import { DailyChallengeView } from "./DailyChallengeView";
 import type { PendingTrainerNav } from "@/lib/store/navigationStore";
 import { useTrainerStore } from "@/lib/store/trainerStore";
 import { cn } from "@/lib/utils/cn";
+import "@/styles/skeleton.css";
 
 const MODES = [
   { id: "plan", label: "Plan", icon: ListChecks },
@@ -95,7 +96,7 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
     <div className="flex w-full flex-1 flex-col items-center gap-4">
       <div className="flex flex-col items-center gap-0.5 text-center">
         <h1 className="text-lg font-semibold text-foreground">Trainer</h1>
-        <p className="max-w-sm text-xs text-muted-2">{MODE_BLURB[mode]}</p>
+        <p className="min-h-8 max-w-sm text-xs text-muted-2">{MODE_BLURB[mode]}</p>
       </div>
 
       <div className="flex flex-wrap justify-center gap-1.5">
@@ -120,27 +121,30 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
         })}
       </div>
 
-      {mode === "plan" ? (
-        <CurriculumSession />
-      ) : mode === "drill" ? (
-        <TrainerView />
-      ) : mode === "gym" ? (
-        <AlgGymTrainer />
-      ) : mode === "cross" ? (
-        <CrossDrill />
-      ) : mode === "recognize" ? (
-        <RecognitionTrainer />
-      ) : mode === "daily" ? (
-        <DailyChallengeView />
-      ) : mode === "bld" ? (
-        <BldMemoTrainer />
-      ) : mode === "race" ? (
-        <RaceHub />
-      ) : mode === "replay" ? (
-        <DualReplay />
-      ) : (
-        <AlgorithmsView autoStartReview={autoStartReview} onAutoStartConsumed={() => setAutoStartReview(null)} />
-      )}
+      {/* Opacity only (no transform, so a fixed sheet inside is never re-parented): a mode fades in instead of snapping. */}
+      <div key={mode} className="sk-reveal flex w-full flex-1 flex-col items-center gap-4">
+        {mode === "plan" ? (
+          <CurriculumSession />
+        ) : mode === "drill" ? (
+          <TrainerView />
+        ) : mode === "gym" ? (
+          <AlgGymTrainer />
+        ) : mode === "cross" ? (
+          <CrossDrill />
+        ) : mode === "recognize" ? (
+          <RecognitionTrainer />
+        ) : mode === "daily" ? (
+          <DailyChallengeView />
+        ) : mode === "bld" ? (
+          <BldMemoTrainer />
+        ) : mode === "race" ? (
+          <RaceHub />
+        ) : mode === "replay" ? (
+          <DualReplay />
+        ) : (
+          <AlgorithmsView autoStartReview={autoStartReview} onAutoStartConsumed={() => setAutoStartReview(null)} />
+        )}
+      </div>
     </div>
   );
 }

@@ -83,7 +83,7 @@ export default function PlayHub() {
       <AppBootstrap />
       <div className="relative mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-24 pt-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-xs font-semibold text-[var(--play-dim)] hover:text-white">
+          <Link href="/" className="hit-y text-xs font-semibold text-[var(--play-dim)] hover:text-white">
             ‹ Timer
           </Link>
           <CubeStatus />

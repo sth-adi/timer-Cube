@@ -92,9 +92,12 @@ export function FxLayer() {
     const live = () => levelRef.current === "insane" && !reduced.matches;
 
     let dpr = Math.min(2, window.devicePixelRatio || 1);
-    let w = 0;
-    let h = 0;
-    const resize = () => {
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    // The canvas only has a backing store while particles are alive: a full-screen one at 2x is
+    // several MB of GPU memory, which an idle (or flat) page shouldn't hold.
+    let sized = false;
+    const fit = () => {
       dpr = Math.min(2, window.devicePixelRatio || 1);
       w = window.innerWidth;
       h = window.innerHeight;
@@ -102,8 +105,19 @@ export function FxLayer() {
       canvas.height = Math.round(h * dpr);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
+      sized = true;
     };
-    resize();
+    const release = () => {
+      if (!sized) return;
+      canvas.width = 1;
+      canvas.height = 1;
+      sized = false;
+    };
+    const resize = () => {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      if (sized) fit();
+    };
     window.addEventListener("resize", resize);
 
     // ---- particle engine -------------------------------------------------
@@ -114,6 +128,8 @@ export function FxLayer() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       ctx.lineCap = "round";
+      // Light-on-light adds up to white, so the glow blend is for dark themes only.
+      const glow: GlobalCompositeOperation = document.documentElement.dataset.theme === "paper" ? "source-over" : "lighter";
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         if (p.kind === "ring") {
@@ -128,7 +144,7 @@ export function FxLayer() {
             particles.splice(i, 1);
             continue;
           }
-          ctx.globalCompositeOperation = "lighter";
+          ctx.globalCompositeOperation = glow;
           // The glow is a wider, fainter second stroke rather than canvas shadowBlur, which re-blurs every
           // shape on every frame and is the slowest thing a 2D canvas can do.
           ctx.strokeStyle = p.color;
@@ -150,7 +166,7 @@ export function FxLayer() {
             particles.splice(i, 1);
             continue;
           }
-          ctx.globalCompositeOperation = "lighter";
+          ctx.globalCompositeOperation = glow;
           ctx.strokeStyle = p.color;
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
@@ -187,10 +203,11 @@ export function FxLayer() {
         raf = requestAnimationFrame(frame);
       } else {
         raf = 0;
-        ctx.clearRect(0, 0, w, h);
+        release();
       }
     };
     const wake = () => {
+      if (!sized) fit();
       if (!raf) raf = requestAnimationFrame(frame);
     };
     const push = (p: Particle) => {
@@ -239,7 +256,7 @@ export function FxLayer() {
       const el = document.querySelector(".timer-stage");
       if (el) {
         const r = el.getBoundingClientRect();
-        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        if (r.width > 0) return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
       }
       return { x: w / 2, y: h * 0.42 };
     };
@@ -266,32 +283,41 @@ export function FxLayer() {
       flash.classList.add("on");
     };
 
+    // A new best is gold in every theme (the theme's own warning colour is orange or lime in some).
+    const goldPalette = () =>
+      document.documentElement.dataset.theme === "paper" ? ["#c27c0e", "#e0a02a", "#a0620a", "#f6c453"] : ["#f6c453", "#ffe29a", "#e29a24", "#ffffff"];
     const impact = (kind: FxImpactKind) => {
+      if (reduced.matches || levelRef.current === "off") return;
+      const GOLD = goldPalette();
       if (!live()) {
-        // Reduced motion / lower levels still get the quiet colour flash.
-        if (levelRef.current !== "off" && !reduced.matches) flashScreen(kind);
+        // Spicy: the screen wash, and for a best a small gold glitter from the digits — no shake, no rings.
+        flashScreen(kind);
+        if (kind === "pb") {
+          const { x, y } = stageCenter();
+          sparks(x, y, 14, 3.6, GOLD, 0.06);
+          wake();
+        }
         return;
       }
       const { x, y } = stageCenter();
       const pal = palette();
       if (kind === "solve") {
-        ring(x, y, pal[0], 11);
-        sparks(x, y, 22, 7.5, [pal[0], pal[1], "#ffffff"]);
-        shake(3, 280);
+        ring(x, y, pal[0], 9);
+        sparks(x, y, 14, 6, [pal[0], pal[1], "#ffffff"]);
+        shake(2, 240);
         flashScreen("solve");
       } else if (kind === "pb") {
-        ring(x, y, pal[0], 15);
-        ring(x, y, pal[2], 12, 7);
-        ring(x, y, pal[1], 9.5, 14);
-        ring(x, y, "#ffffff", 7.5, 22);
-        sparks(x, y, 110, 13, pal, 0.2);
-        shards(x, y, 70, pal);
-        shake(9, 520);
+        ring(x, y, GOLD[0], 13);
+        ring(x, y, GOLD[1], 10, 8);
+        ring(x, y, "#ffffff", 7.5, 18);
+        sparks(x, y, 64, 11, GOLD, 0.18);
+        shards(x, y, 34, GOLD);
+        shake(5, 420);
         flashScreen("pb");
       } else {
-        ring(x, y, cssVar("--danger", "#ff4d6d"), 10);
-        sparks(x, y, 34, 6, [cssVar("--danger", "#ff4d6d"), "#ff9a5c"], 0.3);
-        shake(6, 380);
+        ring(x, y, cssVar("--danger", "#ff4d6d"), 9);
+        sparks(x, y, 24, 5.5, [cssVar("--danger", "#ff4d6d"), "#ff9a5c"], 0.3);
+        shake(4, 320);
         flashScreen("dnf");
       }
       wake();

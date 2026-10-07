@@ -76,8 +76,10 @@ export function LiveElapsed({
 }
 
 /**
- * "N moves so far · X TPS — solve the cube to stop", live. Re-renders every frame on its own so the
- * speedometer slides with the clock instead of only updating when a move arrives.
+ * "N moves · X TPS — solve the cube to stop", live. Re-renders every frame on its own so the
+ * speedometer slides with the clock instead of only updating when a move arrives. Each number sits
+ * in a slot of its own width (tabular figures, right-aligned), so the line never reflows as the
+ * count passes 9 or your hands start and stop; the instruction is the quietest part of it.
  */
 export function LiveMoveLine({ timestamps }: { timestamps: readonly number[] }) {
   const nowMs = useFrameNow(true);
@@ -85,10 +87,18 @@ export function LiveMoveLine({ timestamps }: { timestamps: readonly number[] }) 
   // clock rather than sitting in fixed one-second buckets from the start.
   const liveTps = nowMs > 0 ? rollingTps(timestamps, nowMs) : null;
   return (
-    <p className="text-sm text-muted">
-      {timestamps.length} moves so far
+    <p className="live-readout flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 text-xs text-muted">
+      <span className="whitespace-nowrap">
+        <span className="inline-block min-w-[2ch] text-right font-semibold text-foreground/85">{timestamps.length}</span> moves
+      </span>
+      <span aria-hidden className="text-muted-2/70">
+        ·
+      </span>
       <LiveTps tps={liveTps} />
-      {" — solve the cube to stop"}
+      <span aria-hidden className="text-muted-2/70">
+        —
+      </span>
+      <span className="text-muted-2">solve the cube to stop</span>
     </p>
   );
 }

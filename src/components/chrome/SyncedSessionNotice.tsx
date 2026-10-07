@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { History } from "lucide-react";
+import { History, X } from "lucide-react";
 import { useCloudSyncStore } from "@/lib/store/cloudSyncStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { suggestSession } from "@/lib/db/sessionSuggestion";
@@ -35,9 +35,9 @@ export function SyncedSessionNotice() {
 
   if (!suggestion || wasDismissed(suggestion.id)) return null;
   return (
-    <div className="mx-3 mt-1 flex items-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-xs sm:mx-4" role="status" data-testid="synced-session-notice">
-      <History size={14} className="shrink-0 text-accent" />
-      <p className="min-w-0 flex-1 leading-snug text-foreground">
+    <div className="chrome-banner chrome-banner--info" role="status" data-testid="synced-session-notice">
+      <History size={16} className="shrink-0 text-accent" aria-hidden="true" />
+      <p className="chrome-banner__text">
         Your synced history ({suggestion.count} solves) is in another session.
       </p>
       <button
@@ -46,7 +46,7 @@ export function SyncedSessionNotice() {
           void switchSession(suggestion.id);
           dismiss();
         }}
-        className="hit-y shrink-0 rounded-full bg-accent px-3 py-1 font-semibold text-accent-fg"
+        className="chrome-btn chrome-btn--primary hit-y"
       >
         Open it
       </button>
@@ -61,10 +61,10 @@ export function SyncedSessionNotice() {
           bump((n) => n + 1);
           dismiss();
         }}
-        className="hit-y shrink-0 px-1 text-muted-2 hover:text-muted"
+        className="chrome-dismiss hit"
         aria-label="Dismiss"
       >
-        ✕
+        <X size={15} aria-hidden="true" />
       </button>
     </div>
   );

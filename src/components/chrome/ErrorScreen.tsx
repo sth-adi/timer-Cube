@@ -30,26 +30,26 @@ export function ErrorScreen({ error, onRetry }: { error: Error & { digest?: stri
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 py-10 text-center" data-testid="error-screen">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 pb-[calc(2.5rem+var(--safe-bottom))] pt-10 text-center" data-testid="error-screen">
       <AlertTriangle size={32} className="text-danger" aria-hidden />
       <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
       <p className="max-w-sm text-sm leading-snug text-muted">
         Your solves are safe on this device — they&apos;re stored locally and this error doesn&apos;t touch them.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <button type="button" onClick={onRetry} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
+        <button type="button" onClick={onRetry} className="chrome-btn chrome-btn--lg chrome-btn--primary">
           Try again
         </button>
         {/* A full page load on purpose: it gets out of whatever state broke. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/" className="rounded-full bg-accent-soft px-5 py-2.5 text-sm font-semibold text-foreground">
+        <a href="/" className="chrome-btn chrome-btn--lg chrome-btn--quiet">
           Back to timer
         </a>
         <button
           type="button"
           onClick={download}
           disabled={backup === "working"}
-          className="rounded-full bg-accent-soft px-5 py-2.5 text-sm font-semibold text-foreground disabled:opacity-60"
+          className="chrome-btn chrome-btn--lg chrome-btn--quiet disabled:opacity-60"
         >
           {backup === "working" ? "Preparing…" : "Download backup"}
         </button>

@@ -54,6 +54,15 @@
   --nav-height: 60px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
+  /* Shape and rhythm shared by the app shell (banners, toasts, pills, dock): corner radii
+     from small controls up to the floating dock, the phone page gutter, the touch target. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --gutter: 12px;
+  --hit: 44px;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
@@ -190,8 +199,8 @@
   --bg-elevated: #ffffff;
   --bg-panel: #ffffff;
   --bg-panel-2: #eceef3;
-  --border: rgba(15, 17, 25, 0.09);
-  --border-strong: rgba(15, 17, 25, 0.18);
+  --border: rgba(15, 17, 25, 0.1);
+  --border-strong: rgba(15, 17, 25, 0.2);
   --foreground: #14151c;
   --muted: #4f5363;
   --muted-2: #65697c;
@@ -199,10 +208,11 @@
   --accent-strong: #4a2fdb;
   --accent-soft: rgba(91, 61, 245, 0.1);
   --accent-fg: #ffffff;
-  --cyan: #0284c7;
-  --success: #059669;
-  --warning: #b45309;
-  --danger: #dc2626;
+  /* Status hues are text colours too ("Saved", PB times, errors): each is >= 4.5:1 on white and the page grey. */
+  --cyan: #0369a1;
+  --success: #047857;
+  --warning: #a04a07;
+  --danger: #c81e1e;
   --timer-glow: 0px;
   --shadow-sm: 0 1px 2px rgba(15, 17, 25, 0.06);
   --shadow-md: 0 8px 24px rgba(15, 17, 25, 0.08);
@@ -244,6 +254,17 @@
 
 html {
   overflow-x: hidden;
+  /* Landscape phones must not inflate small text. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Type rhythm: headings break evenly, paragraphs avoid a lone last word. */
+:where(h1, h2, h3) {
+  text-wrap: balance;
+}
+:where(p) {
+  text-wrap: pretty;
 }
 
 body {
@@ -268,8 +289,24 @@ body {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 38%, transparent);
   color: var(--foreground);
+}
+
+/* Keyboard focus, in every effects level (Off included): a crisp accent ring, never on programmatic
+   container focus (dialogs take tabindex=-1 focus and draw no ring of their own). */
+:where(button, a, input, select, textarea, summary, [role="button"], [tabindex]):not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+:where(input, textarea, select):focus-visible {
+  outline-offset: 0;
+}
+
+/* Slim scrollbars everywhere (the effects levels tint them with the accent below). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 24%, transparent) transparent;
 }
 
 /* Flat, solid surface — the default card treatment. Blur/glass is reserved
@@ -959,7 +996,7 @@ body {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
 }
-:root:not([data-fx-level="off"]) :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+:root:not([data-fx-level="off"]) :where(button, a, input, select, textarea, summary, [role="button"], [tabindex]):not([tabindex="-1"]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 22%, transparent);
@@ -1097,13 +1134,47 @@ body {
   box-shadow: 0 0 18px -6px var(--accent);
 }
 
-/* --- Floating glass dock (mobile nav) --- */
+/* --- Mobile dock ---------------------------------------------------------
+   Effects off: a flat bar on the bottom edge — safe-area padding under the labels, a 3px tick over
+   the active tab, a tint while a tab is pressed. Effects on: a floating glass pill with a sliding
+   active pill. Every item is a >= 44px target (the bar is 60px+, items inset 5px top and bottom). */
 .fx-dock {
   padding-bottom: var(--safe-bottom);
   height: calc(var(--nav-height) + var(--safe-bottom));
 }
 .fx-dock-glow {
   display: none;
+}
+.fx-dock-item {
+  position: relative;
+  z-index: 1;
+  margin-block: 5px;
+  min-height: 44px;
+  border-radius: 16px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.fx-dock-item:active {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.fx-dock-item:focus-visible {
+  outline-offset: -3px;
+}
+/* The flat bar's active mark: a short accent tick on the top edge. */
+.fx-dock-item::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 22px;
+  height: 3px;
+  margin-left: -11px;
+  border-radius: 0 0 3px 3px;
+  background: var(--accent);
+  opacity: 0;
+}
+.fx-dock-item[data-active="true"]::before {
+  opacity: 1;
 }
 :root:not([data-fx-level="off"]) {
   --nav-height: 68px;
@@ -1116,41 +1187,53 @@ body {
   padding-bottom: 0;
   border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--bg-elevated) 68%, transparent);
+  /* Mostly opaque: the glass still blurs, but the labels of whatever scrolls behind must not read through. */
+  background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+  /* Unprefixed only (the compiler adds the -webkit- twin): a hand-written twin AFTER it made the compiler drop this line, so Chrome never blurred the dock. */
   backdrop-filter: blur(24px) saturate(1.7);
-  -webkit-backdrop-filter: blur(24px) saturate(1.7);
   box-shadow:
     0 22px 44px -14px rgba(0, 0, 0, 0.75),
     inset 0 1px 0 color-mix(in srgb, var(--foreground) 10%, transparent),
-    0 0 46px -14px var(--accent);
+    0 0 40px -16px var(--accent);
   transition:
     translate 0.55s cubic-bezier(0.3, 1.2, 0.4, 1),
     opacity 0.4s ease;
 }
+:root[data-theme="paper"]:not([data-fx-level="off"]) .fx-dock {
+  box-shadow:
+    0 14px 32px -12px rgba(15, 17, 25, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 0 1px var(--border);
+}
+/* The pill sits behind the active item: one slot wide (the bar's 4px side padding off the total), moved by transform only. */
 :root:not([data-fx-level="off"]) .fx-dock-glow {
   display: block;
   position: absolute;
-  top: 6px;
-  bottom: 6px;
-  left: 0;
-  width: calc(100% / 6);
-  border-radius: 18px;
+  top: 5px;
+  bottom: 5px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--slots, 6));
+  border-radius: 19px;
   pointer-events: none;
   opacity: var(--on, 1);
-  translate: calc(var(--i, 0) * 100%) 0;
+  transform: translateX(calc(var(--i, 0) * 100%));
+  will-change: transform;
   transition:
-    translate 0.5s cubic-bezier(0.3, 1.45, 0.5, 1),
+    transform 0.42s cubic-bezier(0.3, 1.25, 0.45, 1),
     opacity 0.3s ease;
   background:
-    radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 70%),
+    radial-gradient(ellipse at 50% 120%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%),
     color-mix(in srgb, var(--accent) 10%, transparent);
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
-    0 0 26px -6px var(--accent);
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 18px -8px var(--accent);
 }
-:root:not([data-fx-level="off"]) .fx-dock-item {
-  position: relative;
-  z-index: 1;
+:root:not([data-fx-level="off"]) .fx-dock-item::before {
+  display: none;
+}
+:root:not([data-fx-level="off"]) .fx-dock-item:active {
+  background: none;
+  scale: 1; /* only the icon dips (below), not the whole slot the global button press would shrink */
 }
 :root:not([data-fx-level="off"]) .fx-dock-item svg {
   transition:
@@ -1159,9 +1242,13 @@ body {
     filter 0.3s ease;
 }
 :root:not([data-fx-level="off"]) .fx-dock-item[data-active="true"] svg {
-  translate: 0 -2px;
-  scale: 1.16;
-  filter: drop-shadow(0 0 7px var(--accent));
+  translate: 0 -1px;
+  scale: 1.1;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+/* Press feedback, links included (the global :active rule only covers buttons). */
+:root:not([data-fx-level="off"]) .fx-dock-item:active svg {
+  scale: 0.88;
 }
 /* Focus mode: the dock slides away the instant a solve is live. */
 :root:not([data-fx-level="off"])[data-fx-phase="running"] .fx-dock {
@@ -1700,8 +1787,9 @@ body {
     filter: none;
   }
   .fx-dock,
-  .fx-dock-glow {
-    transition: none;
+  .fx-dock-glow,
+  .fx-dock-item svg {
+    transition: none !important;
   }
 }
 
@@ -1726,7 +1814,8 @@ body {
   }
 }
 
-.no-scrollbar {
+.no-scrollbar,
+:root:not([data-fx-level="off"]) .no-scrollbar {
   scrollbar-width: none;
 }
 .no-scrollbar::-webkit-scrollbar {
@@ -1770,4 +1859,152 @@ body {
   select {
     font-size: 16px;
   }
+}
+
+/* --- App shell: banners, toasts and pills (components/chrome) ---------------
+   One look for everything that reports status above or over the screens: the radii and gutter
+   come from the tokens at the top, surfaces are solid enough to read over any content in every
+   theme, and the floating ones clear the dock plus the home indicator. */
+.chrome-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 4px var(--gutter) 0;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--foreground);
+}
+@media (min-width: 640px) {
+  .chrome-banner {
+    margin-inline: 16px;
+  }
+}
+.chrome-banner--danger {
+  background: color-mix(in srgb, var(--danger) 13%, var(--bg-panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.chrome-banner--info {
+  background: color-mix(in srgb, var(--accent) 11%, var(--bg-panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+/* The message keeps a readable measure: on the narrowest phones the actions drop to their own row, right-aligned. */
+.chrome-banner__text {
+  min-width: 0;
+  flex: 1 1 11rem;
+}
+.chrome-banner > .chrome-btn {
+  margin-left: auto;
+}
+/* Pill action inside a banner or toast: a 32px look with a 44px hit area on touch (.hit-y). */
+.chrome-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.chrome-btn--primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.chrome-btn--quiet {
+  background: var(--bg-panel-2);
+  color: var(--foreground);
+}
+.chrome-btn--lg {
+  min-height: var(--hit);
+  padding: 0 20px;
+  font-size: 14px;
+}
+.chrome-dismiss {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--muted-2);
+}
+.chrome-dismiss:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.chrome-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  max-width: 48vw;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.chrome-pill > span:not([class]) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Floating toasts: centred above the dock and the home indicator; --slot stacks a second one over the first. */
+.chrome-toast-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--gutter);
+  pointer-events: none;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px + var(--slot, 0) * 52px);
+}
+/* While a recap's action bar is pinned above the dock, float clear of it. */
+body:has([data-testid="recap-actions"]) .chrome-toast-wrap {
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 92px + var(--slot, 0) * 52px);
+}
+@media (min-width: 1024px) {
+  .chrome-toast-wrap,
+  body:has([data-testid="recap-actions"]) .chrome-toast-wrap {
+    bottom: calc(var(--safe-bottom) + 20px + var(--slot, 0) * 52px);
+  }
+}
+.chrome-toast {
+  pointer-events: auto;
+  display: flex;
+  max-width: min(100%, 420px);
+  min-height: var(--hit);
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--foreground);
+}
+.chrome-toast__action {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.chrome-toast__action:hover {
+  background: var(--accent-soft);
 }

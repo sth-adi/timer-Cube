@@ -118,7 +118,7 @@ export function OnlinePresenceBadge() {
 
   return (
     <div
-      className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-2 py-1 text-[11px] text-muted"
+      className="chrome-pill bg-bg-panel-2 font-normal text-muted"
       title="Cubers with the app open right now"
     >
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />

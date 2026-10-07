@@ -10,6 +10,7 @@ import { useSettingsStore } from "@/lib/store/settingsStore";
 import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, matToQuat, orientationLabel, quatToMat, type Quat } from "@/lib/gyro/orientation";
 import { stepToward } from "@/lib/gyro/smooth";
 import { TurnCube } from "./TurnCube";
+import { TwinStage } from "./TwinStage";
 import { useTurnAnimation } from "./useTurnAnimation";
 import { cn } from "@/lib/utils/cn";
 
@@ -124,7 +125,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
 
   return (
     <div className={cn("relative flex flex-col items-center gap-3", className)} data-testid="gyro-twin">
-      <div className="flex items-center justify-center" style={{ width: size * 1.9, height: size * 1.9, perspective: size * 7 }}>
+      <TwinStage size={size}>
         <div
           ref={cubeRef}
           className="relative"
@@ -137,7 +138,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
         >
           <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={size} />
         </div>
-      </div>
+      </TwinStage>
 
       {showControls && (
         <div className="flex w-full flex-col items-center gap-2">

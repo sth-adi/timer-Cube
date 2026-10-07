@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSmartCubeStore, type SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { FaceletNet } from "@/components/scramble/ScrambleNet";
+import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { MIMIC_STABLE_MS, faceletsOf, fixAfter, mimicAlg, mimicSyncVerdict, mimicView, movesToReach, type MimicFix } from "@/lib/analysis/mimicSync";
 import { cn } from "@/lib/utils/cn";
 
@@ -22,7 +23,7 @@ function MimicNet() {
   const live = useSmartCubeStore((s) => s.liveFacelets);
   return (
     <div className="flex w-full justify-center" aria-hidden="true">
-      <FaceletNet facelets={facelets ?? live} className="w-full max-w-[11rem]" />
+      <FaceletNet facelets={facelets ?? live} className="w-full max-w-[10rem]" />
     </div>
   );
 }
@@ -49,16 +50,6 @@ export function preloadCubeViewer(): void {
     .then((m) => m.loadCubing())
     .catch(() => {});
 }
-
-/** Sticker colours (matches CubeViewer's stickers), keyed by face letter. */
-const FACE_COLOR: Record<string, string> = {
-  U: "#f5f5f0",
-  D: "#ffd42a",
-  R: "#e0332f",
-  L: "#ff8c1a",
-  F: "#1fa64c",
-  B: "#2f6bff",
-};
 
 /**
  * Where the tick sits for each face: on the matching edge of the box (the
@@ -94,7 +85,7 @@ function TurnTick({ face }: { face: string }) {
       ref={ref}
       aria-hidden
       className={cn("pointer-events-none absolute rounded-full opacity-0 motion-reduce:hidden", TICK_POSITION[face])}
-      style={{ background: FACE_COLOR[face] }}
+      style={{ background: FACELET_COLORS[face], boxShadow: `0 0 6px ${FACELET_COLORS[face]}` }}
     />
   );
 }
