@@ -1,0 +1,232 @@
+/* ===========================================================
+   Theme surface identity.
+
+   globals.css gives each theme a palette. This file gives each one a restrained *surface* character,
+   using only: border treatment, corner-radius scale, card elevation, type weight and tracking (headings and
+   the timer digits), divider style. No glow, blur, gradient or text gradient; the theme backgrounds
+   (aurora, grid, cubes, warp) are untouched. Nothing here changes a size: borders keep their 1px width
+   (a colour or an inset ring changes, never the box), radii and weights do not move layout.
+
+     nebula     hairline    standard radii   soft drop       solid dividers   bold digits    (the baseline)
+     mint       borderless  rounder          flat tonal      solid dividers   medium digits
+     carbon     outlined    near-square      2px outline     solid dividers   light digits
+     sunset     hairline    roundest         paper edge      dotted dividers  semibold digits
+     terminal   phosphor    square           flat ruled      dashed dividers  regular digits, mono
+     speedcube  strong      small            key-cap edge    solid dividers   heavy digits
+     paper      hairline    soft             stacked sheets  solid dividers   semibold digits
+
+   Loaded after globals.css (layout.tsx). Card rules out-rank globals.css's FX card rules by specificity, not
+   by order, and stay out of the phone breakpoint's way (see the two @media blocks).
+   =========================================================== */
+
+:root {
+  /* Corner radii, small control up to large panel. Tailwind's rounded-* utilities read these. Nebula's are
+     the app's original values. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  /* The floating dock (its corners, its items, the sliding active pill). */
+  --dock-radius: 24px;
+  --dock-item-radius: 16px;
+  --dock-pill-radius: 19px;
+
+  /* Cards: border colour, elevation, and the same for a hovered card. */
+  --card-border: var(--border);
+  --card-border-hover: var(--border-strong);
+  --card-shadow: var(--shadow-sm);
+  --card-shadow-hover: var(--shadow-md);
+  /* Phone cards (under 1024px) are soft fills; a theme that wants an edge there opts in. */
+  --card-border-phone: transparent;
+  --card-shadow-phone: none;
+
+  --divider-style: solid;
+  --digits-weight: 700;
+  --digits-tracking: -0.045em;
+}
+
+/* --- Nebula: the baseline. Hairline border, soft drop, standard radii. --- */
+
+/* --- Mint: flat and tonal. No card outline, no card shadow; surfaces separate by fill alone. --- */
+:root[data-theme="mint"] {
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-2xl: 20px;
+  --radius-3xl: 28px;
+  --dock-radius: 28px;
+  --dock-item-radius: 20px;
+  --dock-pill-radius: 23px;
+  --card-border: transparent;
+  --card-border-hover: transparent;
+  --card-shadow: none;
+  --card-shadow-hover: none;
+  --border: rgba(255, 255, 255, 0.06);
+  --digits-weight: 600;
+  --digits-tracking: -0.04em;
+}
+
+/* --- Carbon: outlined and high contrast. A 2px outline (1px border plus a 1px inset ring), near-square. --- */
+:root[data-theme="carbon"] {
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 4px;
+  --radius-3xl: 6px;
+  --dock-radius: 6px;
+  --dock-item-radius: 3px;
+  --dock-pill-radius: 3px;
+  --outline: rgba(250, 250, 250, 0.3);
+  --outline-hover: rgba(250, 250, 250, 0.55);
+  --card-border: var(--outline);
+  --card-border-hover: var(--outline-hover);
+  --card-shadow: inset 0 0 0 1px var(--outline);
+  --card-shadow-hover: inset 0 0 0 1px var(--outline-hover);
+  --card-border-phone: var(--outline);
+  --card-shadow-phone: inset 0 0 0 1px var(--outline);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --digits-weight: 300;
+  --digits-tracking: -0.05em;
+  --heading-weight: 600;
+  --heading-tracking: -0.01em;
+}
+
+/* --- Sunset: hairline border, the roundest corners, a one-pixel paper edge under each card. --- */
+:root[data-theme="sunset"] {
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+  --radius-2xl: 22px;
+  --radius-3xl: 30px;
+  --dock-radius: 30px;
+  --dock-item-radius: 22px;
+  --dock-pill-radius: 25px;
+  --card-shadow: 0 1px 0 var(--border-strong);
+  --card-shadow-hover: 0 2px 0 var(--border-strong);
+  --card-shadow-phone: 0 1px 0 var(--border);
+  --divider-style: dotted;
+  --digits-weight: 600;
+  --digits-tracking: -0.035em;
+}
+
+/* --- Terminal: ruled and square. Phosphor hairline, no elevation, dashed rules, regular-weight mono digits. --- */
+:root[data-theme="terminal"] {
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 4px;
+  --radius-2xl: 2px;
+  --radius-3xl: 4px;
+  --dock-radius: 4px;
+  --dock-item-radius: 2px;
+  --dock-pill-radius: 2px;
+  --card-border: var(--border-strong);
+  --card-border-hover: color-mix(in srgb, var(--accent) 55%, transparent);
+  --card-shadow: none;
+  --card-shadow-hover: none;
+  --card-border-phone: var(--border);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --divider-style: dashed;
+  --digits-weight: 500;
+  --digits-tracking: -0.02em;
+  --heading-weight: 600;
+  --heading-tracking: 0.02em;
+}
+
+/* --- Speedcube: chunky. Stronger border, small radii, a 3px key-cap edge, heavy digits. --- */
+:root[data-theme="speedcube"] {
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 10px;
+  --radius-3xl: 14px;
+  --dock-radius: 14px;
+  --dock-item-radius: 9px;
+  --dock-pill-radius: 9px;
+  --card-border: var(--border-strong);
+  --card-border-hover: color-mix(in srgb, var(--foreground) 36%, transparent);
+  --card-shadow: 0 3px 0 var(--border-strong);
+  --card-shadow-hover: 0 3px 0 color-mix(in srgb, var(--foreground) 36%, transparent);
+  --card-border-phone: var(--border-strong);
+  --card-shadow-phone: 0 3px 0 var(--border);
+  --shadow-sm: 0 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 3px 0 rgba(0, 0, 0, 0.5);
+  --digits-weight: 800;
+  --digits-tracking: -0.05em;
+  --heading-weight: 800;
+  --heading-tracking: -0.015em;
+}
+
+/* --- Paper: soft light sheets. Hairline border, two stacked sheet edges underneath. --- */
+:root[data-theme="paper"] {
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --dock-radius: 22px;
+  --dock-item-radius: 15px;
+  --dock-pill-radius: 18px;
+  --card-shadow: 0 1px 0 var(--border-strong), 0 3px 0 -1px var(--border);
+  --card-shadow-hover: 0 1px 0 var(--border-strong), 0 4px 0 -1px var(--border-strong);
+  --card-shadow-phone: 0 1px 0 var(--border-strong), 0 3px 0 -1px var(--border);
+  --card-border-phone: var(--border);
+  --digits-weight: 600;
+  --digits-tracking: -0.04em;
+  --heading-weight: 650;
+}
+
+/* --- Rules that read the variables above --- */
+
+/* Cards on a wide screen. The `:not([data-surface-off])` is only specificity padding (it never matches), so
+   these beat globals.css's `:root:not([data-fx-level="off"]) .card` rules whichever sheet loads last. */
+@media (min-width: 1024px) {
+  html:root:not([data-surface-off]) .card {
+    border-color: var(--card-border);
+    box-shadow: var(--card-shadow);
+  }
+  html:root:not([data-surface-off]) .card:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: var(--card-shadow-hover);
+  }
+}
+
+/* Phone cards: globals.css makes them soft borderless fills; a theme with an edge puts it back. */
+@media (max-width: 1023px) {
+  html:root:not([data-surface-off]) .card {
+    border-color: var(--card-border-phone);
+    box-shadow: var(--card-shadow-phone);
+  }
+}
+
+/* Dividers: the line style only, never the width. */
+html:root:not([data-surface-off]) :is(.border-t, .border-b, .border-y, .divide-y > *) {
+  border-style: var(--divider-style);
+}
+
+/* Heading weight and tracking, for the themes that set them (nebula keeps each heading's own utilities). */
+html:root[data-theme="carbon"] :where(h1, h2, h3),
+html:root[data-theme="terminal"] :where(h1, h2, h3),
+html:root[data-theme="speedcube"] :where(h1, h2, h3),
+html:root[data-theme="paper"] :where(h1, h2, h3) {
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking, normal);
+}
+
+/* The square themes square their pill buttons too (a switch keeps its round track, and so does any
+   element that is not a control: dots, bars, avatars). */
+html:root[data-theme="carbon"] :is(button, a, label)[class*="rounded-full"]:not([role="switch"]) {
+  border-radius: var(--radius-lg);
+}
+html:root[data-theme="terminal"] :is(button, a, label)[class*="rounded-full"]:not([role="switch"]) {
+  border-radius: var(--radius-lg);
+}

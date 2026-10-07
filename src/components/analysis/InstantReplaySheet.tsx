@@ -9,9 +9,10 @@ import { computeReplayGaps } from "@/lib/analysis/replayGaps";
 import { displayIndexForMove, displayMoves } from "@/lib/analysis/replayDisplay";
 import { phaseMarksFromMilestones } from "@/lib/analysis/replayTiming";
 import { hasBreakdown, solveBreakdown } from "@/lib/analysis/solveBreakdown";
-import { solveFinalMs, type Penalty, type Solve } from "@/types";
+import { solveFinalMs, type EventTag, type Penalty, type Solve } from "@/types";
 import { useModalLayer } from "@/hooks/useModalLayer";
 import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
+import { useReplayGhostOption } from "./useReplayGhost";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { ReplayGyroTwin } from "./ReplayGyroTwin";
 import { ReplayPlaceholder } from "@/components/lab/CubeStage";
@@ -35,6 +36,10 @@ interface InstantReplaySheetProps {
   moveTimestamps?: number[];
   /** The solve's recorded cube orientation (see lib/gyro/solveGyro): when there is one, a small Gyro Twin tilts with it over the replay. */
   gyroStream?: GyroStreamData | null;
+  /** The solve's id, date and event when the caller has them: a "vs PB" ghost is then your best solve from before this one, in the same event. */
+  solveId?: string;
+  date?: number;
+  event?: EventTag;
   onClose: () => void;
 }
 
@@ -46,7 +51,7 @@ interface InstantReplaySheetProps {
  * optimal-solution comparison): it's the fast "let me see that again" replay
  * Cubeast's own post-solve screen offers, not a second copy of the analyzer.
  */
-export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty = "none", moveTimestamps, gyroStream, onClose }: InstantReplaySheetProps) {
+export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty = "none", moveTimestamps, gyroStream, solveId, date, event, onClose }: InstantReplaySheetProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useModalLayer(dialogRef, onClose);
@@ -75,6 +80,8 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
 
   // The Gyro Twin's stickers: the cube after each move, so it shows what the real cube showed.
   const faceletsAfter = useMemo(() => (gyroStream && hasRealTiming ? faceletsAfterMoves(scramble, moves) : null), [gyroStream, hasRealTiming, scramble, moves]);
+
+  const ghost = useReplayGhostOption({ id: solveId, scramble, timeMs, date, event }, hasRealTiming, moves.length, timeMs);
 
   const moveText = (active: number) => {
     if (display.length === 0) {
@@ -146,6 +153,8 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
             hasRealTiming={hasRealTiming}
             marks={marks}
             renderMoves={moveText}
+            ghost={ghost}
+            gyro={gyroStream && hasRealTiming && moveTimestamps ? { stream: gyroStream, moveMs: moveTimestamps } : undefined}
             overlay={
               gyroStream && faceletsAfter && moveTimestamps
                 ? ({ positionMs, playing, speed, timeline }) => (

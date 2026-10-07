@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import type { PostSolveBaseline } from "@/lib/analysis/postSolveBaseline";
 import { PHASE_LABELS_4, fillOffsetPct, isSlow, ribbonSegments, segmentFill, segmentState } from "@/components/timer/phaseRibbonMath";
+import { useSmoothedValue } from "@/components/motion";
 import { cn } from "@/lib/utils/cn";
 import "@/styles/live-solve.css";
 
@@ -19,6 +20,25 @@ const PHASE_LETTER = ["C", "F", "O", "P"] as const;
 /** Where the four pair notches sit inside the F2L segment (% along it). */
 const PAIR_NOTCHES = [12.5, 37.5, 62.5, 87.5] as const;
 
+/** A fill that moves by more than this many percent of a segment in one render is a jump (a phase landing), and glides. */
+const FILL_JUMP_PCT = 2.5;
+
+/**
+ * One segment's fill and, while its phase is being timed, the bright leading edge. The fill follows
+ * the clock exactly while it just grows; a jump in it (a phase boundary, the stop) is eased by the
+ * shared smoother rather than stepping. Reduced motion draws the true value.
+ */
+function RibbonFill({ fill, current, solidClass }: { fill: number; current: boolean; solidClass: string }) {
+  const shown = useSmoothedValue(fill, { jumpAbove: FILL_JUMP_PCT, min: 0, max: 100 });
+  const offset = fillOffsetPct(shown);
+  return (
+    <>
+      <div className={cn("phase-ribbon-fill absolute inset-0 rounded-full", solidClass)} style={{ transform: `translate3d(${offset}%,0,0)` }} />
+      {current && shown > 0.5 && <div aria-hidden className="phase-ribbon-head absolute inset-0" style={{ transform: `translate3d(${offset + 100}%,0,0)` }} />}
+    </>
+  );
+}
+
 /**
  * The solve as one strip: Cross, F2L, OLL, PLL sized by how long each usually takes you. Each
  * segment fills against its own time, with a thin tick where your median (or, without enough
@@ -27,7 +47,7 @@ const PAIR_NOTCHES = [12.5, 37.5, 62.5, 87.5] as const;
  * segment is labelled with its letter (plus a tick mark when done, a star for a new best) so the
  * strip never relies on colour alone. The height is fixed whatever the values do.
  *
- * Motion is transform-only (styles/live-solve.css): the fill slides rather than resizes, the phase
+ * Motion is transform-only (styles/live-solve.css): the fill slides rather than resizes (and a jump in it is eased by useSmoothedValue), the phase
  * being timed carries a bright leading edge, and a phase boundary landing makes that segment swell
  * and settle. `entrance` (the recap) fills the strip in once, left to right, instead.
  */
@@ -90,13 +110,7 @@ export function PhaseRibbon({
             title={label}
           >
             <div className={cn("phase-ribbon-track relative h-2.5 overflow-hidden rounded-full", tint.soft)}>
-              <div
-                className={cn("phase-ribbon-fill absolute inset-0 rounded-full", slow ? "bg-warning" : tint.solid)}
-                style={{ transform: `translate3d(${fillOffsetPct(fill)}%,0,0)` }}
-              />
-              {current && fill > 0.5 && (
-                <div aria-hidden className="phase-ribbon-head absolute inset-0" style={{ transform: `translate3d(${fillOffsetPct(fill) + 100}%,0,0)` }} />
-              )}
+              <RibbonFill fill={fill} current={current} solidClass={slow ? "bg-warning" : tint.solid} />
               {seg.tickPct !== null && (
                 <span
                   aria-hidden

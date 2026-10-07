@@ -2,8 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { TimerPhase } from "@/hooks/useTimer";
+import { useSmoothedValue } from "@/components/motion";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
+
+/** A bar position that moves by more than this many percent in one render is a jump, not the clock advancing. */
+const PACE_JUMP_PCT = 4;
 
 /**
  * A live race against your own best single in this session: a bar fills
@@ -13,9 +17,10 @@ import { cn } from "@/lib/utils/cn";
  * you have one. (Both call sites pass the open session's best, hence the
  * default label; pass `label` if a caller ever races something else.)
  *
- * The fill is driven by a transform computed straight from elapsedMs, with no
- * CSS transition: a transition on a value that already changes every frame
- * only makes the bar trail the clock, so it's left to track it exactly.
+ * The fill is a transform computed straight from elapsedMs, with no CSS
+ * transition: a transition on a value that already changes every frame only
+ * makes the bar trail the clock, so it's left to track it exactly. Only a jump
+ * (the stop landing on the final time) is eased, by useSmoothedValue.
  *
  * The target is frozen at the moment a run starts (via the ref below)
  * rather than read live off the PB each render, so finishing a new PB
@@ -69,10 +74,13 @@ export function GhostPaceBar({
     prevOverRef.current = overPb;
   }, [overPb, phase]);
 
+  const rawPct = target !== null && target > 0 ? Math.min(100, (elapsedMs / target) * 100) : 0;
+  // Exact while the clock just advances; the snap to the final time at the stop (or a new target) glides instead.
+  const pct = useSmoothedValue(rawPct, { jumpAbove: PACE_JUMP_PCT, min: 0, max: 100 });
+
   if (target === null || target <= 0) return null;
   if (phase !== "running" && phase !== "stopped") return null;
 
-  const pct = Math.min(100, (elapsedMs / target) * 100);
   const deltaMs = Math.abs(elapsedMs - target);
   const finished = phase === "stopped";
 

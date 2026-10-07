@@ -110,8 +110,10 @@ export default function SolvesPage() {
                   setPicked(new Set());
                 }}
                 aria-pressed={selecting}
+                // Nothing to select on an empty history (and a selection mode already open can still be closed).
+                disabled={rawSolves.length === 0 && !selecting}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40",
                   selecting ? "bg-accent text-accent-fg" : "bg-accent-soft text-accent hover:bg-accent-soft/80",
                 )}
                 data-testid="select-toggle"

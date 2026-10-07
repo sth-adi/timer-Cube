@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils/cn";
 import { useModalLayer } from "@/hooks/useModalLayer";
 import type { Penalty, Solve } from "@/types";
 import { solveFinalMs } from "@/types";
-import { Check, CheckSquare, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Square, Timer as TimerIcon, Trash2, TriangleAlert, Wand2, X } from "lucide-react";
+import { Check, CheckSquare, Heart, Link2, ListChecks, Loader2, MessageSquare, Plus, Square, Trash2, TriangleAlert, Wand2, X } from "lucide-react";
 import { hasBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveSummary, type SolveSummary } from "@/lib/analysis/solveFilter";
 import { CROSS_FACE_COLOR, CROSS_FACE_HEX } from "@/lib/smartcube/crossFrame";
@@ -442,7 +442,6 @@ function EmptySolves({ filtered, compact, addByHand }: { filtered: boolean; comp
         : "Hit space to start.";
   return (
     <div className={cn("flex flex-col items-center gap-1 px-4 text-center", compact ? "py-5" : "py-10")} data-testid="solves-empty">
-      <TimerIcon size={compact ? 16 : 22} aria-hidden="true" className="mb-1.5 text-accent" />
       <p className="text-sm font-medium text-foreground">{filtered ? "No solves match" : "No solves yet"}</p>
       <p className="max-w-[16rem] text-balance text-xs leading-relaxed text-muted-2">{hint}</p>
     </div>

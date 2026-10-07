@@ -9,6 +9,8 @@ import { phaseMarksFromPhases } from "@/lib/analysis/replayTiming";
 import { cn } from "@/lib/utils/cn";
 import { buildDirectorsCut } from "@/lib/replay/directorsCut";
 import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
+import type { EventTag } from "@/types";
+import { useReplayGhostOption } from "./useReplayGhost";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { ReplayGyroTwin } from "./ReplayGyroTwin";
 import { ReplayPlaceholder } from "@/components/lab/CubeStage";
@@ -48,6 +50,11 @@ interface SolveReplayProps {
   totalMs?: number;
   /** The solve's recorded cube orientation: with real timing on a phase you did yourself, a small Gyro Twin tilts with it over the replay. */
   gyroStream?: GyroStreamData | null;
+  /**
+   * Which of your solves this is, so a "vs PB" ghost can be your best earlier one (and never this one).
+   * Omit for a solve that isn't yours (a shared link): no ghost is offered.
+   */
+  ghostOf?: { id: string; date?: number; event?: EventTag };
 }
 
 /** A neutral, non-alarming line for a phase that has no specific finding attached. */
@@ -74,7 +81,7 @@ function fallbackCaption(phase: PhaseAnalysis): string {
  * play/pause/scrub controls pace themselves against how long the cuber
  * really took between moves instead of a uniform per-move tempo.
  */
-export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs, gyroStream }: SolveReplayProps) {
+export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs, gyroStream, ghostOf }: SolveReplayProps) {
   const [selected, setSelected] = useState<number>(-1);
   const [director, setDirector] = useState(false);
   const [voice, setVoice] = useState(true);
@@ -128,6 +135,15 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
     [gyroStream, hasRealTiming, alt, moveTimestamps, startIdx, viewMoves.length],
   );
   const twinFacelets = useMemo(() => (twinMoveMs ? faceletsAfterMoves(setupAlg, viewMoves) : null), [twinMoveMs, setupAlg, viewMoves]);
+
+  // The faint second cube: only for the whole solve at its real pace (a phase on its own starts mid-solve), and only for a solve of yours.
+  const solveMs = totalMs ?? moveTimestamps?.[moveTimestamps.length - 1] ?? 0;
+  const ghost = useReplayGhostOption(
+    { id: ghostOf?.id, date: ghostOf?.date, event: ghostOf?.event, scramble, timeMs: solveMs },
+    !!ghostOf && isWhole && hasRealTiming && !alt,
+    moves.length,
+    solveMs,
+  );
 
   // Phase ticks on the scrubber, for the whole solve only (one phase alone has nothing to divide).
   const marks = useMemo(() => (isWhole ? phaseMarksFromPhases(phases) : undefined), [isWhole, phases]);
@@ -224,6 +240,8 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         cues={isWhole ? cues : undefined}
         marks={marks}
         voice={voice}
+        ghost={ghost}
+        gyro={gyroStream && twinMoveMs ? { stream: gyroStream, moveMs: twinMoveMs } : undefined}
         overlay={
           gyroStream && twinMoveMs && twinFacelets
             ? ({ positionMs, playing, speed, timeline }) => (

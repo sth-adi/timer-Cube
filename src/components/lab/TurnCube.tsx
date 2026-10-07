@@ -69,7 +69,7 @@ const CUBIES: CubieInfo[] = (() => {
   return [...map.values()];
 })();
 
-function Cubie({ info, facelets, s, lit }: { info: CubieInfo; facelets: string; s: number; lit: boolean }) {
+function Cubie({ info, facelets, s, lit, fills }: { info: CubieInfo; facelets: string; s: number; lit: boolean; fills?: readonly (string | undefined)[] }) {
   const h = s / 2;
   const [x, y, z] = info.cubie;
   const inset = Math.max(1.5, s * 0.07);
@@ -90,7 +90,7 @@ function Cubie({ info, facelets, s, lit }: { info: CubieInfo; facelets: string; 
             {idx !== undefined && (
               <div
                 className="tc-sticker absolute"
-                style={{ inset, borderRadius: s * 0.1, backgroundColor: shaded(FACELET_COLORS[facelets[idx]] ?? "#555555", SHADE[nk]) }}
+                style={{ inset, borderRadius: s * 0.1, backgroundColor: fills?.[idx] ?? shaded(FACELET_COLORS[facelets[idx]] ?? "#555555", SHADE[nk]) }}
               />
             )}
           </div>
@@ -107,8 +107,21 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t 
  * round together, the seams between them showing — rather than stickers changing colour in place.
  * `facelets` is the cube BEFORE `turning`; with no turn it is simply the cube. It draws in its own
  * `size` x `size` box, its centre at the box's centre, so the caller can tilt it as a whole.
+ * `stickerFills` (optional, 54 entries in facelet order) paints a sticker with that CSS colour instead of its
+ * facelet colour, as is (no per-facing shading), so a data colour keeps the exact value it was given; an
+ * undefined entry keeps the facelet colour. Callers should keep the array's identity stable between renders.
  */
-export const TurnCube = memo(function TurnCube({ facelets, turning, size }: { facelets: string; turning: TurnState | null; size: number }) {
+export const TurnCube = memo(function TurnCube({
+  facelets,
+  turning,
+  size,
+  stickerFills,
+}: {
+  facelets: string;
+  turning: TurnState | null;
+  size: number;
+  stickerFills?: readonly (string | undefined)[];
+}) {
   const s = size / 3;
   const geo = turning ? turnGeometry(turning.turn) : null;
   const turnKey = geo ? `${geo.axis}:${geo.layer}` : "";
@@ -117,14 +130,14 @@ export const TurnCube = memo(function TurnCube({ facelets, turning, size }: { fa
     const moving: React.ReactNode[] = [];
     for (const info of CUBIES) {
       const isMoving = !!geo && info.cubie[geo.axis] === geo.layer;
-      const el = <Cubie key={info.key} info={info} facelets={facelets} s={s} lit={isMoving} />;
+      const el = <Cubie key={info.key} info={info} facelets={facelets} s={s} lit={isMoving} fills={stickerFills} />;
       if (isMoving) moving.push(el);
       else still.push(el);
     }
     return { still, moving };
     // geo is a pure function of turnKey + the turn's amount, which only matters for the angle below
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facelets, s, turnKey]);
+  }, [facelets, s, turnKey, stickerFills]);
 
   const angle = geo && turning ? geo.degrees * easeInOut(Math.max(0, Math.min(1, turning.progress))) : 0;
   const axisName = geo ? (["X", "Y", "Z"] as const)[geo.axis] : "Z";

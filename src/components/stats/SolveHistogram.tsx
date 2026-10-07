@@ -5,7 +5,7 @@ import type { Solve } from "@/types";
 import { comparableTime, computeHistogram } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
 import { clampReadout, slotIndex } from "./chartMath";
-import { useDismissOutside, useElementWidth } from "./chartKit";
+import { useDismissOutside, useElementWidth, useSlotKeys } from "./chartKit";
 import "@/styles/stats-charts.css";
 
 const PLOT_H = 112;
@@ -24,6 +24,8 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
   }, [solves]);
   const dismiss = useCallback(() => setActive(null), []);
   useDismissOutside(wrapEl, active !== null, dismiss);
+  const plural = (c: number) => `${c} solve${c === 1 ? "" : "s"}`;
+  const keys = useSlotKeys(buckets.length, active, setActive, (i) => `${formatTime(buckets[i].from)} to ${formatTime(buckets[i].to)}: ${plural(buckets[i].count)}`);
 
   if (buckets.length < 3) {
     return <p className="text-muted-2 text-sm text-center py-6">Solve a few more for a distribution chart.</p>;
@@ -36,7 +38,6 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
   const medianPct = median !== null ? Math.min(100, Math.max(0, ((median - lo) / (hi - lo || 1)) * 100)) : null;
   const mode = buckets.findIndex((b) => b.count === max);
   const w = Math.max(240, width);
-  const plural = (c: number) => `${c} solve${c === 1 ? "" : "s"}`;
 
   const pick = (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -71,9 +72,17 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
         )}
 
         <div
-          className="absolute inset-x-0 bottom-0 flex touch-pan-y select-none border-b border-border-strong"
+          className="sc-focusable absolute inset-x-0 bottom-0 flex touch-pan-y select-none border-b border-border-strong"
           style={{ height: PLOT_H }}
-          onPointerDown={pick}
+          role="group"
+          tabIndex={0}
+          aria-label={`Distribution of ${solves.length} solves in ${n} time ranges${median !== null ? `, median ${formatTime(median)}` : ""}. Use the arrow keys to step through the ranges.`}
+          onKeyDown={keys.onKeyDown}
+          onBlur={keys.onBlur}
+          onPointerDown={(e) => {
+            keys.onPointerDown();
+            pick(e);
+          }}
           onPointerMove={(e) => {
             if (e.pointerType === "mouse" || e.buttons > 0 || e.pointerType === "touch") pick(e);
           }}
@@ -113,6 +122,9 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
         </div>
       </div>
 
+      <span className="sr-only" aria-live="polite">
+        {keys.announce}
+      </span>
       <div className="relative mt-1.5 h-4 text-[11px] text-muted-2 tabular-timer" aria-hidden>
         {tickAt.map((k, idx) => {
           const t = k >= n ? hi : buckets[k].from;

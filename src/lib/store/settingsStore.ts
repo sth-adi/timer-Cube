@@ -44,7 +44,7 @@ export const PHASE_LABELS: Record<PhaseCount, readonly string[]> = {
 };
 
 export const THEMES = [
-  { id: "nebula", name: "Nebula", swatch: "#7c5cff" },
+  { id: "nebula", name: "Nebula", swatch: "#957eff" },
   { id: "mint", name: "Mint", swatch: "#2dd4bf" },
   { id: "carbon", name: "Carbon", swatch: "#fafafa" },
   { id: "sunset", name: "Sunset", swatch: "#ff7a59" },

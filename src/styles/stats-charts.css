@@ -107,3 +107,61 @@
 :root[data-theme="sunset"] {
   --sc-ao12: var(--foreground);
 }
+
+/* --- Heat cube ----------------------------------------------------------------------------------------------------
+   One-hue sequential ramp (blue, palette steps 600..200 on dark surfaces, 250..650 on the light theme), five ordinal
+   steps, low to high. Both runs pass the dataviz validator in --ordinal mode against their surface (monotone
+   lightness, adjacent dL >= 0.06, end step >= 2:1, hue spread 3 degrees). --heat-0 is "no data". */
+:root {
+  --heat-0: color-mix(in srgb, var(--foreground) 12%, var(--bg-panel));
+  --heat-1: #184f95;
+  --heat-2: #256abf;
+  --heat-3: #3987e5;
+  --heat-4: #6da7ec;
+  --heat-5: #9ec5f4;
+}
+:root[data-theme="paper"] {
+  --heat-1: #86b6ef;
+  --heat-2: #5598e7;
+  --heat-3: #2a78d6;
+  --heat-4: #1c5cab;
+  --heat-5: #104281;
+}
+
+/* The cube slowly turns and tips so all six faces come round; the camera is the outer (pitch) wrapper, the spin the inner.
+   Reduced motion and the flat fx level hold one view instead, and a button steps through four (--hc-yaw / --hc-pitch). */
+.hc-camera {
+  transform-style: preserve-3d;
+  transform: rotateX(var(--hc-pitch, -24deg));
+}
+.hc-spin {
+  transform-style: preserve-3d;
+  transform: rotateY(var(--hc-yaw, -32deg));
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-fx-level="off"]) .hc-spin {
+    animation: hc-spin 32s linear infinite;
+  }
+  :root:not([data-fx-level="off"]) .hc-camera {
+    animation: hc-pitch 16s ease-in-out infinite alternate;
+  }
+  :root:not([data-fx-level="off"]) .hc-view-btn {
+    display: none;
+  }
+}
+@keyframes hc-spin {
+  from {
+    transform: rotateY(-32deg);
+  }
+  to {
+    transform: rotateY(328deg);
+  }
+}
+@keyframes hc-pitch {
+  from {
+    transform: rotateX(-28deg);
+  }
+  to {
+    transform: rotateX(26deg);
+  }
+}

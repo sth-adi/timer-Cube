@@ -8,6 +8,8 @@ import { CubeStage, ReplayControlsSkeleton } from "@/components/lab/CubeStage";
 import { cn } from "@/lib/utils/cn";
 import { formatTime } from "@/lib/utils/time";
 import { readingMs, type Cue } from "@/lib/replay/directorsCut";
+import { buildPaceCurve } from "@/lib/analysis/paceCurve";
+import { buildLeanTurns } from "@/lib/analysis/replayCamera";
 import {
   SNAP_TURN_MS,
   TURN_MS,
@@ -18,6 +20,10 @@ import {
   type PhaseMark,
   type ReplayTimeline,
 } from "@/lib/analysis/replayTiming";
+import { ReplayGhostTwin } from "./ReplayGhostTwin";
+import { ReplayPaceCurve } from "./ReplayPaceCurve";
+import { REPLAY_LATITUDE_LIMIT, useReplayCamera, type ReplayCameraGyro } from "./useReplayCamera";
+import { useReplayGhostControl, type ReplayGhostOption } from "./useReplayGhost";
 
 interface TimedCubePlayerProps {
   /** The alg that plays on the player's own timeline. */
@@ -61,6 +67,16 @@ interface TimedCubePlayerProps {
    * measured on. Doesn't take pointer input, so the cube still orbits underneath.
    */
   overlay?: (at: { positionMs: number; activeMove: number; timeline: ReplayTimeline; playing: boolean; speed: number }) => ReactNode;
+  /**
+   * A second, faint cube to race beside yours (your best earlier solve, or a model solution), switched
+   * on with a "vs PB" toggle under the controls. Off until asked for; no toggle without one.
+   */
+  ghost?: ReplayGhostOption | null;
+  /**
+   * The solve's recorded cube orientation: the replay's camera then follows its tilt a little, on top of
+   * leaning toward the face being turned. `moveMs` is when each of `alg`'s moves was really made.
+   */
+  gyro?: ReplayCameraGyro | null;
 }
 
 const CUE_TONE: Record<Cue["tone"], string> = { good: "text-success", bad: "text-danger", neutral: "text-accent" };
@@ -129,7 +145,7 @@ function leavesFor(leafMoves: any[], timeline: ReplayTimeline) {
  * (`play()`, `pause()`, the `timestamp` setter), not simulated by swapping
  * `alg` in and out — that doesn't animate anything on its own.
  */
-export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves, overlay }: TimedCubePlayerProps) {
+export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves, overlay, ghost, gyro }: TimedCubePlayerProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -146,6 +162,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     return {
       capped: buildTimeline(gapsMs, { realPauses: false, turnMs }),
       real: buildTimeline(gapsMs, { realPauses: true, turnMs }),
+      turnMs,
     };
   });
   const [realPauses, setRealPauses] = useState(() => hasRealTiming && readRealPauses());
@@ -195,6 +212,8 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
           // Slightly smaller stickers leave more of the black cubie body showing between them: closer to
           // the beveled Gyro Twin than cubing.js's near-flush default (0.85).
           experimentalFaceletScale: FACELET_SCALE,
+          // Room for the camera to lean either side of the resting view (see useReplayCamera).
+          cameraLatitudeLimit: REPLAY_LATITUDE_LIMIT,
           cameraLatitude: CAMERA_LATITUDE,
           cameraLongitude: CAMERA_LONGITUDE,
         });
@@ -477,6 +496,29 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   const activeMove = durationMs > 0 ? activeLeaf(timeline.starts, shownPos) : -1;
   const segments = useMemo(() => (marks && timelineOk ? markSegments(marks, timeline) : []), [marks, timelineOk, timeline]);
 
+  // The camera leans toward each face as it turns (and after the recorded tilt, where there is one).
+  const leanTurns = useMemo(() => {
+    const tokens = alg.split(/\s+/).filter(Boolean);
+    return timelineOk && tokens.length === timeline.starts.length ? buildLeanTurns(tokens, timeline.starts, timeline.ends) : [];
+  }, [alg, timelineOk, timeline]);
+  useReplayCamera({
+    playerRef,
+    hostRef: containerRef,
+    active: ready && timelineOk,
+    turns: leanTurns,
+    starts: timeline.starts,
+    durationMs,
+    positionMs: shownPos,
+    playing,
+    speed,
+    gyro,
+  });
+
+  // Where the time went, on the scrubber's own timeline (true timing makes the curve, whichever timing is shown).
+  const paceCurve = useMemo(() => (hasRealTiming && timelineOk ? buildPaceCurve(timelines.real, timeline) : null), [hasRealTiming, timelineOk, timelines.real, timeline]);
+
+  const ghostCtl = useReplayGhostControl(hasRealTiming && timelineOk ? (ghost ?? null) : null);
+
   // The scrubber's filled part ends under the thumb's centre, not at the raw percentage (the thumb never reaches the track's ends).
   const frac = durationMs > 0 ? shownPos / durationMs : 0;
   const scrubFill = `calc(${frac * 100}% + ${(0.5 - frac) * THUMB_PX}px)`;
@@ -494,6 +536,26 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
         <div ref={containerRef} className="cube-stage__cube h-full w-full" />
         {overlay && ready && timelineOk && (
           <div className="pointer-events-none absolute left-1 top-1">{overlay({ positionMs: shownPos, activeMove, timeline, playing, speed })}</div>
+        )}
+        {ghost && ghostCtl.on && ready && timelineOk && (
+          <div className="pointer-events-none absolute right-1 top-1">
+            {ghostCtl.ghost ? (
+              <ReplayGhostTwin
+                ghost={ghostCtl.ghost}
+                caption={ghost.caption}
+                shown={timeline}
+                real={timelines.real}
+                positionMs={shownPos}
+                playing={playing}
+                speed={speed}
+                turnMs={timelines.turnMs}
+              />
+            ) : (
+              <p role="status" className="rounded-full bg-bg-panel/80 px-2 py-0.5 text-[10px] text-muted">
+                {ghostCtl.status === "failed" ? "Couldn't work out a model solution" : "Working out the model solution"}
+              </p>
+            )}
+          </div>
         )}
       </CubeStage>
 
@@ -557,6 +619,11 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
 
           <div className="flex w-full max-w-sm items-start gap-3">
             <div className="min-w-0 flex-1">
+              {paceCurve && (
+                <div className="mb-0.5">
+                  <ReplayPaceCurve curve={paceCurve} frac={frac} ticks={segments.slice(0, -1).map((seg) => seg.endMs / durationMs)} inset={THUMB_PX / 2} />
+                </div>
+              )}
               <div className="relative">
                 <input
                   type="range"
@@ -593,7 +660,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 </div>
               )}
             </div>
-            <p className="h-7 w-[5.5rem] shrink-0 text-right text-xs leading-7 tabular-nums text-muted" aria-hidden>
+            <p className={cn("h-7 w-[5.5rem] shrink-0 text-right text-xs leading-7 tabular-nums text-muted", paceCurve && "mt-9")} aria-hidden>
               <span className="font-medium text-foreground">{formatTime(shownPos)}</span> / {formatTime(durationMs)}
             </p>
           </div>
@@ -622,6 +689,24 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 )}
               >
                 Real pauses
+              </button>
+            )}
+            {ghost && hasRealTiming && (
+              <button
+                type="button"
+                onClick={ghostCtl.toggle}
+                aria-pressed={ghostCtl.on}
+                title={
+                  ghost.kind === "pb"
+                    ? "A faint second cube: your best earlier solve, turning at the same elapsed time."
+                    : "A faint second cube: a model solution of this scramble, at your pace."
+                }
+                className={cn(
+                  "hit-y h-7 rounded-full px-3 text-[11px] font-medium transition-colors",
+                  ghostCtl.on ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+                )}
+              >
+                {ghost.toggle}
               </button>
             )}
           </div>

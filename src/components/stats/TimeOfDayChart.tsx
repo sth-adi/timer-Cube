@@ -6,7 +6,7 @@ import { computeHourOfDay } from "@/lib/stats/stats";
 import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import { slotIndex } from "./chartMath";
-import { useDismissOutside } from "./chartKit";
+import { useDismissOutside, useSlotKeys } from "./chartKit";
 import "@/styles/stats-charts.css";
 
 // Collapse into 6 four-hour blocks — 24 individual bars is too noisy at this size.
@@ -42,6 +42,12 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
     return { ...b, mean: count > 0 ? sum / count : null, count };
   });
 
+  const describe = (i: number) => {
+    const b = blocks[i];
+    return b.mean === null ? `${b.label}: no solves` : `${b.label}: ${formatTime(b.mean)} average over ${b.count} solve${b.count === 1 ? "" : "s"}`;
+  };
+  const keys = useSlotKeys(blocks.length, active, setActive, describe);
+
   const totalSolves = blocks.reduce((n, b) => n + b.count, 0);
   if (totalSolves < 3) {
     return <p className="text-muted-2 text-sm text-center py-6">Solve at different times of day to see this.</p>;
@@ -62,8 +68,16 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
   return (
     <div ref={setEl}>
       <div
-        className="flex touch-pan-y select-none items-end border-b border-border-strong"
-        onPointerDown={pick}
+        className="sc-focusable flex touch-pan-y select-none items-end border-b border-border-strong"
+        role="group"
+        tabIndex={0}
+        aria-label={`Average solve time by time of day, quickest at ${bestBlock.label}. Use the arrow keys to step through the blocks.`}
+        onKeyDown={keys.onKeyDown}
+        onBlur={keys.onBlur}
+        onPointerDown={(e) => {
+          keys.onPointerDown();
+          pick(e);
+        }}
         onPointerMove={(e) => {
           if (e.pointerType === "mouse" || e.buttons > 0 || e.pointerType === "touch") pick(e);
         }}
@@ -105,6 +119,9 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
           </span>
         ))}
       </div>
+      <span className="sr-only" aria-live="polite">
+        {keys.announce}
+      </span>
       <p className="tabular-timer mt-2 min-h-4 text-[11px] text-muted-2">
         {shown ? (
           shown.mean === null ? (

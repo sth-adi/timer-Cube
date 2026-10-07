@@ -3,6 +3,7 @@
 import { INSPECTION_MS } from "@/lib/timer/timerMachine";
 import type { Penalty } from "@/types";
 import { cn } from "@/lib/utils/cn";
+import { useSmoothedValue } from "@/components/motion";
 import { fillOffsetPct } from "@/components/timer/phaseRibbonMath";
 import "@/styles/live-solve.css";
 import {
@@ -66,11 +67,13 @@ export function InspectionTicks({ remainingMs, penalty }: { remainingMs: number;
   const tone = inspectionTone(remainingMs, penalty);
   const elapsed = penalty !== "none" ? INSPECTION_MS : inspectionElapsedMs(remainingMs);
   const announcement = inspectionAnnouncement(tone, penalty);
+  // Exact while inspection runs; the fill jumping to full when a penalty lands glides instead.
+  const fillPct = useSmoothedValue((elapsed / INSPECTION_MS) * 100, { jumpAbove: 2, min: 0, max: 100 });
   return (
     <div className="relative h-6 w-44 shrink-0" data-testid="inspection-ticks">
       <div aria-hidden className="absolute inset-x-0 top-0 h-1 overflow-hidden rounded-full bg-bg-panel-2">
         {/* Slid, not resized: a frame never touches layout, and the rounded end stays round. */}
-        <div className={cn("h-full w-full rounded-full transition-colors duration-300 motion-reduce:transition-none", FILL_COLOR[tone])} style={{ transform: `translate3d(${fillOffsetPct((elapsed / INSPECTION_MS) * 100)}%,0,0)` }} />
+        <div className={cn("h-full w-full rounded-full transition-colors duration-300 motion-reduce:transition-none", FILL_COLOR[tone])} style={{ transform: `translate3d(${fillOffsetPct(fillPct)}%,0,0)` }} />
       </div>
       {MARKS.map((m) => {
         const passed = elapsed >= m.atMs;

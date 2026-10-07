@@ -82,6 +82,7 @@ import { reconstruction as writeReconstruction } from "@/lib/analysis/reconText"
 import { pbSolveRows, timeWonLost } from "@/lib/analysis/timeWonLost";
 import { ReconstructionCard } from "@/components/recap/ReconstructionCard";
 import { TimeWonLostCard } from "@/components/recap/TimeWonLostCard";
+import { TimeWonLostSkeleton } from "@/components/recap/RecapSkeleton";
 import { cn } from "@/lib/utils/cn";
 import { PHASE_LABELS_4 } from "@/components/timer/phaseRibbonMath";
 import { PhaseRibbon } from "@/components/timer/PhaseRibbon";
@@ -786,6 +787,11 @@ export function SmartCubeTimer() {
     const others = savedSolve ? sessionSolves.filter((x) => x.id !== savedSolve.id) : sessionSolves;
     return computeSessionStats(effectivePendingEvent === null ? normalSolves(others) : solvesForEvent(others, effectivePendingEvent)).best;
   }, [finished, savedSolve, sessionSolves, effectivePendingEvent]);
+  // The solve is on its way to the history (recap captured, no row yet, nothing has failed): the cards built from the saved row show a placeholder meanwhile.
+  const saveFailed = useSessionStore((s) => s.saveError !== null);
+  // Only when the card will actually appear: it needs a usual pace to compare against, so a first solve (no history) shows no placeholder to take away again.
+  const hasUsualPace = postSolveBaseline?.segments.some((seg) => seg !== null) ?? false;
+  const savingNow = finished && finishedScramble !== "" && savedSolveId === null && !savedSolve && !saveFailed && !correctedDuringSolve && postSolveRows.length > 0 && hasUsualPace;
   const savedBreakdown = useMemo(() => (savedSolve ? solveBreakdown(savedSolve) : null), [savedSolve]);
   const timeReport = useMemo(() => {
     if (!savedBreakdown || !savedSolve) return null;
@@ -1257,35 +1263,36 @@ export function SmartCubeTimer() {
           )}
         </div>
 
-        {solveLive && gyroActive ? (
-          // A gyro cube gets the live twin instead: same stickers, but it also
-          // tilts and turns with the cube in your hands, and names regrips live.
-          <div className={cn("relative", LIVE_CUBE)}>
-            {/* navLocked: no link in here may navigate away with the clock running. */}
-            <GyroTwin size={84} showControls={false} navLocked onRotation={() => setRegripCount((c) => c + 1)} />
-            {regripCount > 0 && (
-              <span
-                className="absolute -right-1.5 -top-1.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-muted"
-                title="Whole-cube rotations so far this attempt, fewer usually means a smoother solve"
-              >
-                {regripCount} regrip{regripCount === 1 ? "" : "s"}
-              </span>
-            )}
-          </div>
-        ) : (
-          !gyroActive && (
-            // Mounted for as long as the cube is connected, so the 3D player is built once and is ready
-            // (cubing.js loaded, WebGL context made) before inspection starts. Between solves it sits
-            // invisible and out of the layout, at rest on the next scramble; arming just shows it.
-            <div
-              key="mimic"
-              className={cn("card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl", solveLive ? LIVE_CUBE : "pointer-events-none invisible absolute")}
-              data-testid="live-mimic"
+        {/*
+          One container for the whole connection, so the cube is built once and is already there when
+          inspection starts (no remount flash between scramble, solve and recap). Between solves it sits
+          invisible and out of the layout; arming just shows it. A gyro cube gets the live twin (same
+          stickers, but it also tilts and turns with the cube in your hands, and names regrips live);
+          any other cube gets the mimic, at rest on the next scramble.
+        */}
+        <div
+          key="mimic"
+          className={cn(
+            gyroActive ? "relative" : "card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl",
+            solveLive ? LIVE_CUBE : "pointer-events-none invisible absolute",
+          )}
+          data-testid={gyroActive ? undefined : "live-mimic"}
+        >
+          {gyroActive ? (
+            // navLocked: no link in here may navigate away with the clock running.
+            <GyroTwin size={84} showControls={false} navLocked onRotation={() => solveLive && setRegripCount((c) => c + 1)} />
+          ) : (
+            <LiveCubeMimic scramble={scramble} moves={solveLive ? moves : NO_MOVES} idle={!solveLive} className="h-full w-full" />
+          )}
+          {gyroActive && solveLive && regripCount > 0 && (
+            <span
+              className="absolute -right-1.5 -top-1.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-medium text-muted"
+              title="Whole-cube rotations so far this attempt, fewer usually means a smoother solve"
             >
-              <LiveCubeMimic scramble={scramble} moves={solveLive ? moves : NO_MOVES} idle={!solveLive} className="h-full w-full" />
-            </div>
-          )
-        )}
+              {regripCount} regrip{regripCount === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
 
         <div className={cn("contents", solveLive && LIVE_LINES)}>
           {armed && !recording && flow.phase !== "inspecting" && (
@@ -1416,7 +1423,7 @@ export function SmartCubeTimer() {
         <div className={cn("contents", RECAP_RIGHT)}>
           <PostSolveTable rows={postSolveRows} scramble={analysisScramble} moves={analysisMoves} baseline={postSolveBaseline} crossFace={frameFace} executions={executions} />
 
-          {timeReport && <TimeWonLostCard report={timeReport} />}
+          {timeReport ? <TimeWonLostCard report={timeReport} /> : savingNow && <TimeWonLostSkeleton steps={postSolveRows.length} />}
 
           <PostSolveCoachCard
             rows={postSolveRows}
@@ -1527,6 +1534,9 @@ export function SmartCubeTimer() {
           penalty={savedSolve?.penalty}
           moveTimestamps={moveTimestampsRel}
           gyroStream={savedFull.solve?.gyroStream}
+          solveId={savedSolve?.id}
+          date={savedSolve?.date}
+          event={savedSolve?.event}
           onClose={() => setShowReplay(false)}
         />
       )}

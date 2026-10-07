@@ -1,55 +1,25 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSmartCubeStore, type SmartCubeMove } from "@/lib/store/smartCubeStore";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
-import { FaceletNet } from "@/components/scramble/ScrambleNet";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { MIMIC_STABLE_MS, faceletsOf, fixAfter, mimicAlg, mimicSyncVerdict, mimicView, movesToReach, type MimicFix } from "@/lib/analysis/mimicSync";
+import { TurnCube } from "@/components/lab/TurnCube";
+import { TwinStage } from "@/components/lab/TwinStage";
+import { useTurnAnimation } from "@/components/lab/useTurnAnimation";
 import { cn } from "@/lib/utils/cn";
 
-const loadCubeViewerModule = () => import("@/components/scramble/CubeViewer");
-
 /**
- * What the box shows until the 3D viewer is ready — and instead of it if cubing.js can't load: a
- * flat net of the cube, so the card is never empty. The mimic provides the facelets (what it is
- * about to draw) through this context, since a `dynamic` loading component takes no props.
+ * Kept so the connect flow's tap handler still compiles. The mimic is plain CSS 3D now (the same layer-turning
+ * cube as the Gyro Twin), so there is nothing to download ahead of inspection any more.
  */
-const SkeletonFacelets = createContext<string | null>(null);
+export function preloadCubeViewer(): void {}
 
-function MimicNet() {
-  const facelets = useContext(SkeletonFacelets);
-  const live = useSmartCubeStore((s) => s.liveFacelets);
-  return (
-    <div className="flex w-full justify-center" aria-hidden="true">
-      <FaceletNet facelets={facelets ?? live} className="w-full max-w-[10rem]" />
-    </div>
-  );
-}
-
-const CubeViewer = dynamic(() => loadCubeViewerModule().then((m) => m.CubeViewer), {
-  ssr: false,
-  loading: () => (
-    <div className="absolute inset-0 flex items-center justify-center p-2">
-      <MimicNet />
-    </div>
-  ),
-});
-
-/**
- * Starts downloading the 3D viewer (the wrapper and cubing.js itself) without
- * rendering anything. Call it ahead of the first mimic render — the connect
- * flow does, on the tap — so the module isn't fetched in the middle of
- * inspection, which is exactly when the mimic first mounts. Safe to call
- * repeatedly and on the server (a no-op there).
- */
-export function preloadCubeViewer(): void {
-  if (typeof window === "undefined") return;
-  void loadCubeViewerModule()
-    .then((m) => m.loadCubing())
-    .catch(() => {});
-}
+/** The camera: yellow on top, green in front, a little above and to the left (red shows on the left side), as the mimic has always been held. */
+const MIMIC_CAMERA = "rotateX(-24deg) rotateY(32deg)";
+/** The cube turned over (z2) so yellow is up, inside the camera. */
+const YELLOW_UP = "rotateZ(180deg)";
 
 /**
  * Where the tick sits for each face: on the matching edge of the box (the
@@ -91,23 +61,20 @@ function TurnTick({ face }: { face: string }) {
 }
 
 /**
- * Live 3D mirror of the physical smart cube: the scramble is the viewer's
- * setup and every move reported so far rides on top of it (`liveMoves`). The
- * viewer folds the earlier moves into its setup incrementally and plays only
- * the newest turn — a short quarter-turn animation, no re-parse of the whole
- * move list — so each turn visibly rotates and the cube is never more than
- * one ~80ms animation behind the physical one. When the list isn't simply
- * appended to (a new scramble, a correction, a rewind) it rebuilds the
- * position instantly instead, and under prefers-reduced-motion it always does.
- * One persistent player instance is reused throughout; it never remounts.
+ * Live 3D mirror of the physical smart cube: the scramble plus every move reported so far, drawn as the
+ * same layer-turning CSS cube the Gyro Twin uses. Each turn the cube reports plays as that layer swinging
+ * round (timed by the real gap since the previous move, queued in order, sped up when they pile up; see
+ * useTurnAnimation), and anything that is not one clean face turn (a new scramble, a correction, a rewind,
+ * a slice) snaps, as does everything under prefers-reduced-motion. One cube instance is reused throughout;
+ * it never remounts.
  *
  * The turns alone can drift from the real cube: when one is lost over
  * Bluetooth the store corrects its own state from the cube's report but the
  * recorded turns stay as they were. So once the store's facelets have
  * disagreed with what the mimic shows, unchanged, for a moment (and the
  * reports aren't flagged unreliable), the corrective moves are worked out on
- * the cube-engine worker and become the viewer's new setup — a snap, no
- * animation — with later turns riding on top as before. See mimicSync.ts.
+ * the cube-engine worker and become the mimic's new setup, a snap with no
+ * animation, with later turns riding on top as before. See mimicSync.ts.
  *
  * Each landed turn also lights a small tick in that face's colour on the
  * matching edge of the box, so a turn reads as *caught* the instant it
@@ -168,11 +135,31 @@ export function LiveCubeMimic({
   // Slice and whole-cube moves have no face colour to show, so they get no tick.
   const tickFace = lastFace !== null && lastFace in TICK_POSITION ? lastFace : null;
 
+  // The facelets to draw: what the alg works out to (the cube's own report only if that alg can't be parsed).
+  const turnView = useTurnAnimation(expected ?? liveFacelets);
+  // The cube is drawn in px, so it takes its size from the box it is given (the stage is 1.9 cubes across).
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [cubeSize, setCubeSize] = useState(0);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setCubeSize(Math.max(0, Math.round(Math.min(width, height) / 1.8)));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className={cn("relative", className)}>
-      <SkeletonFacelets.Provider value={expected}>
-        <CubeViewer alg="" setupAlg={setupAlg} liveMoves={liveMoves} className="h-full w-full" fallback={<MimicNet />} />
-      </SkeletonFacelets.Provider>
+    <div ref={boxRef} className={cn("relative flex items-center justify-center", className)} data-testid="mimic-cube">
+      {cubeSize > 0 && (
+        <TwinStage size={cubeSize}>
+          <div className="relative" style={{ width: cubeSize, height: cubeSize, transformStyle: "preserve-3d", transform: `${MIMIC_CAMERA} ${YELLOW_UP}` }}>
+            <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={cubeSize} />
+          </div>
+        </TwinStage>
+      )}
       {tickFace && <TurnTick key={tokens.length} face={tickFace} />}
     </div>
   );

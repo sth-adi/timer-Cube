@@ -16,6 +16,7 @@ import { ShareCardButton } from "./ShareCardButton";
 import { WeaknessReportCard } from "./WeaknessReportCard";
 import { CoachTipCard } from "./CoachTipCard";
 import { FaceSpeedFingerprintCard } from "./FaceSpeedFingerprintCard";
+import { HeatCubeCard } from "./HeatCubeCard";
 import { LookaheadScoreCard } from "./LookaheadScoreCard";
 import { EfficiencyQuadrantCard } from "./EfficiencyQuadrantCard";
 import { StatTilesGrid } from "./StatTilesGrid";
@@ -61,6 +62,7 @@ export function InsightsPanel() {
       </Section>
       <WeaknessReportCard />
       <FaceSpeedFingerprintCard solves={solves} />
+      <HeatCubeCard solves={solves} />
       <LookaheadScoreCard solves={solves} />
       <EfficiencyQuadrantCard solves={solves} />
       <Section title="Activity">

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "@/styles/themes.css";
 import { UsageTracker } from "@/components/chrome/UsageTracker";
 import { FxLayer } from "@/components/chrome/FxLayer";
 import { UndoToast } from "@/components/chrome/UndoToast";

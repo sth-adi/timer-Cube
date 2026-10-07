@@ -5,7 +5,6 @@ import { Compass } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import "@/styles/twin.css";
 import { recolorPlayer } from "./cubeColors";
-import { planLiveUpdate, tempoScaleFor } from "./liveTurns";
 
 export interface CubeViewerHandle {
   play(): void;
@@ -36,23 +35,9 @@ interface CubeViewerProps {
    */
   onReady?: (handle: CubeViewerHandle) => void;
   /**
-   * Opt-in "live" mode, for mirroring a cube turn by turn (see LiveCubeMimic).
-   * When given, the position shown is `setupAlg` followed by these moves and
-   * `alg` is ignored (pass ""). Each time moves are only appended, the earlier
-   * ones are folded into the setup incrementally (no re-parse of the whole
-   * list) and just the newest turn plays, over `liveTurnMs`; anything else —
-   * a reset, a correction, a rewind, a new scramble — rebuilds the position
-   * instantly. Honours prefers-reduced-motion by snapping, and snaps when
-   * turns arrive faster than they can animate. Leave undefined for the
-   * original behaviour.
-   */
-  liveMoves?: readonly string[];
-  /** How long one quarter turn takes to play in live mode (default 80ms). */
-  liveTurnMs?: number;
-  /**
    * Shown in the viewer's box while cubing.js is still loading and, with a short note, if it fails to
    * load (offline, a blocked chunk, no WebGL). Without it the box is empty while loading, and a
-   * failed load shows just the note. See LiveCubeMimic, which passes a flat net of the cube.
+   * failed load shows just the note.
    */
   fallback?: ReactNode;
 }
@@ -72,14 +57,6 @@ export function loadCubing() {
     });
   }
   return cubingLoad;
-}
-
-function prefersReducedMotion(): boolean {
-  try {
-    return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -150,7 +127,7 @@ async function nudgeOrbit(model: OrbitModel, deltaLatitude: number, deltaLongitu
  * real animated 3D cube. Client-only (WebGL + custom element), so this must
  * be dynamically imported with ssr:false wherever it's used.
  */
-export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveTurnMs = 80, fallback }: CubeViewerProps) {
+export function CubeViewer({ alg, setupAlg, className, onReady, fallback }: CubeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
@@ -161,22 +138,13 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
   const [gyroOn, setGyroOn] = useState(false);
   const [gyroDenied, setGyroDenied] = useState(false);
   const gyroBaselineRef = useRef<{ beta: number; gamma: number; latitude: number; longitude: number } | null>(null);
-  const algCtorRef = useRef<(typeof import("cubing/alg"))["Alg"] | null>(null);
-  // What live mode has put into the player: the snapshot the planner compares
-  // against, the setup as an Alg object (extended per move, never re-parsed),
-  // and when the last turn started animating.
-  const liveRef = useRef<{ setup: string; tokens: readonly string[]; baked: InstanceType<(typeof import("cubing/alg"))["Alg"]>; lastAnimMs: number } | null>(null);
-  const isLive = liveMoves !== undefined;
-
   useEffect(() => {
     let cancelled = false;
     const container = containerRef.current;
     (async () => {
       let player: InstanceType<(typeof import("cubing/twisty"))["TwistyPlayer"]>;
-      let algModule: typeof import("cubing/alg");
       try {
         const loaded = await loadCubing();
-        algModule = loaded.alg;
         if (cancelled || !container) return;
         player = new loaded.twisty.TwistyPlayer({
           puzzle: "3x3x3",
@@ -188,13 +156,11 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
           experimentalDragInput: "auto",
           cameraLatitude: CAMERA_LATITUDE,
           cameraLongitude: CAMERA_LONGITUDE,
-          ...(isLive ? { tempoScale: tempoScaleFor(liveTurnMs) } : {}),
         });
       } catch {
         if (!cancelled) setLoadFailed(true);
         return;
       }
-      algCtorRef.current = algModule.Alg;
       player.style.width = "100%";
       player.style.height = "100%";
       player.style.transform = "rotate(180deg)";
@@ -232,7 +198,6 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
         container.removeChild(playerRef.current);
       }
       playerRef.current = null;
-      liveRef.current = null;
       setPlayerReady(false);
     };
     // Only (re)create the player on mount/unmount (or a Retry); alg/setupAlg updates are handled below.
@@ -242,65 +207,10 @@ export function CubeViewer({ alg, setupAlg, className, onReady, liveMoves, liveT
   useEffect(() => {
     // Set together (setup before alg) so there's never an intermediate
     // frame where one updated but not the other.
-    if (isLive || !playerRef.current) return;
+    if (!playerRef.current) return;
     playerRef.current.experimentalSetupAlg = setupAlg ?? "";
     playerRef.current.alg = alg;
-  }, [alg, setupAlg, isLive]);
-
-  // Live mode (opt-in, see `liveMoves`). The player always holds "every move
-  // but the newest" as its setup and the newest turn as its alg, so one turn
-  // visibly rotates instead of the whole position jumping. Depends on
-  // playerReady so moves that arrive while cubing.js is still loading are
-  // shown the moment the player exists.
-  useEffect(() => {
-    const player = playerRef.current;
-    const AlgCtor = algCtorRef.current;
-    if (!liveMoves || !player || !AlgCtor || !playerReady) return;
-    const setup = setupAlg ?? "";
-    const prev = liveRef.current;
-    const nowMs = performance.now();
-    const plan = planLiveUpdate(prev ? { setup: prev.setup, tokens: prev.tokens } : null, { setup, tokens: liveMoves }, {
-      nowMs,
-      lastAnimMs: prev?.lastAnimMs ?? -Infinity,
-      reducedMotion: prefersReducedMotion(),
-    });
-    if (plan.kind === "none") return;
-    const tempo = tempoScaleFor(liveTurnMs);
-    try {
-      if (plan.kind === "append" && prev) {
-        if (plan.animate) {
-          const last = plan.added[plan.added.length - 1];
-          const silent = plan.added.slice(0, -1);
-          const before = silent.length ? prev.baked.concat(silent.join(" ")) : prev.baked;
-          // Stops any turn still playing (it is folded into `before`) and rewinds the clock.
-          player.jumpToStart({ flash: false });
-          player.tempoScale = tempo;
-          player.experimentalSetupAlg = before;
-          player.alg = last;
-          player.play();
-          liveRef.current = { setup, tokens: liveMoves, baked: before.concat(last), lastAnimMs: nowMs };
-        } else {
-          const baked = prev.baked.concat(plan.added.join(" "));
-          player.pause();
-          player.experimentalSetupAlg = baked;
-          player.alg = "";
-          liveRef.current = { setup, tokens: liveMoves, baked, lastAnimMs: prev.lastAnimMs };
-        }
-        return;
-      }
-      // First show, or the moves were not simply appended: rebuild everything.
-      const baked = AlgCtor.fromString([setup, ...liveMoves].filter(Boolean).join(" "));
-      player.pause();
-      player.tempoScale = tempo;
-      player.experimentalSetupAlg = baked;
-      player.alg = "";
-      liveRef.current = { setup, tokens: liveMoves, baked, lastAnimMs: -Infinity };
-    } catch {
-      // A token cubing.js can't parse: leave the last good position showing
-      // and re-plan from scratch on the next change.
-      liveRef.current = null;
-    }
-  }, [liveMoves, setupAlg, liveTurnMs, playerReady]);
+  }, [alg, setupAlg]);
 
   // Tilt-to-rotate: while enabled, the view tracks the phone's tilt relative
   // to however it was held the moment gyro was turned on (not absolute

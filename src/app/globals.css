@@ -20,10 +20,12 @@
   --muted: #9a9ab4;
   --muted-2: #8585a1;
 
-  --accent: #7c5cff;
-  --accent-strong: #6a48f5;
-  --accent-soft: rgba(124, 92, 255, 0.16);
-  --accent-fg: #ffffff;
+  /* The accent is also text (text-accent on every panel), so it is light enough for 4.5:1 on all four
+     surfaces, and the solid accent button carries dark text rather than white. */
+  --accent: #957eff;
+  --accent-strong: #8a70f7;
+  --accent-soft: rgba(149, 126, 255, 0.11);
+  --accent-fg: #120d2e;
   --cyan: #35e6c5;
 
   --success: #3ddc84;
@@ -52,12 +54,8 @@
   --nav-height: 60px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  /* Shape and rhythm shared by the app shell (banners, toasts, pills, dock): corner radii
-     from small controls up to the floating dock, the phone page gutter, the touch target. */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* Rhythm shared by the app shell: the phone page gutter, the touch target. The corner radii
+     (--radius-*, --dock-*) are per-theme surface identity and live in styles/themes.css. */
   --gutter: 12px;
   --hit: 44px;
 
@@ -181,10 +179,11 @@
   --accent-strong: #e6c000;
   --accent-soft: rgba(255, 213, 0, 0.15);
   --accent-fg: #1a1500;
-  --cyan: #0051ba;
-  --success: #009b48;
+  /* The WCA blue, green and red lifted a step: these are also text colours, >= 4.5:1 on every dark surface. */
+  --cyan: #4da3ff;
+  --success: #12c26a;
   --warning: #ff5800;
-  --danger: #c41e3a;
+  --danger: #ff6477;
   --aurora-1: rgba(255, 213, 0, 0.09);
   --aurora-2: rgba(255, 213, 0, 0.05);
   color-scheme: dark;
@@ -328,7 +327,9 @@ body {
 .timer-digits {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
-  letter-spacing: -0.045em;
+  /* Weight and tracking are per-theme surface identity (styles/themes.css). */
+  font-weight: var(--digits-weight, 700);
+  letter-spacing: var(--digits-tracking, -0.045em);
   text-shadow: none;
 }
 
@@ -525,12 +526,16 @@ body {
   border-radius: 50%;
   /* A radial gradient that fades to transparent is already as soft as a blurred one, and a blur
      filter on an element this size is re-rendered on every frame of its drift — by far the
-     costliest thing on the page. hue/saturation are nudged live by the performance aura bus
+     costliest thing on the page. saturation is nudged live by the performance aura bus
      while a solve is running (see AuroraBackground.tsx), and only then does the filter apply. */
   will-change: transform;
 }
+/* The pace aura (AuroraBackground.tsx) deepens the saturation and speeds the drift as a solve runs ahead of or
+   behind pace. It no longer turns the hue: a rotated blob next to the beam, or a green theme going magenta,
+   put a second hue on screen. The layer keeps its theme's one hue. */
+/* (Blobs only: a filter on the 260vmax beam would be a far bigger layer for no visible gain.) */
 .aurora-layer[data-pace] .aurora-blob {
-  filter: hue-rotate(var(--aurora-pace-hue, 0deg)) saturate(var(--aurora-pace-sat, 1));
+  filter: saturate(var(--aurora-pace-sat, 1));
 }
 
 .aurora-blob-a {
@@ -983,7 +988,7 @@ body {
   outline-offset: 2px;
 }
 
-/* --- Cards: lit border, pointer spotlight, tilt, scroll reveal --- */
+/* --- Cards: tilt and scroll reveal. The border and elevation are per-theme (styles/themes.css). --- */
 :root:not([data-fx-level="off"]) .card {
   position: relative;
   isolation: isolate;
@@ -994,50 +999,9 @@ body {
     box-shadow 0.3s ease,
     border-color 0.3s ease;
 }
-:root:not([data-fx-level="off"]) .card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.3;
-  transition: opacity 0.3s ease;
-  background: conic-gradient(
-    from var(--fx-angle),
-    transparent 0deg,
-    color-mix(in srgb, var(--accent) 70%, transparent) 70deg,
-    transparent 150deg,
-    transparent 360deg
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
 :root:not([data-fx-level="off"]) .card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--border-strong);
-}
-:root:not([data-fx-level="off"]) .card:hover::before {
-  opacity: 0.95;
-  animation: fx-spin 4.5s linear infinite;
-}
-:root:not([data-fx-level="off"]) .card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 15%, transparent), transparent 65%);
-}
-:root[data-fx-level="insane"] .card:hover::after {
-  opacity: 1;
 }
 :root[data-fx-level="insane"] .card {
   transform: perspective(900px) rotateX(var(--fx-ry, 0deg)) rotateY(var(--fx-rx, 0deg));
@@ -1054,13 +1018,11 @@ body {
     opacity: 0;
     translate: 0 28px;
     scale: 0.965;
-    filter: blur(6px);
   }
   to {
     opacity: 1;
     translate: 0 0;
     scale: 1;
-    filter: blur(0);
   }
 }
 :root:not([data-fx-level="off"]) .glass-panel {
@@ -1118,7 +1080,7 @@ body {
   z-index: 1;
   margin-block: 5px;
   min-height: 44px;
-  border-radius: 16px;
+  border-radius: var(--dock-item-radius, 16px);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1154,7 +1116,7 @@ body {
   height: 62px;
   padding-bottom: 0;
   border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
-  border-radius: 24px;
+  border-radius: var(--dock-radius, 24px);
   /* Solid: the labels of whatever scrolls behind must not read through. */
   background: var(--bg-elevated);
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.5);
@@ -1173,7 +1135,7 @@ body {
   bottom: 5px;
   left: 4px;
   width: calc((100% - 8px) / var(--slots, 6));
-  border-radius: 19px;
+  border-radius: var(--dock-pill-radius, 19px);
   pointer-events: none;
   opacity: var(--on, 1);
   transform: translateX(calc(var(--i, 0) * 100%));
@@ -1596,6 +1558,7 @@ body {
     transform: rotate3d(var(--ax), var(--ay), var(--az), 360deg);
   }
 }
+/* The floating cubes are one hue: six steps of the theme accent, not the six sticker colours. */
 .fx-face {
   position: absolute;
   inset: 0;
@@ -1606,27 +1569,27 @@ body {
     linear-gradient(0deg, transparent 31.5%, rgba(0, 0, 0, 0.6) 31.5% 35%, transparent 35% 65%, rgba(0, 0, 0, 0.6) 65% 68.5%, transparent 68.5%);
 }
 .fx-face-f {
-  background-color: #1faa59;
+  background-color: var(--accent);
   transform: translateZ(calc(var(--s) / 2));
 }
 .fx-face-b {
-  background-color: #1e5fd6;
+  background-color: color-mix(in srgb, var(--accent) 62%, var(--background));
   transform: rotateY(180deg) translateZ(calc(var(--s) / 2));
 }
 .fx-face-r {
-  background-color: #d72c2c;
+  background-color: color-mix(in srgb, var(--accent) 80%, var(--background));
   transform: rotateY(90deg) translateZ(calc(var(--s) / 2));
 }
 .fx-face-l {
-  background-color: #ff8a1f;
+  background-color: color-mix(in srgb, var(--accent) 45%, var(--background));
   transform: rotateY(-90deg) translateZ(calc(var(--s) / 2));
 }
 .fx-face-u {
-  background-color: #f4f4f0;
+  background-color: color-mix(in srgb, var(--accent) 70%, var(--foreground));
   transform: rotateX(90deg) translateZ(calc(var(--s) / 2));
 }
 .fx-face-d {
-  background-color: #ffd60a;
+  background-color: color-mix(in srgb, var(--accent) 30%, var(--background));
   transform: rotateX(-90deg) translateZ(calc(var(--s) / 2));
 }
 
@@ -1661,6 +1624,8 @@ body {
   border-radius: 2px;
   transform-origin: 0 50%;
   opacity: 0;
+  /* One hue: every streak takes the accent, whatever colour the component hands it (--c is set inline). */
+  --c: var(--accent) !important;
   background: linear-gradient(90deg, transparent, var(--c));
   animation: fx-warp calc(var(--d) / var(--warp-speed)) cubic-bezier(0.5, 0, 0.9, 0.6) infinite;
   animation-delay: var(--dl);
@@ -1705,7 +1670,6 @@ body {
   .fx-toast::before,
   .fx-toast-gold,
   :root:not([data-fx-level="off"]) .card,
-  :root:not([data-fx-level="off"]) .card::before,
   :root:not([data-fx-level="off"]) :is(button, a).bg-accent:hover {
     animation: none !important;
   }
@@ -1733,10 +1697,6 @@ body {
     box-shadow: none;
     transform: none;
     animation: none;
-  }
-  :root:not([data-fx-level="off"]) .card::before,
-  :root:not([data-fx-level="off"]) .card::after {
-    display: none;
   }
 }
 

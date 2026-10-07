@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GYRO_TWIN_CAMERA } from "@/components/lab/GyroTwin";
 import { TurnCube } from "@/components/lab/TurnCube";
 import { TwinStage } from "@/components/lab/TwinStage";
@@ -10,6 +10,10 @@ import { solveMsAtPosition, streamQuatAt } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { springStep, type SpringPose } from "@/lib/gyro/smooth";
 import { activeLeaf } from "@/lib/analysis/replayTiming";
+import { REST_SPRING, buildLeanTurns, cameraMotionAllowed, leanAt, stepLean, type LeanSpring } from "@/lib/analysis/replayCamera";
+
+/** The twin's fixed camera, nudged by the replay's lean (degrees): yaw swings it right, pitch raises it. */
+const cameraFor = (yaw: number, pitch: number) => `rotateX(${(-24 - pitch).toFixed(2)}deg) rotateY(${(-32 - yaw).toFixed(2)}deg)`;
 
 function prefersReducedMotion(): boolean {
   try {
@@ -28,6 +32,8 @@ function prefersReducedMotion(): boolean {
  * the twin keeps its own clock: between reports it carries on from the last one at the playback rate
  * (every animation frame), and its tilt is a spring toward the recorded orientation so it glides through
  * the stream's ~20 Hz samples. The turning layer is drawn by how far through its move that clock is.
+ * Its camera also leans a few degrees toward the face being turned (as the replay's does, see
+ * lib/analysis/replayCamera), except under reduced motion or with effects off.
  *
  * `faceletsAfter[k]` is the cube with the first k moves made (so one more entry than there are
  * moves); `moveMs` is when each move was really made, ms from the solve's start; `starts` and `ends`
@@ -67,10 +73,11 @@ export function ReplayGyroTwin({
   const poseRef = useRef<SpringPose | null>(null);
   const kickRef = useRef<() => void>(() => {});
   // Everything the frame loop reads, kept current without restarting it.
-  const dataRef = useRef({ stream, moveMs, starts, ends });
+  const turns = useMemo(() => buildLeanTurns(moves, starts, ends), [moves, starts, ends]);
+  const dataRef = useRef({ stream, moveMs, starts, ends, turns });
 
   useEffect(() => {
-    dataRef.current = { stream, moveMs, starts, ends };
+    dataRef.current = { stream, moveMs, starts, ends, turns };
   });
 
   useEffect(() => {
@@ -82,6 +89,8 @@ export function ReplayGyroTwin({
     const el = orientRef.current;
     if (!el) return undefined;
     const reduce = prefersReducedMotion();
+    const lean = cameraMotionAllowed();
+    let leanSpring: LeanSpring = REST_SPRING;
     const start = streamQuatAt(dataRef.current.stream, solveMsAtPosition(dataRef.current.starts, dataRef.current.moveMs, anchorRef.current.pos));
     if (start) {
       poseRef.current = { q: start, w: [0, 0, 0] };
@@ -92,7 +101,7 @@ export function ReplayGyroTwin({
     const frame = (now: number) => {
       raf = 0;
       const a = anchorRef.current;
-      const { stream: st, moveMs: mm, starts: ss, ends: es } = dataRef.current;
+      const { stream: st, moveMs: mm, starts: ss, ends: es, turns: lt } = dataRef.current;
       const end = es.length ? es[es.length - 1] : 0;
       const pos = Math.max(0, Math.min(end, a.pos + (a.rate ? (now - a.at) * a.rate : 0)));
       const target = streamQuatAt(st, solveMsAtPosition(ss, mm, pos));
@@ -108,7 +117,13 @@ export function ReplayGyroTwin({
           poseRef.current = next;
           settled = next.settled;
         }
-        el.style.transform = `${GYRO_TWIN_CAMERA} ${cssMatrix3d(quatToMat(poseRef.current.q))}`;
+        const grip = quatToMat(poseRef.current.q);
+        if (lean) {
+          const leanStep = stepLean(leanSpring, leanAt(lt, pos, grip), dt);
+          leanSpring = leanStep.spring;
+          settled = settled && leanStep.settled;
+        }
+        el.style.transform = `${cameraFor(leanSpring.yaw, leanSpring.pitch)} ${cssMatrix3d(grip)}`;
       }
       if (Math.abs(pos - clockRef.current) > 0.5) {
         clockRef.current = pos;

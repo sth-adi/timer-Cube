@@ -203,6 +203,7 @@ export function AnalyzerView() {
               moveTimestamps={moveTimestamps ?? undefined}
               totalMs={timeMs ?? undefined}
               gyroStream={gyroStream}
+              ghostOf={solveId ? { id: solveId, date: analysedSolve?.date, event: analysedSolve?.event } : undefined}
             />
           )}
 
