@@ -105,17 +105,17 @@ export function DailyChallengeView() {
   if (done) {
     return (
       <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center gap-3 py-2 text-center">
-        <Flame size={32} className="text-warning" />
+        <Flame size={32} className="text-warning" strokeWidth={1.75} />
         <p className="text-lg font-semibold">Today&apos;s challenge complete</p>
-        <p className="tabular-timer text-4xl font-bold">{ao5 !== null ? formatTime(ao5) : "—"}</p>
-        <p className="text-xs uppercase tracking-wide text-muted-2">ao5</p>
+        <p className="tabular-timer text-4xl font-bold">{ao5 !== null ? formatTime(ao5) : "-"}</p>
+        <p className="text-xs text-muted-2">ao5</p>
         <p className="flex items-center gap-1.5 text-sm font-medium text-warning">
-          <Flame size={14} /> {streak}-day streak
+          <Flame size={14} strokeWidth={1.75} /> {streak}-day streak
         </p>
         <div className="flex gap-3 text-xs text-muted">
           {times.map((t, i) => (
             <span key={i} className="tabular-timer">
-              {t !== null ? formatTime(t) : "—"}
+              {t !== null ? formatTime(t) : "-"}
             </span>
           ))}
         </div>
@@ -125,7 +125,7 @@ export function DailyChallengeView() {
           <div className="mt-3 w-full max-w-xs rounded-xl bg-bg-panel-2 p-3 text-left">
             <div className="mb-2 flex items-center justify-between">
               <p className="flex items-center gap-1.5 text-xs font-semibold">
-                <Trophy size={13} className="text-warning" /> Today&apos;s leaderboard
+                <Trophy size={13} className="text-warning" strokeWidth={1.75} /> Today&apos;s leaderboard
               </p>
               {leaderboard.yourRank && (
                 <span className="text-[11px] text-muted-2">
@@ -165,7 +165,7 @@ export function DailyChallengeView() {
       {...touch}
     >
       <div className="flex items-center gap-1.5 text-xs text-muted">
-        <Flame size={12} className="text-warning" />
+        <Flame size={12} className="text-warning" strokeWidth={1.75} />
         {streak}-day streak
         <span className="text-muted-2">
           · solve {currentIndex + 1} of {DAILY_CHALLENGE_LENGTH}

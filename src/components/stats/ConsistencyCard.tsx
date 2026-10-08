@@ -15,7 +15,7 @@ export function ConsistencyCard({ solves }: { solves: Solve[] }) {
   const plus2Count = useMemo(() => solves.filter((s) => s.penalty === "plus2").length, [solves]);
 
   if (solves.length < 2) {
-    return <p className="text-muted-2 text-sm text-center py-6">Solve a bit more to see your consistency.</p>;
+    return <p className="py-4 text-sm text-muted-2">Solve a bit more to see your consistency.</p>;
   }
 
   return (

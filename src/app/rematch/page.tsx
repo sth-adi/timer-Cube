@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Ghost as GhostIcon, Link2, Loader2, Radio, RotateCcw, Swords, Timer as TimerIcon } from "lucide-react";
@@ -22,7 +23,7 @@ import { cn } from "@/lib/utils/cn";
 
 type Phase = "pick" | "setup" | "ready" | "solving" | "done";
 
-const signed = (ms: number | null) => (ms === null ? "—" : `${ms < 0 ? "−" : "+"}${(Math.abs(ms) / 1000).toFixed(2)}`);
+const signed = (ms: number | null) => (ms === null ? "-" : `${ms < 0 ? "−" : "+"}${(Math.abs(ms) / 1000).toFixed(2)}`);
 
 function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
   const faster = c.totalB < c.totalA;
@@ -50,8 +51,8 @@ function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
         </div>
       </div>
 
-      <div className="card flex flex-col gap-2 rounded-xl p-4">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Stretch by stretch</p>
+      <div className="flex flex-col gap-2 border-t border-border pt-5">
+        <p className="text-[11px] font-medium text-muted-2">Stretch by stretch</p>
         <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-1 text-[11px]">
           <span className="text-muted-2" />
           <span className="text-right text-muted-2">before</span>
@@ -60,8 +61,8 @@ function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
           {c.stretches.map((r) => (
             <div key={r.label} className="contents">
               <span className="text-foreground">{r.label}</span>
-              <span className="text-right tabular-nums text-muted">{r.a === null ? "—" : formatTime(r.a)}</span>
-              <span className="text-right tabular-nums text-muted">{r.b === null ? "—" : formatTime(r.b)}</span>
+              <span className="text-right tabular-nums text-muted">{r.a === null ? "-" : formatTime(r.a)}</span>
+              <span className="text-right tabular-nums text-muted">{r.b === null ? "-" : formatTime(r.b)}</span>
               <span
                 className={cn(
                   "text-right font-semibold tabular-nums",
@@ -80,11 +81,11 @@ function Result({ c, ghost }: { c: Comparison; ghost: Ghost }) {
         ))}
       </div>
 
-      <div className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-5">
         <div className="flex flex-col gap-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Cross before ({c.crossA.length})</p>
+          <p className="text-[11px] font-medium text-muted-2">Cross before ({c.crossA.length})</p>
           <TurnChips moves={c.crossA} />
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Cross now ({c.crossB.length})</p>
+          <p className="text-[11px] font-medium text-muted-2">Cross now ({c.crossB.length})</p>
           <TurnChips moves={c.crossB} />
         </div>
         {(c.orderA.length > 0 || c.orderB.length > 0) && (
@@ -138,9 +139,9 @@ function GhostPanel({ ghost, elapsed, mine }: { ghost: Ghost; elapsed: number; m
             {turns >= ghost.moves.length ? `finished in ${formatTime(ghost.totalMs)}` : `${MILESTONES[gap.ghost] ?? "Solved"} next · turn ${turns}/${ghost.moves.length}`}
           </p>
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-wide text-muted-2">Ghost</span>
+            <span className="text-[11px] text-muted-2">Ghost</span>
             {lane(gap.ghost, "bg-muted-2")}
-            <span className="text-[11px] uppercase tracking-wide text-muted-2">You</span>
+            <span className="text-[11px] text-muted-2">You</span>
             {lane(gap.mine, "bg-accent")}
           </div>
         </div>
@@ -190,7 +191,7 @@ function GhostPicker({ onPick }: { onPick: (g: Ghost) => void }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-3 gap-1 rounded-full bg-bg-panel-2 p-1 text-[11px]">
+      <div className="grid grid-cols-3 gap-1 rounded-lg bg-bg-panel-2 p-1 text-[11px]">
         {(
           [
             ["mine", "My solves"],
@@ -205,7 +206,7 @@ function GhostPicker({ onPick }: { onPick: (g: Ghost) => void }) {
               setSource(id);
               setError(null);
             }}
-            className={cn("rounded-full py-1.5 font-semibold", source === id ? "bg-accent text-accent-fg" : "text-muted")}
+            className={cn("rounded-md py-1.5 font-semibold", source === id ? "bg-accent text-accent-fg" : "text-muted")}
           >
             {label}
           </button>
@@ -213,7 +214,7 @@ function GhostPicker({ onPick }: { onPick: (g: Ghost) => void }) {
       </div>
       {source === "mine" &&
         (candidates.length === 0 ? (
-          <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on your smart cube first, every solve you finish can be raced here.</div>
+          <EmptyState title="No smart-cube solves yet"><p>Solve on your smart cube first, every solve you finish can be raced here.</p></EmptyState>
         ) : (
           <div className="card flex flex-col gap-1 rounded-xl p-2">
             {candidates.map((s) => (
@@ -434,7 +435,7 @@ function Rematch() {
           <button
             type="button"
             onClick={() => pick(ghost)}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
+            className="flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
           >
             <RotateCcw size={14} /> Race it again
           </button>
@@ -457,7 +458,7 @@ export default function RematchPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Swords size={17} className="text-accent" /> Rematch &amp; Ghost Race
+              <Swords size={17} className="text-accent" /> Rematch and ghost race
             </h1>
             <p className="text-[11px] text-muted-2">
               Race a real solve on the same scramble, yours, a friend&apos;s shared link, or any reconstruction, its turns playing beside you at their

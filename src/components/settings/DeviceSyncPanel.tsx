@@ -73,7 +73,7 @@ export function DeviceSyncPanel() {
 
   return (
     <div className="mt-4 border-t border-border pt-3">
-      <p className="mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-2">
+      <p className="mb-2 flex items-center gap-1.5 text-[11px] text-muted-2">
         <Smartphone size={12} /> Sync with another device
       </p>
 

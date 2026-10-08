@@ -30,9 +30,11 @@ describe("theme tokens", () => {
 
   it("reads every theme, inheriting the :root palette", () => {
     for (const id of ids) expect(tokens[id]["--background"], id).toBeTruthy();
-    expect(tokens.nebula["--background"]).toBe("#08080f");
-    expect(tokens.paper["--background"]).toBe("#f4f5f8");
-    expect(tokens.mint["--border"]).toBe(tokens.nebula["--border"]);
+    expect(tokens.nebula["--background"]).toBe("#0c0e12");
+    expect(tokens.paper["--background"]).toBe("#eef0f4");
+    // A theme that does not restyle a token keeps the :root value (the accent-on-dark lift is paper's alone).
+    expect(tokens.mint["--bg-elevated"]).not.toBe(tokens.nebula["--bg-elevated"]);
+    expect(tokens.nebula["--accent"]).toBe("#6f9be8");
   });
 
   for (const id of ids) {

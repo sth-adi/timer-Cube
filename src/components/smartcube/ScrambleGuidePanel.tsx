@@ -21,7 +21,7 @@ function NowAndNext({ w, partial }: { w: ScrambleWindow; partial: boolean }) {
       {w.now ? (
         <div
           aria-current="step"
-          className="relative flex h-[84px] min-w-[76px] flex-col items-center justify-center gap-1 rounded-2xl bg-accent px-4 font-mono text-accent-fg shadow-lg outline outline-2 outline-offset-2 outline-foreground"
+          className="relative flex h-[84px] min-w-[76px] flex-col items-center justify-center gap-1 rounded-xl bg-accent px-4 font-mono text-accent-fg outline outline-2 outline-offset-2 outline-foreground"
         >
           <span className="sr-only">Now: </span>
           <span className="text-4xl font-bold leading-none">{w.now.token}</span>
@@ -32,13 +32,13 @@ function NowAndNext({ w, partial }: { w: ScrambleWindow; partial: boolean }) {
           {partial && <span className="absolute -right-1.5 -top-1.5 rounded-full bg-warning px-1.5 text-[10px] text-black">½</span>}
         </div>
       ) : (
-        <div aria-hidden className="flex h-[84px] min-w-[76px] items-center justify-center rounded-2xl bg-bg-panel-2 text-success">
+        <div aria-hidden className="flex h-[84px] min-w-[76px] items-center justify-center rounded-xl bg-bg-panel-2 text-success">
           <CheckCircle2 size={32} />
         </div>
       )}
       {w.next.length > 0 && (
         <div className="flex items-center gap-1.5">
-          <span aria-hidden className="text-[10px] font-semibold uppercase tracking-wide text-muted-2">
+          <span aria-hidden className="text-[10px] font-semibold text-muted-2">
             then
           </span>
           {w.next.map((step, i) => (
@@ -72,7 +72,7 @@ function ProgressBar({ w }: { w: ScrambleWindow }) {
         aria-valuetext={w.valueText}
         className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-panel-2"
       >
-        <div className="h-full rounded-full bg-accent transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${w.progress * 100}%` }} />
+        <div className="h-full rounded-md bg-accent transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${w.progress * 100}%` }} />
       </div>
       <span aria-hidden className="min-w-[3.5rem] text-right font-mono text-[11px] tabular-nums text-muted">
         {w.label}
@@ -109,7 +109,7 @@ export function ScrambleGuidePanel() {
   return (
     <div className="flex w-full flex-col items-center gap-3">
       {offTrack ? (
-        <div className="flex w-full max-w-md flex-col items-center gap-2 rounded-xl bg-warning/10 px-3 py-3 text-center ring-1 ring-warning/40">
+        <div className="flex w-full max-w-md flex-col items-center gap-2 rounded-lg bg-warning/10 px-3 py-3 text-center ring-1 ring-warning/40">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-warning">
             <Undo2 size={15} /> Wrong turn, undo {view.undo.length === 1 ? "this" : `these ${view.undo.length}`}
           </p>
@@ -123,7 +123,7 @@ export function ScrambleGuidePanel() {
           </p>
         </div>
       ) : view.fix ? (
-        <div className="flex w-full max-w-md flex-col items-center gap-2 rounded-xl bg-warning/10 px-3 py-3 text-center ring-1 ring-warning/40">
+        <div className="flex w-full max-w-md flex-col items-center gap-2 rounded-lg bg-warning/10 px-3 py-3 text-center ring-1 ring-warning/40">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-warning">
             <AlertTriangle size={15} /> Not quite, turn this to fix step {view.index + 1}
           </p>

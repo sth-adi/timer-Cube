@@ -13,22 +13,22 @@ const VERDICT_STYLE: Record<PaceVerdict, string> = {
   behind: "bg-danger/15 text-danger",
 };
 
-const signed = (ms: number) => `${ms < 0 ? "−" : "+"}${(Math.abs(ms) / 1000).toFixed(2)}`;
+const signed = (ms: number) => `${ms < 0 ? "-" : "+"}${(Math.abs(ms) / 1000).toFixed(2)}`;
 
 /** During a solve: the last pace call, or what the next split needs to be. */
 export function PaceChip({ calls, targets }: { calls: readonly PaceCall[]; targets: readonly number[] }) {
   const last = calls[calls.length - 1];
   if (!last) {
     return (
-      <span className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-3 py-1 text-[11px] text-muted">
-        <Gauge size={12} className="text-accent" /> Cross by {formatTime(targets[0])}
+      <span className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-3 py-1 text-[11px] text-muted">
+        <Gauge size={12} className="text-accent" strokeWidth={1.75} /> Cross by {formatTime(targets[0])}
       </span>
     );
   }
   const v = paceVerdict(last.deltaMs);
   return (
-    <span className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold tabular-nums", VERDICT_STYLE[v])}>
-      <Gauge size={12} /> {MILESTONES[last.index]} {signed(last.deltaMs)} {v === "ahead" ? "ahead" : v === "behind" ? "behind" : "on pace"}
+    <span className={cn("flex items-center gap-1.5 rounded-lg px-3 py-1 text-[11px] font-semibold tabular-nums", VERDICT_STYLE[v])}>
+      <Gauge size={12} strokeWidth={1.75} /> {MILESTONES[last.index]} {signed(last.deltaMs)} {v === "ahead" ? "ahead" : v === "behind" ? "behind" : "on pace"}
     </span>
   );
 }
@@ -40,9 +40,9 @@ export function PaceLadderCard({ actual, targets, targetMs }: { actual: readonly
   return (
     <Link href="/pacer" className="card flex w-full flex-col gap-2.5 rounded-xl p-3 transition-colors hover:bg-bg-panel-2/40">
       <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-        <Gauge size={13} className="text-accent" /> Split Pacer
-        <span className="font-normal text-muted-2">· target {formatTime(targetMs)}</span>
-        <ChevronRight size={14} className="ml-auto text-muted-2" />
+        <Gauge size={13} className="text-accent" strokeWidth={1.75} /> Split pacer
+        <span className="font-normal text-muted-2">target {formatTime(targetMs)}</span>
+        <ChevronRight size={14} className="ml-auto text-muted-2" strokeWidth={1.75} />
       </p>
       <div className="flex flex-col gap-1">
         {ladder.rows.map((r) => (
@@ -64,7 +64,7 @@ export function PaceLadderCard({ actual, targets, targetMs }: { actual: readonly
                 r.deltaMs === null ? "text-muted-2" : paceVerdict(r.deltaMs) === "behind" ? "text-danger" : paceVerdict(r.deltaMs) === "ahead" ? "text-success" : "text-accent",
               )}
             >
-              {r.deltaMs === null ? "—" : signed(r.deltaMs)}
+              {r.deltaMs === null ? "-" : signed(r.deltaMs)}
             </span>
           </div>
         ))}

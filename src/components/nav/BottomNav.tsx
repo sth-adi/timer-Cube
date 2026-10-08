@@ -18,7 +18,7 @@ export type TabId = (typeof TABS)[number]["id"] | "solves";
 const SLOTS = 6;
 
 const ITEM =
-  "fx-dock-item flex min-w-0 flex-1 flex-col items-center justify-center gap-[5px] text-[11px] font-medium leading-none tracking-[0.01em] transition-colors";
+  "fx-dock-item flex min-w-0 flex-1 flex-col items-center justify-center gap-[5px] text-[11px] font-medium leading-none transition-colors";
 
 function Label({ children }: { children: ReactNode }) {
   return <span className="max-w-full truncate">{children}</span>;
@@ -59,17 +59,17 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (t: T
             data-active={isActive}
             className={cn(ITEM, isActive ? "text-accent" : "text-muted-2")}
           >
-            <Icon size={21} strokeWidth={isActive ? 2.25 : 2} aria-hidden="true" />
+            <Icon size={21} aria-hidden="true" />
             <Label>{tab.label}</Label>
           </button>
         );
       })}
       <Link href="/play" data-active={false} className={cn(ITEM, "text-muted-2")}>
-        <Gamepad2 size={21} strokeWidth={2} aria-hidden="true" />
+        <Gamepad2 size={21} aria-hidden="true" />
         <Label>Play</Label>
       </Link>
       <Link href="/solves" data-active={false} className={cn(ITEM, "text-muted-2")}>
-        <ListOrdered size={21} strokeWidth={2} aria-hidden="true" />
+        <ListOrdered size={21} aria-hidden="true" />
         <Label>Solves</Label>
       </Link>
     </nav>

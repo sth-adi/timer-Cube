@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { History, Loader2, Microscope, Palette, ScanLine, Target, Timer as TimerIcon, Waves, Wand } from "lucide-react";
+import { Loader2, ScanLine, Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
+import { EmptyState } from "@/components/analysis/EmptyState";
+import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { runXray, xrayRequestFor } from "@/lib/xray/client";
 import { useXrayHistory } from "@/components/xray/useXrayHistory";
@@ -25,17 +27,14 @@ import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <section className={cn("card flex flex-col gap-3 rounded-xl p-4", className)}>{children}</section>;
+  return <section className={cn("flex flex-col gap-3 border-t border-border pt-5", className)}>{children}</section>;
 }
 
-function SectionTitle({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
+function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        {icon}
-        {title}
-      </h2>
-      {subtitle && <p className="text-[11px] text-muted-2">{subtitle}</p>}
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      {subtitle && <p className="max-w-prose text-xs text-muted-2">{subtitle}</p>}
     </div>
   );
 }
@@ -148,24 +147,23 @@ function XrayPageInner() {
           </div>
 
           {candidates.length === 0 ? (
-            <Card>
-              <p className="py-6 text-center text-sm text-muted">
-                Solve on a connected smart cube and each solve shows up here for a full X-Ray.
-              </p>
-            </Card>
+            <EmptyState title="No smart-cube solves yet" href="/" action="Open timer">
+              <p>Solve on a connected smart cube and each solve shows up here for a full X-Ray.</p>
+            </EmptyState>
           ) : (
             <>
               {linkMissing && <p className="px-1 text-[11px] text-muted-2">That solve can&apos;t be X-Rayed (it may have been deleted), so here&apos;s your newest one.</p>}
               <SolvePicker solves={candidates} selectedId={selected?.id ?? null} onPick={setPickedId} />
 
               {!current ? (
-                <Card className="items-center py-10">
-                  <Loader2 size={18} className="animate-spin text-accent" />
-                  <p className="text-xs text-muted">Replaying every turn…</p>
-                </Card>
+                <SkeletonGroup label="Replaying every turn" className="flex flex-col gap-3 border-t border-border pt-5">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-28 w-full" />
+                  <Skeleton className="h-4 w-56" />
+                </SkeletonGroup>
               ) : !current.result ? (
                 <Card>
-                  <p className="text-center text-xs text-muted">This solve couldn&apos;t be replayed against its scramble.</p>
+                  <p className="text-sm text-muted">This solve couldn&apos;t be replayed against its scramble. Pick another solve above.</p>
                 </Card>
               ) : (
                 <>
@@ -173,14 +171,14 @@ function XrayPageInner() {
                     {current.result.flow ? (
                       <F2lFlowChart report={current.result.flow} />
                     ) : (
-                      <p className="text-xs text-muted">No complete cross → F2L in this solve to chart.</p>
+                      <p className="text-sm text-muted">This solve has no complete cross and F2L to chart.</p>
                     )}
                   </Card>
                   <Card>
                     {current.result.oracle ? (
                       <LastSlotOracleCard report={current.result.oracle} />
                     ) : (
-                      <p className="text-xs text-muted">No single last slot to analyze (two pairs finished together, or F2L never completed).</p>
+                      <p className="text-sm text-muted">No single last slot to analyze: two pairs finished together, or F2L never completed.</p>
                     )}
                   </Card>
                   <Card>
@@ -194,55 +192,48 @@ function XrayPageInner() {
                 </>
               )}
 
-              <div className="flex items-center gap-2 px-1 pt-3">
-                <History size={15} className="text-accent" />
-                <h2 className="text-sm font-semibold text-foreground">Across your solves</h2>
+              <div className="flex items-baseline gap-2 px-1 pt-6">
+                <h2 className="text-base font-semibold text-foreground">Across your solves</h2>
                 {scanning && (
-                  <span className="ml-auto flex items-center gap-1 text-[11px] text-muted-2">
-                    <Loader2 size={11} className="animate-spin" /> scanning {historyDone}/{historyTotal}
+                  <span className="ml-auto flex items-center gap-1 text-xs tabular-nums text-muted-2">
+                    <Loader2 size={11} className="animate-spin" /> Scanning {historyDone} of {historyTotal}
                   </span>
                 )}
               </div>
 
               {plan.length > 0 && (
                 <Card>
-                  <SectionTitle
-                    icon={<Target size={15} className="text-accent" />}
-                    title="What to fix first"
-                    subtitle="All four analyses, priced in seconds per solve against your own better solves."
-                  />
-                  <div className="flex flex-col gap-2">
+                  <SectionTitle title="What to fix first" subtitle="All four analyses, priced in seconds per solve against your own better solves." />
+                  <ol className="flex flex-col divide-y divide-border">
                     {plan.map((f, i) => (
-                      <div key={f.id} className="flex flex-col gap-1 rounded-lg bg-bg-panel-2 p-2.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-xs font-semibold text-foreground">
+                      <li key={f.id} className={cn("flex flex-col gap-1 py-3 first:pt-0 last:pb-0", i === 0 && "text-base")}>
+                        <div className="flex items-start justify-between gap-3">
+                          <p className={cn("font-semibold text-foreground", i === 0 ? "text-base" : "text-sm")}>
                             {i + 1}. {f.title}
                           </p>
-                          <span className="shrink-0 text-xs font-bold tabular-nums text-accent">{(f.msPerSolve / 1000).toFixed(2)}s</span>
+                          <span className={cn("shrink-0 font-semibold tabular-nums text-accent", i === 0 ? "text-base" : "text-sm")}>{(f.msPerSolve / 1000).toFixed(2)}s</span>
                         </div>
-                        <p className="text-[11px] text-muted">{f.detail}</p>
-                        <p className="text-[11px] font-medium text-foreground">{f.action}</p>
-                      </div>
+                        <p className="text-xs text-muted">{f.detail}</p>
+                        <p className="text-xs font-medium text-foreground">{f.action}</p>
+                      </li>
                     ))}
-                  </div>
-                  <Link href="/coach" className="hit-y text-[11px] font-medium text-accent">
-                    See it ranked with everything else in the Coach →
+                  </ol>
+                  <Link href="/coach" className="hit-y text-xs font-medium text-accent">
+                    See it ranked in Coach
                   </Link>
                 </Card>
               )}
 
               <Card>
-                <SectionTitle
-                  icon={<Microscope size={15} className="text-accent" />}
-                  title="Alg Microscope"
-                  subtitle="The algorithms you actually use for every case, with recognition vs. execution time. Open a case to see its turn-by-turn timing and where you stall."
+                <SectionTitle title="Alg microscope"
+                  subtitle="The algorithms you actually use for every case, with recognition and execution time. Open a case to see its turn-by-turn timing and where you stall."
                 />
                 <AlgMicroscopePanel cases={microscope} />
               </Card>
 
               {flowHistory && (
                 <Card>
-                  <SectionTitle icon={<Waves size={15} className="text-accent" />} title="F2L Flow" subtitle={`${flowHistory.solves} solves`} />
+                  <SectionTitle title="F2L flow" subtitle={`${flowHistory.solves} solves`} />
                   <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
                     <Stat value={Math.round(flowHistory.avgFlowScore).toString()} label="avg flow score" />
                     <Stat value={`${Math.round(flowHistory.easiestPickRate * 100)}%`} label="easiest pair picked" />
@@ -259,7 +250,7 @@ function XrayPageInner() {
 
               {oracleHistory && (
                 <Card>
-                  <SectionTitle icon={<Wand size={15} className="text-accent" />} title="Last Slot Oracle" subtitle={`${oracleHistory.solves} most recent solves`} />
+                  <SectionTitle title="Last slot oracle" subtitle={`${oracleHistory.solves} most recent solves`} />
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <Stat value={`${Math.round(oracleHistory.skipAvailableRate * 100)}%`} label="an OLL skip was an insert away" tone="success" />
                     <Stat value={`${Math.round(oracleHistory.skipTakenRate * 100)}%`} label="skips you actually got" />
@@ -270,9 +261,7 @@ function XrayPageInner() {
 
               {neutrality && (
                 <Card>
-                  <SectionTitle
-                    icon={<Palette size={15} className="text-accent" />}
-                    title="Neutrality Scout"
+                  <SectionTitle title="Neutrality scout"
                     subtitle="Would learning more cross colors pay off for you? Measured on the scrambles you actually solved."
                   />
                   <NeutralityHistory report={neutrality} />
@@ -288,7 +277,7 @@ function XrayPageInner() {
 
 function Stat({ value, label, tone }: { value: string; label: string; tone?: "success" | "danger" }) {
   return (
-    <div className="rounded-lg bg-bg-panel-2 px-2 py-2">
+    <div className="rounded-lg bg-bg-panel-2 px-2 py-2.5">
       <p className={cn("text-base font-bold tabular-nums", tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : "text-foreground")}>
         {value}
       </p>

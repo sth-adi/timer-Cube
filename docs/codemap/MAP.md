@@ -423,3 +423,7 @@ Appended (not regenerated).
 - src/components/timer/finishMoment.ts [1] {Timer} — What the finish moment shows: the settle, the one-time ring in the ending phase's colour, and gold markers. (CUBE_SETTLE_MS, FINISH_RING_MS, PHASE_HUE_VARS, finishHueVar, lastPhaseIndex)
 - src/components/timer/tickPlacement.ts [1] {Timer} — Which edge of the live cube's box a turned face's tick belongs on, worked out from the camera. (Camera, FaceName, LIVE_CAMERA, TickEdge, faceOnScreen, tickEdge, tickPositionClass)
 - Cube visuals: `lab/TurnCube` + `useTurnAnimation` + `cube-engine/stickerTurns` now animate slices (M E S), rotations (x y z) and a slice-shaped opposite-face pair as one turn; `lab/groundShadow` shifts the flat shadow with the tilt; `smartcube/cubeProgress` + `progressFill` dim pieces not home yet through `stickerFills`.
+
+### Additions — 2026-10-08 (taste rework: calm surfaces, slate palette, sentence case)
+- src/components/analysis/EmptyState.tsx [17] {Analysis / X-Ray} — The shared 'not enough solves yet' block for report pages: title, the number needed, one sentence and one next action. (EmptyState)
+- Taste rework: palettes and radii live in `app/globals.css` + `styles/themes.css` (nebula is shown as Slate); `.card` is a calm panel and flattens card-in-card; report pages use hairline sections and `analysis/EmptyState`; no uppercase tracked labels, pill badges or gradients in the UI.

@@ -70,7 +70,7 @@ export function MistakeRadarCard({
         <ScoreRing score={report.cleanScore} />
         <div className="flex min-w-0 flex-col">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-            <Radar size={13} className="text-accent" /> Mistake Radar
+            <Radar size={13} className="text-accent" strokeWidth={1.75} /> Mistake Radar
           </p>
           {mistakes.length === 0 ? (
             <p className="text-[11px] text-muted">Clean solve, nothing knocked out, no extra looks, no wasted turns.</p>
@@ -136,7 +136,7 @@ export function MistakeRadarCard({
       )}
       {mistakes.length === 0 && (
         <p className="flex items-center gap-1.5 text-[11px] text-success">
-          <ShieldCheck size={12} /> Nothing to fix here.
+          <ShieldCheck size={12} strokeWidth={1.75} /> Nothing to fix here.
         </p>
       )}
     </div>

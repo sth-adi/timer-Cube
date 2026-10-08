@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Lightbulb } from "lucide-react";
 import type { Solve } from "@/types";
 import { computeCoachTip } from "@/lib/analysis/smartCubeInsights";
 
@@ -16,12 +15,10 @@ export function CoachTipCard({ solves }: { solves: Solve[] }) {
   if (!tip) return null;
 
   return (
-    <div className="card rounded-xl border-accent/30 bg-accent-soft/40 p-4">
-      <h3 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-accent">
-        <Lightbulb size={14} />
-        {tip.title}
-      </h3>
-      <p className="text-xs leading-relaxed text-foreground/90">{tip.detail}</p>
+    <div>
+      <p className="mb-1 text-xs font-medium text-muted-2">Coach tip</p>
+      <h3 className="text-sm font-semibold tracking-[-0.01em] text-foreground">{tip.title}</h3>
+      <p className="mt-1 max-w-[65ch] text-pretty text-xs leading-relaxed text-muted">{tip.detail}</p>
     </div>
   );
 }

@@ -49,13 +49,13 @@ export default function CadencePage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Consistency over your last {Math.min(40, r.solves.length)} solves</SectionTitle>
             <TrendStrip solves={r.solves} />
             <p className="text-[11px] text-muted-2">Each bar is one solve&apos;s score (0-100). Taller is steadier turning.</p>
           </div>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Steadiest vs roughest</SectionTitle>
             {[
               { label: "Steadiest", s: r.best },

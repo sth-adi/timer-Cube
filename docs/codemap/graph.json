@@ -599,7 +599,8 @@
     {"id":"src/components/smartcube/ConnectMoment.tsx","kind":"component","area":"Smart cube","exports":["BatteryBar","ConnectedMoment","ConnectingMoment"],"summary":"The small card shown on connect: cube turning R U R' U', cube name, battery bar, Reading cube then Ready.","loc":95,"importedBy":2,"hasTest":false},
     {"id":"src/components/smartcube/useScriptedFrames.ts","kind":"hook","area":"Smart cube","exports":["ScriptedFramesOptions","useScriptedFrames"],"summary":"Plays a fixed list of cube states on a timer for the connect animation.","loc":38,"importedBy":1,"hasTest":false},
     {"id":"src/components/timer/finishMoment.ts","kind":"lib","area":"Timer","exports":["CUBE_SETTLE_MS","FINISH_RING_MS","PHASE_HUE_VARS","finishHueVar","lastPhaseIndex"],"summary":"What the finish moment shows: the settle, the one-time ring in the ending phase's colour, and gold markers.","loc":24,"importedBy":1,"hasTest":true},
-    {"id":"src/components/timer/tickPlacement.ts","kind":"lib","area":"Timer","exports":["Camera","FaceName","LIVE_CAMERA","TickEdge","faceOnScreen","tickEdge","tickPositionClass"],"summary":"Which edge of the live cube's box a turned face's tick belongs on, worked out from the camera.","loc":69,"importedBy":1,"hasTest":true}
+    {"id":"src/components/timer/tickPlacement.ts","kind":"lib","area":"Timer","exports":["Camera","FaceName","LIVE_CAMERA","TickEdge","faceOnScreen","tickEdge","tickPositionClass"],"summary":"Which edge of the live cube's box a turned face's tick belongs on, worked out from the camera.","loc":69,"importedBy":1,"hasTest":true},
+    {"id":"src/components/analysis/EmptyState.tsx","kind":"component","area":"Analysis / X-Ray","exports":["EmptyState"],"summary":"The shared 'not enough solves yet' block for report pages: title, the number needed, one sentence and one next action.","loc":39,"importedBy":17,"hasTest":false}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},
@@ -2799,7 +2800,24 @@
     {"from":"src/components/timer/SmartCubeTimer.tsx","to":"src/components/smartcube/ConnectMoment.tsx"},
     {"from":"src/components/smartcube/useScriptedFrames.ts","to":"src/components/motion/motionOff.ts"},
     {"from":"src/components/timer/SmartCubeTimer.tsx","to":"src/components/timer/finishMoment.ts"},
-    {"from":"src/components/timer/LiveCubeMimic.tsx","to":"src/components/timer/tickPlacement.ts"}
+    {"from":"src/components/timer/LiveCubeMimic.tsx","to":"src/components/timer/tickPlacement.ts"},
+    {"from":"src/app/auf/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/blindspots/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/bottleneck/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/coldstart/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/eventmix/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/inspection/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/lookahead/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/mistakes/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/momentum/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/multislot/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/reel/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/rematch/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/spin/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/wrapped/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/app/xray/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/components/analytics/AnalyticsShell.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/components/timemachine/WhatIf.tsx","to":"src/components/analysis/EmptyState.tsx"}
   ],
   "routes": {
     "/": "src/app/page.tsx",

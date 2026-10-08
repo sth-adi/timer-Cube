@@ -16,7 +16,7 @@ function Row({ label, you, rival }: { label: string; you: number | null; rival: 
       <span className={cn("tabular-timer text-right", youWins && "font-semibold text-success")}>
         {you !== null ? formatTime(you) : "—"}
       </span>
-      <span className="text-center text-[11px] uppercase tracking-wide text-muted-2">{label}</span>
+      <span className="text-center text-[11px] text-muted-2">{label}</span>
       <span className={cn("tabular-timer text-left", rivalWins && "font-semibold text-success")}>
         {rival !== null ? formatTime(rival) : "—"}
       </span>
@@ -54,7 +54,7 @@ export function RivalCompare() {
 
   return (
     <div className="mt-3 border-t border-border pt-3">
-      <p className="mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-2">
+      <p className="mb-2 flex items-center gap-1.5 text-[11px] text-muted-2">
         <Swords size={12} /> Rival
       </p>
       <form onSubmit={onSubmit} className="flex gap-1.5">
@@ -89,7 +89,7 @@ export function RivalCompare() {
           <Row label="ao12" you={yours.bestAo12} rival={result.bestAo12Ms} />
           <div className="grid grid-cols-3 items-center gap-1 pt-1 text-xs">
             <span className="tabular-nums text-right">{yours.count}</span>
-            <span className="text-center text-[11px] uppercase tracking-wide text-muted-2">Solves</span>
+            <span className="text-center text-[11px] text-muted-2">Solves</span>
             <span className="tabular-nums text-left">{result.totalSolves}</span>
           </div>
         </div>

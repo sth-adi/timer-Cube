@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Move3d } from "lucide-react";
+
 import type { Solve } from "@/types";
 import { computeEfficiencyPoints, type EfficiencyPoint } from "@/lib/analysis/smartCubeInsights";
 import { formatTime } from "@/lib/utils/time";
@@ -46,9 +46,8 @@ export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
     maxTime > minTime ? HEIGHT - PAD - ((ms - minTime) / (maxTime - minTime)) * (HEIGHT - 2 * PAD) : HEIGHT / 2;
 
   return (
-    <div className="card rounded-xl p-4">
-      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
-        <Move3d size={14} className="text-accent" />
+    <div>
+      <h3 className="mb-3 text-sm font-semibold tracking-[-0.01em]">
         Efficiency vs. speed
       </h3>
       <div className="relative">
@@ -61,14 +60,15 @@ export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
               cx={x(p.moveCount)}
               cy={y(p.timeMs)}
               r={hover?.id === p.id ? 4 : 2.5}
-              fill={hover?.id === p.id ? "var(--accent)" : "var(--accent-soft)"}
+              fill="var(--accent)"
+              fillOpacity={hover?.id === p.id ? 1 : 0.5}
               onMouseEnter={() => setHover(p)}
               onMouseLeave={() => setHover((h) => (h?.id === p.id ? null : h))}
             />
           ))}
         </svg>
         {hover && (
-          <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-md border border-border-strong bg-bg-panel-2 px-2 py-1 text-[11px] tabular-timer shadow-lg">
+          <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-md border border-border-strong bg-bg-panel-2 px-2 py-1 text-[11px] tabular-timer shadow-[var(--shadow-sm)]">
             {formatTime(hover.timeMs)} · {hover.moveCount} moves · {hover.tps.toFixed(1)} tps
           </div>
         )}

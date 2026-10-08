@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, Shapes } from "lucide-react";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
@@ -39,14 +40,14 @@ function CaseRow({ stat, maxTotal, deepLinked }: { stat: CaseStat; maxTotal: num
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div ref={ref} className={cn("card rounded-xl", deepLinked && "ring-2 ring-accent")}>
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 p-3 text-left">
+    <div ref={ref} className={cn(deepLinked && "rounded-lg ring-2 ring-accent")}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 py-3 text-left">
         <Icon stat={stat} className="h-11 w-11 shrink-0" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="flex items-start justify-between gap-2">
             <span className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{stat.name}</span>
             <span className="shrink-0 text-xs tabular-nums text-muted">
-              {stat.count}× <span className="text-muted-2">· {(stat.share * 100).toFixed(1)}%</span>
+              {stat.count}× <span className="text-muted-2">{(stat.share * 100).toFixed(1)}%</span>
             </span>
           </p>
           <div className="flex h-1.5 overflow-hidden rounded-full bg-bg-panel-2">
@@ -58,11 +59,11 @@ function CaseRow({ stat, maxTotal, deepLinked }: { stat: CaseStat; maxTotal: num
             <span className="font-medium text-foreground">{secs(stat.totalMs)}s</span> avg
           </p>
         </div>
-        <ChevronDown size={14} className={cn("shrink-0 text-muted-2 transition-transform", open && "rotate-180")} />
+        <ChevronDown size={14} className={cn("shrink-0 text-muted-2 transition-transform", open && "rotate-180")} strokeWidth={1.75} />
       </button>
       {open && (
-        <div className="border-t border-border px-3 pb-3 pt-2">
-          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+        <div className="pb-3 pt-1">
+          <p className="mb-1.5 text-[11px] font-medium text-muted-2">
             Best {secs(stat.bestTotalMs)}s · last {Math.min(10, stat.occurrences.length)} times
           </p>
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-1 text-[11px] tabular-nums">
@@ -134,17 +135,17 @@ function CasesPageInner() {
 
   return (
     <AnalyticsShell
-      icon={<Shapes size={17} className="text-accent" />}
+      icon={<Shapes size={17} className="text-accent" strokeWidth={1.75} />}
       title="Case history"
       subtitle="Every OLL, PLL and F2L case from your smart-cube solves: how often it comes up, and how long you take to recognise it versus turn it."
     >
-      <div className="flex rounded-full bg-bg-panel-2 p-1">
+      <div className="flex rounded-lg bg-bg-panel-2 p-1">
         {GROUPS.map((g) => (
           <button
             key={g}
             type="button"
             onClick={() => setGroup(g)}
-            className={cn("hit-y flex-1 rounded-full py-1.5 text-xs font-semibold", group === g ? "bg-accent text-accent-fg" : "text-muted")}
+            className={cn("hit-y flex-1 rounded-lg py-1.5 text-xs font-semibold", group === g ? "bg-accent text-accent-fg" : "text-muted")}
           >
             {g}
           </button>
@@ -152,8 +153,13 @@ function CasesPageInner() {
       </div>
 
       {stats.length === 0 ? (
-        <div className="card rounded-xl p-6 text-center text-sm text-muted">
-          No {group} cases yet, solve on a connected smart cube and each one is logged here automatically.
+        <div className="flex flex-col items-center gap-3 border-y border-border py-8 text-center">
+          <p className="max-w-[40ch] text-pretty text-sm text-muted">
+            No {group} cases yet. Solve on a connected smart cube and each one is logged here automatically.
+          </p>
+          <Link href="/" className="hit-y text-sm font-medium text-accent">
+            Open the timer
+          </Link>
         </div>
       ) : (
         <>
@@ -165,7 +171,7 @@ function CasesPageInner() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground [@media(pointer:coarse)]:min-h-11"
+              className="rounded-md bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground [@media(pointer:coarse)]:min-h-11"
               aria-label="Sort cases"
             >
               {SORTS.map((s) => (
@@ -176,7 +182,7 @@ function CasesPageInner() {
             </select>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col divide-y divide-border border-y border-border">
             {sorted.map((s) => (
               <CaseRow key={s.key} stat={s} maxTotal={maxTotal} deepLinked={linkedCase === s.key} />
             ))}
@@ -192,10 +198,10 @@ function CasesPageInner() {
           </p>
 
           {unseen.length > 0 && (
-            <div className="card rounded-xl p-3">
+            <div className="border-b border-border pb-1">
               <button type="button" onClick={() => setShowUnseen((v) => !v)} className="hit-y flex w-full items-center justify-between text-xs font-medium text-muted">
                 Not seen yet ({unseen.length})
-                <ChevronDown size={13} className={cn("transition-transform", showUnseen && "rotate-180")} />
+                <ChevronDown size={13} className={cn("transition-transform", showUnseen && "rotate-180")} strokeWidth={1.75} />
               </button>
               {showUnseen && (
                 <div className="mt-2 grid grid-cols-6 gap-2">

@@ -103,7 +103,7 @@ export function CurriculumSession() {
     return (
       <div className="flex w-full max-w-md flex-col gap-3">
         <div className="card flex flex-col items-center gap-2 rounded-xl p-5 text-center">
-          <Trophy size={28} className="text-accent" />
+          <Trophy size={28} className="text-accent" strokeWidth={1.75} />
           <p className="text-lg font-bold text-foreground">Session done</p>
           <p className="text-xs text-muted">
             {Math.round(total / 60000)} min across {plan.length} blocks{reps ? ` · ${hits}/${reps} gym reps clean` : ""}.
@@ -111,14 +111,14 @@ export function CurriculumSession() {
         </div>
         {plan.map((b, i) => (
           <p key={b.id} className="flex items-start gap-2 px-1 text-xs text-foreground">
-            <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-success" />
+            <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-success" strokeWidth={1.75} />
             <span>
               {b.title}, {Math.max(1, Math.round(results[i].ms / 60000))} min
               {results[i].reps ? `, ${results[i].hits}/${results[i].reps} clean` : ""}
             </span>
           </p>
         ))}
-        <button type="button" onClick={() => setPlan(null)} className="self-center rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-fg">
+        <button type="button" onClick={() => setPlan(null)} className="self-center rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-accent-fg">
           Plan another session
         </button>
       </div>
@@ -138,10 +138,10 @@ export function CurriculumSession() {
         <div className="card flex w-full max-w-md flex-col gap-2 rounded-xl p-3">
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-              <Icon size={14} className="text-accent" /> {index + 1}/{plan.length} · {block.title}
+              <Icon size={14} className="text-accent" strokeWidth={1.75} /> {index + 1}/{plan.length} · {block.title}
             </p>
             <button type="button" onClick={end} className="hit text-muted-2 hover:text-danger" aria-label="End session" title="End session">
-              <Square size={13} />
+              <Square size={13} strokeWidth={1.75} />
             </button>
           </div>
           <p className="text-[11px] text-muted">{block.reason}</p>
@@ -157,11 +157,11 @@ export function CurriculumSession() {
               type="button"
               onClick={next}
               className={cn(
-                "flex items-center gap-1 rounded-full px-3 py-1 font-semibold",
+                "flex items-center gap-1 rounded-lg px-3 py-1 font-semibold",
                 timeUp || repsDone ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted",
               )}
             >
-              {index + 1 < plan.length ? "Next block" : "Finish"} <SkipForward size={11} />
+              {index + 1 < plan.length ? "Next block" : "Finish"} <SkipForward size={11} strokeWidth={1.75} />
             </button>
           </div>
           {(timeUp || repsDone) && <p className="text-center text-xs font-semibold text-success">Block done, move on when you&apos;re ready.</p>}
@@ -177,13 +177,13 @@ export function CurriculumSession() {
         {block.kind === "cross" && <CrossDrill key={block.id} />}
         {block.kind === "lookahead" && (
           <div className="card flex w-full max-w-md flex-col items-center gap-2 rounded-xl p-5 text-center">
-            <Navigation size={22} className="text-accent" />
+            <Navigation size={22} className="text-accent" strokeWidth={1.75} />
             <p className="text-sm font-semibold text-foreground">Solve at a calm, steady pace, never stop</p>
             <p className="text-xs text-muted">
               The Sat-Nav&apos;s coach mode hides the route unless you stall, so every pause is visible. Aim to find the next pair while the current one
               is still going in.
             </p>
-            <Link href="/satnav" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
+            <Link href="/satnav" className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
               Open Sat-Nav
             </Link>
           </div>
@@ -197,9 +197,9 @@ export function CurriculumSession() {
     <div className="flex w-full max-w-md flex-col gap-3">
       <div className="flex items-center justify-between px-1">
         <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <ListChecks size={15} className="text-accent" /> Today&apos;s session
+          <ListChecks size={15} className="text-accent" strokeWidth={1.75} /> Today&apos;s session
         </p>
-        <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
+        <div className="flex overflow-hidden rounded-lg bg-bg-panel-2 text-xs">
           {[10, 20, 30].map((m) => (
             <button key={m} type="button" onClick={() => setMinutes(m)} className={cn("px-3 py-1.5 font-medium", minutes === m ? "bg-accent-soft text-accent" : "text-muted")}>
               {m} min
@@ -216,7 +216,7 @@ export function CurriculumSession() {
         const Icon = ICON[b.kind];
         return (
           <div key={b.id} className="card flex gap-3 rounded-xl p-3">
-            <Icon size={15} className="mt-0.5 shrink-0 text-accent" />
+            <Icon size={15} className="mt-0.5 shrink-0 text-accent" strokeWidth={1.75} />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs font-semibold text-foreground">
@@ -234,8 +234,8 @@ export function CurriculumSession() {
           </div>
         );
       })}
-      <button type="button" onClick={start} className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
-        <Play size={14} /> Start session
+      <button type="button" onClick={start} className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
+        <Play size={14} strokeWidth={1.75} /> Start session
       </button>
     </div>
   );

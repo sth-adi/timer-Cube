@@ -68,7 +68,7 @@ export function DailyGoalRing() {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
           {done ? (
-            <Check size={20} strokeWidth={3} className="text-success" aria-hidden />
+            <Check size={20} strokeWidth={1.75} className="text-success" aria-hidden />
           ) : (
             <span className="tabular-timer text-lg font-semibold leading-none">{todayCount}</span>
           )}
@@ -76,8 +76,8 @@ export function DailyGoalRing() {
         </div>
       </div>
       <div>
-        <p className="text-sm font-medium">{done ? "Goal reached! 🎉" : "Today's practice"}</p>
-        <p className="text-muted-2 text-xs">
+        <p className="text-sm font-semibold tracking-[-0.01em]">{done ? "Goal reached" : "Today's practice"}</p>
+        <p className="tabular-timer mt-0.5 text-xs text-muted-2">
           {todayCount} / {dailyGoal} solves
         </p>
       </div>

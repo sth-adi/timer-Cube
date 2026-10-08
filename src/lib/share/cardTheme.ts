@@ -20,18 +20,18 @@ export interface CardTheme {
 const SANS_FALLBACK = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const MONO_FALLBACK = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
-/** The default (Nebula, dark) palette: what a card falls back to with no document, or a variable that will not parse. */
+/** The default (Slate, id "nebula", dark) palette: what a card falls back to with no document, or a variable that will not parse. */
 export const DEFAULT_CARD_THEME: CardTheme = {
   isLight: false,
-  bg: [8, 8, 15],
-  bgElevated: [18, 18, 32],
-  fg: [236, 236, 245],
-  muted: [154, 154, 180],
-  accent: [124, 92, 255],
-  cyan: [53, 230, 197],
-  success: [61, 220, 132],
-  warning: [255, 176, 32],
-  danger: [255, 77, 109],
+  bg: [12, 14, 18],
+  bgElevated: [24, 27, 34],
+  fg: [232, 235, 242],
+  muted: [155, 162, 179],
+  accent: [111, 155, 232],
+  cyan: [134, 179, 212],
+  success: [70, 201, 138],
+  warning: [226, 167, 62],
+  danger: [236, 107, 125],
   fontSans: SANS_FALLBACK,
   fontMono: MONO_FALLBACK,
 };

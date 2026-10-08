@@ -12,7 +12,6 @@ import { Cube } from "@/lib/cube-engine/engine";
 import { decodeSealed, encodeSealed, open, seal, strengthBits, strengthLabel, type Sealed } from "@/lib/play/vault";
 import { cn } from "@/lib/utils/cn";
 
-const ACCENT = "#ffc53d";
 
 const STRENGTH_COPY: Record<ReturnType<typeof strengthLabel>, { label: string; color: string }> = {
   none: { label: "No key yet, the solved cube opens anything", color: "#8d88a8" },
@@ -45,7 +44,7 @@ export default function VaultPage() {
   const sealed = token ? decodeSealed(token) : null;
 
   return (
-    <PlayShell accent={ACCENT} title="Cube Vault" tagline="Your cube is the password. Twist it into a state, seal a message with it, and send the link, it only opens when someone twists their cube into that exact state.">
+    <PlayShell title="Cube vault" tagline="Your cube is the password. Twist it into a state, seal a message with it, and send the link, it only opens when someone twists their cube into that exact state.">
       {!ready ? null : sealed ? <UnlockView sealed={sealed} /> : token ? <p className="text-sm text-red-300">That vault link is damaged, ask for it again.</p> : <LockView />}
     </PlayShell>
   );
@@ -111,7 +110,7 @@ function LockView() {
         <KeyNet facelets={facelets} dim={solved} />
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-col">
-            <span className="text-[11px] font-semibold" style={{ color: strength.color }}>
+            <span className="text-[12px] font-medium" style={{ color: strength.color }}>
               {solved ? "Solved" : `≈${Math.round(bits)} bits`} · {strength.label}
             </span>
             <div className="mt-1 h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
@@ -125,9 +124,9 @@ function LockView() {
               setKeyTurns([]);
               setLink(null);
             }}
-            className="hit flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-[var(--play-dim)] hover:text-white"
+            className="hit flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-[var(--play-dim)] hover:text-white"
           >
-            <RotateCcw size={12} /> {connected ? "I've solved it" : "Reset"}
+            <RotateCcw size={12} strokeWidth={1.75} /> {connected ? "I've solved it" : "Reset"}
           </button>
         </div>
         {!connected && <TurnPad onTurn={press} />}
@@ -166,17 +165,17 @@ function LockView() {
       <section className="play-panel flex flex-col gap-3 rounded-2xl p-4">
         <Step n={3} title="Seal it" />
         {!link ? (
-          <button type="button" disabled={!message.trim() || sealing} onClick={() => void doSeal()} className="play-btn play-glow flex items-center justify-center gap-2 py-3 text-sm">
-            <Lock size={16} /> {sealing ? "Sealing…" : solved ? "Seal (with no key, anyone opens it)" : "Seal with this cube state"}
+          <button type="button" disabled={!message.trim() || sealing} onClick={() => void doSeal()} className="play-btn flex items-center justify-center gap-2 py-3 text-sm">
+            <Lock size={16} strokeWidth={1.75} /> {sealing ? "Sealing…" : solved ? "Seal (with no key, anyone opens it)" : "Seal with this cube state"}
           </button>
         ) : (
           <div className="flex flex-col gap-2 animate-fade-in-up">
             <div className="break-all rounded-xl bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-[var(--play-accent)]">{link}</div>
             <div className="flex gap-2">
               <button type="button" onClick={() => void share()} className="play-btn flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm">
-                {copied ? <Check size={15} /> : "share" in navigator ? <Share2 size={15} /> : <Copy size={15} />} {copied ? "Copied" : "Share link"}
+                {copied ? <Check size={15} strokeWidth={1.75} /> : "share" in navigator ? <Share2 size={15} strokeWidth={1.75} /> : <Copy size={15} strokeWidth={1.75} />} {copied ? "Copied" : "Share link"}
               </button>
-              <a href={link} target="_blank" rel="noreferrer" className="flex items-center rounded-full border border-white/15 px-4 text-[12px] font-semibold text-white/80">
+              <a href={link} target="_blank" rel="noreferrer" className="flex items-center rounded-lg border border-white/15 px-4 text-[12px] font-semibold text-white/80">
                 Test it
               </a>
             </div>
@@ -207,10 +206,10 @@ function LockView() {
 
 function Step({ n, title }: { n: number; title: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--play-accent)] text-[12px] font-black text-black">{n}</span>
-      <h2 className="text-[15px] font-bold tracking-tight">{title}</h2>
-    </div>
+    <h2 className="text-[15px] font-semibold tracking-[-0.01em]">
+      <span className="tabular-nums text-[var(--play-dim)]">{n}. </span>
+      {title}
+    </h2>
   );
 }
 
@@ -264,10 +263,8 @@ function UnlockView({ sealed }: { sealed: Sealed }) {
   if (message !== null)
     return (
       <div className="flex flex-col items-center gap-4 pt-4 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--play-accent)] text-black play-glow">
-          <Unlock size={28} />
-        </div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--play-accent)]">Vault open</p>
+        <Unlock size={32} strokeWidth={1.75} className="text-[var(--play-accent)]" />
+        <p className="text-[11px] font-bold text-[var(--play-accent)]">Vault open</p>
         <div className="play-panel play-unlock w-full whitespace-pre-wrap rounded-2xl p-5 text-left text-[17px] leading-relaxed">{message}</div>
         <a href="/vault" className="text-[12px] font-semibold text-[var(--play-dim)] underline underline-offset-4">
           Seal one back
@@ -279,7 +276,7 @@ function UnlockView({ sealed }: { sealed: Sealed }) {
     <div className="flex flex-col gap-4">
       <div key={shake} className={cn("play-panel flex flex-col items-center gap-2 rounded-2xl p-5 text-center", shake > 0 && "play-shake")}>
         <VaultArt className="play-float h-36 w-full" />
-        <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--play-accent)]">Sealed</p>
+        <p className="text-[11px] font-bold text-[var(--play-accent)]">Sealed</p>
         {sealed.hint ? <p className="text-[15px] font-semibold">“{sealed.hint}”</p> : <p className="text-[13px] text-[var(--play-dim)]">No hint. You were told the state some other way, or you weren&apos;t.</p>}
         <p className="text-[11px] text-[var(--play-dim)]">
           {tries === 0 ? "Waiting for your cube" : `${tries} state${tries === 1 ? "" : "s"} tried`} · the lock never says how close you are

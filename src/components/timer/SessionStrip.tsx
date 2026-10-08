@@ -38,7 +38,7 @@ export function SessionStrip({ className }: { className?: string }) {
   ].filter((l): l is string => l !== null);
 
   return (
-    <div className={cn("card flex w-full max-w-sm flex-col gap-2 rounded-xl px-3 py-2.5", className)} data-testid="session-strip">
+    <div className={cn("flex w-full max-w-sm flex-col gap-2 border-t border-border px-3 pt-3", className)} data-testid="session-strip">
       <div className="flex items-center justify-center gap-1.5">
         {recent.map((s) => {
           const final = solveFinalMs(s);
@@ -77,7 +77,7 @@ export function SessionStrip({ className }: { className?: string }) {
       </div>
       {lines.length > 0 && (
         <div className="flex flex-col items-center gap-0.5 border-t border-border pt-1.5" data-testid="session-targets">
-          <span className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+          <span className="flex items-center gap-1 text-[11px] font-medium text-muted-2">
             <Target size={11} /> To set a record
           </span>
           {lines.map((l) => (
@@ -102,7 +102,7 @@ export function PenaltyControls({ solve, onSet }: { solve: Solve; onSet: (penalt
         onClick={() => onSet(on ? "none" : value)}
         aria-pressed={on}
         className={cn(
-          "hit-y rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+          "hit-y rounded-md px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
           on ? (value === "dnf" ? "bg-danger text-white" : "bg-warning text-black") : "bg-bg-panel-2 text-muted hover:text-foreground",
         )}
       >

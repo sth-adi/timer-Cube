@@ -73,7 +73,7 @@ export function ConnectionPill() {
   if (userId && status === "syncing" && pending > 0) {
     return (
       <div className="chrome-pill bg-accent-soft text-accent" role="status">
-        <CloudUpload size={12} className="shrink-0 animate-pulse" />
+        <CloudUpload size={12} className="shrink-0" />
         <span className="tabular-nums">Syncing {pending}</span>
       </div>
     );

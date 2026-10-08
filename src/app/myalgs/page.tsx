@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookMarked, Loader2, Printer } from "lucide-react";
+import { BookMarked, Printer } from "lucide-react";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
 import { YourAlgs } from "@/components/algorithms/YourAlgs";
@@ -84,10 +84,10 @@ export default function MyAlgsPage() {
   const mineCount = Object.keys(chosen).length;
 
   return (
-    <AnalyticsShell icon={<BookMarked size={17} className="text-accent" />} title="My Algs" subtitle="Your algorithms, not the book's, learned from your one-look solves, used everywhere.">
+    <AnalyticsShell icon={<BookMarked size={17} className="text-accent" strokeWidth={1.75} />} title="My algs" subtitle="Your algorithms, not the book's, learned from your one-look solves, used everywhere.">
       <div className="print:hidden flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
+          <div className="flex overflow-hidden rounded-lg bg-bg-panel-2 text-xs">
             {(["PLL", "OLL"] as const).map((g) => (
               <button key={g} type="button" onClick={() => setGroup(g)} className={cn("px-3 py-1.5 font-semibold [@media(pointer:coarse)]:py-3", group === g ? "bg-accent text-accent-fg" : "text-muted")}>
                 {g}
@@ -95,11 +95,11 @@ export default function MyAlgsPage() {
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <button type="button" onClick={() => setOnlyMine((v) => !v)} className={cn("hit-y rounded-full px-2.5 py-1.5 text-[11px] font-medium", onlyMine ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+            <button type="button" onClick={() => setOnlyMine((v) => !v)} className={cn("hit-y rounded-lg px-2.5 py-1.5 text-[11px] font-medium", onlyMine ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
               Only mine
             </button>
-            <button type="button" onClick={() => window.print()} className="hit-y flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1.5 text-[11px] font-medium text-muted hover:text-foreground">
-              <Printer size={11} /> Print sheet
+            <button type="button" onClick={() => window.print()} className="hit-y flex items-center gap-1 rounded-lg bg-bg-panel-2 px-2.5 py-1.5 text-[11px] font-medium text-muted hover:text-foreground">
+              <Printer size={11} strokeWidth={1.75} /> Print sheet
             </button>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function MyAlgsPage() {
             : `No one-look ${group} algorithms read from your smart-cube solves yet.`}
           {reading > 0 && (
             <span className="ml-1 inline-flex items-center gap-1 text-muted-2">
-              <Loader2 size={10} className="animate-spin" /> reading {reading} solves
+              reading {reading} solves
             </span>
           )}
         </p>

@@ -41,20 +41,20 @@ export function YourAlgs({ algCase, onShow, showing }: { algCase: AlgCase; onSho
         </button>
         {isMain ? (
           <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-accent">
-            <Check size={11} /> main
+            <Check size={11} strokeWidth={1.75} /> main
           </span>
         ) : (
           <button
             type="button"
             onClick={() => (opts.book ? clear(key) : choose(key, alg))}
-            className="hit-y shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-fg"
+            className="hit-y shrink-0 rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-fg"
           >
             Make main
           </button>
         )}
         {!opts.book && (
           <button type="button" onClick={() => dismiss(key, alg)} aria-label="Remove this algorithm" className="hit-y -mx-2.5 -my-2 shrink-0 px-3 py-2 text-muted-2 hover:text-danger">
-            <X size={12} />
+            <X size={12} strokeWidth={1.75} />
           </button>
         )}
       </div>
@@ -63,8 +63,8 @@ export function YourAlgs({ algCase, onShow, showing }: { algCase: AlgCase; onSho
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
-        <Sparkles size={10} className="text-accent" /> Your algorithms
+      <p className="flex items-center gap-1 text-[11px] font-medium text-muted-2">
+        <Sparkles size={10} className="text-accent" strokeWidth={1.75} /> Your algorithms
       </p>
       {row(algCase.alg, { book: true, count: bookSeen?.count, meanMs: bookSeen?.meanExecMs, bestMs: bookSeen?.bestExecMs })}
       {yours.map((x) => row(x.alg, { book: false, count: x.count, meanMs: x.meanExecMs, bestMs: x.bestExecMs }))}

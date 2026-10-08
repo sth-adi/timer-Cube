@@ -74,7 +74,7 @@ function Trail({ result }: { result: BlindCrossResult }) {
   const path = trail.map((d, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(d)}`).join(" ");
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Turns from a finished cross, after each turn</p>
+      <p className="text-[11px] font-medium text-muted-2">Turns from a finished cross, after each turn</p>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
         <line x1={4} x2={w - 4} y1={y(0)} y2={y(0)} stroke="var(--success)" strokeDasharray="3 3" strokeWidth={1} opacity={0.6} />
         <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
@@ -103,34 +103,34 @@ function Report({ attempt }: { attempt: Attempt }) {
           ].map(([v, l]) => (
             <div key={l} className="rounded-lg bg-bg-panel-2 px-2 py-1.5">
               <p className="text-base font-bold tabular-nums text-foreground">{v}</p>
-              <p className="text-[10px] text-muted-2">{l}</p>
+              <p className="text-[11px] text-muted-2">{l}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-5">
         <Trail result={r} />
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
+          <p className="text-[11px] font-medium text-muted-2">What you did</p>
           <div className="flex flex-wrap gap-1">
             {r.moves.length === 0 ? <span className="text-[11px] text-muted">No turns.</span> : r.moves.map((t, i) => <TurnChip key={i} token={t} bad={i === r.wanderedAt} />)}
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">An optimal cross ({optimal.length})</p>
+          <p className="text-[11px] font-medium text-muted-2">An optimal cross ({optimal.length})</p>
           <div className="flex flex-wrap gap-1">
             {optimal.map((t, i) => (
               <TurnChip key={i} token={t} />
             ))}
           </div>
-          <p className="text-[10px] text-muted-2">Each chip is the center that turns: ↻ clockwise facing that center, ↺ counter-clockwise.</p>
+          <p className="text-[11px] text-muted-2">Each chip is the center that turns: ↻ clockwise facing that center, ↺ counter-clockwise.</p>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {r.edges.map((e) => (
             <div key={e.name} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-2.5 py-1.5">
               <span className="text-[11px] text-foreground">{e.name}</span>
-              <span className={cn("text-[10px] font-semibold", e.status === "solved" ? "text-success" : "text-danger")}>{e.status}</span>
+              <span className={cn("text-[11px] font-semibold", e.status === "solved" ? "text-success" : "text-danger")}>{e.status}</span>
             </div>
           ))}
         </div>
@@ -266,7 +266,7 @@ function BlindCross() {
         <EyeClosed size={40} className="text-white/30" />
         <p className="text-sm font-medium text-white/50">Eyes closed, solve the {level === "xcross" ? "x-cross" : "cross"}</p>
         <p className="tabular-timer text-5xl font-bold text-white/80">{Math.max(0, (now - blindStart) / 1000).toFixed(1)}</p>
-        <button type="button" onClick={finish} className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/70">
+        <button type="button" onClick={finish} className="rounded-md border border-white/20 px-6 py-3 text-sm font-semibold text-white/70">
           Done
         </button>
         <p className="max-w-xs text-center text-[11px] text-white/30">Beeps when the {level === "xcross" ? "x-cross" : "cross"} is solved, or once you stop turning for 3 seconds.</p>
@@ -279,14 +279,14 @@ function BlindCross() {
   return (
     <div className="flex flex-col gap-3">
       {(phase === "idle" || phase === "done") && (
-        <div className="card flex flex-col gap-3 rounded-xl p-4">
-          <div className="flex rounded-full bg-bg-panel-2 p-1">
+        <div className="flex flex-col gap-3 border-t border-border pt-5">
+          <div className="flex rounded-lg bg-bg-panel-2 p-1">
             {(["cross", "xcross"] as const).map((l) => (
               <button
                 key={l}
                 type="button"
                 onClick={() => setLevel(l)}
-                className={cn("flex-1 rounded-full py-1.5 text-xs font-semibold", level === l ? "bg-accent text-accent-fg" : "text-muted")}
+                className={cn("flex-1 rounded-md py-1.5 text-xs font-semibold", level === l ? "bg-accent text-accent-fg" : "text-muted")}
               >
                 {l === "cross" ? "Cross" : "X-Cross (cross + a pair)"}
               </button>
@@ -296,17 +296,17 @@ function BlindCross() {
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-bg-panel-2 py-1.5">
                 <p className="text-base font-bold tabular-nums text-foreground">{Math.round(summary.successRate * 100)}%</p>
-                <p className="text-[10px] text-muted-2">success · {summary.attempts} {summary.attempts === 1 ? "try" : "tries"}</p>
+                <p className="text-[11px] text-muted-2">success · {summary.attempts} {summary.attempts === 1 ? "try" : "tries"}</p>
               </div>
               <div className="rounded-lg bg-bg-panel-2 py-1.5">
                 <p className="flex items-center justify-center gap-1 text-base font-bold tabular-nums text-foreground">
                   <Flame size={13} className={summary.streak > 0 ? "text-warning" : "text-muted-2"} /> {summary.streak}
                 </p>
-                <p className="text-[10px] text-muted-2">streak · best {summary.bestStreak}</p>
+                <p className="text-[11px] text-muted-2">streak · best {summary.bestStreak}</p>
               </div>
               <div className="rounded-lg bg-bg-panel-2 py-1.5">
-                <p className="text-base font-bold tabular-nums text-foreground">{summary.avgExtra !== null ? `+${summary.avgExtra.toFixed(1)}` : "—"}</p>
-                <p className="text-[10px] text-muted-2">turns over optimal</p>
+                <p className="text-base font-bold tabular-nums text-foreground">{summary.avgExtra !== null ? `+${summary.avgExtra.toFixed(1)}` : "-"}</p>
+                <p className="text-[11px] text-muted-2">turns over optimal</p>
               </div>
             </div>
           ) : (
@@ -321,11 +321,11 @@ function BlindCross() {
           <button
             type="button"
             onClick={() => void start()}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
+            className="flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
           >
             {phase === "done" ? <RotateCcw size={14} /> : <Play size={14} />} {phase === "done" ? "Next scramble" : "Start"}
           </button>
-          {gyroActive && <p className="text-center text-[10px] text-muted-2">Gyro on, your inspection gaze will be mapped too.</p>}
+          {gyroActive && <p className="text-center text-[11px] text-muted-2">Gyro on, your inspection gaze will be mapped too.</p>}
         </div>
       )}
 
@@ -353,7 +353,7 @@ function BlindCross() {
           <button
             type="button"
             onClick={() => goBlind(performance.now())}
-            className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground"
+            className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground"
           >
             <EyeClosed size={13} /> Black out the screen first
           </button>
@@ -376,7 +376,7 @@ export default function BlindCrossPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <EyeClosed size={17} className="text-accent" /> Blind Cross
+              <EyeClosed size={17} className="text-accent" /> Blind cross
             </h1>
             <p className="text-[11px] text-muted-2">Inspect, close your eyes, solve the cross, graded turn by turn by the cube itself.</p>
           </div>

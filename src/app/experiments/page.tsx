@@ -77,15 +77,15 @@ function ExperimentCard({ e, solves, onRemove }: { e: Experiment; solves: readon
 
   const badge =
     !overall || overall.verdict === "too-few"
-      ? { text: "Collecting", cls: "bg-bg-panel-2 text-muted" }
+      ? { text: "Collecting", cls: "text-muted" }
       : overall.verdict === "better"
-        ? { text: "Helped", cls: "bg-success/15 text-success" }
+        ? { text: "Helped", cls: "text-success" }
         : overall.verdict === "worse"
-          ? { text: "Hurt", cls: "bg-danger/10 text-danger" }
-          : { text: "No clear effect", cls: "bg-bg-panel-2 text-foreground" };
+          ? { text: "Hurt", cls: "text-danger" }
+          : { text: "No clear effect", cls: "text-foreground" };
 
   return (
-    <div className="card flex flex-col gap-2.5 rounded-xl p-4">
+    <div className="flex flex-col gap-2.5 border-t border-border pt-5">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col">
           <p className="truncate text-sm font-bold text-foreground">{e.name}</p>
@@ -95,7 +95,7 @@ function ExperimentCard({ e, solves, onRemove }: { e: Experiment; solves: readon
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", badge.cls)}>{badge.text}</span>
+          <span className={cn("text-[11px] font-semibold", badge.cls)}>{badge.text}</span>
           <button type="button" onClick={onRemove} className="text-muted-2 hover:text-danger" aria-label="Delete experiment">
             <Trash2 size={12} />
           </button>
@@ -122,7 +122,7 @@ function ExperimentCard({ e, solves, onRemove }: { e: Experiment; solves: readon
           <p className="pt-1 text-[11px] leading-relaxed text-foreground">{overall.headline}</p>
           {phases.length > 0 && (
             <div className="flex flex-col gap-1 border-t border-border pt-2">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Where it changed (smart-cube solves)</p>
+              <p className="text-[11px] font-medium text-muted-2">Where it changed (smart-cube solves)</p>
               {phases.map(({ name, r }) => (
                 <div key={name} className="flex items-center gap-2 text-[11px]">
                   <span className="w-10 text-muted">{name}</span>
@@ -184,11 +184,11 @@ export default function ExperimentsPage() {
           <Plus size={14} /> Log a change
         </button>
       ) : (
-        <div className="card flex flex-col gap-2.5 rounded-xl p-4">
+        <div className="flex flex-col gap-2.5 border-t border-border pt-5">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="What changed? e.g. New cube: Tornado V3" className="rounded-lg bg-bg-panel-2 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-2" />
           <div className="flex flex-wrap gap-1.5">
             {KINDS.map((k) => (
-              <button key={k.id} type="button" onClick={() => setKind(k.id)} className={cn("rounded-full px-2.5 py-1 text-[11px] font-medium", kind === k.id ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}>
+              <button key={k.id} type="button" onClick={() => setKind(k.id)} className={cn("rounded-md px-2.5 py-1 text-[11px] font-medium", kind === k.id ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}>
                 {k.label}
               </button>
             ))}
@@ -199,10 +199,10 @@ export default function ExperimentsPage() {
           </label>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes (optional)" className="rounded-lg bg-bg-panel-2 px-3 py-2 text-xs text-foreground outline-none placeholder:text-muted-2" />
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs text-muted">
+            <button type="button" onClick={() => setOpen(false)} className="rounded-md bg-bg-panel-2 px-3 py-1.5 text-xs text-muted">
               Cancel
             </button>
-            <button type="button" onClick={submit} disabled={!name.trim()} className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40">
+            <button type="button" onClick={submit} disabled={!name.trim()} className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40">
               Start the experiment
             </button>
           </div>

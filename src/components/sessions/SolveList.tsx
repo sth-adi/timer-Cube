@@ -39,7 +39,7 @@ function SolveSheet({ label, onClose, children }: { label: string; onClose: () =
       aria-label={label}
       tabIndex={-1}
       onClick={(e) => e.stopPropagation()}
-      className="max-h-[85vh] supports-[height:1dvh]:max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-bg-elevated p-3 pb-[calc(0.75rem+var(--safe-bottom))] shadow-lg outline-none animate-sheet-in sm:max-w-sm sm:rounded-xl sm:pb-3 sm:animate-fade-in-up"
+      className="max-h-[85vh] supports-[height:1dvh]:max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-bg-elevated p-4 pb-[calc(1rem+var(--safe-bottom))] shadow-[var(--shadow-md)] outline-none animate-sheet-in sm:max-w-sm sm:rounded-xl sm:pb-4 sm:animate-fade-in-up"
     >
       {children}
     </div>
@@ -102,20 +102,20 @@ const SolveRow = memo(function SolveRow({
           onClick={() => (selectMode ? onToggle?.(solve.id) : smart ? setRecapOpen(true) : setOpen((o) => !o))}
           aria-pressed={selectMode ? ticked : undefined}
           className={cn(
-            "min-w-0 flex-1 flex min-h-9 items-center justify-between rounded-lg px-2.5 py-0.5 lg:min-h-0 lg:py-2.5 text-sm hover:bg-bg-panel-2 active:bg-bg-panel-2 transition-colors",
+            "flex min-h-11 min-w-0 flex-1 items-center justify-between rounded-md px-2 py-0.5 text-sm transition-colors active:bg-bg-panel-2 lg:min-h-0 lg:py-2.5 [@media(hover:hover)]:hover:bg-bg-panel-2",
             isBest && "text-success",
             isWorst && "text-danger",
             selectMode && ticked && "bg-accent-soft",
           )}
         >
           {selectMode &&
-            (ticked ? <CheckSquare size={15} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} className="mr-1.5 shrink-0 text-muted-2" />)}
-          <span className="text-muted-2 w-6 text-right tabular-timer">{index}</span>
-          <span className="tabular-timer ml-2 w-16 shrink-0 text-left">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
+            (ticked ? <CheckSquare size={15} strokeWidth={1.75} className="mr-1.5 shrink-0 text-accent" /> : <Square size={15} strokeWidth={1.75} className="mr-1.5 shrink-0 text-muted-2" />)}
+          <span className="w-7 shrink-0 text-right text-xs text-muted-2 tabular-timer">{index}</span>
+          <span className="tabular-timer ml-3 w-[4.5rem] shrink-0 text-left font-medium">{formatResult(solveFinalMs(solve), solve.penalty)}</span>
           {summary ? <StepStrip summary={summary} /> : <span className="flex-1" />}
-          {solve.reconstruction && <Wand2 size={14} className="mr-1 shrink-0 text-accent" role="img" aria-label="Reconstruction saved" />}
-          {summary?.hasMistake && <TriangleAlert size={14} className="mr-1 shrink-0 text-warning" role="img" aria-label="Mistake flagged" />}
-          {solve.comment && <MessageSquare size={14} className="mr-1 shrink-0 text-muted-2" role="img" aria-label="Has a note" />}
+          {solve.reconstruction && <Wand2 size={14} strokeWidth={1.75} className="mr-1 shrink-0 text-accent" role="img" aria-label="Reconstruction saved" />}
+          {summary?.hasMistake && <TriangleAlert size={14} strokeWidth={1.75} className="mr-1 shrink-0 text-warning" role="img" aria-label="Mistake flagged" />}
+          {solve.comment && <MessageSquare size={14} strokeWidth={1.75} className="mr-1 shrink-0 text-muted-2" role="img" aria-label="Has a note" />}
         </button>
         {detailed && !selectMode && (
           <button
@@ -123,9 +123,9 @@ const SolveRow = memo(function SolveRow({
             onClick={() => void removeSolve(solve.id)}
             aria-label={`Delete solve ${index}`}
             title="Delete (undo from the toast)"
-            className="hit-y ml-0.5 grid h-9 w-11 shrink-0 place-items-center rounded-full text-muted-2 transition-colors hover:text-danger active:text-danger"
+            className="hit-y ml-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-md text-muted-2 transition-colors hover:text-danger active:text-danger"
           >
-            <Trash2 size={14} />
+            <Trash2 size={14} strokeWidth={1.75} />
           </button>
         )}
       </div>
@@ -140,7 +140,7 @@ const SolveRow = memo(function SolveRow({
                   #{index} · {formatResult(solveFinalMs(solve), solve.penalty)}
                 </p>
                 <button type="button" onClick={closeSheet} aria-label="Close" className="tap-target -mr-2 text-muted hover:text-foreground">
-                  <X size={16} />
+                  <X size={16} strokeWidth={1.75} />
                 </button>
               </div>
               {smart && (
@@ -152,13 +152,13 @@ const SolveRow = memo(function SolveRow({
                   }}
                   className="mb-2 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-2 py-1.5 text-xs font-semibold text-accent-fg"
                 >
-                  <ListChecks size={12} /> Full recap
+                  <ListChecks size={12} strokeWidth={1.75} /> Full recap
                 </button>
               )}
               <p className="text-muted-2 text-[11px] font-mono leading-snug mb-2 break-words">{solve.scramble}</p>
               {solve.heartRate && (
                 <p className="mb-2 flex items-center gap-1 text-[11px] text-danger">
-                  <Heart size={11} fill="currentColor" />
+                  <Heart size={11} strokeWidth={1.75} fill="currentColor" />
                   {solve.heartRate.avg} avg · {solve.heartRate.max} max bpm
                 </p>
               )}
@@ -176,7 +176,7 @@ const SolveRow = memo(function SolveRow({
                   type="button"
                   onClick={() => cyclePenalty("plus2")}
                   className={cn(
-                    "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
+                    "min-h-10 min-w-10 rounded-md px-2 py-1 text-xs font-medium",
                     solve.penalty === "plus2" ? "bg-warning/20 text-warning" : "text-muted hover:text-foreground",
                   )}
                 >
@@ -186,7 +186,7 @@ const SolveRow = memo(function SolveRow({
                   type="button"
                   onClick={() => cyclePenalty("dnf")}
                   className={cn(
-                    "min-h-10 min-w-10 rounded px-2 py-1 text-xs font-medium",
+                    "min-h-10 min-w-10 rounded-md px-2 py-1 text-xs font-medium",
                     solve.penalty === "dnf" ? "bg-danger/20 text-danger" : "text-muted hover:text-foreground",
                   )}
                 >
@@ -203,9 +203,9 @@ const SolveRow = memo(function SolveRow({
                     // nothing on this page is listening to switch tabs on).
                     if (pathname !== "/") router.push("/?jump=analyze");
                   }}
-                  className="ml-auto flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium text-muted hover:text-accent"
+                  className="ml-auto flex min-h-10 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted hover:text-accent"
                 >
-                  <Wand2 size={12} /> Analyze
+                  <Wand2 size={12} strokeWidth={1.75} /> Analyze
                 </button>
                 {shareable && (
                   <button
@@ -214,16 +214,16 @@ const SolveRow = memo(function SolveRow({
                     disabled={shareState === "busy"}
                     title="Copy a shareable link to this solve's reconstruction and stats"
                     className={cn(
-                      "flex min-h-10 items-center gap-1 rounded px-2 py-1 text-xs font-medium",
+                      "flex min-h-10 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium",
                       shareState === "copied" ? "text-success" : shareState === "error" ? "text-danger" : "text-muted hover:text-accent",
                     )}
                   >
                     {shareState === "busy" ? (
-                      <Loader2 size={12} className="animate-spin" />
+                      <Loader2 size={12} strokeWidth={1.75} className="animate-spin" />
                     ) : shareState === "copied" ? (
-                      <Check size={12} />
+                      <Check size={12} strokeWidth={1.75} />
                     ) : (
-                      <Link2 size={12} />
+                      <Link2 size={12} strokeWidth={1.75} />
                     )}
                     {shareState === "copied" ? "Copied" : shareState === "error" ? "Failed" : "Share"}
                   </button>
@@ -237,7 +237,7 @@ const SolveRow = memo(function SolveRow({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                   }}
-                  placeholder="Add a note…"
+                  placeholder="Add a note"
                   className="min-h-10 min-w-0 flex-1 rounded-md bg-bg-panel-2 border border-border px-2 py-1 text-[16px] text-foreground placeholder:text-muted-2 focus:outline-none focus:border-accent sm:min-h-0 sm:text-xs"
                 />
                 <button
@@ -249,7 +249,7 @@ const SolveRow = memo(function SolveRow({
                   className="flex min-h-10 shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
                   aria-label="Delete solve"
                 >
-                  <Trash2 size={12} /> Delete
+                  <Trash2 size={12} strokeWidth={1.75} /> Delete
                 </button>
               </div>
             </SolveSheet>
@@ -280,19 +280,19 @@ function StepStrip({ summary }: { summary: SolveSummary }) {
   const cases = [summary.oll, summary.pll].filter(Boolean).join(" · ");
   return (
     <span className="ml-1 flex min-w-0 flex-1 items-center gap-2" title={summary.steps.map((ms, i) => `${names[i]} ${formatTime(ms)}`).join(" · ")}>
-      <span className="flex h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-bg-panel-2 sm:w-24" aria-hidden>
+      <span className="flex h-1.5 w-16 shrink-0 gap-px overflow-hidden rounded-sm bg-bg-panel-2 sm:w-24" aria-hidden>
         {summary.steps.map((ms, i) => (
           <span key={i} className={PHASE_TINTS[i]} style={{ width: `${(ms / total) * 100}%` }} />
         ))}
       </span>
       {summary.crossFace !== "U" && (
         <span
-          className="h-2 w-2 shrink-0 rounded-full ring-1 ring-border"
+          className="h-2 w-2 shrink-0 rounded-[2px] ring-1 ring-border"
           style={{ background: CROSS_FACE_HEX[summary.crossFace] }}
           title={`${CROSS_FACE_COLOR[summary.crossFace]} cross`}
         />
       )}
-      <span className="truncate text-left text-[11px] text-muted-2">{cases}</span>
+      <span className="truncate text-left text-xs text-muted-2">{cases}</span>
     </span>
   );
 }
@@ -366,7 +366,7 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
         <button
           type="button"
           onClick={() => void submit()}
-          className="min-h-10 rounded-md bg-accent-soft px-3 py-1 text-xs font-medium text-accent hover:brightness-110 sm:min-h-0 sm:px-2"
+          className="min-h-10 rounded-md bg-accent-soft px-3 py-1 text-xs font-medium text-accent active:translate-y-px sm:min-h-0 sm:px-2"
         >
           Add
         </button>
@@ -382,15 +382,15 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
       {recent.length > 0 && (
         <div className="flex flex-wrap items-center gap-1" aria-label="Times just added">
           {recent.map((x) => (
-            <span key={x.id} className="flex items-center gap-0.5 rounded-full bg-bg-panel-2 py-0.5 pl-2 pr-0.5 text-xs tabular-timer text-foreground">
+            <span key={x.id} className="flex items-center gap-0.5 rounded-md bg-bg-panel-2 py-0.5 pl-2 pr-0.5 text-xs tabular-timer text-foreground">
               {formatTime(x.ms)}
               <button
                 type="button"
                 onClick={() => void removeSolve(x.id)}
                 aria-label={`Delete ${formatTime(x.ms)}`}
-                className="hit grid h-5 w-5 place-items-center rounded-full text-muted-2 hover:bg-danger/15 hover:text-danger"
+                className="hit grid h-5 w-5 place-items-center rounded-sm text-muted-2 hover:bg-danger/15 hover:text-danger"
               >
-                <Trash2 size={11} />
+                <Trash2 size={11} strokeWidth={1.75} />
               </button>
             </span>
           ))}
@@ -406,14 +406,14 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
  */
 function SolveListSkeleton({ rows, detailed }: { rows: number; detailed: boolean }) {
   return (
-    <SkeletonGroup label="Loading solves" className={cn("flex flex-col gap-0.5", detailed && "max-h-[55vh] overflow-hidden pr-1")}>
+    <SkeletonGroup label="Loading solves" className={cn("flex flex-col divide-y divide-border/70", detailed && "max-h-[55vh] overflow-hidden pr-1")}>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center" data-testid="solve-row-skeleton">
-          <div className="flex min-h-9 min-w-0 flex-1 items-center rounded-lg px-2.5 py-0.5 lg:min-h-0 lg:py-2.5">
-            <span className="flex h-5 w-6 items-center justify-end">
+          <div className="flex min-h-11 min-w-0 flex-1 items-center rounded-md px-2 py-0.5 lg:min-h-0 lg:py-2.5">
+            <span className="flex h-5 w-7 items-center justify-end">
               <Skeleton className="h-3 w-4" />
             </span>
-            <span className="ml-2 flex h-5 w-16 shrink-0 items-center">
+            <span className="ml-3 flex h-5 w-[4.5rem] shrink-0 items-center">
               <Skeleton className="h-3.5" style={{ width: skeletonWidth(i, 60, 95) }} />
             </span>
             {detailed && (
@@ -423,7 +423,7 @@ function SolveListSkeleton({ rows, detailed }: { rows: number; detailed: boolean
               </span>
             )}
           </div>
-          {detailed && <span className="ml-0.5 h-9 w-11 shrink-0" aria-hidden="true" />}
+          {detailed && <span className="ml-0.5 h-11 w-11 shrink-0" aria-hidden="true" />}
         </div>
       ))}
     </SkeletonGroup>
@@ -441,7 +441,7 @@ function EmptySolves({ filtered, compact, addByHand }: { filtered: boolean; comp
         ? "Touch and hold the timer to start."
         : "Hit space to start.";
   return (
-    <div className={cn("flex flex-col items-center gap-1 px-4 text-center", compact ? "py-5" : "py-10")} data-testid="solves-empty">
+    <div className={cn("flex flex-col items-center gap-1.5 px-4 text-center", compact ? "py-6" : "py-12")} data-testid="solves-empty">
       <p className="text-sm font-medium text-foreground">{filtered ? "No solves match" : "No solves yet"}</p>
       <p className="max-w-[16rem] text-balance text-xs leading-relaxed text-muted-2">{hint}</p>
     </div>
@@ -503,14 +503,14 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
     <div className="flex flex-col gap-1">
       {!hideHeader && (
         <div className="flex items-center justify-between px-1">
-          <span className="text-[11px] uppercase tracking-wide text-muted-2">Solves</span>
+          <span className="text-xs font-medium text-muted-2">Solves</span>
           <button
             type="button"
             onClick={() => setManualOpen((o) => !o)}
             aria-label="Add manual time"
-            className={cn("tap-target -mr-2 rounded-full transition-colors", manualOpen ? "text-accent" : "text-muted hover:text-foreground")}
+            className={cn("tap-target -mr-2 rounded-md transition-colors", manualOpen ? "text-accent" : "text-muted hover:text-foreground")}
           >
-            <Plus size={16} />
+            <Plus size={16} strokeWidth={1.75} />
           </button>
         </div>
       )}
@@ -522,7 +522,7 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
       ) : shown.length === 0 ? (
         <EmptySolves filtered={!!view && solves.length > 0} compact={limit !== undefined} addByHand={!hideHeader} />
       ) : (
-        <div className={cn("flex animate-fade-in-up flex-col gap-0.5", limit === undefined && "max-h-[55vh] overflow-y-auto pr-1")}>
+        <div className={cn("flex animate-fade-in-up flex-col divide-y divide-border/70", limit === undefined && "max-h-[55vh] overflow-y-auto pr-1")}>
           {shown.map((solve) => {
             const t = comparableTime(solve);
             return (
@@ -543,7 +543,7 @@ export function SolveList({ solves: solvesProp, limit, hideHeader, view, selecti
             <button
               type="button"
               onClick={() => setVisible((v) => v + PAGE_SIZE)}
-              className="hit-y mx-auto my-2 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground"
+              className="hit-y mx-auto my-2 rounded-md px-3 py-1.5 text-xs font-medium text-accent"
             >
               Show {Math.min(PAGE_SIZE, hidden)} more
               <span className="ml-1 text-muted-2">({hidden} hidden)</span>

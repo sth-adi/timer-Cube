@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bluetooth, Delete, GitBranch, Loader2, Navigation, RotateCcw } from "lucide-react";
 import { FaceletNet } from "@/components/scramble/ScrambleNet";
@@ -70,7 +71,7 @@ export function WhatIf() {
   }, [fromCube]);
 
   if (!solve) {
-    return <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on a connected smart cube and your solves show up here to branch.</div>;
+    return <EmptyState title="No smart-cube solves yet"><p>Solve on a connected smart cube and your solves show up here to branch.</p></EmptyState>;
   }
 
   const current = completion?.key === key ? completion.result : undefined;
@@ -112,7 +113,7 @@ export function WhatIf() {
         })}
       </div>
 
-      <div className="card flex flex-col gap-2 rounded-xl p-4">
+      <div className="flex flex-col gap-2 border-t border-border pt-5">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
             <GitBranch size={14} className="text-accent" /> Fork at turn {at}
@@ -140,7 +141,7 @@ export function WhatIf() {
         </p>
       </div>
 
-      <div className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-5">
         <p className="text-sm font-semibold text-foreground">Your branch</p>
         <div className="flex min-h-[32px] flex-wrap items-center gap-1 rounded-lg bg-bg-panel-2 p-2 font-mono text-sm">
           {branch.length === 0 ? (
@@ -181,10 +182,10 @@ export function WhatIf() {
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
-          <button type="button" onClick={() => setBranch((b) => b.slice(0, -1))} disabled={!branch.length} className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 font-medium text-muted disabled:opacity-40">
+          <button type="button" onClick={() => setBranch((b) => b.slice(0, -1))} disabled={!branch.length} className="flex items-center gap-1 rounded-md bg-bg-panel-2 px-2.5 py-1 font-medium text-muted disabled:opacity-40">
             <Delete size={11} /> Undo
           </button>
-          <button type="button" onClick={() => setBranch([])} disabled={!branch.length} className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 font-medium text-muted disabled:opacity-40">
+          <button type="button" onClick={() => setBranch([])} disabled={!branch.length} className="flex items-center gap-1 rounded-md bg-bg-panel-2 px-2.5 py-1 font-medium text-muted disabled:opacity-40">
             <RotateCcw size={11} /> Clear
           </button>
           {cubeConnected && (
@@ -192,7 +193,7 @@ export function WhatIf() {
               type="button"
               onClick={() => setFromCube((v) => !v)}
               aria-pressed={fromCube}
-              className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 font-medium", fromCube ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
+              className={cn("flex items-center gap-1 rounded-md px-2.5 py-1 font-medium", fromCube ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
             >
               <Bluetooth size={11} /> {fromCube ? "Recording your turns" : "Turn it on my cube"}
             </button>
@@ -203,7 +204,7 @@ export function WhatIf() {
 
       <div className="grid grid-cols-2 gap-2">
         <div className="card flex flex-col items-center gap-1.5 rounded-xl p-3">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
+          <p className="text-[11px] font-medium text-muted-2">What you did</p>
           <div className="w-24">
             <FaceletNet facelets={fork} className="w-full" />
           </div>
@@ -211,7 +212,7 @@ export function WhatIf() {
           <p className="text-[11px] text-muted">{secs(original.ms)} from the fork</p>
         </div>
         <div className="card flex flex-col items-center gap-1.5 rounded-xl p-3">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-accent">Branch</p>
+          <p className="text-[11px] font-medium text-accent">Branch</p>
           <div className="w-24">
             <FaceletNet facelets={branchState} className="w-full" />
           </div>
@@ -239,7 +240,7 @@ export function WhatIf() {
 
       {current?.solved && current.legs.length > 0 && (
         <div className="card flex flex-col gap-2 rounded-xl p-3">
-          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-2">
             <Navigation size={11} className="text-accent" /> How the Sat-Nav finishes {branch.length ? "your branch" : "from the fork"}
           </p>
           {current.legs.map((l, i) => (

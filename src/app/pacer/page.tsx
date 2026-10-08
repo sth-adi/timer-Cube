@@ -51,17 +51,17 @@ export default function PacerPage() {
     <>
       <AppBootstrap />
       <AppBackground />
-      <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <TimerIcon size={16} className="text-accent" />
+      <div className="flex min-h-dvh flex-col items-center gap-5 px-4 py-6">
+        <Link href="/" className="hit flex items-center gap-1.5 rounded-md text-sm font-semibold text-foreground active:translate-y-px">
+          <TimerIcon size={16} className="text-accent" strokeWidth={1.75} />
           Cube
         </Link>
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Gauge size={17} className="text-accent" /> Split Pacer
+            <h1 className="flex items-center gap-2 text-balance text-xl font-semibold leading-tight tracking-[-0.02em] text-foreground">
+              <Gauge size={17} className="text-accent" strokeWidth={1.75} /> Split pacer
             </h1>
-            <p className="text-[11px] text-muted-2">A tone at every milestone of every smart-cube solve: ahead, on pace, or behind your target split.</p>
+            <p className="max-w-[65ch] text-pretty text-xs leading-relaxed text-muted-2">A tone at every milestone of every smart-cube solve: ahead, on pace, or behind your target split.</p>
           </div>
 
           <div className="card flex flex-col gap-3 rounded-xl p-4">
@@ -104,7 +104,7 @@ export default function PacerPage() {
                       key={label}
                       type="button"
                       onClick={() => setTargetMs(ms as number)}
-                      className="hit-y rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground"
+                      className="hit-y rounded-md bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground"
                     >
                       {label} · {formatTime(ms as number)}
                     </button>
@@ -114,8 +114,8 @@ export default function PacerPage() {
             </div>
           </div>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Your target splits</p>
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
+            <p className="text-[12px] font-medium text-muted-2">Your target splits</p>
             <div className="flex h-4 overflow-hidden rounded-full">
               {targets.map((t, k) => (
                 <span key={k} title={MILESTONES[k]} style={{ flexGrow: Math.max(1, t - (k ? targets[k - 1] : 0)), background: STRETCH_COLORS[k] }} />
@@ -143,9 +143,9 @@ export default function PacerPage() {
             </p>
           </div>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
-            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">
-              <Volume2 size={12} /> What you&apos;ll hear
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
+            <p className="flex items-center gap-1.5 text-[12px] font-medium text-muted-2">
+              <Volume2 size={12} strokeWidth={1.75} /> What you&apos;ll hear
             </p>
             <div className="grid grid-cols-3 gap-2">
               {(
@@ -155,17 +155,17 @@ export default function PacerPage() {
                   ["behind", "Behind", "falling"],
                 ] as const
               ).map(([v, label, blurb]) => (
-                <button key={v} type="button" onClick={() => playPaceTone(v)} className="flex flex-col items-center rounded-lg bg-bg-panel-2 py-2">
+                <button key={v} type="button" onClick={() => playPaceTone(v)} className="hit-y flex flex-col items-center rounded-lg border border-border py-2 active:translate-y-px">
                   <span className={cn("text-xs font-semibold", v === "ahead" ? "text-success" : v === "behind" ? "text-danger" : "text-accent")}>{label}</span>
-                  <span className="text-[11px] text-muted-2">{blurb} · tap</span>
+                  <span className="text-[11px] text-muted-2">{blurb}, tap</span>
                 </button>
               ))}
             </div>
           </div>
 
           {recent.length > 0 && (
-            <div className="card flex flex-col gap-2 rounded-xl p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Your last {recent.length} solves against this target</p>
+            <div className="flex flex-col gap-2 border-t border-border pt-5">
+              <p className="text-[12px] font-medium text-muted-2">Your last {recent.length} solves against this target</p>
               <div className="grid grid-cols-[auto_repeat(4,1fr)] gap-x-2 gap-y-1 text-[11px]">
                 <span />
                 {SHOWN.map((k) => (
@@ -178,7 +178,7 @@ export default function PacerPage() {
                     <span className="tabular-nums text-muted">{formatTime(r.timeMs)}</span>
                     {SHOWN.map((k) => {
                       const t = r.marks[k];
-                      if (t === null) return <span key={k} className="text-center text-muted-2">—</span>;
+                      if (t === null) return <span key={k} className="text-center text-muted-2">-</span>;
                       const d = t - targets[k];
                       const v = paceVerdict(d);
                       return (
@@ -189,7 +189,7 @@ export default function PacerPage() {
                             v === "ahead" ? "bg-success/15 text-success" : v === "behind" ? "bg-danger/15 text-danger" : "bg-accent-soft text-accent",
                           )}
                         >
-                          {d < 0 ? "−" : "+"}
+                          {d < 0 ? "-" : "+"}
                           {(Math.abs(d) / 1000).toFixed(1)}
                         </span>
                       );

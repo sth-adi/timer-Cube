@@ -64,7 +64,7 @@ export function LiveSessionCoach() {
   return (
     // data-no-timer: this card sits on the timer's touch surface; a tap on it (or its
     // small "more" button) is for the card and must not start a hold.
-    <div className="card flex w-full max-w-sm flex-col gap-1.5 rounded-xl px-3 py-2.5" aria-live="polite" data-no-timer>
+    <div className="flex w-full max-w-sm flex-col gap-1.5 border-t border-border px-3 pt-3" aria-live="polite" data-no-timer>
       <div className="flex items-start gap-2.5">
         <Icon size={16} className={cn("mt-0.5 shrink-0", TONE[top.tone])} />
         <div className="min-w-0 flex-1">

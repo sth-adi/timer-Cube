@@ -7,49 +7,53 @@
    =========================================================== */
 
 :root {
-  /* palette — overwritten per theme below */
-  --background: #08080f;
-  --bg-elevated: #121220;
-  --bg-panel: #14141f;
-  --bg-panel-2: #1c1c2b;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --foreground: #ececf5;
+  /* palette: overwritten per theme below. The default block is Slate (id "nebula"): a cool, blue-tinted
+     off-black neutral family and one desaturated blue accent. Every theme keeps to the same recipe: one
+     neutral family tinted toward its hue, one accent under 80% saturation, shadows and washes in that hue. */
+  --background: #0c0e12;
+  --bg-elevated: #181b22;
+  --bg-panel: #14171d;
+  --bg-panel-2: #1c2028;
+  --border: rgba(186, 202, 235, 0.09);
+  --border-strong: rgba(186, 202, 235, 0.18);
+  --foreground: #e8ebf2;
   /* --muted-2 carries real instructions, so every theme keeps it >= 4.5:1 on its
      page and panel surfaces (WCAG AA) while staying dimmer than --muted. */
-  --muted: #9a9ab4;
-  --muted-2: #8585a1;
+  --muted: #9ba2b3;
+  --muted-2: #8990a2;
 
   /* The accent is also text (text-accent on every panel), so it is light enough for 4.5:1 on all four
      surfaces, and the solid accent button carries dark text rather than white. */
-  --accent: #957eff;
-  --accent-strong: #8a70f7;
-  --accent-soft: rgba(149, 126, 255, 0.11);
-  --accent-fg: #120d2e;
-  --cyan: #35e6c5;
+  --accent: #6f9be8;
+  --accent-strong: #5f8ad6;
+  --accent-soft: rgba(111, 155, 232, 0.12);
+  --accent-fg: #0a1322;
+  --cyan: #86b3d4;
 
-  --success: #3ddc84;
-  --warning: #ffb020;
-  --danger: #ff4d6d;
+  --success: #46c98a;
+  --warning: #e2a73e;
+  --danger: #ec6b7d;
 
   --timer-idle: var(--foreground);
   --timer-holding: var(--danger);
   --timer-ready: var(--success);
   --timer-running: var(--foreground);
 
-  /* Aurora background layer — two drifting blobs tinted per theme. */
   /* Chart palette for the four solve phases (Cross, F2L, OLL, PLL), in that
      fixed order — validated for CVD separation on the dark panel surfaces. */
   --viz-1: #3987e5;
   --viz-2: #d95926;
   --viz-3: #199e70;
   --viz-4: #c98500;
-  --aurora-1: rgba(124, 92, 255, 0.14);
-  --aurora-2: rgba(124, 92, 255, 0.07);
+  /* Background washes: the accent hue only, at very low opacity. */
+  --aurora-1: rgba(111, 155, 232, 0.07);
+  --aurora-2: rgba(111, 155, 232, 0.035);
   --aurora-opacity: 1;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.55);
+  /* Shadows are the background hue, darkened: one light direction (from above). Only overlays use them
+     (sheets, dialogs, toasts, menus); cards carry no shadow. */
+  --shadow-sm: 0 1px 2px rgba(3, 5, 10, 0.4);
+  --shadow-md: 0 14px 32px -12px rgba(3, 5, 10, 0.7), 0 2px 6px rgba(3, 5, 10, 0.3);
 
   --nav-height: 60px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -62,162 +66,177 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
+  accent-color: var(--accent);
   color-scheme: dark;
 }
 
-/* --- Nebula: deep violet (default) --- */
+/* --- Slate: cool blue-gray (default, id "nebula") --- */
 :root[data-theme="nebula"] {
   color-scheme: dark;
 }
 
-/* --- Mint: cool teal on near-black --- */
+/* --- Mint: teal-tinted neutrals, one soft teal accent --- */
 :root[data-theme="mint"] {
-  --background: #0a0b0e;
-  --bg-elevated: #131519;
-  --bg-panel: #16181d;
-  --bg-panel-2: #1d2026;
-  --foreground: #eef0f3;
-  --muted: #989da8;
-  --muted-2: #838997;
-  --accent: #2dd4bf;
-  --accent-strong: #14b8a6;
-  --accent-soft: rgba(45, 212, 191, 0.14);
-  --accent-fg: #04211d;
-  --cyan: #38bdf8;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
-  --aurora-1: rgba(45, 212, 191, 0.12);
-  --aurora-2: rgba(45, 212, 191, 0.06);
+  --background: #0b0f0f;
+  --bg-elevated: #172020;
+  --bg-panel: #131a1a;
+  --bg-panel-2: #1b2424;
+  --border: rgba(190, 235, 228, 0.09);
+  --border-strong: rgba(190, 235, 228, 0.18);
+  --foreground: #ebf2f1;
+  --muted: #98a7a5;
+  --muted-2: #85938f;
+  --accent: #3dbfae;
+  --accent-strong: #31ab9b;
+  --accent-soft: rgba(61, 191, 174, 0.13);
+  --accent-fg: #04201c;
+  --cyan: #74b6c8;
+  --success: #46c98a;
+  --warning: #e2a73e;
+  --danger: #ec6f6f;
+  --shadow-sm: 0 1px 2px rgba(2, 8, 8, 0.4);
+  --shadow-md: 0 14px 32px -12px rgba(2, 8, 8, 0.7), 0 2px 6px rgba(2, 8, 8, 0.3);
+  --aurora-1: rgba(61, 191, 174, 0.07);
+  --aurora-2: rgba(61, 191, 174, 0.035);
   color-scheme: dark;
 }
 
-/* --- Carbon: minimal, high contrast, no colour cast --- */
+/* --- Carbon: graphite neutrals, a near-white accent, outlined --- */
 :root[data-theme="carbon"] {
-  --background: #050505;
-  --bg-elevated: #0f0f0f;
-  --bg-panel: #121212;
-  --bg-panel-2: #1a1a1a;
-  --border: rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.22);
-  --foreground: #fafafa;
-  --muted: #a1a1a1;
-  --muted-2: #848484;
-  --accent: #fafafa;
-  --accent-strong: #d4d4d4;
-  --accent-soft: rgba(250, 250, 250, 0.12);
-  --accent-fg: #0a0a0a;
-  --cyan: #a1a1a1;
-  --success: #4ade80;
-  --warning: #facc15;
-  --danger: #f87171;
+  --background: #0a0a0b;
+  --bg-elevated: #19191b;
+  --bg-panel: #121214;
+  --bg-panel-2: #1b1b1e;
+  --border: rgba(235, 235, 245, 0.11);
+  --border-strong: rgba(235, 235, 245, 0.24);
+  --foreground: #f1f1f3;
+  --muted: #a2a2aa;
+  --muted-2: #8a8a93;
+  --accent: #f1f1f3;
+  --accent-strong: #d2d2d8;
+  --accent-soft: rgba(241, 241, 243, 0.12);
+  --accent-fg: #0a0a0b;
+  --cyan: #a2a2aa;
+  --success: #52c98a;
+  --warning: #dcb23e;
+  --danger: #ec7070;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 3, 0.45);
+  --shadow-md: 0 14px 32px -12px rgba(0, 0, 3, 0.75), 0 2px 6px rgba(0, 0, 3, 0.35);
   --aurora-opacity: 0;
   color-scheme: dark;
 }
 
-/* --- Sunset: warm dusk --- */
+/* --- Sunset: warm umber neutrals, one terracotta accent --- */
 :root[data-theme="sunset"] {
-  --background: #120a10;
-  --bg-elevated: #1d1119;
-  --bg-panel: #21131c;
-  --bg-panel-2: #2c1a25;
-  --border: rgba(255, 220, 230, 0.09);
-  --border-strong: rgba(255, 220, 230, 0.18);
-  --foreground: #ffeef4;
-  --muted: #c39aad;
-  --muted-2: #9e8191;
-  --accent: #ff7a59;
-  --accent-strong: #f2603c;
-  --accent-soft: rgba(255, 122, 89, 0.16);
-  --accent-fg: #2a0f08;
-  --cyan: #ffb37a;
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --danger: #ff5470;
-  --aurora-1: rgba(255, 122, 89, 0.13);
-  --aurora-2: rgba(255, 122, 89, 0.06);
+  --background: #130f0e;
+  --bg-elevated: #251d1a;
+  --bg-panel: #1c1614;
+  --bg-panel-2: #251d1a;
+  --border: rgba(255, 224, 205, 0.09);
+  --border-strong: rgba(255, 224, 205, 0.18);
+  --foreground: #f5ece6;
+  --muted: #b6a49a;
+  --muted-2: #9d8b81;
+  --accent: #e08463;
+  --accent-strong: #cf7452;
+  --accent-soft: rgba(224, 132, 99, 0.14);
+  --accent-fg: #26110a;
+  --cyan: #d6a982;
+  --success: #5ec98a;
+  --warning: #e2ad45;
+  --danger: #ec6f6a;
+  --shadow-sm: 0 1px 2px rgba(10, 4, 2, 0.4);
+  --shadow-md: 0 14px 32px -12px rgba(10, 4, 2, 0.7), 0 2px 6px rgba(10, 4, 2, 0.3);
+  --aurora-1: rgba(224, 132, 99, 0.07);
+  --aurora-2: rgba(224, 132, 99, 0.035);
   color-scheme: dark;
 }
 
-/* --- Terminal: phosphor green --- */
+/* --- Terminal: green-black, one phosphor accent --- */
 :root[data-theme="terminal"] {
-  --background: #000000;
-  --bg-elevated: #060d06;
-  --bg-panel: #071007;
-  --bg-panel-2: #0c1a0c;
-  --border: rgba(61, 220, 132, 0.16);
-  --border-strong: rgba(61, 220, 132, 0.34);
-  --foreground: #b9ffcd;
-  --muted: #63b37c;
-  --muted-2: #4c9064;
-  --accent: #3ddc84;
-  --accent-strong: #2bb96b;
-  --accent-soft: rgba(61, 220, 132, 0.14);
+  --background: #070b08;
+  --bg-elevated: #121a13;
+  --bg-panel: #0c130d;
+  --bg-panel-2: #131c14;
+  --border: rgba(80, 210, 130, 0.17);
+  --border-strong: rgba(80, 210, 130, 0.34);
+  --foreground: #c0e8cd;
+  --muted: #6fb689;
+  --muted-2: #59a073;
+  --accent: #4ad486;
+  --accent-strong: #3bbd73;
+  --accent-soft: rgba(74, 212, 134, 0.14);
   --accent-fg: #04150b;
-  --cyan: #7cf7b0;
-  --success: #3ddc84;
-  --warning: #d9f24f;
-  --danger: #ff6b6b;
+  --cyan: #8fdcae;
+  --success: #4ad486;
+  --warning: #d6e05a;
+  --danger: #f27474;
   --font-sans: var(--font-geist-mono);
-  --aurora-1: rgba(61, 220, 132, 0.10);
-  --aurora-2: rgba(61, 220, 132, 0.05);
+  --shadow-sm: 0 1px 2px rgba(0, 4, 1, 0.5);
+  --shadow-md: 0 14px 32px -12px rgba(0, 4, 1, 0.8), 0 2px 6px rgba(0, 4, 1, 0.4);
+  --aurora-1: rgba(74, 212, 134, 0.06);
+  --aurora-2: rgba(74, 212, 134, 0.03);
   color-scheme: dark;
 }
 
-/* --- Speedcube: WCA sticker colours --- */
+/* --- Speedcube: cool slate neutrals, one cube-yellow accent --- */
 :root[data-theme="speedcube"] {
   --background: #0b0d12;
-  --bg-elevated: #141821;
-  --bg-panel: #171c26;
-  --bg-panel-2: #1f2632;
-  --border: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  --foreground: #f6f7fb;
+  --bg-elevated: #1a1f2a;
+  --bg-panel: #151a23;
+  --bg-panel-2: #1e2430;
+  --border: rgba(190, 205, 235, 0.1);
+  --border-strong: rgba(190, 205, 235, 0.21);
+  --foreground: #f1f3f8;
   --muted: #a1a9bc;
-  --muted-2: #868fa2;
-  --accent: #ffd500;
-  --accent-strong: #e6c000;
-  --accent-soft: rgba(255, 213, 0, 0.15);
+  --muted-2: #8790a4;
+  --accent: #e3c24a;
+  --accent-strong: #cfae38;
+  --accent-soft: rgba(227, 194, 74, 0.14);
   --accent-fg: #1a1500;
-  /* The WCA blue, green and red lifted a step: these are also text colours, >= 4.5:1 on every dark surface. */
-  --cyan: #4da3ff;
-  --success: #12c26a;
-  --warning: #ff5800;
-  --danger: #ff6477;
-  --aurora-1: rgba(255, 213, 0, 0.09);
-  --aurora-2: rgba(255, 213, 0, 0.05);
+  /* The status hues are also text colours: >= 4.5:1 on every dark surface, kept under 80% saturation. */
+  --cyan: #6ea8e6;
+  --success: #38c47e;
+  --warning: #e8803d;
+  --danger: #ee6b7b;
+  --shadow-sm: 0 1px 2px rgba(2, 4, 10, 0.45);
+  --shadow-md: 0 14px 32px -12px rgba(2, 4, 10, 0.75), 0 2px 6px rgba(2, 4, 10, 0.35);
+  --aurora-1: rgba(227, 194, 74, 0.06);
+  --aurora-2: rgba(227, 194, 74, 0.03);
   color-scheme: dark;
 }
 
-/* --- Paper: light --- */
+/* --- Paper: light, cool off-white neutrals, one ink-blue accent --- */
 :root[data-theme="paper"] {
-  --background: #f4f5f8;
-  --bg-elevated: #ffffff;
-  --bg-panel: #ffffff;
-  --bg-panel-2: #eceef3;
-  --border: rgba(15, 17, 25, 0.1);
-  --border-strong: rgba(15, 17, 25, 0.2);
-  --foreground: #14151c;
-  --muted: #4f5363;
-  --muted-2: #65697c;
-  --accent: #5b3df5;
-  --accent-strong: #4a2fdb;
-  --accent-soft: rgba(91, 61, 245, 0.1);
-  --accent-fg: #ffffff;
-  /* Status hues are text colours too ("Saved", PB times, errors): each is >= 4.5:1 on white and the page grey. */
+  --background: #eef0f4;
+  --bg-elevated: #fcfcfd;
+  --bg-panel: #f9fafb;
+  --bg-panel-2: #e5e8ee;
+  --border: rgba(20, 28, 50, 0.1);
+  --border-strong: rgba(20, 28, 50, 0.2);
+  --foreground: #14171f;
+  --muted: #485063;
+  --muted-2: #5d6578;
+  --accent: #2c4fb8;
+  --accent-strong: #223f9c;
+  --accent-soft: rgba(44, 79, 184, 0.09);
+  --accent-fg: #f8faff;
+  /* The accent on the dark Play cabinet: the ink blue lifted. */
+  --accent-on-dark: #8fa8ee;
+  /* Status hues are text colours too ("Saved", PB times, errors): each is >= 4.5:1 on the panel and the page grey. */
   --cyan: #0369a1;
-  --success: #047857;
+  --success: #046c4e;
   --warning: #a04a07;
   --danger: #c81e1e;
-  --shadow-sm: 0 1px 2px rgba(15, 17, 25, 0.06);
-  --shadow-md: 0 8px 24px rgba(15, 17, 25, 0.08);
+  --shadow-sm: 0 1px 2px rgba(20, 30, 60, 0.07);
+  --shadow-md: 0 14px 32px -14px rgba(20, 30, 60, 0.22), 0 2px 6px rgba(20, 30, 60, 0.08);
   /* Light-surface steps of the same four phase hues. */
   --viz-1: #2a78d6;
   --viz-2: #eb6834;
   --viz-3: #1baf7a;
   --viz-4: #eda100;
-  --aurora-1: rgba(91, 61, 245, 0.07);
-  --aurora-2: rgba(91, 61, 245, 0.04);
+  --aurora-1: rgba(44, 79, 184, 0.05);
+  --aurora-2: rgba(44, 79, 184, 0.025);
   color-scheme: light;
 }
 
@@ -254,12 +273,41 @@ html {
   text-size-adjust: 100%;
 }
 
-/* Type rhythm: headings break evenly, paragraphs avoid a lone last word. */
-:where(h1, h2, h3) {
+/* Type rhythm. Element defaults live in the base layer, so a heading's own utilities (size, weight, leading,
+   tracking) still win: headings are tight and break evenly, paragraphs avoid a lone last word. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* Tabular figures wherever numbers line up or tick. */
+  table,
+  time,
+  output,
+  progress,
+  meter,
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+  /* One stroke weight for every icon (lucide's own default is 2). A CSS value beats the strokeWidth attribute. */
+  svg.lucide {
+    stroke-width: 1.75;
+  }
+}
+/* Page and panel titles are spans and divs as often as headings: the same tight tracking for the semibold and
+   bold text-base to text-3xl titles (the big timer digits keep their own). */
+:is(.text-base, .text-lg, .text-xl, .text-2xl, .text-3xl):is(.font-semibold, .font-bold):not(.timer-digits) {
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
-:where(p) {
-  text-wrap: pretty;
+svg.lucide {
+  stroke-width: 1.75;
 }
 
 body {
@@ -288,7 +336,7 @@ body {
   color: var(--foreground);
 }
 
-/* Keyboard focus, in every effects level (Off included): a crisp accent ring, never on programmatic
+/* Keyboard focus, in every effects level (Off included): one crisp accent ring, never on programmatic
    container focus (dialogs take tabindex=-1 focus and draw no ring of their own). */
 :where(button, a, input, select, textarea, summary, [role="button"], [tabindex]):not([tabindex="-1"]):focus-visible {
   outline: 2px solid var(--accent);
@@ -304,14 +352,34 @@ body {
   scrollbar-color: color-mix(in srgb, var(--foreground) 24%, transparent) transparent;
 }
 
-/* Flat, solid surface — the default card treatment. */
+/* A calm panel: a solid fill, the theme's radius, no shadow and no hover state. The edge is a theme token
+   (styles/themes.css): transparent in the tonal themes, a hairline in the outlined ones. Cards are for a real
+   data module; sections within a page are separated by whitespace and a divider. */
 .card {
+  position: relative;
+  isolation: isolate;
   background: var(--bg-panel);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--card-border, transparent);
+  box-shadow: none;
+}
+/* The default radius sits in the components layer, so a rounded-* utility on the element still wins. */
+@layer components {
+  .card {
+    border-radius: var(--radius-lg);
+  }
+}
+/* Safety net against a card in a card: the inner one drops its fill, edge and corners and becomes a section
+   with a single hairline on top. (Menus, sheets and dialogs are overlays, not sections: they keep their look.) */
+.card .card,
+.card .glass-panel:not(.absolute):not(.fixed):not([role="dialog"]):not([role="menu"]) {
+  background: transparent;
+  border-color: transparent;
+  border-top-color: var(--border);
+  border-radius: 0;
+  box-shadow: none;
 }
 
-/* For genuinely floating overlays: menus, sheets, toasts. Solid, with a hairline and a small shadow. */
+/* Overlays only: sheets, dialogs, menus, toasts. Solid and elevated; the tinted shadow carries the hierarchy. */
 .glass-panel {
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
@@ -674,17 +742,18 @@ body {
    so the games read as a different place from the tools.
    =========================================================== */
 
+/* The Play cabinet is always dark, but it speaks the active theme: its one accent is the theme accent (the
+   lifted ink blue on Paper) and its neutrals are near-black tinted toward that hue. The accent is set with
+   !important so a page that still hands it its own neon through an inline style follows the theme too. */
 .play-root {
-  --play-bg: #07060d;
-  --play-panel: rgba(255, 255, 255, 0.045);
-  --play-line: rgba(255, 255, 255, 0.09);
-  --play-ink: #f4f1ff;
-  --play-dim: #8d88a8;
-  --play-accent: #b36bff;
+  --play-accent: var(--accent-on-dark, var(--accent)) !important;
+  --play-bg: color-mix(in srgb, var(--play-accent) 5%, #09090b);
+  --play-panel: color-mix(in srgb, var(--play-accent) 5%, rgba(255, 255, 255, 0.035));
+  --play-line: color-mix(in srgb, var(--play-accent) 14%, rgba(255, 255, 255, 0.05));
+  --play-ink: color-mix(in srgb, var(--play-accent) 6%, #f4f4f6);
+  --play-dim: color-mix(in srgb, var(--play-accent) 10%, #9a9aa3);
   min-height: 100dvh;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--play-accent) 10%, transparent), transparent 70%),
-    var(--play-bg);
+  background: var(--play-bg);
   color: var(--play-ink);
 }
 
@@ -719,14 +788,16 @@ body {
   background: var(--play-accent);
   color: #0a0712;
   font-weight: 800;
-  border-radius: 999px;
-  transition: transform 0.12s ease, filter 0.12s ease;
+  border-radius: var(--radius-lg);
+  transition: transform 0.12s ease-out;
 }
-.play-btn:hover {
-  filter: brightness(1.12);
+@media (hover: hover) {
+  .play-btn:hover {
+    filter: brightness(1.08);
+  }
 }
 .play-btn:active {
-  transform: scale(0.96);
+  transform: translateY(1px);
 }
 .play-btn:disabled {
   opacity: 0.4;
@@ -834,31 +905,20 @@ body {
 
    Everything below is opt-out via settingsStore's `fxLevel`
    (FxLayer.tsx mirrors it onto <html data-fx-level>):
-     off    → none of this applies; the original flat look
-     spicy  → static upgrades only (borders, dock, digits, grain)
-     insane → + pointer spotlight, card tilt, click sparks,
-              shockwaves, shake, grain drift (FxLayer.tsx)
+     off    → none of this applies; the plain flat look
+     spicy  → the quiet upgrades (timer rings, grain, sparks on a solve)
+     insane → + click sparks, shockwaves, shake, grain drift (FxLayer.tsx)
    <html data-fx-phase> carries the live timer phase so the whole
    UI can lean into a solve. prefers-reduced-motion flattens every
    moving part regardless of level (bottom of this block).
    =========================================================== */
 
-@property --fx-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
 @property --party-hue {
   syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
 }
 
-@keyframes fx-spin {
-  to {
-    --fx-angle: 360deg;
-  }
-}
 @keyframes fx-beam {
   to {
     rotate: 360deg;
@@ -890,8 +950,8 @@ body {
   opacity: 0;
   --fx-flash-c: var(--accent);
   background:
-    radial-gradient(ellipse at 50% 44%, color-mix(in srgb, var(--fx-flash-c) 55%, transparent), transparent 62%),
-    radial-gradient(ellipse at 50% 50%, transparent 55%, color-mix(in srgb, var(--fx-flash-c) 38%, transparent) 100%);
+    radial-gradient(ellipse at 50% 44%, color-mix(in srgb, var(--fx-flash-c) 22%, transparent), transparent 62%),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, color-mix(in srgb, var(--fx-flash-c) 16%, transparent) 100%);
 }
 .fx-flash[data-kind="pb"] {
   --fx-flash-c: var(--warning);
@@ -907,32 +967,15 @@ body {
     opacity: 0;
   }
   12% {
-    opacity: 0.75;
+    opacity: 0.6;
   }
   100% {
     opacity: 0;
   }
 }
 .fx-spotlight {
+  /* A cursor-following glow is a halo: the layer FxLayer mounts stays hidden. */
   display: none;
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 560px;
-  height: 560px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  will-change: transform;
-  mix-blend-mode: screen;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 15%, transparent), transparent 62%);
-}
-@media (hover: hover) and (pointer: fine) {
-  :root[data-fx-level="insane"] .fx-spotlight {
-    display: block;
-  }
 }
 :root[data-fx-level="off"] .fx-canvas,
 :root[data-fx-level="off"] .fx-flash {
@@ -946,7 +989,7 @@ body {
   inset: -60px;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.085;
+  opacity: 0.05;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
@@ -974,7 +1017,7 @@ body {
   }
 }
 :root[data-theme="paper"]:not([data-fx-level="off"]) body::after {
-  opacity: 0.05;
+  opacity: 0.035;
   mix-blend-mode: multiply;
 }
 
@@ -983,91 +1026,35 @@ body {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
 }
-:root:not([data-fx-level="off"]) :where(button, a, input, select, textarea, summary, [role="button"], [tabindex]):not([tabindex="-1"]):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 
-/* --- Cards: tilt and scroll reveal. The border and elevation are per-theme (styles/themes.css). --- */
-:root:not([data-fx-level="off"]) .card {
-  position: relative;
-  isolation: isolate;
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-sm);
-  transition:
-    transform 0.22s ease-out,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
-}
-:root:not([data-fx-level="off"]) .card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-strong);
-}
-:root[data-fx-level="insane"] .card {
-  transform: perspective(900px) rotateX(var(--fx-ry, 0deg)) rotateY(var(--fx-rx, 0deg));
-}
-@supports (animation-timeline: view()) {
-  :root:not([data-fx-level="off"]) .card {
-    animation: fx-reveal linear both;
-    animation-timeline: view();
-    animation-range: entry 0% entry 42%;
+/* --- Buttons: a tactile press and quiet colour transitions. Transform only on press, never layout. --- */
+@layer base {
+  :where(button, [role="button"], a[href]) {
+    transition:
+      background-color 0.15s ease-out,
+      color 0.15s ease-out,
+      border-color 0.15s ease-out,
+      opacity 0.2s ease-out,
+      transform 0.12s ease-out;
   }
 }
-@keyframes fx-reveal {
-  from {
-    opacity: 0;
-    translate: 0 28px;
-    scale: 0.965;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-    scale: 1;
+:where(button, [role="button"], a[href]):not(:disabled):not([aria-disabled="true"]):active {
+  transform: translateY(1px);
+}
+@media (hover: hover) {
+  :where(button, a).bg-accent:not(:disabled):hover {
+    filter: brightness(1.07);
   }
 }
-:root:not([data-fx-level="off"]) .glass-panel {
-  box-shadow: var(--shadow-md);
-}
-
-/* --- Buttons: press, glow, shine --- */
-:root:not([data-fx-level="off"]) :where(button, [role="button"], a[href]) {
-  transition:
-    scale 0.14s ease,
-    translate 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2),
-    filter 0.2s ease,
-    background-color 0.18s ease,
-    color 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.25s ease,
-    opacity 0.25s ease,
-    transform 0.22s ease;
-}
-:root:not([data-fx-level="off"]) :where(button, [role="button"]):not(:disabled):active {
-  scale: 0.94;
-}
-:root:not([data-fx-level="off"]) :is(button, a).bg-accent:not(:disabled):hover {
-  filter: brightness(1.08);
-  background-image: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.38) 50%, transparent 62%);
-  background-size: 260% 100%;
-  animation: fx-shine 0.9s ease-out;
-}
-@keyframes fx-shine {
-  from {
-    background-position: 130% 0;
-  }
-  to {
-    background-position: -40% 0;
-  }
-}
-:root:not([data-fx-level="off"]) :is(button, a).bg-accent-soft:not(:disabled):hover,
+:root:not([data-fx-level="off"]) :is(button, a).bg-accent-soft:not(:disabled),
 :root:not([data-fx-level="off"]) button[aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent);
 }
 
 /* --- Mobile dock ---------------------------------------------------------
-   Effects off: a flat bar on the bottom edge — safe-area padding under the labels, a 3px tick over
-   the active tab, a tint while a tab is pressed. Effects on: a floating solid pill with a sliding
-   active pill. Every item is a >= 44px target (the bar is 60px+, items inset 5px top and bottom). */
+   A solid bar on the bottom edge with a hairline on top: safe-area padding under the labels, a short accent
+   tick over the active tab (it slides between tabs when effects are on), a quiet tint while a tab is pressed.
+   No blur, glow or floating pill. Every item is a >= 44px target (the bar is 60px+, items inset 5px). */
 .fx-dock {
   padding-bottom: var(--safe-bottom);
   height: calc(var(--nav-height) + var(--safe-bottom));
@@ -1080,107 +1067,81 @@ body {
   z-index: 1;
   margin-block: 5px;
   min-height: 44px;
-  border-radius: var(--dock-item-radius, 16px);
+  border-radius: var(--dock-item-radius, var(--radius-md));
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
 .fx-dock-item:active {
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  transform: none;
 }
 .fx-dock-item:focus-visible {
   outline-offset: -3px;
 }
-/* The flat bar's active mark: a short accent tick on the top edge. */
+/* The active mark: a short accent tick on the top edge. */
 .fx-dock-item::before {
   content: "";
   position: absolute;
   top: -6px;
   left: 50%;
   width: 22px;
-  height: 3px;
+  height: 2px;
   margin-left: -11px;
-  border-radius: 0 0 3px 3px;
+  border-radius: 0 0 2px 2px;
   background: var(--accent);
   opacity: 0;
 }
 .fx-dock-item[data-active="true"]::before {
   opacity: 1;
 }
-:root:not([data-fx-level="off"]) {
-  --nav-height: 68px;
-}
-:root:not([data-fx-level="off"]) .fx-dock {
-  left: 10px;
-  right: 10px;
-  bottom: calc(var(--safe-bottom) + 8px);
-  height: 62px;
-  padding-bottom: 0;
-  border: 1px solid color-mix(in srgb, var(--foreground) 13%, transparent);
-  border-radius: var(--dock-radius, 24px);
-  /* Solid: the labels of whatever scrolls behind must not read through. */
-  background: var(--bg-elevated);
-  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.5);
-  transition:
-    translate 0.55s cubic-bezier(0.3, 1.2, 0.4, 1),
-    opacity 0.4s ease;
-}
-:root[data-theme="paper"]:not([data-fx-level="off"]) .fx-dock {
-  box-shadow: 0 6px 16px -6px rgba(15, 17, 25, 0.2);
-}
-/* The pill sits behind the active item: one slot wide (the bar's 4px side padding off the total), moved by transform only. */
+/* With effects on, one tick slides behind the active item (a transform only), in place of the per-item ticks. */
 :root:not([data-fx-level="off"]) .fx-dock-glow {
   display: block;
   position: absolute;
-  top: 5px;
-  bottom: 5px;
+  top: 0;
+  height: 2px;
   left: 4px;
   width: calc((100% - 8px) / var(--slots, 6));
-  border-radius: var(--dock-pill-radius, 19px);
   pointer-events: none;
   opacity: var(--on, 1);
   transform: translateX(calc(var(--i, 0) * 100%));
-  will-change: transform;
   transition:
-    transform 0.42s cubic-bezier(0.3, 1.25, 0.45, 1),
-    opacity 0.3s ease;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease-out;
+}
+:root:not([data-fx-level="off"]) .fx-dock-glow::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 22px;
+  height: 2px;
+  margin-left: -11px;
+  border-radius: 0 0 2px 2px;
+  background: var(--accent);
 }
 :root:not([data-fx-level="off"]) .fx-dock-item::before {
   display: none;
 }
-:root:not([data-fx-level="off"]) .fx-dock-item:active {
-  background: none;
-  scale: 1; /* only the icon dips (below), not the whole slot the global button press would shrink */
-}
-:root:not([data-fx-level="off"]) .fx-dock-item svg {
-  transition:
-    translate 0.4s cubic-bezier(0.3, 1.6, 0.5, 1),
-    scale 0.4s cubic-bezier(0.3, 1.6, 0.5, 1),
-    filter 0.3s ease;
-}
-:root:not([data-fx-level="off"]) .fx-dock-item[data-active="true"] svg {
-  translate: 0 -1px;
-  scale: 1.1;
-}
-/* Press feedback, links included (the global :active rule only covers buttons). */
-:root:not([data-fx-level="off"]) .fx-dock-item:active svg {
-  scale: 0.88;
-}
 /* Focus mode: the dock slides away the instant a solve is live. */
 :root:not([data-fx-level="off"])[data-fx-phase="running"] .fx-dock {
-  translate: 0 160%;
+  translate: 0 100%;
   opacity: 0;
   pointer-events: none;
 }
+:root:not([data-fx-level="off"]) .fx-dock {
+  transition:
+    translate 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease-out;
+}
 
-/* --- Desktop tab pill --- */
+/* --- Desktop tab group --- */
 :root:not([data-fx-level="off"]) .fx-pill {
-  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border: 1px solid var(--border);
   background: var(--bg-panel-2);
 }
 :root:not([data-fx-level="off"]) .fx-pill > .bg-bg-elevated {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 /* --- Timer stage: reactor rings + core behind the digits --- */
@@ -1194,7 +1155,7 @@ body {
   --rc2: var(--cyan);
   --reactor-speed: 1;
   --reactor-scale: 1;
-  --reactor-o: 0.42;
+  --reactor-o: 0.3;
 }
 .timer-stage:not(:has(.timer-digits)) {
   display: none;
@@ -1259,11 +1220,8 @@ body {
   animation: fx-turn calc(22s / var(--reactor-speed)) linear infinite reverse;
 }
 :root:not([data-fx-level="off"]) .reactor-core {
-  width: calc(100% + 40px);
-  height: calc(100% + 30px);
-  border-radius: 50%;
-  background: radial-gradient(ellipse, color-mix(in srgb, var(--rc) 10%, transparent), transparent 68%);
-  opacity: var(--reactor-o);
+  /* A glow behind the digits is a halo: the core layer stays empty. */
+  display: none;
 }
 @keyframes fx-core-pulse {
   0%,
@@ -1394,33 +1352,6 @@ body {
   --aurora-pace-speed: 2.4;
 }
 
-/* --- Toasts: a travelling light around the pill --- */
-:root:not([data-fx-level="off"]) .fx-toast {
-  position: relative;
-  isolation: isolate;
-  box-shadow: var(--shadow-sm);
-}
-:root:not([data-fx-level="off"]) .fx-toast::before {
-  content: "";
-  position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  padding: 1.5px;
-  pointer-events: none;
-  background: conic-gradient(from var(--fx-angle), transparent 0deg, currentColor 90deg, transparent 160deg, transparent 360deg);
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: fx-spin 2.2s linear infinite;
-}
-:root:not([data-fx-level="off"]) .fx-toast-gold {
-  background-image: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
-  background-size: 250% 100%;
-  animation: fx-shine 1.6s ease-out 0.3s both;
-}
-
 /* --- Party mode (Konami code) --- */
 :root.fx-party {
   animation: fx-party-hue 3.6s linear infinite;
@@ -1433,7 +1364,7 @@ body {
   top: 35%;
   width: 46vmax;
   height: 46vmax;
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 16%, transparent), transparent 66%);
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 7%, transparent), transparent 66%);
   animation: aurora-drift-b calc(38s / var(--aurora-pace-speed, 1)) ease-in-out infinite reverse;
 }
 .aurora-beam {
@@ -1497,8 +1428,8 @@ body {
   bottom: -3%;
   height: 150%;
   background-image:
-    linear-gradient(color-mix(in srgb, var(--accent) 65%, transparent) 2px, transparent 2px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 65%, transparent) 2px, transparent 2px);
+    linear-gradient(color-mix(in srgb, var(--accent) 30%, transparent) 2px, transparent 2px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent) 2px, transparent 2px);
   background-size: 72px 72px;
   transform: perspective(620px) rotateX(72deg);
   transform-origin: 50% 100%;
@@ -1612,7 +1543,7 @@ body {
   width: 60vmax;
   height: 60vmax;
   translate: -50% -50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%);
   animation: fx-core-pulse 6s ease-in-out infinite;
 }
 .fx-star {
@@ -1666,11 +1597,7 @@ body {
   .warp-glow,
   .timer-digits,
   .timer-digits--gradient,
-  .timer-stage.fx-shaking,
-  .fx-toast::before,
-  .fx-toast-gold,
-  :root:not([data-fx-level="off"]) .card,
-  :root:not([data-fx-level="off"]) :is(button, a).bg-accent:hover {
+  .timer-stage.fx-shaking {
     animation: none !important;
   }
   :root.fx-party {
@@ -1679,26 +1606,16 @@ body {
   }
   .fx-dock,
   .fx-dock-glow,
-  .fx-dock-item svg {
+  :where(button, [role="button"], a[href]) {
     transition: none !important;
   }
 }
-
-/* --- Phones: flatter, less boxy ---
-   Lit borders, glass blur and per-card tilt earn their keep on a wide screen; on a phone they
-   box every section in. Cards become soft fills with no outline, and scroll-reveal is dropped
-   so content is simply there. Placed last so it wins over the FX card rules above. */
-@media (max-width: 1023px) {
-  .card,
-  :root:not([data-fx-level="off"]) .card,
-  :root[data-fx-level="insane"] .card {
-    background: color-mix(in srgb, var(--bg-panel) 58%, transparent);
-    border-color: transparent;
-    box-shadow: none;
-    transform: none;
-    animation: none;
-  }
+/* Effects off: no motion beyond the press itself. */
+:root[data-fx-level="off"] .fx-dock,
+:root[data-fx-level="off"] .fx-dock-glow {
+  transition: none;
 }
+
 
 .no-scrollbar,
 :root:not([data-fx-level="off"]) .no-scrollbar {
@@ -1758,7 +1675,7 @@ body {
   gap: 4px 8px;
   margin: 4px var(--gutter) 0;
   padding: 8px 8px 8px 12px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font-size: 12px;
   line-height: 1.35;
   color: var(--foreground);
@@ -1793,7 +1710,7 @@ body {
   gap: 4px;
   min-height: 32px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -1819,12 +1736,14 @@ body {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   color: var(--muted-2);
 }
-.chrome-dismiss:hover {
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+@media (hover: hover) {
+  .chrome-dismiss:hover {
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
 }
 .chrome-pill {
   display: inline-flex;
@@ -1833,7 +1752,7 @@ body {
   min-height: 24px;
   max-width: 48vw;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
@@ -1875,7 +1794,7 @@ body:has([data-testid="recap-actions"]) .chrome-toast-wrap {
   align-items: center;
   gap: 8px;
   padding: 4px 6px 4px 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-lg);
   font-size: 13px;
   line-height: 1.25;
   color: var(--foreground);
@@ -1887,10 +1806,12 @@ body:has([data-testid="recap-actions"]) .chrome-toast-wrap {
   gap: 4px;
   min-height: 36px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   font-weight: 600;
   color: var(--accent);
 }
-.chrome-toast__action:hover {
-  background: var(--accent-soft);
+@media (hover: hover) {
+  .chrome-toast__action:hover {
+    background: var(--accent-soft);
+  }
 }

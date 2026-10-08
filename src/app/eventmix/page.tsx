@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Shuffle } from "lucide-react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -21,14 +22,14 @@ export default function EventMixPage() {
   return (
     <AnalyticsShell
       icon={<Shuffle size={17} className="text-accent" />}
-      title="Event Mix"
+      title="Event mix"
       subtitle="Every puzzle and category you do, ranked against your ordinary 3x3."
     >
       {!r ? (
-        <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">Event Mix needs at least {MIN_PER_GROUP} completed solves of ordinary two-handed 3x3, plus {MIN_PER_GROUP} more of something else to compare against.</p>
-          <p className="text-[11px] text-muted-2">Every session&apos;s puzzle, and every solve&apos;s practice tag, counts toward this.</p>
-        </div>
+        <EmptyState need={MIN_PER_GROUP} unit="solves per group">
+          <p>Event Mix needs at least {MIN_PER_GROUP} completed solves of ordinary two-handed 3x3, plus {MIN_PER_GROUP} more of something else to compare against.</p>
+          <p className="mt-1 text-[12px] text-muted-2">Every session&apos;s puzzle, and every solve&apos;s practice tag, counts toward this.</p>
+        </EmptyState>
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -38,7 +39,7 @@ export default function EventMixPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Everything else, ranked against it</SectionTitle>
             {(() => {
               const max = Math.max(...r.others.map((o) => o.ratio), 1);

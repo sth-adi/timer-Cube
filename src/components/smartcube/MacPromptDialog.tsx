@@ -42,7 +42,7 @@ function MacForm({ deviceName, onSubmit }: { deviceName: string | null; onSubmit
         aria-modal="true"
         aria-label="Enter the cube's Bluetooth address"
         tabIndex={-1}
-        className="card flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4 outline-none"
+        className="card flex w-full max-w-sm flex-col gap-3 rounded-xl p-4 outline-none"
         onSubmit={(e) => {
           e.preventDefault();
           setTouched(true);
@@ -57,7 +57,7 @@ function MacForm({ deviceName, onSubmit }: { deviceName: string | null; onSubmit
           Your browser won&apos;t tell this app the cube&apos;s Bluetooth address, and it&apos;s needed to read the cube. Type it in once, it&apos;s remembered after that. You can find it in the cube&apos;s own app (look for device info), or in your phone&apos;s Bluetooth details for the cube.
         </p>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-muted-2">Bluetooth address</span>
+          <span className="text-[11px] text-muted-2">Bluetooth address</span>
           <input
             ref={inputRef}
             value={text}
@@ -74,10 +74,10 @@ function MacForm({ deviceName, onSubmit }: { deviceName: string | null; onSubmit
           {invalid && <span className="text-[11px] text-danger">That should be six pairs of letters and numbers, like AA:BB:CC:DD:EE:FF.</span>}
         </label>
         <div className="flex gap-2">
-          <button type="submit" disabled={!mac} className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg disabled:opacity-40" data-testid="mac-submit">
+          <button type="submit" disabled={!mac} className="flex-1 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-fg disabled:opacity-40" data-testid="mac-submit">
             Connect
           </button>
-          <button type="button" onClick={() => onSubmit(null)} className="rounded-full bg-bg-panel-2 px-4 py-2 text-sm font-medium text-muted hover:text-foreground">
+          <button type="button" onClick={() => onSubmit(null)} className="rounded-md bg-bg-panel-2 px-4 py-2 text-sm font-medium text-muted hover:text-foreground">
             Cancel
           </button>
         </div>

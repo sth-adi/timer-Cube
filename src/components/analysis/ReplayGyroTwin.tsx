@@ -188,7 +188,7 @@ export function ReplayGyroTwin({
         </TwinStage>
         {named && <MoveLabel label={named.text} nonce={named.nonce} size={size} />}
       </div>
-      <span className="text-[9px] font-medium uppercase tracking-wide text-muted-2">Gyro</span>
+      <span className="text-[9px] font-medium text-muted-2">Gyro</span>
     </div>
   );
 }

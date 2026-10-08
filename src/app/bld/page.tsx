@@ -79,7 +79,7 @@ function Report({ attempt }: { attempt: Attempt }) {
         </p>
       </div>
 
-      <div className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-5">
         <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
           <Stethoscope size={15} className="text-accent" /> {d.verdict}
         </p>
@@ -87,7 +87,7 @@ function Report({ attempt }: { attempt: Attempt }) {
 
         {d.chunks.length > 0 && (
           <div className="flex flex-col gap-1">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Pieces solved after each chunk</p>
+            <p className="text-[11px] font-medium text-muted-2">Pieces solved after each chunk</p>
             <div className="flex h-16 items-end gap-[3px]">
               {d.chunks.map((c, i) => (
                 <div
@@ -109,7 +109,7 @@ function Report({ attempt }: { attempt: Attempt }) {
 
         {d.unsolved.some((u) => u.brokenInChunk !== null) && (
           <div className="flex flex-col gap-1.5">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Solved at some point, then broken</p>
+            <p className="text-[11px] font-medium text-muted-2">Solved at some point, then broken</p>
             {d.unsolved
               .filter((u) => u.brokenInChunk !== null)
               .sort((a, b) => a.brokenInChunk! - b.brokenInChunk!)
@@ -117,9 +117,9 @@ function Report({ attempt }: { attempt: Attempt }) {
                 <div key={`${u.piece.kind}${u.piece.index}`} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-2.5 py-1.5">
                   <span className="flex items-center gap-2">
                     <PieceChip u={u} />
-                    <span className="text-[10px] text-muted-2">{u.piece.kind}</span>
+                    <span className="text-[11px] text-muted-2">{u.piece.kind}</span>
                   </span>
-                  <span className="text-[10px] text-muted">
+                  <span className="text-[11px] text-muted">
                     {u.issue} · broken in chunk {u.brokenInChunk! + 1}
                   </span>
                 </div>
@@ -132,7 +132,7 @@ function Report({ attempt }: { attempt: Attempt }) {
           if (never.length === 0) return null;
           return (
             <div key={kind} className="flex flex-col gap-1.5">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">
+              <p className="text-[11px] font-medium text-muted-2">
                 {kind === "corner" ? "Corners" : "Edges"} never solved during the attempt, a skipped target or memo slip
               </p>
               <div className="flex flex-wrap gap-2">
@@ -148,16 +148,16 @@ function Report({ attempt }: { attempt: Attempt }) {
       </div>
 
       <div className="card flex flex-col gap-1.5 rounded-xl p-4">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Correct memo (Speffz, buffer A: ULB corner / UB edge)</p>
+        <p className="text-[11px] font-medium text-muted-2">Correct memo (Speffz, buffer A: ULB corner / UB edge)</p>
         <p className="font-mono text-xs text-foreground">
           <span className="text-muted-2">Edges </span>
-          {memo.edgesSolved ? "—" : pairUp(memo.edgeWords.flat()).join(" ")}
+          {memo.edgesSolved ? "-" : pairUp(memo.edgeWords.flat()).join(" ")}
         </p>
         <p className="font-mono text-xs text-foreground">
           <span className="text-muted-2">Corners </span>
-          {memo.cornersSolved ? "—" : pairUp(memo.cornerWords.flat()).join(" ")}
+          {memo.cornersSolved ? "-" : pairUp(memo.cornerWords.flat()).join(" ")}
         </p>
-        <p className="break-words font-mono text-[10px] text-muted-2">{attempt.scramble}</p>
+        <p className="break-words font-mono text-[11px] text-muted-2">{attempt.scramble}</p>
       </div>
     </div>
   );
@@ -286,7 +286,7 @@ function BldDoctor() {
         <button
           type="button"
           onClick={() => finish(performance.now())}
-          className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/70"
+          className="rounded-md border border-white/20 px-6 py-3 text-sm font-semibold text-white/70"
         >
           I&apos;m done
         </button>
@@ -309,7 +309,7 @@ function BldDoctor() {
         <button
           type="button"
           onClick={() => void newAttempt()}
-          className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
+          className="flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
         >
           {phase === "done" ? <RotateCcw size={14} /> : <Play size={14} />} {phase === "done" ? "Next attempt" : "Start a BLD attempt"}
         </button>
@@ -330,7 +330,7 @@ function BldDoctor() {
           ) : (
             <Loader2 size={16} className="animate-spin text-accent" />
           )}
-          <p className="break-words font-mono text-[10px] text-muted-2">{scramble}</p>
+          <p className="break-words font-mono text-[11px] text-muted-2">{scramble}</p>
         </div>
       )}
 
@@ -338,7 +338,7 @@ function BldDoctor() {
         <div className="card flex flex-col items-center gap-3 rounded-xl p-6 text-center">
           <p className="text-sm font-semibold text-foreground">Scrambled. Ready when you are.</p>
           <p className="max-w-xs text-[11px] text-muted">Tap start as you begin memorizing. The screen goes dark; your first turn marks the switch to execution.</p>
-          <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-fg">
+          <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-md bg-accent px-6 py-3 text-sm font-semibold text-accent-fg">
             <EyeOff size={14} /> Start memo
           </button>
         </div>
@@ -360,7 +360,7 @@ export default function BldPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Stethoscope size={17} className="text-accent" /> BLD Doctor
+              <Stethoscope size={17} className="text-accent" /> BLD doctor
             </h1>
             <p className="text-[11px] text-muted-2">Blindfolded attempts on your smart cube, and when one DNFs, exactly why.</p>
           </div>

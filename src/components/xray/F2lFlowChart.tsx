@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, TriangleAlert, Waves } from "lucide-react";
+import { Check, TriangleAlert } from "lucide-react";
 import type { F2lFlowReport } from "@/lib/xray/f2lFlow";
 import { PAIR_COLORS, PAIR_LABELS } from "@/lib/xray/common";
 import { formatTime } from "@/lib/utils/time";
@@ -48,9 +48,7 @@ export function F2lFlowChart({ report }: { report: F2lFlowReport }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-          <Waves size={13} className="text-accent" /> F2L Flow
-        </p>
+        <h3 className="text-sm font-semibold text-foreground">F2L flow</h3>
         <p className="text-[11px] text-muted">
           flow score <span className="font-bold tabular-nums text-foreground">{report.flowScore}</span>
         </p>
@@ -106,9 +104,9 @@ export function F2lFlowChart({ report }: { report: F2lFlowReport }) {
         </p>
       )}
 
-      <ol className="flex flex-col gap-1.5">
+      <ol className="flex flex-col divide-y divide-border">
         {decisions.map((d, i) => (
-          <li key={d.pair} className="flex flex-col gap-1 rounded-lg bg-bg-panel-2 px-2.5 py-2">
+          <li key={d.pair} className="flex flex-col gap-1 py-2.5 first:pt-0">
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
                 <span className="text-muted-2">{i + 1}.</span>
@@ -138,8 +136,8 @@ export function F2lFlowChart({ report }: { report: F2lFlowReport }) {
                     <span
                       key={e.pair}
                       className={cn(
-                        "flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium",
-                        e.after < e.before ? "bg-success/15 text-success" : "bg-danger/15 text-danger",
+                        "flex items-center gap-1 text-[11px] font-medium",
+                        e.after < e.before ? "text-success" : "text-danger",
                       )}
                     >
                       <PairChip pair={e.pair} />

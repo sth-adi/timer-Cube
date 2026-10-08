@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Dumbbell, Eye, Loader2, SkipForward, Trophy, XCircle } from "lucide-react";
+import { CheckCircle2, Dumbbell, Eye, SkipForward, Trophy, XCircle } from "lucide-react";
 import { ConnectGate } from "@/components/smartcube/ConnectGate";
 import { RouteChips } from "@/components/smartcube/RouteChips";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
@@ -222,7 +222,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
               onClick={() => toggleGroup(g)}
               disabled={phase !== "idle" && phase !== "result"}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-semibold",
+                "rounded-lg px-3 py-1.5 text-xs font-semibold",
                 groups.includes(g) ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted",
               )}
             >
@@ -236,12 +236,12 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
       <div className="card flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-xl p-5 text-center">
         {phase === "idle" && (
           <>
-            <Dumbbell size={28} className="text-accent" />
+            <Dumbbell size={28} className="text-accent" strokeWidth={1.75} />
             <p className="max-w-xs text-xs text-muted">
               The gym sets each case up on your cube, then times you recognizing and solving it, and tells you if you did the wrong
               algorithm. Hold it yellow on top, green facing you, the whole way through. Weak and slow cases come up more.
             </p>
-            <button type="button" onClick={next} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
+            <button type="button" onClick={next} className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
               Start drilling
             </button>
           </>
@@ -260,15 +260,15 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
             {route ? (
               <RouteChips display={display} turns={route.turns} position={route.position} partial={route.partial} />
             ) : (
-              <Loader2 size={16} className="animate-spin text-accent" />
+              <span className="block h-6 w-40 animate-pulse rounded-md bg-bg-panel-2" aria-label="Loading" role="status" />
             )}
           </>
         )}
 
         {(phase === "go" || phase === "exec") && (
           <>
-            <Eye size={26} className="text-accent" />
-            <p className="text-2xl font-black text-foreground">{phase === "go" ? "Go!" : "…"}</p>
+            <Eye size={26} className="text-accent" strokeWidth={1.75} />
+            <p className="text-2xl font-bold text-foreground">{phase === "go" ? "Go" : "…"}</p>
             <p className="text-[11px] text-muted">Yellow on top, green facing you, recognize the {current?.group} and solve it. The clock is already running.</p>
           </>
         )}
@@ -279,7 +279,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
               <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={algCase.group} className="h-16 w-16 shrink-0 overflow-hidden rounded" />
               <div className="flex flex-col items-start">
                 <p className={cn("flex items-center gap-1.5 text-lg font-bold", result.ok ? "text-success" : "text-danger")}>
-                  {result.ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />} {algCase.group} · {algCase.name}
+                  {result.ok ? <CheckCircle2 size={18} strokeWidth={1.75} /> : <XCircle size={18} strokeWidth={1.75} />} {algCase.group} · {algCase.name}
                 </p>
                 {result.ok && (
                   <p className="text-xs tabular-nums text-muted">
@@ -287,7 +287,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
                     <span className="font-semibold text-foreground">{secs(result.execMs)}s</span>
                     {result.pb && (
                       <span className="ml-1.5 inline-flex items-center gap-0.5 text-accent">
-                        <Trophy size={11} /> PB
+                        <Trophy size={11} strokeWidth={1.75} /> PB
                       </span>
                     )}
                   </p>
@@ -303,12 +303,12 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
       {(phase === "result" || phase === "setup" || phase === "go" || phase === "exec") && (
         <div className="flex justify-center gap-2">
           {phase === "result" ? (
-            <button type="button" onClick={next} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
+            <button type="button" onClick={next} className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
               Next case
             </button>
           ) : (
-            <button type="button" onClick={next} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-medium text-muted">
-              <SkipForward size={12} /> Skip
+            <button type="button" onClick={next} className="flex items-center gap-1.5 rounded-lg bg-bg-panel-2 px-4 py-2 text-xs font-medium text-muted">
+              <SkipForward size={12} strokeWidth={1.75} /> Skip
             </button>
           )}
         </div>
@@ -316,7 +316,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
 
       {table.length > 0 && (
         <div className="card flex flex-col gap-1 rounded-xl p-3">
-          <div className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+          <div className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium text-muted-2">
             <span>Your cases, slowest first</span>
             <span>see + do · best · hit rate</span>
           </div>
@@ -325,7 +325,7 @@ function AlgGymInner({ focus, onAttempt }: GymProps) {
               <CaseIcon setupAlg={invertAlg(c.alg)} kind={c.group} className="h-7 w-7 shrink-0 overflow-hidden rounded-[2px]" />
               <span className="flex-1 truncate text-[11px] font-medium text-foreground">{c.name}</span>
               <span className="text-[11px] tabular-nums text-muted">
-                {caseAverageMs(s) !== null ? `${secs(caseAverageMs(s)!)}s` : "—"} · {s!.bestMs !== null ? `${secs(s!.bestMs)}s` : "—"} ·{" "}
+                {caseAverageMs(s) !== null ? `${secs(caseAverageMs(s)!)}s` : "-"} · {s!.bestMs !== null ? `${secs(s!.bestMs)}s` : "-"} ·{" "}
                 {Math.round((s!.successes / s!.attempts) * 100)}%
               </span>
             </div>

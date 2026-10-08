@@ -28,7 +28,7 @@ function SolvePickerRow({ solve, onPick }: { solve: Solve; onPick: () => void })
         <span className="text-[11px] text-muted-2">{new Date(solve.date).toLocaleDateString()}</span>
       </span>
       {solve.moveTimestamps && solve.moveTimestamps.length > 0 && (
-        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">real timing</span>
+        <span className=" bg-accent-soft text-[11px] font-medium text-accent">real timing</span>
       )}
     </button>
   );
@@ -59,7 +59,7 @@ export default function RhythmPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-8">
           <div className="flex items-center gap-2 px-1">
             <Music size={16} className="text-accent" />
-            <h1 className="text-lg font-semibold text-foreground">Rhythm Game</h1>
+            <h1 className="text-lg font-semibold text-foreground">Rhythm game</h1>
           </div>
 
           {selected ? (
@@ -75,7 +75,7 @@ export default function RhythmPage() {
               <RhythmGamePlayer reconstruction={selected.reconstruction!} moveTimestamps={selected.moveTimestamps} />
             </div>
           ) : candidates.length === 0 ? (
-            <div className="card rounded-xl p-6 text-center text-sm text-muted">
+            <div className="border-y border-border py-8 text-center text-sm text-muted">
               No solves with a saved reconstruction yet, solve on a connected smart cube, or save a reconstruction from the Analyzer, to
               unlock a track.
             </div>

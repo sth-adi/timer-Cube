@@ -124,8 +124,8 @@ function PhaseMini({ p }: { p: PhaseProgress }) {
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label={`${p.phase} rolling average`}>
         <path d={path} fill="none" stroke={PHASE_COLOR[p.phase]} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
-      <span className={cn("self-start rounded-full px-2 py-0.5 text-[11px] font-medium", p.plateau ? "bg-warning/15 text-warning" : "bg-success/15 text-success")}>
-        {p.plateau ? "⏸ stalled lately" : `▼ ${(p.per100 * 100).toFixed(1)}% per 100 solves`}
+      <span className={cn("self-start text-[11px] font-medium", p.plateau ? "text-warning" : "text-success")}>
+        {p.plateau ? "Stalled lately" : `Down ${(p.per100 * 100).toFixed(1)}% per 100 solves`}
       </span>
     </div>
   );
@@ -143,7 +143,7 @@ export default function ProgressPage() {
   return (
     <AnalyticsShell
       icon={<TrendingUp size={17} className="text-accent" />}
-      title="Progress Forecast"
+      title="Progress forecast"
       subtitle="Learning curves fitted to your own solves, what's improving, what's stalled, and when you'll hit your next goal."
     >
       {!r ? (
@@ -165,7 +165,7 @@ export default function ProgressPage() {
           )}
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Your learning curve</SectionTitle>
             <CurveChart r={r} />
             <div className="flex flex-wrap gap-3 text-[11px] text-muted">
@@ -181,7 +181,7 @@ export default function ProgressPage() {
             </div>
           </div>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Each phase on its own</SectionTitle>
             <div className="grid grid-cols-2 gap-2">
               {r.phases.map((p) => (

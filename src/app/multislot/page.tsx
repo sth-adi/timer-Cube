@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Layers } from "lucide-react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -28,19 +29,15 @@ export default function MultiSlotPage() {
   return (
     <AnalyticsShell
       icon={<Layers size={17} className="text-accent" />}
-      title="Multi-Slot Report"
+      title="Multi-slot report"
       subtitle="Pairs solved together vs one at a time, and which is actually faster."
     >
       {!r ? (
-        <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">
-            Multi-Slot Report needs at least {MIN_EVENTS} tracked F2L pair insertions, you have {eventCount}.
-          </p>
-          <p className="text-[11px] text-muted-2">
-            An insertion is counted from a solve&apos;s saved reconstruction and move timing, so this can lag behind your total solve count, and if you
-            always insert one pair at a time, it&apos;ll still report once you clear {MIN_EVENTS}, just with nothing to compare multi-slotting against.
-          </p>
-        </div>
+        <EmptyState need={MIN_EVENTS} have={eventCount} unit="insertions">
+          <p>Multi-Slot Report needs at least {MIN_EVENTS} tracked F2L pair insertions, you have {eventCount}.</p>
+          <p className="mt-1 text-[12px] text-muted-2">An insertion is counted from a solve&apos;s saved reconstruction and move timing, so this can lag behind your total solve count, and if you
+            always insert one pair at a time, it&apos;ll still report once you clear {MIN_EVENTS}, just with nothing to compare multi-slotting against.</p>
+        </EmptyState>
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -52,7 +49,7 @@ export default function MultiSlotPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Cost per pair</SectionTitle>
             {[
               { label: "Solo", turns: r.avgTurnsPerPairSolo, ms: r.avgMsPerPairSolo, faster: r.faster === "solo", events: r.soloEvents },
@@ -61,7 +58,7 @@ export default function MultiSlotPage() {
               <div key={row.label} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2">
                 <span className="flex items-center gap-1.5 text-[11px] text-foreground">
                   {row.label}
-                  {row.faster && <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-semibold text-accent">faster</span>}
+                  {row.faster && <span className=" text-[11px] font-semibold text-accent">faster</span>}
                 </span>
                 <span className="text-[11px] tabular-nums text-muted-2">
                   {row.events === 0 ? "never" : `${row.turns.toFixed(1)} turns/pair · ${secs(row.ms)}/pair`}

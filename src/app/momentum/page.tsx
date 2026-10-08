@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Flame } from "lucide-react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -21,14 +22,14 @@ export default function MomentumPage() {
   return (
     <AnalyticsShell
       icon={<Flame size={17} className="text-accent" />}
-      title="Momentum Meter"
+      title="Momentum meter"
       subtitle="Do fast solves cluster together, or is every solve independent of the last?"
     >
       {!r ? (
-        <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">Momentum Meter needs at least {MIN_PAIRS} consecutive solve pairs within sittings of 5 or more, you don&apos;t have enough yet.</p>
-          <p className="text-[11px] text-muted-2">A sitting is a run of solves with no 15+ minute gap. Keep going and this fills in.</p>
-        </div>
+        <EmptyState need={MIN_PAIRS} unit="solve pairs">
+          <p>Momentum Meter needs at least {MIN_PAIRS} consecutive solve pairs within sittings of 5 or more, you don&apos;t have enough yet.</p>
+          <p className="mt-1 text-[12px] text-muted-2">A sitting is a run of solves with no 15+ minute gap. Keep going and this fills in.</p>
+        </EmptyState>
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -38,7 +39,7 @@ export default function MomentumPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>The solve right after…</SectionTitle>
             {[
               { label: "…a faster-than-usual solve", rel: r.afterFastAvgRel },

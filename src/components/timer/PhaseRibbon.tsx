@@ -136,7 +136,7 @@ export function PhaseRibbon({
             </div>
             <span
               className={cn(
-                "phase-ribbon-label flex items-center justify-center gap-0.5 text-[11px] font-semibold uppercase leading-none tracking-wider",
+                "phase-ribbon-label flex items-center justify-center gap-0.5 text-[11px] font-semibold leading-none",
                 gold[i] ? "text-warning" : slow ? "text-warning" : current ? "text-foreground" : done ? "text-muted" : "text-muted-2",
               )}
             >

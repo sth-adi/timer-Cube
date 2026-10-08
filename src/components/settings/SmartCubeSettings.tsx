@@ -147,7 +147,7 @@ export function SmartCubeSettings() {
 
   return (
     <div className="mt-4 border-t border-border pt-3" data-testid="smartcube-settings">
-      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Smart cube</p>
+      <p className="mb-1.5 text-[11px] text-muted-2">Smart cube</p>
 
       <p className="mb-1 text-xs text-muted">Voice coach</p>
       <div className="grid grid-cols-3 gap-1.5">

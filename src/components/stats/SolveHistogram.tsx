@@ -28,7 +28,7 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
   const keys = useSlotKeys(buckets.length, active, setActive, (i) => `${formatTime(buckets[i].from)} to ${formatTime(buckets[i].to)}: ${plural(buckets[i].count)}`);
 
   if (buckets.length < 3) {
-    return <p className="text-muted-2 text-sm text-center py-6">Solve a few more for a distribution chart.</p>;
+    return <p className="py-4 text-sm text-muted-2">Solve a few more for a distribution chart.</p>;
   }
 
   const n = buckets.length;
@@ -52,7 +52,7 @@ export function SolveHistogram({ solves }: { solves: Solve[] }) {
         {/* the header strip is the readout: the median's name when idle, the touched bucket otherwise, never under the finger */}
         {activeBucket && active !== null ? (
           <div
-            className="pointer-events-none absolute top-0 flex items-baseline gap-1.5 whitespace-nowrap rounded-lg border border-border-strong bg-bg-panel-2 px-2 py-0.5 text-[11px] shadow-lg"
+            className="pointer-events-none absolute top-0 flex items-baseline gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-bg-panel-2 px-2 py-0.5 text-[11px] shadow-[var(--shadow-sm)]"
             style={{ left: clampReadout(((active + 0.5) / n) * w, READOUT_W, w), width: READOUT_W }}
           >
             <span className="tabular-timer text-[13px] font-semibold text-foreground">{plural(activeBucket.count)}</span>

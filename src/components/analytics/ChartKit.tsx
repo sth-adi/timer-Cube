@@ -16,7 +16,7 @@ export function PhaseLegend({ values }: { values?: Partial<Record<PhaseName, str
     <div className="flex flex-wrap gap-x-3 gap-y-1">
       {PHASES.map((p) => (
         <span key={p} className="flex items-center gap-1.5 text-[11px] text-muted">
-          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: PHASE_COLOR[p] }} />
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ background: PHASE_COLOR[p] }} />
           {p}
           {values?.[p] && <span className="font-semibold text-foreground">{values[p]}</span>}
         </span>
@@ -73,27 +73,27 @@ export function ChartTip({ tip, width }: { tip: TipState | null; width?: number 
   const w = width ?? 9999;
   return (
     <div
-      className="pointer-events-none absolute z-10 flex -translate-y-full flex-col rounded-lg border border-border-strong bg-bg-elevated px-2.5 py-1.5 shadow-lg"
+      className="pointer-events-none absolute z-10 flex -translate-y-full flex-col rounded-md border border-border-strong bg-bg-elevated px-2.5 py-1.5 shadow-[var(--shadow-sm)]"
       style={{ left: Math.min(Math.max(8, tip.x - 60), w - 140), top: tip.y - 8, minWidth: 110 }}
     >
-      <span className="text-sm font-bold text-foreground">{tip.value}</span>
+      <span className="tabular-timer text-sm font-semibold text-foreground">{tip.value}</span>
       <span className="text-[11px] text-muted">{tip.label}</span>
       {tip.detail && <span className="text-[11px] text-muted-2">{tip.detail}</span>}
     </div>
   );
 }
 
-/** The single headline number a page leads with. */
+/** The single headline number a page leads with: the one primary panel, number left and large, then a plain label and a sentence. */
 export function Hero({ value, label, sub }: { value: string; label: string; sub?: string }) {
   return (
-    <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
-      <p className="text-5xl font-bold text-foreground">{value}</p>
-      <p className="text-xs font-medium text-muted">{label}</p>
-      {sub && <p className="max-w-sm text-[11px] text-muted-2">{sub}</p>}
+    <div className="card flex flex-col gap-1.5 rounded-xl p-5">
+      <p className="tabular-timer text-5xl font-bold leading-none tracking-[-0.02em] text-foreground">{value}</p>
+      <p className="mt-1 max-w-[65ch] text-pretty text-sm font-medium text-foreground">{label}</p>
+      {sub && <p className="max-w-[65ch] text-pretty text-xs leading-relaxed text-muted-2">{sub}</p>}
     </div>
   );
 }
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">{children}</p>;
+  return <h2 className="text-sm font-semibold tracking-[-0.01em] text-foreground">{children}</h2>;
 }

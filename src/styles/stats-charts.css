@@ -70,7 +70,7 @@
 /* A chart you can drive from the keyboard shows a focus ring only for keyboard focus. */
 .sc-focusable {
   outline: none;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
 }
 .sc-focusable:focus-visible {
   outline: 2px solid var(--accent);

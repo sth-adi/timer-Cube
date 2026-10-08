@@ -10,7 +10,7 @@ export function ConnectGate({ children, blurb }: { children: React.ReactNode; bl
   const error = useSmartCubeStore((s) => s.error);
   if (connected) return <>{children}</>;
   return (
-    <div className="card flex flex-col items-center gap-3 rounded-xl px-6 py-10 text-center">
+    <div className="card flex flex-col items-center gap-3 rounded-lg px-6 py-10 text-center">
       <Bluetooth size={22} className="text-accent" />
       <p className="max-w-xs text-sm text-muted">{blurb}</p>
       <ConnectControls unsupportedLabel="Web Bluetooth unavailable in this browser" />

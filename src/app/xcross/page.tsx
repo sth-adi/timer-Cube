@@ -53,8 +53,8 @@ function Report({ attempt }: { attempt: Attempt }) {
         <p className="text-[11px] text-muted">{g.detail}</p>
         <div className="mt-1 grid w-full grid-cols-3 gap-2">
           {[
-            [g.turns !== null ? `${g.turns}` : "—", "your turns"],
-            [g.best ? `${g.best.moves.length}` : "—", "best x-cross"],
+            [g.turns !== null ? `${g.turns}` : "-", "your turns"],
+            [g.best ? `${g.best.moves.length}` : "-", "best x-cross"],
             [formatTime(attempt.ms), "to cross + pair"],
           ].map(([v, l]) => (
             <div key={l} className="rounded-lg bg-bg-panel-2 px-2 py-1.5">
@@ -65,13 +65,13 @@ function Report({ attempt }: { attempt: Attempt }) {
         </div>
       </div>
 
-      <div className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-5">
         <div className="flex flex-col gap-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
+          <p className="text-[11px] font-medium text-muted-2">What you did</p>
           {g.moves.length ? <TurnChips moves={g.turns !== null ? g.moves.slice(0, g.turns) : g.moves} /> : <p className="text-[11px] text-muted">No turns.</p>}
         </div>
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Every x-cross this scramble had</p>
+          <p className="text-[11px] font-medium text-muted-2">Every x-cross this scramble had</p>
           {attempt.options.map((o, i) => (
             <div key={o.pair} className={cn("flex flex-col gap-1.5 rounded-lg px-2.5 py-2", i === 0 ? "bg-accent-soft" : "bg-bg-panel-2")}>
               <p className="flex items-center gap-2 text-[11px] font-semibold text-foreground">
@@ -203,8 +203,8 @@ function Hunter() {
   return (
     <div className="flex flex-col gap-3">
       {(phase === "idle" || phase === "done") && (
-        <div className="card flex flex-col gap-3 rounded-xl p-4">
-          <div className="flex rounded-full bg-bg-panel-2 p-1">
+        <div className="flex flex-col gap-3 border-t border-border pt-5">
+          <div className="flex rounded-lg bg-bg-panel-2 p-1">
             {[
               [7, "Easy · x-cross ≤ 7"],
               [8, "Normal · ≤ 8"],
@@ -213,7 +213,7 @@ function Hunter() {
                 key={d}
                 type="button"
                 onClick={() => setMaxDepth(d as number)}
-                className={cn("flex-1 rounded-full py-1.5 text-xs font-semibold", maxDepth === d ? "bg-accent text-accent-fg" : "text-muted")}
+                className={cn("flex-1 rounded-md py-1.5 text-xs font-semibold", maxDepth === d ? "bg-accent text-accent-fg" : "text-muted")}
               >
                 {label}
               </button>
@@ -224,7 +224,7 @@ function Hunter() {
               {[
                 [`${Math.round(stats.hitRate * 100)}%`, `x-cross found · ${stats.attempts}`],
                 [`${Math.round(stats.recentRate * 100)}%`, "last 20"],
-                [stats.avgExtra !== null ? `+${stats.avgExtra.toFixed(1)}` : "—", "turns over best"],
+                [stats.avgExtra !== null ? `+${stats.avgExtra.toFixed(1)}` : "-", "turns over best"],
               ].map(([v, l]) => (
                 <div key={l} className="rounded-lg bg-bg-panel-2 py-1.5">
                   <p className="text-base font-bold tabular-nums text-foreground">{v}</p>
@@ -241,7 +241,7 @@ function Hunter() {
           <button
             type="button"
             onClick={() => void hunt()}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
+            className="flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-accent-fg"
           >
             {phase === "done" ? <RotateCcw size={14} /> : <Play size={14} />} {phase === "done" ? "Hunt another" : "Hunt a scramble"}
           </button>
@@ -281,7 +281,7 @@ function Hunter() {
           <button
             type="button"
             onClick={() => finish(performance.now())}
-            className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground"
+            className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground"
           >
             <Square size={11} fill="currentColor" /> Give up
           </button>
@@ -304,7 +304,7 @@ export default function XCrossPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Target size={17} className="text-accent" /> X-Cross Hunter
+              <Target size={17} className="text-accent" /> X-cross hunter
             </h1>
             <p className="text-[11px] text-muted-2">Scrambles picked for a short x-cross, set up on your cube, can you see it in 15 seconds?</p>
           </div>

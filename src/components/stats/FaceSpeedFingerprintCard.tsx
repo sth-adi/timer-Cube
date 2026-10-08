@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Gauge } from "lucide-react";
+
 import type { Solve } from "@/types";
 import { computeFaceSpeedFingerprint } from "@/lib/analysis/smartCubeInsights";
 import { PAUSE_MS } from "@/lib/analytics/pause";
@@ -20,9 +20,8 @@ export function FaceSpeedFingerprintCard({ solves }: { solves: Solve[] }) {
   const max = Math.max(...sorted.map((f) => f.avgGapMs));
 
   return (
-    <div className="card rounded-xl p-4">
-      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
-        <Gauge size={14} className="text-accent" />
+    <div>
+      <h3 className="mb-3 text-sm font-semibold tracking-[-0.01em]">
         Turn-speed fingerprint
       </h3>
       <div className="space-y-1.5">

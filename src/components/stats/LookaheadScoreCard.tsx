@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Eye } from "lucide-react";
+
 import type { Solve } from "@/types";
 import { computeLookaheadScore } from "@/lib/analysis/smartCubeInsights";
 
@@ -20,9 +20,8 @@ export function LookaheadScoreCard({ solves }: { solves: Solve[] }) {
   const recent = stat.perSolve.slice(-30);
 
   return (
-    <div className="card rounded-xl p-4">
-      <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
-        <Eye size={14} className="text-accent" />
+    <div>
+      <h3 className="mb-1 text-sm font-semibold tracking-[-0.01em]">
         Last-layer lookahead
       </h3>
       <p className="mb-3 text-2xl font-bold tabular-nums">

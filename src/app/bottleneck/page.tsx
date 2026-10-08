@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Crosshair } from "lucide-react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -21,14 +22,14 @@ export default function BottleneckPage() {
   return (
     <AnalyticsShell
       icon={<Crosshair size={17} className="text-accent" />}
-      title="Bottleneck Report"
+      title="Bottleneck report"
       subtitle="Is each slow case costing you recognition time, or execution time?"
     >
       {!r ? (
-        <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">Bottleneck Report needs at least {MIN_CASES} OLL/PLL/F2L cases you&apos;ve each hit a few times.</p>
-          <p className="text-[11px] text-muted-2">Every smart-cube solve logs its cases automatically, see Case History to check.</p>
-        </div>
+        <EmptyState need={MIN_CASES} unit="cases">
+          <p>Bottleneck Report needs at least {MIN_CASES} OLL/PLL/F2L cases you&apos;ve each hit a few times.</p>
+          <p className="mt-1 text-[12px] text-muted-2">Every smart-cube solve logs its cases automatically, see Case History to check.</p>
+        </EmptyState>
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -40,12 +41,12 @@ export default function BottleneckPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Costliest cases overall</SectionTitle>
             {r.cases.slice(0, 8).map((c) => (
               <div key={`${c.group}-${c.key}`} className="flex items-center justify-between gap-2 rounded-lg bg-bg-panel-2 px-3 py-2">
                 <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-foreground">
-                  <span className="shrink-0 rounded-full bg-bg-panel px-1.5 py-0.5 text-[11px] font-semibold text-muted">{c.group}</span>
+                  <span className="shrink-0 text-[11px] font-semibold text-muted">{c.group}</span>
                   <span className="truncate">{c.name}</span>
                 </span>
                 <span className="shrink-0 text-right text-[11px] tabular-nums text-muted-2">

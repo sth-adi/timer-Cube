@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useRef } from "react";
-import { Flag, Loader2, Play, RotateCcw, SkipForward } from "lucide-react";
+import { Flag, Play, RotateCcw, SkipForward } from "lucide-react";
 import { PlayShell, TurnPad } from "@/components/play/PlayShell";
 import { RouteChips } from "@/components/smartcube/RouteChips";
 import { usePlayInput } from "@/lib/play/usePlayInput";
@@ -13,7 +13,6 @@ import { countStrokes, generateHole, scoreLabel } from "@/lib/play/golf";
 import { MENU, ROUND_PARS, SKIP_PENALTY, golfReduce, totalOverPar } from "@/lib/play/golfGame";
 import { cn } from "@/lib/utils/cn";
 
-const ACCENT = "#7dff6a";
 const BEST_KEY = "golf-best";
 
 const overLabel = (n: number) => (n === 0 ? "Even" : n > 0 ? `+${n}` : `${n}`);
@@ -81,34 +80,34 @@ export default function GolfPage() {
   };
 
   return (
-    <PlayShell accent={ACCENT} title="Cube Golf" tagline="Scramble a few turns, then solve it in as few as you can. Par is the shortest possible, you can tie it, never beat it.">
+    <PlayShell title="Cube golf" tagline="Scramble a few turns, then solve it in as few as you can. Par is the shortest possible, you can tie it, never beat it.">
       {game.phase === "menu" && (
-        <div className="play-panel play-glow flex flex-col gap-3 rounded-3xl p-5" data-testid="golf-menu">
+        <div className="play-panel flex flex-col gap-3 rounded-2xl p-5" data-testid="golf-menu">
           <p className="text-sm leading-snug text-white/80">
             Six holes, from 3 turns to 7. Each one shows you the scramble; do it, then solve the cube in the fewest turns you can. A half turn counts as one; turns that cancel cost nothing.
           </p>
           <p className="text-xs text-[var(--play-dim)]">Start with your cube solved. Turns are named by the colour of the face: U white, D yellow, F green, B blue, R red, L orange.</p>
           {best !== null && <p className="text-xs font-semibold text-white/70">Best round: {overLabel(best)} over par</p>}
-          <button type="button" onClick={() => dispatch({ type: "start", seed: Date.now() })} className="play-btn flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-black">
-            <Play size={16} /> Tee off
+          <button type="button" onClick={() => dispatch({ type: "start", seed: Date.now() })} className="play-btn flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-bold">
+            <Play size={16} strokeWidth={1.75} /> Tee off
           </button>
         </div>
       )}
 
       {game.phase !== "menu" && game.phase !== "card" && (
-        <div className="play-panel play-glow flex flex-col items-center gap-4 rounded-3xl px-4 py-5" data-testid="golf-hole">
-          <div className="flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--play-dim)]">
+        <div className="play-panel flex flex-col items-center gap-4 rounded-2xl px-4 py-5" data-testid="golf-hole">
+          <div className="flex w-full items-center justify-between text-[11px] font-bold text-[var(--play-dim)]">
             <span data-testid="golf-hole-no">
               Hole {game.index + 1} of {ROUND_PARS.length}
             </span>
             <span className="flex items-center gap-1" data-testid="golf-par">
-              <Flag size={12} /> Par {ROUND_PARS[game.index]}
+              <Flag size={12} strokeWidth={1.75} /> Par {ROUND_PARS[game.index]}
             </span>
           </div>
 
           {game.phase === "loading" && (
-            <p className="flex items-center gap-2 py-10 text-sm text-[var(--play-dim)]">
-              <Loader2 size={16} className="animate-spin" /> Setting up the hole…
+            <p className="py-10 text-sm text-[var(--play-dim)]">
+              Setting up the hole
             </p>
           )}
 
@@ -148,24 +147,24 @@ export default function GolfPage() {
           {game.phase === "play" && hole && (
             <div className="flex flex-col items-center gap-3 py-2" data-testid="golf-play">
               <p className="text-base font-bold">Solve it, par is {hole.par}</p>
-              <p className="text-[56px] font-black leading-none" data-testid="golf-strokes">
+              <p className="text-[56px] font-bold leading-none" data-testid="golf-strokes">
                 {countStrokes(game.playTurns)}
               </p>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--play-dim)]">strokes</p>
+              <p className="text-[11px] font-bold text-[var(--play-dim)]">strokes</p>
             </div>
           )}
 
           {game.phase === "holed" && hole && last && (
             <div className="flex w-full flex-col items-center gap-3 text-center" data-testid="golf-holed">
-              <p className="text-2xl font-black" style={{ color: last.strokes <= last.par ? ACCENT : "#fff" }} data-testid="golf-verdict">
+              <p className="text-2xl font-bold" style={{ color: last.strokes <= last.par ? "var(--play-accent)" : "#fff" }} data-testid="golf-verdict">
                 {last.skipped ? `Skipped (+${SKIP_PENALTY})` : scoreLabel(last.strokes, last.par)}
               </p>
               <p className="text-sm text-white/70">
                 {last.skipped ? "" : `${last.strokes} stroke${last.strokes === 1 ? "" : "s"} · `}par {last.par}
               </p>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[var(--play-dim)]">The shortest way</p>
+              <p className="mt-1 text-[11px] font-bold text-[var(--play-dim)]">The shortest way</p>
               <RouteChips display={hole.solution} turns={hole.solution} position={0} size="md" />
-              <button type="button" onClick={() => dispatch({ type: "next" })} className="play-btn mt-1 flex items-center gap-2 rounded-full px-6 py-3 text-sm font-black" data-testid="golf-next">
+              <button type="button" onClick={() => dispatch({ type: "next" })} className="play-btn mt-1 flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold" data-testid="golf-next">
                 {game.index + 1 < ROUND_PARS.length ? "Next hole" : "Scorecard"}
               </button>
             </div>
@@ -173,22 +172,22 @@ export default function GolfPage() {
 
           {(game.phase === "setup" || game.phase === "play" || game.phase === "reset") && (
             <button type="button" onClick={skip} className="flex items-center gap-1 text-[11px] text-[var(--play-dim)] underline hover:text-white">
-              <SkipForward size={12} /> Skip this hole (+{SKIP_PENALTY})
+              <SkipForward size={12} strokeWidth={1.75} /> Skip this hole (+{SKIP_PENALTY})
             </button>
           )}
         </div>
       )}
 
       {game.phase === "card" && (
-        <div className="play-panel play-glow flex flex-col gap-3 rounded-3xl p-5" data-testid="golf-card">
-          <h2 className="text-lg font-black">Scorecard</h2>
+        <div className="play-panel flex flex-col gap-3 rounded-2xl p-5" data-testid="golf-card">
+          <h2 className="text-lg font-bold">Scorecard</h2>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-[var(--play-dim)]">
+              <tr className="text-left text-[11px] text-[var(--play-dim)]">
                 <th className="py-1">Hole</th>
                 <th>Par</th>
                 <th>Strokes</th>
-                <th className="text-right">+/−</th>
+                <th className="text-right">+/-</th>
               </tr>
             </thead>
             <tbody>
@@ -197,22 +196,22 @@ export default function GolfPage() {
                   <td className="py-1.5">{i + 1}</td>
                   <td>{r.par}</td>
                   <td>{r.skipped ? "skipped" : r.strokes}</td>
-                  <td className="text-right font-semibold" style={{ color: r.strokes === r.par ? ACCENT : undefined }}>
+                  <td className="text-right font-semibold" style={{ color: r.strokes === r.par ? "var(--play-accent)" : undefined }}>
                     {overLabel(r.strokes - r.par)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="text-center text-2xl font-black" data-testid="golf-total">
+          <p className="text-center text-2xl font-bold" data-testid="golf-total">
             {overLabel(total)} over par
           </p>
           {best !== null && <p className="text-center text-xs text-[var(--play-dim)]">Best round: {overLabel(best)}</p>}
           <div className="flex gap-2">
-            <button type="button" onClick={() => dispatch({ type: "start", seed: Date.now() })} className="play-btn flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-black">
-              <RotateCcw size={16} /> Play again
+            <button type="button" onClick={() => dispatch({ type: "start", seed: Date.now() })} className="play-btn flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold">
+              <RotateCcw size={16} strokeWidth={1.75} /> Play again
             </button>
-            <button type="button" onClick={() => dispatch({ type: "menu" })} className="rounded-full border border-white/15 px-4 py-3 text-sm font-bold text-white/70 hover:text-white">
+            <button type="button" onClick={() => dispatch({ type: "menu" })} className="rounded-lg border border-white/15 px-4 py-3 text-sm font-bold text-white/70 hover:text-white">
               Menu
             </button>
           </div>

@@ -193,25 +193,25 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
       />
       <div className="flex flex-wrap items-center justify-center gap-2">
         {busy ? (
-          <button type="button" onClick={stop} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-sm font-semibold text-foreground">
+          <button type="button" onClick={stop} className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-4 py-2 text-sm font-semibold text-foreground">
             <Square size={12} fill="currentColor" /> Stop
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => run(false)} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-sm font-semibold text-foreground">
+            <button type="button" onClick={() => run(false)} className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-4 py-2 text-sm font-semibold text-foreground">
               <Play size={13} /> Preview
             </button>
             <button
               type="button"
               onClick={() => run(true)}
               disabled={!supported}
-              className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-fg disabled:opacity-40"
             >
               <Circle size={11} fill="currentColor" /> Record video
             </button>
           </>
         )}
-        <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
+        <div className="flex overflow-hidden rounded-md bg-bg-panel-2 text-xs">
           {[1, 0.5].map((s) => (
             <button
               key={s}
@@ -230,7 +230,7 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
             disabled={busy}
             onClick={() => setSound((v) => !v)}
             aria-pressed={sound}
-            className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium", sound ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
+            className={cn("hit-y flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium", sound ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
           >
             {sound ? <Music size={12} /> : <VolumeX size={12} />} Soundtrack
           </button>
@@ -247,11 +247,11 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
           <a
             href={video.url}
             download={`${fileName}.${video.ext}`}
-            className="flex items-center gap-1.5 rounded-full bg-success px-4 py-2 text-sm font-semibold text-white"
+            className="flex items-center gap-1.5 rounded-md bg-success px-4 py-2 text-sm font-semibold text-white"
           >
             <Download size={13} /> Download video
           </a>
-          <button type="button" onClick={() => void share()} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-sm font-semibold text-foreground">
+          <button type="button" onClick={() => void share()} className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-4 py-2 text-sm font-semibold text-foreground">
             <Share2 size={13} /> Share
           </button>
         </div>

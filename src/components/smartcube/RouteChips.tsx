@@ -59,7 +59,7 @@ export function RouteChips({ display, turns, position, partial, size = "md", var
               cues && "motion-reduce:transition-none",
               size === "lg" ? "min-w-[44px] text-xl" : "min-w-[34px] text-sm",
               done && "bg-bg-panel-2 text-muted-2 opacity-60",
-              current && "scale-110 bg-accent text-accent-fg shadow-lg",
+              current && "scale-110 bg-accent text-accent-fg",
               cues && current && "outline outline-2 outline-offset-2 outline-foreground",
               !done && !current && "bg-bg-panel-2 text-foreground",
               cues && !done && !current && "border border-dashed border-muted-2",

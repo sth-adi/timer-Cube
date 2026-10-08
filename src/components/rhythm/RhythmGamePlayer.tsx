@@ -118,7 +118,7 @@ export function RhythmGamePlayer({ reconstruction, moveTimestamps }: RhythmGameP
           {track.notes.length} moves · {track.hasRealTiming ? "your real solve timing" : "estimated pacing, no smart-cube timing on this solve"}
         </p>
         <p className="max-w-xs text-center text-xs text-muted-2">Tap or press any key exactly when each move lands on the line.</p>
-        <button type="button" onClick={start} className="tap-target rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-fg">
+        <button type="button" onClick={start} className="tap-target rounded-md bg-accent px-6 py-2.5 text-sm font-semibold text-accent-fg">
           Start
         </button>
       </div>
@@ -136,7 +136,7 @@ export function RhythmGamePlayer({ reconstruction, moveTimestamps }: RhythmGameP
         <p className="text-xs text-muted-2">
           Score {score.score} · Max combo {score.maxCombo}
         </p>
-        <button type="button" onClick={start} className="tap-target mt-2 rounded-full bg-bg-panel-2 px-5 py-2 text-sm font-medium text-foreground">
+        <button type="button" onClick={start} className="tap-target mt-2 rounded-md bg-bg-panel-2 px-5 py-2 text-sm font-medium text-foreground">
           Play again
         </button>
       </div>
@@ -149,7 +149,7 @@ export function RhythmGamePlayer({ reconstruction, moveTimestamps }: RhythmGameP
       {track.notes.map((note) => (
         <div
           key={note.index}
-          className="absolute left-1/2 flex h-9 w-9 items-center justify-center rounded-md bg-accent text-[10px] font-bold text-accent-fg"
+          className="absolute left-1/2 flex h-9 w-9 items-center justify-center rounded-md bg-accent text-[11px] font-bold text-accent-fg"
           style={{
             top: 230,
             marginLeft: -18,
@@ -170,7 +170,7 @@ export function RhythmGamePlayer({ reconstruction, moveTimestamps }: RhythmGameP
       )}
       <div className="absolute right-3 top-3 text-right">
         <p className="text-sm font-bold text-foreground">{score.score}</p>
-        <p className="text-[10px] text-muted-2">combo {score.combo}</p>
+        <p className="text-[11px] text-muted-2">combo {score.combo}</p>
       </div>
     </div>
   );

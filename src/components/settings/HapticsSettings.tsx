@@ -49,7 +49,7 @@ export function HapticsSettings({ className }: { className?: string }) {
   const info = HAPTIC_LEVEL_INFO[level];
   return (
     <div className={cn("mt-4 border-t border-border pt-3", className)} data-testid="haptics-settings">
-      <p id={`${id}-label`} className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">
+      <p id={`${id}-label`} className="mb-1.5 text-[11px] text-muted-2">
         Haptics
       </p>
 

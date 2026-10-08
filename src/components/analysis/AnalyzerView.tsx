@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Bookmark, BookmarkCheck, Gauge, Loader2, Target, Wand2, Zap } from "lucide-react";
+import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 import { useAnalysisStore } from "@/lib/store/analysisStore";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useFullSolve } from "@/hooks/useFullSolve";
@@ -61,17 +61,14 @@ export function AnalyzerView() {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3 pb-4">
       <div className="card rounded-xl p-3">
-        <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-          <Wand2 size={15} className="text-accent" />
-          Solve analyzer
-        </h2>
+        <h2 className="mb-2 text-base font-semibold text-foreground">Solve analyzer</h2>
         <p className="mb-3 text-xs leading-relaxed text-muted">
           Type the moves you actually made. The analyzer replays them on a virtual cube, works out where each
           phase started and ended, then solves every phase again from the position you were in, so you can see
           exactly where the moves went.
         </p>
 
-        <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted-2">Scramble</label>
+        <label className="mb-1 block text-[11px] font-medium text-muted-2">Scramble</label>
         <div className="mb-3 flex gap-2">
           <input
             value={scramble}
@@ -89,7 +86,7 @@ export function AnalyzerView() {
           </button>
         </div>
 
-        <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted-2">
+        <label className="mb-1 block text-[11px] font-medium text-muted-2">
           Your solution
         </label>
         <textarea
@@ -108,7 +105,7 @@ export function AnalyzerView() {
 
         <div className="flex items-end gap-2">
           <div className="min-w-0">
-            <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted-2">
+            <label className="mb-1 block text-[11px] font-medium text-muted-2">
               Time (optional)
             </label>
             <input
@@ -136,10 +133,8 @@ export function AnalyzerView() {
       </div>
 
       {errors.length > 0 && (
-        <div className="card animate-fade-in-up rounded-xl border-danger/40 p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-danger">
-            <AlertTriangle size={13} /> Couldn&apos;t analyze this solve
-          </p>
+        <div role="alert" className="animate-fade-in-up border-t border-danger/40 pt-3">
+          <p className="mb-1 text-sm font-semibold text-danger">Couldn&apos;t analyze this solve</p>
           <ul className="space-y-1 text-xs leading-relaxed text-muted">
             {errors.map((e) => (
               <li key={e}>{e}</li>
@@ -162,7 +157,7 @@ export function AnalyzerView() {
                   onClick={onSave}
                   disabled={isSaved}
                   className={cn(
-                    "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    "hit-y flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
                     isSaved ? "text-success" : "bg-bg-panel-2 text-muted hover:text-accent",
                   )}
                 >
@@ -171,20 +166,17 @@ export function AnalyzerView() {
                 </button>
               )}
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-border pt-2.5 text-[11px] text-muted">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-border pt-2.5 text-[11px] tabular-nums text-muted">
               <span className="flex items-center gap-1">
-                <Target size={11} className="text-accent" />
                 Cross on <span className="text-foreground">{result.crossFace}</span>
               </span>
               <span className="flex items-center gap-1">
-                <Zap size={11} className="text-accent" />
                 <span className="text-foreground">{result.metrics.stm}</span> STM ·{" "}
                 <span className="text-foreground">{result.metrics.qtm}</span> QTM ·{" "}
                 <span className="text-foreground">{result.metrics.rotations}</span> rotations
               </span>
               {result.tps !== undefined && (
                 <span className="flex items-center gap-1">
-                  <Gauge size={11} className="text-accent" />
                   <span className="text-foreground">{result.tps.toFixed(1)}</span> TPS
                 </span>
               )}

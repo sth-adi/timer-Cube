@@ -24,7 +24,7 @@ export function ReplayPaceCurve({ curve, frac, ticks, inset }: { curve: PaceCurv
   }`;
   return (
     <div className="w-full" data-testid="replay-pace">
-      <div className="flex h-3.5 items-baseline justify-between px-2 text-[10px] font-medium uppercase leading-3.5 tracking-wide text-muted-2" aria-hidden>
+      <div className="flex h-3.5 items-baseline justify-between px-2 text-[10px] font-medium leading-3.5 text-muted-2" aria-hidden>
         <span>Pace</span>
         <span className="normal-case tabular-nums tracking-normal">{readout}</span>
       </div>

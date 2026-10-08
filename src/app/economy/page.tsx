@@ -20,11 +20,11 @@ export default function EconomyPage() {
   return (
     <AnalyticsShell
       icon={<Minimize2 size={17} className="text-accent" />}
-      title="Move Economy Trend"
+      title="Move economy trend"
       subtitle="A learning curve for your move count, not your time."
     >
       {!r ? (
-        <NotEnough need={MIN_SOLVES} have={eligible} what="Move Economy Trend" />
+        <NotEnough need={MIN_SOLVES} have={eligible} what="Move economy trend" />
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -34,7 +34,7 @@ export default function EconomyPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Move count over your history</SectionTitle>
             <div className="relative flex h-20 items-end gap-[2px]">
               {(() => {

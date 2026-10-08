@@ -16,7 +16,7 @@ function Heatmap({ r }: { r: StallMapReport }) {
   const all = r.rows.flat().filter((v) => v > 0).sort((a, b) => a - b);
   const cap = all.length ? all[Math.floor(all.length * 0.95)] : 1;
   const colMax = Math.max(1, ...r.columns);
-  const where = (c: number) => `${PHASES[Math.floor(c / BINS_PER_PHASE)]}, ${Math.round(((c % BINS_PER_PHASE) / BINS_PER_PHASE) * 100)}–${Math.round((((c % BINS_PER_PHASE) + 1) / BINS_PER_PHASE) * 100)}% through`;
+  const where = (c: number) => `${PHASES[Math.floor(c / BINS_PER_PHASE)]}, ${Math.round(((c % BINS_PER_PHASE) / BINS_PER_PHASE) * 100)}-${Math.round((((c % BINS_PER_PHASE) + 1) / BINS_PER_PHASE) * 100)}% through`;
   return (
     <div ref={ref} className="relative flex flex-col gap-1">
       <div className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(4, 1fr)` }}>
@@ -36,7 +36,7 @@ function Heatmap({ r }: { r: StallMapReport }) {
           </div>
         ))}
       </div>
-      <p className="text-[11px] text-muted-2">↑ oldest of your last {r.solves} solves · newest ↓</p>
+      <p className="text-[11px] text-muted-2">Oldest of your last {r.solves} solves at the top, newest at the bottom</p>
       <div className="mt-1 grid h-12 items-end gap-px" style={{ gridTemplateColumns: `repeat(${r.columns.length}, 1fr)` }}>
         {r.columns.map((v, c) => (
           <div
@@ -64,7 +64,7 @@ export default function StallsPage() {
   return (
     <AnalyticsShell
       icon={<Flame size={17} className="text-accent" />}
-      title="Stall Map"
+      title="Stall map"
       subtitle="Where in the solve your pauses land, across your recent solves, the spots your lookahead runs dry."
     >
       {!r ? (
@@ -74,12 +74,12 @@ export default function StallsPage() {
           <Hero value={secs(total)} label="paused per solve, on average" sub={`last ${r.solves} smart-cube solves · a pause is a gap of 0.4s or more between turns`} />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Every pause, by where it happened</SectionTitle>
             <Heatmap r={r} />
           </div>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Your three worst spots</SectionTitle>
             {r.hotspots.map((h, i) => (
               <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-bg-panel-2 px-3 py-2">

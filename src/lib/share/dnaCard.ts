@@ -131,13 +131,12 @@ function drawRadar(card: Card, cx: number, cy: number, R: number, axes: DnaAxis[
     const maxW = Math.max(40, room);
     // Above the point for the top spoke, below for the bottom, level for the sides.
     const top = cos > 0.5 ? -58 : cos < -0.5 ? 4 : -26;
-    fitText(ctx, a.label.toUpperCase(), p.x, p.y + top + 24, maxW, {
+    fitText(ctx, a.label, p.x, p.y + top + 24, maxW, {
       maxPx: 25,
       minPx: 15,
       family: theme.fontSans,
       weight: 750,
       color: rgba(theme.fg, 1),
-      tracking: 1.4,
       align,
     });
     text(ctx, String(Math.round(a.score)), p.x, p.y + top + 52, {

@@ -23,7 +23,7 @@ export function EventTagSelector() {
         onClick={() => setPendingEvent(null)}
         aria-pressed={pendingEvent === null}
         className={cn(
-          "inline-flex items-center pointer-coarse:min-h-10 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+          "inline-flex items-center pointer-coarse:min-h-10 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
           pendingEvent === null ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-muted",
         )}
       >
@@ -36,7 +36,7 @@ export function EventTagSelector() {
           onClick={() => setPendingEvent(tag.id)}
           aria-pressed={pendingEvent === tag.id}
           className={cn(
-            "inline-flex items-center pointer-coarse:min-h-10 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+            "inline-flex items-center pointer-coarse:min-h-10 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
             pendingEvent === tag.id ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-muted",
           )}
         >

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Snowflake } from "lucide-react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -19,14 +20,14 @@ export default function ColdStartPage() {
   return (
     <AnalyticsShell
       icon={<Snowflake size={17} className="text-accent" />}
-      title="Cold Start Tax"
+      title="Cold start tax"
       subtitle="Are your first few turns after a pause slower than your steady speed?"
     >
       {!r ? (
-        <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">Cold Start Tax needs at least {MIN_SAMPLES} turns right after a pause, and {MIN_SAMPLES} steady turns to compare against.</p>
-          <p className="text-[11px] text-muted-2">Every smart-cube solve with move timing adds to this, keep going and it fills in.</p>
-        </div>
+        <EmptyState need={MIN_SAMPLES} unit="turns">
+          <p>Cold Start Tax needs at least {MIN_SAMPLES} turns right after a pause, and {MIN_SAMPLES} steady turns to compare against.</p>
+          <p className="mt-1 text-[12px] text-muted-2">Every smart-cube solve with move timing adds to this, keep going and it fills in.</p>
+        </EmptyState>
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -38,7 +39,7 @@ export default function ColdStartPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Speed per turn</SectionTitle>
             {(() => {
               const max = Math.max(r.coldAvgMs, r.warmAvgMs);

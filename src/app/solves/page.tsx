@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Timer as TimerIcon, Music, FlaskConical, ScanLine, Clapperboard, ListChecks, Trash2 } from "lucide-react";
+import { Timer as TimerIcon, ListChecks, Trash2 } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -95,62 +95,44 @@ export default function SolvesPage() {
       <AppBackground />
       <div className="flex flex-col items-center gap-4 px-4 py-6">
         <Link href="/" className="hit-y flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <TimerIcon size={16} className="text-accent" />
+          <TimerIcon size={16} strokeWidth={1.75} className="text-accent" />
           Cube
         </Link>
 
         <div className="flex w-full max-w-2xl flex-col gap-3 pb-8">
-          <div className="flex items-center justify-between px-1">
-            <h1 className="text-lg font-semibold text-foreground">Solves</h1>
-            <div className="flex flex-wrap justify-end gap-1.5 [@media(pointer:coarse)]:gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelecting((v) => !v);
-                  setPicked(new Set());
-                }}
-                aria-pressed={selecting}
-                // Nothing to select on an empty history (and a selection mode already open can still be closed).
-                disabled={rawSolves.length === 0 && !selecting}
-                className={cn(
-                  "hit-y flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40",
-                  selecting ? "bg-accent text-accent-fg" : "bg-accent-soft text-accent hover:bg-accent-soft/80",
-                )}
-                data-testid="select-toggle"
-              >
-                <ListChecks size={13} />
-                {selecting ? "Done" : "Select"}
-              </button>
-              <Link
-                href="/xray"
-                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
-              >
-                <ScanLine size={13} />
-                X-Ray
-              </Link>
-              <Link
-                href="/reel"
-                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
-              >
-                <Clapperboard size={13} />
-                Reel
-              </Link>
-              <Link
-                href="/lab"
-                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
-              >
-                <FlaskConical size={13} />
-                Lab
-              </Link>
-              <Link
-                href="/rhythm"
-                className="hit-y flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/80"
-              >
-                <Music size={13} />
-                Rhythm
-              </Link>
-            </div>
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h1 className="text-balance text-xl font-semibold leading-tight tracking-[-0.02em] text-foreground">Solves</h1>
+            <button
+              type="button"
+              onClick={() => {
+                setSelecting((v) => !v);
+                setPicked(new Set());
+              }}
+              aria-pressed={selecting}
+              // Nothing to select on an empty history (and a selection mode already open can still be closed).
+              disabled={rawSolves.length === 0 && !selecting}
+              className={cn(
+                "hit-y flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors active:translate-y-px disabled:opacity-40",
+                selecting ? "bg-accent text-accent-fg" : "bg-accent-soft text-accent",
+              )}
+              data-testid="select-toggle"
+            >
+              <ListChecks size={13} strokeWidth={1.75} />
+              {selecting ? "Done" : "Select"}
+            </button>
           </div>
+          <nav aria-label="Solve tools" className="-mt-1 flex flex-wrap gap-x-4 px-1">
+            {[
+              ["/xray", "X-Ray"],
+              ["/reel", "Reel"],
+              ["/lab", "Lab"],
+              ["/rhythm", "Rhythm"],
+            ].map(([href, label]) => (
+              <Link key={href} href={href} className="hit-y px-2 text-xs font-medium text-muted [@media(hover:hover)]:hover:text-foreground">
+                {label}
+              </Link>
+            ))}
+          </nav>
 
           {presentTags.length > 0 && (
             <div className="flex animate-fade-in-up flex-wrap gap-1.5 px-1 [@media(pointer:coarse)]:gap-2">
@@ -159,7 +141,7 @@ export default function SolvesPage() {
                 onClick={() => setSelected(null)}
                 aria-pressed={selected === null}
                 className={cn(
-                  "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "hit-y rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                   selected === null ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >
@@ -174,7 +156,7 @@ export default function SolvesPage() {
                     onClick={() => setSelected(tag)}
                     aria-pressed={selected === tag}
                     className={cn(
-                      "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                      "hit-y rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                       selected === tag ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                     )}
                   >
@@ -237,7 +219,7 @@ export default function SolvesPage() {
                 aria-pressed={!!filter.twoLook}
                 title="Solves where a step's algorithm took more than one look"
                 className={cn(
-                  "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "hit-y rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                   filter.twoLook ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >
@@ -249,7 +231,7 @@ export default function SolvesPage() {
                 aria-pressed={!!filter.mistake}
                 title="Solves the Mistake Radar flagged, a knocked pair, a broken cross, an extra look, wasted turns"
                 className={cn(
-                  "hit-y rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "hit-y rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                   filter.mistake ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
                 )}
               >
@@ -259,7 +241,7 @@ export default function SolvesPage() {
                 <button
                   type="button"
                   onClick={() => setFilter({})}
-                  className="hit-y rounded-full px-2 py-1.5 text-xs font-medium text-muted-2 hover:text-foreground"
+                  className="hit-y rounded-md px-2 py-1.5 text-xs font-medium text-muted-2 hover:text-foreground"
                 >
                   Clear
                 </button>
@@ -267,7 +249,7 @@ export default function SolvesPage() {
             </div>
           )}
           {matchSummary && (
-            <p className="px-1 text-xs text-muted">
+            <p className="tabular-timer px-1 text-xs text-muted">
               {matchSummary.n} solve{matchSummary.n === 1 ? "" : "s"}
               {matchSummary.mean !== null && <> · mean {formatTime(matchSummary.mean)}</>}
               {matchSummary.step?.mean != null && (
@@ -284,10 +266,10 @@ export default function SolvesPage() {
               <span className="mr-1 text-xs font-medium text-foreground" data-testid="bulk-count">
                 {livePicked.length} selected
               </span>
-              <button type="button" onClick={() => setPicked(new Set(shownIds))} className="inline-flex items-center pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
+              <button type="button" onClick={() => setPicked(new Set(shownIds))} className="inline-flex items-center pointer-coarse:min-h-10 rounded-md px-2.5 py-1 text-xs font-medium text-muted hover:bg-bg-panel-2 hover:text-foreground">
                 All shown ({shownIds.length})
               </button>
-              <button type="button" onClick={() => setPicked(new Set())} className="inline-flex items-center pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground">
+              <button type="button" onClick={() => setPicked(new Set())} className="inline-flex items-center pointer-coarse:min-h-10 rounded-md px-2.5 py-1 text-xs font-medium text-muted hover:bg-bg-panel-2 hover:text-foreground">
                 None
               </button>
               <span className="mx-0.5 h-4 w-px bg-border" />
@@ -297,7 +279,7 @@ export default function SolvesPage() {
                   type="button"
                   disabled={livePicked.length === 0}
                   onClick={() => void updateSolves(livePicked, { penalty: p })}
-                  className="inline-flex items-center pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-bg-panel disabled:opacity-40"
+                  className="inline-flex items-center pointer-coarse:min-h-10 rounded-md px-2.5 py-1 text-xs font-medium text-foreground hover:bg-bg-panel-2 disabled:opacity-40"
                 >
                   {p === "plus2" ? "+2" : p === "dnf" ? "DNF" : "Clear penalty"}
                 </button>
@@ -310,9 +292,9 @@ export default function SolvesPage() {
                   const v = e.target.value;
                   if (v) void updateSolves(livePicked, { event: v === "normal" ? null : (v as EventTag) });
                 }}
-                className="pointer-coarse:min-h-10 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[16px] font-medium text-foreground disabled:opacity-40 sm:text-[11px]"
+                className="pointer-coarse:min-h-10 rounded-md bg-bg-panel-2 px-2.5 py-1 text-[16px] font-medium text-foreground disabled:opacity-40 sm:text-xs"
               >
-                <option value="">Tag as…</option>
+                <option value="">Tag as</option>
                 <option value="normal">Normal</option>
                 {EVENT_TAGS.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -327,15 +309,15 @@ export default function SolvesPage() {
                   void removeSolves(livePicked);
                   setPicked(new Set());
                 }}
-                className="ml-auto flex items-center gap-1 pointer-coarse:min-h-10 rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-semibold text-danger disabled:opacity-40"
+                className="ml-auto flex items-center gap-1 pointer-coarse:min-h-10 rounded-md px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-40"
                 data-testid="bulk-delete"
               >
-                <Trash2 size={11} /> Delete
+                <Trash2 size={12} strokeWidth={1.75} /> Delete
               </button>
             </div>
           )}
 
-          <div className="card rounded-xl p-3">
+          <div className="card rounded-xl p-2 lg:p-3">
             <SolveList solves={solves} view={showView ? view : undefined} selection={selecting ? { selected: picked, toggle } : undefined} />
           </div>
         </div>
@@ -356,7 +338,7 @@ const SORTS: { value: SolveSort; label: string }[] = [
   { value: "pll", label: "Slowest PLL" },
 ];
 
-/** A native select dressed as one of the page's pills — the phone's own picker on mobile. */
+/** A native select styled as one of the page's filter chips — the phone's own picker on mobile. */
 function PillSelect({
   label,
   value,
@@ -375,7 +357,7 @@ function PillSelect({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
-        "max-w-[11rem] appearance-none truncate rounded-full border-0 px-3 py-1.5 text-[16px] font-medium sm:text-xs pointer-coarse:min-h-10 transition-colors focus:outline-none focus:ring-1 focus:ring-accent",
+        "max-w-[11rem] appearance-none truncate rounded-md border-0 px-3 py-1.5 text-[16px] font-medium sm:text-xs pointer-coarse:min-h-10 transition-colors focus:outline-none focus:ring-1 focus:ring-accent",
         active ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
       )}
     >

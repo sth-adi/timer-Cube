@@ -133,7 +133,7 @@ export function ReplayGhostTwin({
           </div>
         </TwinStage>
       </div>
-      <span className="max-w-[7rem] truncate text-[9px] font-medium uppercase tracking-wide text-muted-2">{frame.finished ? `${caption} done` : caption}</span>
+      <span className="max-w-[7rem] truncate text-[9px] font-medium text-muted-2">{frame.finished ? `${caption} done` : caption}</span>
     </div>
   );
 }

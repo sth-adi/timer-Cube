@@ -61,9 +61,9 @@ export function ShareCardButton() {
       type="button"
       onClick={onShare}
       disabled={solves.length === 0 || busy}
-      className="flex items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2.5 text-xs font-medium text-foreground/90 hover:brightness-110 disabled:opacity-40"
+      className="hit-y flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-accent active:translate-y-px disabled:opacity-40"
     >
-      <Share2 size={14} /> Share stats
+      <Share2 size={14} strokeWidth={1.75} /> Share stats
     </button>
   );
 }

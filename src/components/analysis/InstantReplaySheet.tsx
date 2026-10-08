@@ -128,7 +128,7 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="tap-target -mr-2.5 rounded-full text-muted hover:text-foreground"
+            className="tap-target -mr-2.5 rounded-md text-muted hover:text-foreground"
           >
             <X size={18} />
           </button>

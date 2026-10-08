@@ -88,7 +88,7 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
         <button
           type="button"
           onClick={onDone}
-          className="rounded-full bg-accent-soft px-5 py-2.5 text-sm font-medium text-accent"
+          className="rounded-lg bg-accent-soft px-5 py-2.5 text-sm font-medium text-accent"
         >
           Done
         </button>
@@ -101,7 +101,7 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
       <div className="flex w-full items-center justify-between">
         <span className="text-muted-2 text-xs">{queue.length} left</span>
         <button type="button" onClick={onDone} aria-label="Close review" className="tap-target -mr-2 text-muted hover:text-foreground">
-          <X size={18} />
+          <X size={18} strokeWidth={1.75} />
         </button>
       </div>
 
@@ -119,9 +119,9 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
         <button
           type="button"
           onClick={onReveal}
-          className="flex min-h-11 items-center gap-1.5 rounded-full px-4 py-2.5 text-sm text-muted-2 hover:text-muted hover:bg-bg-panel-2"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm text-muted-2 hover:text-muted hover:bg-bg-panel-2"
         >
-          <Eye size={14} /> Reveal algorithm
+          <Eye size={14} strokeWidth={1.75} /> Reveal algorithm
         </button>
       ) : (
         <div className="flex flex-col items-center gap-1">
@@ -133,8 +133,8 @@ export function ReviewSession({ initialQueue, onDone }: { initialQueue: string[]
                 isPB ? "text-success" : "text-muted-2",
               )}
             >
-              {isPB && <Trophy size={11} />}
-              {formatTime(recallMs)} recall{isPB ? ", new best!" : ""}
+              {isPB && <Trophy size={11} strokeWidth={1.75} />}
+              {formatTime(recallMs)} recall{isPB ? ", new best" : ""}
               {!isPB && bestRecallMs(currentId) !== null && (
                 <span className="text-muted-2"> · best {formatTime(bestRecallMs(currentId)!)}</span>
               )}

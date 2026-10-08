@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Binoculars } from "lucide-react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -33,12 +34,12 @@ export default function LookaheadPage() {
   const maxPause = Math.max(1, ...rows.map((x) => x.pause));
 
   return (
-    <AnalyticsShell icon={<Binoculars size={17} className="text-accent" />} title="Lookahead Tradeoff" subtitle="Does turning F2L calmer shorten your next pause, and is it worth it?">
+    <AnalyticsShell icon={<Binoculars size={17} className="text-accent" />} title="Lookahead tradeoff" subtitle="Does turning F2L calmer shorten your next pause, and is it worth it?">
       {!r ? (
-        <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">Lookahead Tradeoff needs at least {MIN_HANDOFFS} back-to-back F2L pair hand-offs.</p>
-          <p className="text-[11px] text-muted-2">Each smart-cube solve adds up to three, keep going and this fills in.</p>
-        </div>
+        <EmptyState need={MIN_HANDOFFS} unit="hand-offs">
+          <p>Lookahead Tradeoff needs at least {MIN_HANDOFFS} back-to-back F2L pair hand-offs.</p>
+          <p className="mt-1 text-[12px] text-muted-2">Each smart-cube solve adds up to three, keep going and this fills in.</p>
+        </EmptyState>
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -47,7 +48,7 @@ export default function LookaheadPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Pause before the next pair</SectionTitle>
             {rows.map((x) => (
               <div key={x.label} className="flex flex-col gap-1">

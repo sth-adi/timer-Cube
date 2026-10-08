@@ -101,11 +101,9 @@ body:has([data-testid="recap-actions"]) .moment-toast-wrap {
   gap: 1px;
 }
 .moment-toast__eyebrow {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.2;
-  text-transform: uppercase;
   color: var(--moment-ink);
 }
 .moment-toast__value {

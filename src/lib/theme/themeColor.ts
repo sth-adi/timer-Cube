@@ -4,13 +4,13 @@
  * step with the `--background` values in app/globals.css.
  */
 export const THEME_COLORS: Record<string, string> = {
-  nebula: "#08080f",
-  mint: "#0a0b0e",
-  carbon: "#050505",
-  sunset: "#120a10",
-  terminal: "#000000",
+  nebula: "#0c0e12",
+  mint: "#0b0f0f",
+  carbon: "#0a0a0b",
+  sunset: "#130f0e",
+  terminal: "#070b08",
   speedcube: "#0b0d12",
-  paper: "#f4f5f8",
+  paper: "#eef0f4",
 };
 
 export const DEFAULT_THEME_COLOR = THEME_COLORS.nebula;

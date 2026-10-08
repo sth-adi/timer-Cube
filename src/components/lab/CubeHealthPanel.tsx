@@ -33,7 +33,7 @@ function FaceTile({ f }: { f: FaceHealth }) {
       title={`${f.color}: ${STATUS_STYLE[f.status].label}`}
     >
       <span className={cn("text-lg font-bold tabular-nums", dark ? "text-black/80" : "text-white")}>
-        {f.status === "unknown" ? "–" : f.score}
+        {f.status === "unknown" ? "-" : f.score}
       </span>
     </div>
   );
@@ -67,7 +67,7 @@ export function CubeHealthPanel({ report }: { report: CubeHealthReport | null })
         </div>
         <div className="flex flex-col gap-1">
           <p className="flex items-center gap-1.5 text-3xl font-bold tabular-nums text-foreground">
-            <HeartPulse size={20} className="text-accent" />
+            <HeartPulse size={20} className="text-accent" strokeWidth={1.75} />
             {report.overallScore}
           </p>
           <p className="text-xs font-medium text-foreground">{report.headline}</p>
@@ -86,7 +86,7 @@ export function CubeHealthPanel({ report }: { report: CubeHealthReport | null })
                 <span className="h-3 w-3 rounded-[3px] ring-1 ring-black/30" style={{ background: FACELET_COLORS[f.face] }} />
                 {f.color}
               </span>
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", STATUS_STYLE[f.status].className)}>
+              <span className={cn("rounded-lg px-2 py-0.5 text-[10px] font-medium", STATUS_STYLE[f.status].className)}>
                 {STATUS_STYLE[f.status].label}
               </span>
             </div>

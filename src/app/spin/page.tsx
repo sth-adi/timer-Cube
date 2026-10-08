@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { RotateCw } from "lucide-react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -24,18 +25,16 @@ export default function SpinPage() {
       subtitle="Clockwise vs counter-clockwise, and which side of each axis is slower."
     >
       {!r ? (
-        <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-          <p className="text-sm text-muted">
-            Spin needs at least {MIN_TURNS_PER_FACE} qualifying turns on two opposite faces, or a clear mix of clockwise and counter-clockwise turns.
-          </p>
-          <p className="text-[11px] text-muted-2">Every smart-cube solve with timing adds to this, keep going and it fills in.</p>
-        </div>
+        <EmptyState need={MIN_TURNS_PER_FACE} unit="turns per face">
+          <p>Spin needs at least {MIN_TURNS_PER_FACE} qualifying turns on two opposite faces, or a clear mix of clockwise and counter-clockwise turns.</p>
+          <p className="mt-1 text-[12px] text-muted-2">Every smart-cube solve with timing adds to this, keep going and it fills in.</p>
+        </EmptyState>
       ) : (
         <>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
           {r.directions.length === 2 && (
-            <div className="card flex flex-col gap-3 rounded-xl p-4">
+            <div className="flex flex-col gap-3 border-t border-border pt-5">
               <SectionTitle>Direction bias</SectionTitle>
               {(() => {
                 const max = Math.max(...r.directions.map((d) => d.avgGapMs));
@@ -56,7 +55,7 @@ export default function SpinPage() {
           )}
 
           {r.axes.length > 0 && (
-            <div className="card flex flex-col gap-3 rounded-xl p-4">
+            <div className="flex flex-col gap-3 border-t border-border pt-5">
               <SectionTitle>Opposite-face axes</SectionTitle>
               {r.axes.map((a) => (
                 <div key={a.axis} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2">

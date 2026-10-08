@@ -1,6 +1,5 @@
 "use client";
 
-import { Palette } from "lucide-react";
 import { CROSS_COLORS, CROSS_COLOR_NAME, type NeutralityReport, type NeutralitySolve } from "@/lib/xray/neutrality";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { cn } from "@/lib/utils/cn";
@@ -13,9 +12,7 @@ export function SolveNeutrality({ solve }: { solve: NeutralitySolve }) {
   const sorted = [...CROSS_COLORS].sort((a, b) => solve.lengths[a] - solve.lengths[b]);
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-        <Palette size={13} className="text-accent" /> Cross on every color
-      </p>
+      <h3 className="text-sm font-semibold text-foreground">Cross on every color</h3>
       <div className="flex flex-col gap-1">
         {sorted.map((c) => {
           const len = solve.lengths[c];
@@ -93,7 +90,7 @@ export function NeutralityHistory({ report }: { report: NeutralityReport }) {
               </span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-panel-2">
-              <div className="h-full rounded-full bg-accent" style={{ width: `${(o.msSaved / maxSave) * 100}%` }} />
+              <div className="h-full rounded-md bg-accent" style={{ width: `${(o.msSaved / maxSave) * 100}%` }} />
             </div>
           </div>
         ))}

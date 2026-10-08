@@ -87,7 +87,7 @@ function PhaseTrack({
           <div key={label} className="flex flex-col items-center">
             <span
               className={cn(
-                "flex items-center gap-1 text-[10px] uppercase tracking-wide",
+                "flex items-center gap-1 text-[10px]",
                 active ? "text-accent" : done ? "text-muted" : "text-muted-2",
               )}
             >
@@ -316,7 +316,7 @@ export function TimerView() {
         </p>
       )}
       {pendingEvent && (
-        <p className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-medium text-accent">
+        <p className="text-xs font-medium text-accent">
           {EVENT_TAGS.find((t) => t.id === pendingEvent)?.label}
         </p>
       )}
@@ -375,7 +375,7 @@ export function TimerView() {
         </>
       )}
       {phase === "stopped" && lastResult && lastResult.penalty !== "none" && (
-        <p className="rounded-full bg-danger/15 px-3 py-1 text-sm font-semibold text-danger">
+        <p className="text-sm font-semibold text-danger">
           {lastResult.penalty === "dnf" ? "DNF" : "+2"}, started {((lastResult.inspection?.elapsedMs ?? 0) / 1000).toFixed(2)}s into inspection
         </p>
       )}

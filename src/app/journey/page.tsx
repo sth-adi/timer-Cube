@@ -18,34 +18,34 @@ const day = (t: number) => new Date(t).toLocaleDateString(undefined, { month: "s
 
 const DRILLS: Record<Focus, { href: string; label: string }[]> = {
   Cross: [
-    { href: "/blindcross", label: "Blind Cross" },
+    { href: "/blindcross", label: "Blind cross" },
     { href: "/xcross", label: "X-Cross Hunter" },
-    { href: "/crosscolor", label: "Cross Color Advisor" },
+    { href: "/crosscolor", label: "Cross color advisor" },
   ],
   F2L: [
     { href: "/blindspots", label: "F2L Pause Map" },
-    { href: "/mistakes", label: "Mistake Drills" },
+    { href: "/mistakes", label: "Mistake drills" },
     { href: "/satnav", label: "Sat-Nav" },
   ],
   OLL: [
-    { href: "/gym", label: "Alg Gym" },
-    { href: "/algspeed", label: "Alg Speed Check" },
-    { href: "/myalgs", label: "My Algs" },
+    { href: "/gym", label: "Alg gym" },
+    { href: "/algspeed", label: "Alg speed check" },
+    { href: "/myalgs", label: "My algs" },
   ],
   PLL: [
-    { href: "/gym", label: "Alg Gym" },
-    { href: "/algspeed", label: "Alg Speed Check" },
+    { href: "/gym", label: "Alg gym" },
+    { href: "/algspeed", label: "Alg speed check" },
     { href: "/auf", label: "AUF Audit" },
   ],
   Consistency: [
-    { href: "/consistency", label: "Consistency Lab" },
-    { href: "/tilt", label: "Tilt Meter" },
-    { href: "/comp", label: "Comp Sim" },
+    { href: "/consistency", label: "Consistency lab" },
+    { href: "/tilt", label: "Tilt meter" },
+    { href: "/comp", label: "Comp sim" },
   ],
   Consolidate: [
-    { href: "/comp", label: "Comp Sim" },
-    { href: "/pacer", label: "Split Pacer" },
-    { href: "/consistency", label: "Consistency Lab" },
+    { href: "/comp", label: "Comp sim" },
+    { href: "/pacer", label: "Split pacer" },
+    { href: "/consistency", label: "Consistency lab" },
   ],
 };
 
@@ -81,11 +81,11 @@ function Stepper({ value, label, onMinus, onPlus }: { value: string; label: stri
     <div className="flex flex-col items-center gap-1">
       <div className="flex items-center gap-2">
         <button type="button" onClick={onMinus} aria-label={`Less ${label}`} className="hit flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-foreground">
-          <Minus size={14} />
+          <Minus size={14} strokeWidth={1.75} />
         </button>
         <p className="min-w-[4.5rem] text-center text-xl font-bold tabular-nums text-foreground">{value}</p>
         <button type="button" onClick={onPlus} aria-label={`More ${label}`} className="hit flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-foreground">
-          <Plus size={14} />
+          <Plus size={14} strokeWidth={1.75} />
         </button>
       </div>
       <p className="text-[11px] text-muted-2">{label}</p>
@@ -172,7 +172,7 @@ function Setup({ solves }: { solves: Solve[] }) {
         </div>
         <p className={cn("text-center text-[11px]", perWeekDrop > level * 0.03 ? "text-warning" : "text-muted")}>
           {perWeekDrop > level * 0.03
-            ? `That's ${s2(perWeekDrop)} a week, steep. Most cubers manage 1–2% a week; consider more weeks.`
+            ? `That's ${s2(perWeekDrop)} a week, steep. Most cubers manage 1 to 2% a week; consider more weeks.`
             : `About ${s2(perWeekDrop)} a week on average, more at the start.`}
         </p>
       </div>
@@ -195,7 +195,7 @@ function Setup({ solves }: { solves: Solve[] }) {
         </p>
       </div>
 
-      <button type="button" onClick={() => start({ ...draft, createdAt: wallNow() })} className="rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-fg">
+      <button type="button" onClick={() => start({ ...draft, createdAt: wallNow() })} className="rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-accent-fg">
         Start the journey
       </button>
     </div>
@@ -212,7 +212,7 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="card flex flex-col gap-2 rounded-xl p-4">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">
+        <p className="text-[11px] font-medium text-muted-2">
           {s2(j.baselineMs)} → {s2(j.targetMs)} · {j.weeks} weeks from {day(j.createdAt)}
         </p>
         <p className="text-sm font-semibold leading-snug text-foreground">{review.headline}</p>
@@ -229,7 +229,7 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
 
       {thisWeek && (
         <div className="card flex flex-col gap-2 rounded-xl p-4 ring-1 ring-accent/40">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-accent">This week · {thisWeek.plan.focus}</p>
+          <p className="text-[11px] font-medium text-accent">This week · {thisWeek.plan.focus}</p>
           <p className="text-[12px] text-foreground">{FOCUS_BLURB[thisWeek.plan.focus]}</p>
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="rounded-lg bg-bg-panel-2 py-1.5">
@@ -246,7 +246,7 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
           <div className="flex flex-col gap-1">
             {DRILLS[thisWeek.plan.focus].map((d) => (
               <Link key={d.href} href={d.href} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2 text-[12px] font-medium text-foreground hover:text-accent">
-                {d.label} <ChevronRight size={13} className="text-muted-2" />
+                {d.label} <ChevronRight size={13} className="text-muted-2" strokeWidth={1.75} />
               </Link>
             ))}
           </div>
@@ -263,7 +263,7 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
               {w.meanMs !== null && w.status !== "upcoming" ? `${s2(w.meanMs)} / ` : ""}
               {s2(w.plan.checkpointMs)}
             </span>
-            {STATUS[w.status].label && <span className={cn("w-[5.5rem] shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-semibold", STATUS[w.status].tone)}>{STATUS[w.status].label}</span>}
+            {STATUS[w.status].label && <span className={cn("w-[5.5rem] shrink-0 rounded-lg px-2 py-0.5 text-center text-[11px] font-semibold", STATUS[w.status].tone)}>{STATUS[w.status].label}</span>}
           </div>
         ))}
       </div>
@@ -276,11 +276,11 @@ function Progress({ j, solves }: { j: Journey; solves: Solve[] }) {
               const finalMs = [...review.weeks].reverse().find((w) => w.meanMs !== null && w.status !== "upcoming")?.meanMs ?? null;
               end({ endedAt: wallNow(), finalMs, reached: review.reached });
             }}
-            className="hit-y flex-1 rounded-full bg-danger px-4 py-2 text-xs font-semibold text-white"
+            className="hit-y flex-1 rounded-lg bg-danger px-4 py-2 text-xs font-semibold text-white"
           >
             End it
           </button>
-          <button type="button" onClick={() => setConfirm(false)} className="hit-y flex-1 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
+          <button type="button" onClick={() => setConfirm(false)} className="hit-y flex-1 rounded-lg bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
             Keep going
           </button>
         </div>
@@ -304,7 +304,7 @@ export default function JourneyPage() {
   const solves = useThreeByThree();
 
   return (
-    <AnalyticsShell icon={<Route size={17} className="text-accent" />} title="Training Journey" subtitle="A goal and a deadline, turned into a week-by-week road you can check yourself against.">
+    <AnalyticsShell icon={<Route size={17} className="text-accent" strokeWidth={1.75} />} title="Training journey" subtitle="A goal and a deadline, turned into a week-by-week road you can check yourself against.">
       {journey ? <Progress j={journey} solves={solves} /> : <Setup solves={solves} />}
       {past.length > 0 && (
         <div className="card flex flex-col gap-1 rounded-xl p-4">

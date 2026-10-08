@@ -26,7 +26,7 @@ export function GestureToast({ toast }: { toast: Toast | null }) {
       key={toast.id}
       role="status"
       className={cn(
-        "fixed bottom-24 left-1/2 z-50 flex animate-[gesture-toast_0.25s_ease-out] items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg",
+        "fixed bottom-24 left-1/2 z-50 flex animate-[gesture-toast_0.25s_ease-out] items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-lg",
         toast.ok ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted",
       )}
       style={{ transform: "translateX(-50%)" }}
@@ -57,7 +57,7 @@ export function GestureLegend({ className }: { className?: string }) {
 export function GestureHint() {
   return (
     <p className="flex items-center gap-1 text-[10px] text-muted-2">
-      <Hand size={11} /> Cube gestures on, spin a face 4× to control the app
+      <Hand size={11} strokeWidth={1.75} /> Cube gestures on, spin a face 4× to control the app
     </p>
   );
 }

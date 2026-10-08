@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils/cn";
 const secs = (ms: number) => `${(ms / 1000).toFixed(2)}s`;
 
 const VERDICT: Record<NonNullable<HandoffStat["verdict"]>, { label: string; className: string }> = {
-  finding: { label: "stops to look", className: "bg-danger/15 text-danger" },
-  solution: { label: "long way round", className: "bg-warning/15 text-warning" },
-  fine: { label: "flowing", className: "bg-success/15 text-success" },
+  finding: { label: "stops to look", className: "text-danger" },
+  solution: { label: "long way round", className: "text-warning" },
+  fine: { label: "flowing", className: "text-success" },
 };
 
 function HandoffRow({ h, max }: { h: HandoffStat; max: number }) {
@@ -21,7 +21,7 @@ function HandoffRow({ h, max }: { h: HandoffStat; max: number }) {
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-foreground">{h.label}</span>
         {h.verdict ? (
-          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", VERDICT[h.verdict].className)}>{VERDICT[h.verdict].label}</span>
+          <span className={cn("text-[11px] font-semibold", VERDICT[h.verdict].className)}>{VERDICT[h.verdict].label}</span>
         ) : (
           <span className="text-[11px] text-muted-2">{h.count} pairs · need more</span>
         )}
@@ -58,7 +58,7 @@ export function PauseMapCard({ report, onDrill }: { report: PauseMapReport; onDr
   );
 
   return (
-    <div className="card flex flex-col gap-3 rounded-xl p-4">
+    <div className="flex flex-col gap-3 border-t border-border pt-5">
       <p className="text-[11px] leading-relaxed text-muted">{report.headline}</p>
       <div className="flex flex-col gap-3">
         {report.handoffs.map((h) => (
@@ -72,14 +72,14 @@ export function PauseMapCard({ report, onDrill }: { report: PauseMapReport; onDr
       </p>
 
       {onDrill && report.worst && (
-        <button type="button" onClick={onDrill} className="rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
+        <button type="button" onClick={onDrill} className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
           Drill {report.worst.label.toLowerCase()} · {report.examples.length} real position{report.examples.length === 1 ? "" : "s"}
         </button>
       )}
 
       {effects.length > 0 && (
         <div className="flex flex-col gap-2 rounded-lg bg-bg-panel-2 px-3 py-2.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Did drilling help? (your real solves, not the drills)</p>
+          <p className="text-[11px] font-medium text-muted-2">Did drilling help? (your real solves, not the drills)</p>
           {effects.map(({ h, e, n }) => (
             <div key={h.order} className="text-[11px] text-muted">
               <span className="font-medium text-foreground">{h.label}</span>, drilled {n}× since {new Date(e.since).toLocaleDateString()}.{" "}

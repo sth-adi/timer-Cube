@@ -193,7 +193,7 @@ function PhaseSplitsRow({
           <span
             key={label}
             className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-medium tabular-nums",
+              "rounded-md px-2.5 py-1 text-[11px] font-medium tabular-nums",
               isCurrent
                 ? overdue
                   ? "bg-warning/15 text-warning"
@@ -887,7 +887,7 @@ export function SmartCubeTimer() {
     <button
       type="button"
       onClick={() => cancel()}
-      className="rounded-full px-2 py-0.5 text-[11px] font-medium text-muted-2 underline-offset-2 hover:text-muted hover:underline"
+      className="rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-2 underline-offset-2 hover:text-muted hover:underline"
       title="Not ready after all? Disarm, nothing is recorded, and the next scramble check starts over."
       data-testid="cancel-inspection"
     >
@@ -1197,7 +1197,7 @@ export function SmartCubeTimer() {
         )}
 
         {pendingEvent && (
-          <p className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-medium text-accent">
+          <p className="text-xs font-medium text-accent">
             {EVENT_TAGS.find((t) => t.id === pendingEvent)?.label}
           </p>
         )}
@@ -1259,7 +1259,7 @@ export function SmartCubeTimer() {
           )}
 
           {abortedByBack && !recording && (
-            <p className="rounded-full bg-warning/15 px-3 py-1 text-[11px] font-medium text-warning" role="status" data-testid="solve-aborted">
+            <p className="text-xs font-medium text-warning" role="status" data-testid="solve-aborted">
               Solve aborted, nothing was saved
             </p>
           )}
@@ -1268,7 +1268,7 @@ export function SmartCubeTimer() {
             <button
               type="button"
               onClick={() => stopSolve("discard")}
-              className="flex min-h-10 items-center gap-1.5 rounded-full bg-danger/15 px-4 text-xs font-semibold text-danger transition-colors hover:bg-danger/25 active:bg-danger/25"
+              className="flex min-h-10 items-center gap-1.5 rounded-md bg-danger/15 px-4 text-xs font-semibold text-danger transition-colors hover:bg-danger/25 active:bg-danger/25"
               title="Throw this solve away: the time isn't saved and the next scramble comes up. The phone's Back button does the same."
               data-testid="abort-solve"
             >
@@ -1303,7 +1303,7 @@ export function SmartCubeTimer() {
         <div
           key="mimic"
           className={cn(
-            gyroActive ? "relative" : "card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl",
+            gyroActive ? "relative" : "card h-40 w-full max-w-[13rem] overflow-hidden rounded-lg",
             solveLive ? LIVE_CUBE : cubeSettling ? "cube-settle pointer-events-none absolute" : "pointer-events-none invisible absolute",
           )}
           data-testid={gyroActive ? undefined : "live-mimic"}
@@ -1316,7 +1316,7 @@ export function SmartCubeTimer() {
           )}
           {gyroActive && solveLive && regripCount > 0 && (
             <span
-              className="absolute right-0 top-0 whitespace-nowrap rounded-full bg-bg-elevated px-2 py-1 text-[11px] font-medium leading-none text-foreground ring-1 ring-border-strong"
+              className="absolute right-0 top-0 whitespace-nowrap rounded-md bg-bg-elevated px-2 py-1 text-[11px] font-medium leading-none text-foreground ring-1 ring-border-strong"
               data-testid="regrip-badge"
               title="Whole-cube rotations so far this attempt, fewer usually means a smoother solve"
             >
@@ -1353,10 +1353,10 @@ export function SmartCubeTimer() {
               {/* Throwing the solve away is "Abort solve" above; this is only for a cube that IS solved while the app missed a turn. 40px+ targets: it is tapped mid-solve with a cube in the other hand. */}
               {stopOpen ? (
                 <div className="flex flex-wrap items-center justify-center gap-1.5">
-                  <button type="button" onClick={() => stopSolve("solved")} className="flex min-h-10 items-center rounded-full bg-accent px-4 text-xs font-semibold text-accent-fg" title="The cube is solved but the app missed a turn" data-testid="stop-solved">
+                  <button type="button" onClick={() => stopSolve("solved")} className="flex min-h-10 items-center rounded-md bg-accent px-4 text-xs font-semibold text-accent-fg" title="The cube is solved but the app missed a turn" data-testid="stop-solved">
                     It&apos;s solved, save {formatTime(lastMoveMs - (startedAtMs ?? lastMoveMs))}
                   </button>
-                  <button type="button" onClick={() => stopSolve("dnf")} className="flex min-h-10 items-center rounded-full bg-bg-panel-2 px-4 text-xs font-semibold text-foreground" data-testid="stop-dnf">
+                  <button type="button" onClick={() => stopSolve("dnf")} className="flex min-h-10 items-center rounded-md bg-bg-panel-2 px-4 text-xs font-semibold text-foreground" data-testid="stop-dnf">
                     Save as DNF
                   </button>
                   <button type="button" onClick={() => setStopOpen(false)} className="flex min-h-10 items-center px-3 text-xs text-muted" data-testid="stop-keep-going">
@@ -1367,7 +1367,7 @@ export function SmartCubeTimer() {
                 <button
                   type="button"
                   onClick={() => setStopOpen(true)}
-                  className="flex min-h-10 items-center rounded-full px-3 text-xs text-muted underline-offset-2 hover:text-foreground hover:underline"
+                  className="flex min-h-10 items-center rounded-md px-3 text-xs text-muted underline-offset-2 hover:text-foreground hover:underline"
                   title="The cube is solved but the clock kept running, save the time as it stands, or as a DNF"
                   data-testid="stop-solve"
                 >
@@ -1503,7 +1503,7 @@ export function SmartCubeTimer() {
             <div className="flex w-full flex-col gap-3">
               {buckets.length > 1 && (
                 <div className="flex flex-col gap-1">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Turn speed through the solve</p>
+                  <p className="text-[10px] font-medium text-muted-2">Turn speed through the solve</p>
                   <div className="flex h-12 w-full items-end gap-0.5 rounded-lg bg-bg-panel-2 p-1.5">
                     {buckets.map((b, i) => (
                       <div
@@ -1577,7 +1577,7 @@ export function SmartCubeTimer() {
           {/* Hangs above this block (out of the flow), over the empty room under the cube's controls, so nothing moves when it comes or goes. */}
           {readyMoment && <ConnectedMoment name={nickname ?? deviceName} batterySupported={batterySupported} batteryLevel={batteryLevel} onDone={endReadyMoment} />}
           {finished && (
-            <p className="border-t border-border pt-3 text-[11px] font-medium uppercase tracking-wide text-muted">
+            <p className="border-t border-border pt-3 text-[11px] font-medium text-muted">
               Next scramble, turn the cube to start it and this recap clears
             </p>
           )}
@@ -1597,7 +1597,7 @@ export function SmartCubeTimer() {
                   type="button"
                   onClick={() => void adoptCubeAsScramble()}
                   disabled={adopting}
-                  className="rounded-full bg-bg-panel-2 px-3 py-1.5 text-[11px] font-medium text-foreground hover:bg-bg-panel disabled:opacity-50"
+                  className="rounded-md bg-bg-panel-2 px-3 py-1.5 text-[11px] font-medium text-foreground hover:bg-bg-panel disabled:opacity-50"
                   title="Skip the undo: whatever's on the cube right now becomes the scramble, and inspection starts"
                   data-testid="keep-cube"
                 >

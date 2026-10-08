@@ -9,7 +9,7 @@ export function FreestylePanel({ onCaptureNow, onUseAnyway }: { onCaptureNow: ()
   const { status, turns, easyMoves } = useFreestyleStore();
 
   return (
-    <div className="card flex w-full max-w-md flex-col items-center gap-2 rounded-xl px-4 py-3 text-center" data-testid="freestyle-panel">
+    <div className="flex w-full max-w-md flex-col items-center gap-2 border-t border-border px-4 pt-3 text-center" data-testid="freestyle-panel">
       <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
         <Shuffle size={15} className="text-accent" /> Freestyle scramble
       </p>
@@ -22,7 +22,7 @@ export function FreestylePanel({ onCaptureNow, onUseAnyway }: { onCaptureNow: ()
           <p className="text-xs text-warning">
             That&apos;s only {easyMoves} move{easyMoves === 1 ? "" : "s"} from solved, an easy case, not a scramble. Keep mixing, or:
           </p>
-          <button type="button" onClick={onUseAnyway} className="rounded-full bg-bg-panel-2 px-3 py-1 text-xs font-medium text-foreground hover:bg-bg-panel">
+          <button type="button" onClick={onUseAnyway} className="rounded-md bg-bg-panel-2 px-3 py-1 text-xs font-medium text-foreground hover:bg-bg-panel">
             Use it anyway
           </button>
         </>

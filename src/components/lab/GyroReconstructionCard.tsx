@@ -41,10 +41,10 @@ export function GyroReconstructionCard({ summary, phases }: GyroReconstructionCa
     <div className="card flex w-full flex-col gap-2.5 rounded-xl p-3">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-          <RotateCw size={13} className="text-accent" /> Rotation-aware reconstruction
+          <RotateCw size={13} className="text-accent" strokeWidth={1.75} /> Rotation-aware reconstruction
         </p>
         <button type="button" onClick={copy} className="flex items-center gap-1 text-[11px] text-muted-2 hover:text-foreground">
-          {copied ? <Check size={11} /> : <Copy size={11} />} {copied ? "Copied" : "Copy"}
+          {copied ? <Check size={11} strokeWidth={1.75} /> : <Copy size={11} strokeWidth={1.75} />} {copied ? "Copied" : "Copy"}
         </button>
       </div>
       <p className="text-[11px] text-muted-2">Held {summary.startLabel} at the first move · {total === 0 ? "no regrips" : `${total} regrip${total === 1 ? "" : "s"}`}</p>
@@ -54,7 +54,7 @@ export function GyroReconstructionCard({ summary, phases }: GyroReconstructionCa
           <span
             key={p.label}
             className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums",
+              "rounded-lg px-2 py-0.5 text-[10px] font-medium tabular-nums",
               perPhase[i] === 0
                 ? "bg-bg-panel-2 text-muted-2"
                 : i === worst && perPhase[i] > 1

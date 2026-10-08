@@ -104,7 +104,7 @@ export function BldMemoTrainer() {
     <div className="flex w-full max-w-xl flex-col gap-3 pb-4">
       <div className="card rounded-xl p-3">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-          <Brain size={15} className="text-accent" />
+          <Brain size={15} className="text-accent" strokeWidth={1.75} />
           BLD memo trainer
         </h2>
         <p className="mb-3 text-xs leading-relaxed text-muted">
@@ -125,7 +125,7 @@ export function BldMemoTrainer() {
                 disabled={!speechSupported}
                 className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-fg disabled:opacity-40"
               >
-                {playing ? <Square size={13} /> : <Play size={13} />}
+                {playing ? <Square size={13} strokeWidth={1.75} /> : <Play size={13} strokeWidth={1.75} />}
                 {playing ? "Stop" : "Speak memo"}
               </button>
               <label className="flex items-center gap-1.5 text-[11px] text-muted">
@@ -148,7 +148,7 @@ export function BldMemoTrainer() {
               if (items.length === 0) return null;
               return (
                 <div key={section} className="mb-2">
-                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+                  <p className="mb-1 text-[10px] font-medium text-muted-2">
                     {section === "corner" ? "Corners" : "Edges"}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -182,7 +182,7 @@ export function BldMemoTrainer() {
           className="flex w-full items-center justify-between text-xs font-medium text-muted hover:text-foreground"
         >
           Lettering reference
-          <ChevronDown size={14} className={cn("transition-transform", showLegend && "rotate-180")} />
+          <ChevronDown size={14} className={cn("transition-transform", showLegend && "rotate-180")} strokeWidth={1.75} />
         </button>
         {showLegend && (
           <div className="mt-2 flex flex-col gap-2">
@@ -191,9 +191,9 @@ export function BldMemoTrainer() {
               is <span className="font-mono font-semibold text-foreground">A</span> for both. A word is the chain of
               letters starting from wherever a piece currently sits, all the way back to the buffer.
             </p>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Corners (slot → U/L/F/R/B/D letters)</p>
+            <p className="text-[10px] font-medium text-muted-2">Corners (slot → U/L/F/R/B/D letters)</p>
             <LegendTable labels={CORNER_SLOT_LABELS} table={CORNER_LETTER} />
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Edges (slot → letters)</p>
+            <p className="text-[10px] font-medium text-muted-2">Edges (slot → letters)</p>
             <LegendTable labels={EDGE_SLOT_LABELS} table={EDGE_LETTER} />
           </div>
         )}

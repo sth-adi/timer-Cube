@@ -76,13 +76,13 @@ export function ScrambleBar({ className }: { className?: string }) {
     <div className={cn("flex flex-col items-center gap-1.5 px-4 sm:gap-3", className)}>
       <div className="flex items-center gap-1.5">
         {event !== "333" && (
-          <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+          <span className="text-[11px] font-medium text-accent">
             {WCA_EVENTS.find((e) => e.id === event)?.label}
           </span>
         )}
         {(event !== "333" || practiceMode) && (
           <span
-            className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-warning"
+            className="text-[11px] font-medium text-warning"
             title={
               event !== "333"
                 ? "A random-move scramble for this puzzle size, not a true random-state competition scramble."
@@ -94,7 +94,7 @@ export function ScrambleBar({ className }: { className?: string }) {
         )}
       </div>
       <div className="flex flex-col items-center gap-0.5 sm:flex-row sm:items-start sm:justify-center sm:gap-2">
-        <p className="tabular-timer max-w-3xl text-center text-base leading-snug sm:text-xl font-medium tracking-wide text-foreground/90 select-text">
+        <p className="tabular-timer max-w-3xl text-center text-base leading-snug sm:text-xl font-medium text-foreground/90 select-text">
           {freestyleAwaiting
             ? "Freestyle, scramble your cube however you like"
             : loading && !scramble
@@ -124,7 +124,7 @@ export function ScrambleBar({ className }: { className?: string }) {
             onClick={previousScramble}
             disabled={historyIndex <= 0}
             aria-label="Previous scramble"
-            className="tap-target rounded-full text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-30"
+            className="tap-target rounded-md text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-30"
           >
             <ChevronLeft size={17} />
           </button>
@@ -134,7 +134,7 @@ export function ScrambleBar({ className }: { className?: string }) {
             disabled={!scramble}
             aria-label="Copy scramble"
             className={cn(
-              "tap-target rounded-full transition-colors disabled:opacity-40",
+              "tap-target rounded-md transition-colors disabled:opacity-40",
               copied ? "text-success" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
             )}
           >
@@ -147,7 +147,7 @@ export function ScrambleBar({ className }: { className?: string }) {
               aria-label="Paste a scramble"
               title={pasteState === "bad" ? "That isn't a 3x3 scramble, only U D L R F B turns" : "Paste a scramble from your clipboard and solve that one"}
               className={cn(
-                "tap-target rounded-full transition-colors",
+                "tap-target rounded-md transition-colors",
                 pasteState === "ok" ? "text-success" : pasteState === "bad" ? "text-danger" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
               )}
               data-testid="paste-scramble"
@@ -163,7 +163,7 @@ export function ScrambleBar({ className }: { className?: string }) {
               aria-label="Show scramble diagram"
               aria-pressed={netOpen}
               className={cn(
-                "tap-target rounded-full transition-colors disabled:opacity-40",
+                "tap-target rounded-md transition-colors disabled:opacity-40",
                 netOpen ? "text-accent bg-accent-soft" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
               )}
             >
@@ -177,7 +177,7 @@ export function ScrambleBar({ className }: { className?: string }) {
             aria-label="Copy a link a friend can use to race this exact scramble"
             title="Copy challenge link"
             className={cn(
-              "tap-target rounded-full transition-colors disabled:opacity-40",
+              "tap-target rounded-md transition-colors disabled:opacity-40",
               linkCopied ? "text-success" : "text-muted hover:text-foreground hover:bg-bg-panel-2",
             )}
           >
@@ -188,7 +188,7 @@ export function ScrambleBar({ className }: { className?: string }) {
             onClick={() => nextScramble()}
             disabled={loading}
             aria-label="New scramble"
-            className="tap-target rounded-full text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-40"
+            className="tap-target rounded-md text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors disabled:opacity-40"
           >
             <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
           </button>
@@ -196,7 +196,7 @@ export function ScrambleBar({ className }: { className?: string }) {
       </div>
 
       {netAvailable && netOpen && scramble && (
-        <div className="card animate-fade-in-up w-full max-w-sm rounded-xl p-4">
+        <div className="card animate-fade-in-up w-full max-w-sm rounded-lg p-4">
           <ScrambleNet scramble={scramble} className="w-full" />
         </div>
       )}

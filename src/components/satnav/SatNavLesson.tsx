@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, GraduationCap, Lightbulb, Loader2, PartyPopper, RefreshCw } from "lucide-react";
+import { CheckCircle2, Lightbulb, Loader2, RefreshCw } from "lucide-react";
 import { RouteChips } from "@/components/smartcube/RouteChips";
 import { GyroTwin } from "@/components/lab/GyroTwin";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
@@ -165,7 +165,7 @@ export function SatNavLesson() {
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex w-full items-center justify-between">
-        <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
+        <div className="flex overflow-hidden rounded-md bg-bg-panel-2 text-xs">
           {(
             [
               ["guided", "Guided"],
@@ -186,7 +186,7 @@ export function SatNavLesson() {
         <button
           type="button"
           onClick={replan}
-          className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground"
+          className="flex items-center gap-1 rounded-md bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground"
         >
           <RefreshCw size={11} /> Replan
         </button>
@@ -197,8 +197,7 @@ export function SatNavLesson() {
 
       {finished && (!step || step.stage === "solved") ? (
         <div className="card flex w-full flex-col items-center gap-2 rounded-xl p-5 text-center">
-          <PartyPopper size={28} className="text-accent" />
-          <p className="text-lg font-bold text-foreground">You solved it</p>
+          <p className="text-lg font-semibold text-foreground">You solved it</p>
           <p className="text-xs text-muted">
             {finished.turns} turns in {(finished.ms / 1000).toFixed(1)}s. Scramble it and the next lesson starts on its own
             {style === "guided" ? ", try it with “Try first” on." : "."}
@@ -209,14 +208,13 @@ export function SatNavLesson() {
           <Loader2 size={15} className="animate-spin text-accent" /> Reading your cube…
         </p>
       ) : step.stage === "solved" ? (
-        <div className="card w-full rounded-xl p-5 text-center text-sm text-muted">Your cube is solved, scramble it to start a lesson.</div>
+        <p className="w-full border-y border-border py-6 text-center text-sm text-muted">Your cube is solved. Scramble it to start a lesson.</p>
       ) : (
         lesson && (
           <div className="card flex w-full flex-col gap-3 rounded-xl p-4">
             <div className="flex items-start gap-2.5">
-              <GraduationCap size={18} className="mt-0.5 shrink-0 text-accent" />
               <div className="flex flex-col gap-0.5">
-                <p className="text-sm font-bold text-foreground">
+                <p className="text-sm font-semibold text-foreground">
                   {lesson.name}
                   {leg?.label ? ` · ${leg.label}` : ""}
                 </p>
@@ -235,12 +233,12 @@ export function SatNavLesson() {
                   {leg && <span>{leg.turns} turns so far</span>}
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-bg-panel-2">
-                  <div className="h-full rounded-full bg-success transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+                  <div className="h-full rounded-md bg-success transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
                 </div>
               </div>
             )}
 
-            <div className="flex min-h-[96px] flex-col items-center justify-center gap-2 rounded-lg bg-bg-panel-2/50 p-3">
+            <div className="flex min-h-[96px] flex-col items-center justify-center gap-2 border-t border-border pt-4">
               {step.stage === "lost" ? (
                 <p className="text-xs text-muted">{step.title}</p>
               ) : style === "guided" ? (
@@ -252,10 +250,10 @@ export function SatNavLesson() {
                   <>
                     {nextDisplay && (
                       <div className="flex items-center gap-3">
-                        <span className="text-[11px] uppercase tracking-wide text-muted-2">
+                        <span className="text-[11px] text-muted-2">
                           Turn {nav.position + 1}/{step.turns.length}
                         </span>
-                        <span className="flex flex-col items-center rounded-xl bg-accent px-4 py-1.5 font-mono text-4xl font-black text-accent-fg shadow-lg">
+                        <span className="flex flex-col items-center rounded-lg bg-accent px-4 py-1.5 font-mono text-4xl font-bold text-accent-fg">
                           {nextDisplay}
                           <span className="mt-0.5 h-1.5 w-6 rounded-full ring-1 ring-black/20" style={{ background: FACELET_COLORS[nextTurn?.[0] ?? ""] }} />
                         </span>
@@ -273,7 +271,7 @@ export function SatNavLesson() {
                 <>
                   <p className="text-[11px] text-muted">A good next turn from here:</p>
                   {nextDisplay && (
-                    <span className="rounded-xl bg-accent px-4 py-1 font-mono text-3xl font-black text-accent-fg">{nextDisplay}</span>
+                    <span className="rounded-lg bg-accent px-4 py-1 font-mono text-3xl font-bold text-accent-fg">{nextDisplay}</span>
                   )}
                 </>
               ) : (
@@ -289,7 +287,7 @@ export function SatNavLesson() {
                     setHintLevel((hint + 1) as HintLevel);
                     armStall();
                   }}
-                  className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-3 py-1 text-[11px] font-medium text-muted hover:text-foreground"
+                  className="flex items-center gap-1 rounded-md bg-bg-panel-2 px-3 py-1 text-[11px] font-medium text-muted hover:text-foreground"
                 >
                   <Lightbulb size={11} /> {hint === 0 ? "Hint: first turn" : "Show the whole route"}
                 </button>
@@ -300,8 +298,8 @@ export function SatNavLesson() {
       )}
 
       {recaps.length > 0 && (
-        <div className="card flex w-full flex-col gap-1.5 rounded-xl p-3">
-          <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">This solve</p>
+        <div className="flex w-full flex-col gap-1.5 border-t border-border pt-5">
+          <p className="text-xs font-medium text-muted-2">This solve</p>
           {recaps.map((r, i) => {
             // A stage's takeaway goes under its last leg (the fourth F2L pair, say), once it's really behind you.
             const lastOfStage = recaps[i + 1] ? recaps[i + 1].stage !== r.stage : !!finished || stage !== r.stage;

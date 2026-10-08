@@ -1,20 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import { Flame, Zap } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { computeTriggerStats, FACE_TURNS, type TriggerStat } from "@/lib/analysis/triggers";
 import { cn } from "@/lib/utils/cn";
 
-/** Green (fast) through red (slow) — a heatmap reads by this convention regardless of the app's own accent theme, same reasoning as findings' fixed severity colors. */
+/** One blue ramp (the heat-cube steps): the faintest cell is your fastest pair, the strongest your slowest. */
 function colorFor(pct: number): string {
-  const hue = 140 - pct * 140;
-  return `hsl(${hue} 62% 40%)`;
+  return `var(--heat-${Math.min(5, Math.floor(pct * 5) + 1)})`;
 }
 
 function TriggerRow({ stat }: { stat: TriggerStat }) {
   return (
-    <div className="flex items-center justify-between gap-2 text-[11px]">
+    <div className="flex items-center justify-between gap-2 text-xs">
       <span className="truncate font-mono text-foreground/90">{stat.pair}</span>
       <span className="flex shrink-0 items-center gap-2 tabular-nums text-muted-2">
         {stat.avgMs.toFixed(0)}ms <span className="text-muted-2/70">×{stat.count}</span>
@@ -51,8 +49,7 @@ export function TriggerHeatmapCard() {
   if (stats.length < 6) {
     return (
       <div className="card rounded-xl p-4">
-        <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
-          <Flame size={14} className="text-accent" />
+        <h3 className="mb-1 text-sm font-semibold tracking-[-0.01em]">
           Trigger heatmap
         </h3>
         <p className="text-xs text-muted-2">
@@ -67,14 +64,13 @@ export function TriggerHeatmapCard() {
   const fastest = sorted.slice(0, 5);
 
   return (
-    <div className="card animate-fade-in-up rounded-xl p-4">
-      <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
-        <Flame size={14} className="text-accent" />
+    <div className="card rounded-xl p-4">
+      <h3 className="mb-1 text-sm font-semibold tracking-[-0.01em]">
         Trigger heatmap
       </h3>
-      <p className="mb-2.5 text-[11px] text-muted-2">
-        Every move-pair you&apos;ve actually turned, colored by average speed, green is fast, red is where your
-        fingers hesitate.
+      <p className="mb-3 max-w-[65ch] text-pretty text-xs text-muted-2">
+        Every move-pair you&apos;ve actually turned, shaded by average speed: the fainter the cell, the faster the pair;
+        the strongest are where your fingers hesitate.
       </p>
 
       <div className="overflow-x-auto pb-1">
@@ -106,10 +102,10 @@ export function TriggerHeatmapCard() {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 border-t border-border pt-2.5 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-2">
         <div>
-          <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-danger">
-            <Flame size={10} /> Weakest triggers
+          <p className="mb-1.5 text-xs font-medium text-foreground">
+            Weakest triggers
           </p>
           <div className="space-y-1">
             {slowest.map((s) => (
@@ -118,8 +114,8 @@ export function TriggerHeatmapCard() {
           </div>
         </div>
         <div>
-          <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-success">
-            <Zap size={10} /> Fastest triggers
+          <p className="mb-1.5 text-xs font-medium text-foreground">
+            Fastest triggers
           </p>
           <div className="space-y-1">
             {fastest.map((s) => (

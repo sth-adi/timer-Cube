@@ -133,7 +133,7 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
         tabIndex={-1}
         className={cn(
           "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] supports-[height:1dvh]:max-h-[88dvh] overflow-y-auto",
-          "sm:max-w-md sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
+          "sm:max-w-md sm:rounded-xl sm:pb-5 sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -167,7 +167,7 @@ export function SessionCompareSheet({ onClose }: { onClose: () => void }) {
             {!sameEvent && (
               <p className="pb-1 text-[11px] leading-snug text-muted">These sessions are different events, so the times aren&apos;t directly comparable.</p>
             )}
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 pb-1 text-[11px] uppercase tracking-wide text-muted-2">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 pb-1 text-[11px] text-muted-2">
               <span className="truncate text-left">{leftName}</span>
               <span />
               <span className="truncate text-right">{rightName}</span>

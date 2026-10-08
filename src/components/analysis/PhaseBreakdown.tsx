@@ -31,7 +31,7 @@ function PhaseBar({ phase, max }: { phase: PhaseAnalysis; max: number }) {
       </div>
       <span className="rc-num text-right font-medium">
         {model === null ? (
-          <span className="text-muted-2">—</span>
+          <span className="text-muted-2">-</span>
         ) : lost > 0 ? (
           <span className="rc-t-slow">+{lost}</span>
         ) : (
@@ -44,7 +44,7 @@ function PhaseBar({ phase, max }: { phase: PhaseAnalysis; max: number }) {
 
 function PhaseDetail({ phase }: { phase: PhaseAnalysis }) {
   return (
-    <div className="rounded-xl bg-bg-panel-2 p-3 text-xs">
+    <div className="py-3 text-xs first:pt-0">
       <div className="mb-2 flex items-baseline justify-between gap-2 leading-4">
         <span className="font-semibold text-foreground">
           {phase.label}
@@ -57,7 +57,7 @@ function PhaseDetail({ phase }: { phase: PhaseAnalysis }) {
       </p>
       {phase.model && (phase.lost ?? 0) > 0 && (
         <p className="mt-2 break-words font-mono text-[12px] leading-5 rc-t-good [overflow-wrap:anywhere]">
-          <span className="font-sans text-[11px] uppercase tracking-wide text-muted-2">Better </span>
+          <span className="font-sans text-[11px] text-muted-2">Better </span>
           {phase.model.moves.join(" ")}
         </p>
       )}
@@ -83,7 +83,7 @@ export function PhaseBreakdownCards({ phases }: { phases: PhaseAnalysis[] }) {
 
   return (
     <>
-      <div className="card animate-fade-in-up rounded-2xl p-3 sm:p-4">
+      <div className="animate-fade-in-up border-t border-border px-1 pt-5">
         <CardTitle as="h3">Where the moves went</CardTitle>
         <div className="mt-4 flex flex-col gap-2">
           {phases.map((p) => (
@@ -97,9 +97,9 @@ export function PhaseBreakdownCards({ phases }: { phases: PhaseAnalysis[] }) {
         </p>
       </div>
 
-      <div className="card animate-fade-in-up rounded-2xl p-3 sm:p-4">
+      <div className="animate-fade-in-up border-t border-border px-1 pt-5">
         <CardTitle as="h3">Phase by phase</CardTitle>
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="mt-3 flex flex-col divide-y divide-border">
           {phases.map((p) => (
             <PhaseDetail key={`${p.label}-${p.slot ?? ""}-detail`} phase={p} />
           ))}

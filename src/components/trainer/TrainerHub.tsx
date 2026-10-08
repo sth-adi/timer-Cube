@@ -95,13 +95,12 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
   return (
     <div className="flex w-full flex-1 flex-col items-center gap-4">
       <div className="flex flex-col items-center gap-0.5 text-center">
-        <h1 className="text-lg font-semibold text-foreground">Trainer</h1>
-        <p className="min-h-8 max-w-sm text-xs text-muted-2">{MODE_BLURB[mode]}</p>
+        <h1 className="text-balance text-xl font-semibold leading-tight tracking-[-0.02em] text-foreground">Trainer</h1>
+        <p className="min-h-8 max-w-sm text-pretty text-xs leading-relaxed text-muted-2">{MODE_BLURB[mode]}</p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-1.5">
+      <div className="flex flex-wrap justify-center gap-x-1 gap-y-0.5">
         {MODES.map((m) => {
-          const Icon = m.icon;
           const active = mode === m.id;
           return (
             <button
@@ -110,11 +109,10 @@ export function TrainerHub({ pendingNav, onConsumedNav }: TrainerHubProps) {
               onClick={() => setMode(m.id)}
               aria-pressed={active}
               className={cn(
-                "hit-y flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
-                active ? "bg-accent-soft text-accent" : "text-muted hover:bg-bg-panel-2 hover:text-foreground",
+                "hit-y rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                active ? "font-semibold text-accent" : "font-medium text-muted [@media(hover:hover)]:hover:text-foreground",
               )}
             >
-              <Icon size={14} />
               {m.label}
             </button>
           );

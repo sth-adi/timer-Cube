@@ -125,14 +125,14 @@ export function HandoffDrillPanel({
 
   return (
     <ConnectGate blurb="The hand-off drill sets your own stalled positions up on a smart cube and times your lookahead through them.">
-      <div className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-5">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-foreground">Drill: {label.toLowerCase()}</p>
           <button type="button" onClick={onClose} aria-label="Close drill" className="tap-target rounded-full text-muted hover:text-foreground">
             <X size={16} />
           </button>
         </div>
-        <p className="text-[10px] text-muted-2">
+        <p className="text-[11px] text-muted-2">
           Position {(index % examples.length) + 1} of {examples.length}, from your own solves, each one a spot where you stopped to look.
         </p>
 
@@ -144,7 +144,7 @@ export function HandoffDrillPanel({
               Your cube gets set to a moment one step before a stall. Finish that step (the pair, or the cross) as you normally would and keep
               going into the next pair, the drill times the gap between them. It walks the cube there from whatever state it&apos;s in.
             </p>
-            <button type="button" onClick={() => start(0)} className="rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
+            <button type="button" onClick={() => start(0)} className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
               Set up position 1
             </button>
           </div>
@@ -175,7 +175,7 @@ export function HandoffDrillPanel({
                   ? "Solve the cross, and look for your first pair while you do"
                   : "Finish this pair, and find the next one while you do"
                 : trackerPhase === "finding"
-                  ? "Keep turning, next pair!"
+                  ? "Keep turning to the next pair."
                   : "Get the next pair in"}
             </p>
             <p className="text-[11px] text-muted-2">In your solve you paused {secs(drill.originalFindMs)} here.</p>
@@ -195,12 +195,12 @@ export function HandoffDrillPanel({
                 ].map(([v, l, good]) => (
                   <div key={l as string} className="rounded-lg bg-bg-panel-2 px-2 py-1.5">
                     <p className={cn("text-base font-bold tabular-nums", good === true ? "text-success" : good === false ? "text-warning" : "text-foreground")}>{v}</p>
-                    <p className="text-[10px] text-muted-2">{l}</p>
+                    <p className="text-[11px] text-muted-2">{l}</p>
                   </div>
                 ))}
               </div>
             )}
-            <button type="button" onClick={() => start(index + 1)} className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
+            <button type="button" onClick={() => start(index + 1)} className="flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
               <RotateCcw size={14} /> Next position
             </button>
           </div>

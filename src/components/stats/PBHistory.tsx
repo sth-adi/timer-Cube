@@ -15,7 +15,7 @@ export function PBHistory({ solves }: { solves: Solve[] }) {
   }, [solves]);
 
   if (history.length === 0) {
-    return <p className="text-muted-2 text-sm text-center py-6">Your first solve will start the record.</p>;
+    return <p className="py-4 text-sm text-muted-2">Your first solve will start the record. Time one to begin.</p>;
   }
 
   return (
@@ -30,11 +30,11 @@ export function PBHistory({ solves }: { solves: Solve[] }) {
               i === 0 ? "bg-warning text-bg-panel" : "bg-muted-2/50 text-muted-2",
             )}
           >
-            {i === 0 && <Trophy size={8} />}
+            {i === 0 && <Trophy size={8} strokeWidth={1.75} />}
           </span>
           <span className={cn("tabular-timer font-semibold", i === 0 ? "text-lg text-foreground" : "text-sm text-muted")}>{formatTime(pb.ms)}</span>
-          {pb.beat !== null && <span className="rounded-full bg-success/10 px-1.5 py-px text-[11px] font-medium tabular-nums text-success">−{(pb.beat / 1000).toFixed(2)}</span>}
-          <span className="ml-auto text-[11px] text-muted-2">
+          {pb.beat !== null && <span className="text-xs font-medium tabular-nums text-success">−{(pb.beat / 1000).toFixed(2)}</span>}
+          <span className="tabular-timer ml-auto text-xs text-muted-2">
             #{pb.solveIndex} · {new Date(pb.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
           </span>
         </li>

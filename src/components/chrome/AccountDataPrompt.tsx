@@ -57,7 +57,7 @@ function AccountDataDialog() {
         aria-modal="true"
         aria-labelledby="account-data-title"
         tabIndex={-1}
-        className="card flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4 outline-none"
+        className="glass-panel flex w-full max-w-sm flex-col gap-3 rounded-2xl p-4 outline-none"
       >
         <div className="flex items-center gap-2">
           <Users size={16} className="shrink-0 text-accent" />

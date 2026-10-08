@@ -32,11 +32,11 @@ export function GazeCard({ report, facelets }: { report: GazeReport; facelets: s
               <span className="h-2.5 w-2.5 shrink-0 rounded-[3px] ring-1 ring-black/30" style={{ background: FACELET_COLORS[f] }} />
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-panel-2">
                 <div
-                  className={cn("h-full rounded-full", report.faceMs[f] >= MIN_LOOK_MS ? "bg-accent" : "bg-muted-2/40")}
+                  className={cn("h-full rounded-md", report.faceMs[f] >= MIN_LOOK_MS ? "bg-accent" : "bg-muted-2/40")}
                   style={{ width: `${(report.faceMs[f] / maxMs) * 100}%` }}
                 />
               </div>
-              <span className="w-8 text-right text-[10px] tabular-nums text-muted-2">{(report.faceMs[f] / 1000).toFixed(1)}s</span>
+              <span className="w-8 text-right text-[11px] tabular-nums text-muted-2">{(report.faceMs[f] / 1000).toFixed(1)}s</span>
             </div>
           ))}
         </div>
@@ -44,7 +44,7 @@ export function GazeCard({ report, facelets }: { report: GazeReport; facelets: s
 
       {report.timeline.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Side facing you, second by second</p>
+          <p className="text-[11px] font-medium text-muted-2">Side facing you, second by second</p>
           <div className="flex h-3 overflow-hidden rounded-full">
             {report.timeline.map((seg, i) => (
               <span
@@ -56,7 +56,7 @@ export function GazeCard({ report, facelets }: { report: GazeReport; facelets: s
           </div>
         </div>
       )}
-      <p className="text-[10px] text-muted-2">Faded sides were never turned toward you. Outlined stickers are cross edges you couldn&apos;t have seen.</p>
+      <p className="text-[11px] text-muted-2">Faded sides were never turned toward you. Outlined stickers are cross edges you couldn&apos;t have seen.</p>
     </div>
   );
 }

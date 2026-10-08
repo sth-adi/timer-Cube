@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowRight, ListChecks } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useAlgorithmStore } from "@/lib/store/algorithmStore";
 import { useTrainerStore } from "@/lib/store/trainerStore";
 import { useDailyChallengeStore, DAILY_CHALLENGE_LENGTH } from "@/lib/store/dailyChallengeStore";
@@ -100,29 +100,26 @@ export function DailyPracticePlanCard() {
   if (plan.length === 0) return null;
 
   return (
-    <div className="card rounded-xl border-accent/30 bg-accent-soft/30 p-4">
-      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-accent">
-        <ListChecks size={14} />
-        Today&apos;s practice plan
-      </h3>
-      <div className="space-y-2.5">
+    <div>
+      <h3 className="mb-3 text-sm font-semibold tracking-[-0.01em]">Today&apos;s practice plan</h3>
+      <ul className="space-y-3">
         {plan.map((item) => (
-          <div key={item.id} className="flex items-start justify-between gap-2">
+          <li key={item.id} className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground/90">{item.title}</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-2">{item.detail}</p>
+              <p className="text-sm font-medium text-foreground">{item.title}</p>
+              <p className="mt-0.5 max-w-[65ch] text-pretty text-xs leading-relaxed text-muted-2">{item.detail}</p>
             </div>
             <button
               type="button"
               onClick={() => requestNavigate(item.target)}
-              className="hit-y flex shrink-0 items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-accent whitespace-nowrap"
+              className="hit-y flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1 text-xs font-medium text-accent active:translate-y-px"
             >
               {item.targetLabel}
-              <ArrowRight size={11} />
+              <ArrowRight size={12} strokeWidth={1.75} />
             </button>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

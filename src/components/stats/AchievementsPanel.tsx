@@ -17,8 +17,8 @@ export function AchievementsPanel() {
 
   return (
     <div>
-      <Link href="/quests" className="mb-3 flex items-center gap-3 rounded-xl bg-bg-panel-2 px-3 py-2 hover:bg-bg-panel-2/70">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-black text-accent-fg">{level.level}</span>
+      <Link href="/quests" className="mb-5 flex items-center gap-3 rounded-lg active:translate-y-px">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold tabular-nums text-accent-fg">{level.level}</span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex justify-between text-xs">
             <span className="font-semibold text-foreground">{level.title}</span>
@@ -29,12 +29,12 @@ export function AchievementsPanel() {
           </span>
         </span>
         <span className="flex items-center text-[11px] font-medium text-accent">
-          Quests <ChevronRight size={12} />
+          Quests <ChevronRight size={12} strokeWidth={1.75} />
         </span>
       </Link>
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-medium">Milestones</p>
-        <span className="text-muted-2 text-xs tabular-timer">
+        <h3 className="text-sm font-semibold tracking-[-0.01em]">Milestones</h3>
+        <span className="tabular-timer text-xs text-muted-2">
           {unlockedCount} / {achievements.length}
         </span>
       </div>
@@ -51,8 +51,8 @@ export function AchievementsPanel() {
               key={a.id}
               title={`${a.label}, ${a.description}`}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-opacity",
-                a.unlocked ? "bg-accent-soft" : "bg-bg-panel-2 opacity-50",
+                "flex flex-col items-center gap-1 rounded-md p-2 text-center transition-opacity",
+                a.unlocked ? "bg-accent-soft" : "opacity-45",
               )}
             >
               <span className="text-xl leading-none">{a.icon}</span>

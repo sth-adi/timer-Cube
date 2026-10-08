@@ -24,7 +24,7 @@ export function LiveTps({ tps }: { tps: number | null }) {
   return (
     <span className={cn("live-readout inline-flex items-baseline gap-1 whitespace-nowrap transition-colors duration-300 motion-reduce:transition-none", shown === null ? "text-muted-2/60" : "text-accent")}>
       <span className="inline-block w-[4ch] text-right font-semibold">{shown ?? "—"}</span>
-      <span className="text-[10px] font-medium uppercase tracking-wider">TPS</span>
+      <span className="text-[10px] font-medium">TPS</span>
     </span>
   );
 }

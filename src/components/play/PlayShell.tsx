@@ -18,14 +18,12 @@ export const FACE_HEX: Record<string, string> = {
 };
 
 export function PlayShell({
-  accent,
   title,
   tagline,
   back = "/play",
   wide = false,
   children,
 }: {
-  accent: string;
   title: string;
   tagline: string;
   back?: string;
@@ -33,18 +31,18 @@ export function PlayShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="play-root" style={{ ["--play-accent" as string]: accent }}>
+    <div className="play-root">
       <AppBootstrap />
       <div className={cn("relative mx-auto flex w-full flex-col gap-4 px-4 pb-16 pt-4", wide ? "max-w-3xl" : "max-w-md")}>
         <div className="flex items-center justify-between">
-          <Link href={back} className="hit flex items-center gap-0.5 text-xs font-semibold text-[var(--play-dim)] hover:text-white">
-            <ChevronLeft size={16} /> {back === "/" ? "Timer" : "Play"}
+          <Link href={back} className="hit flex items-center gap-0.5 text-xs font-medium text-[var(--play-dim)] hover:text-white">
+            <ChevronLeft size={16} strokeWidth={1.75} /> {back === "/" ? "Timer" : "Play"}
           </Link>
           <CubeStatus />
         </div>
         <header className="flex flex-col gap-1.5">
-          <h1 className="play-title text-[44px]">{title}</h1>
-          <p className="max-w-sm text-[13px] leading-snug text-[var(--play-dim)]">{tagline}</p>
+          <h1 className="play-title text-balance text-[40px]">{title}</h1>
+          <p className="max-w-sm text-pretty text-[13px] leading-snug text-[var(--play-dim)]">{tagline}</p>
         </header>
         {children}
       </div>
@@ -61,10 +59,8 @@ export function CubeStatus() {
   const connect = useSmartCubeStore((s) => s.connect);
   if (connected)
     return (
-      <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-        {deviceName ?? "Cube"}
-        {gyroActive && <span className="text-emerald-300/60">· gyro</span>}
+      <span className="text-[12px] font-medium text-[var(--play-dim)]">
+        {deviceName ?? "Cube"} connected{gyroActive ? ", gyro on" : ""}
       </span>
     );
   return (
@@ -72,11 +68,11 @@ export function CubeStatus() {
       type="button"
       onClick={() => void connect()}
       disabled={connecting || supported !== true}
-      className="hit-y flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--play-dim)] hover:text-white disabled:hover:text-[var(--play-dim)]"
+      className="hit-y flex items-center gap-1.5 text-[12px] font-medium text-[var(--play-dim)] hover:text-white disabled:hover:text-[var(--play-dim)]"
       title={supported === false ? "No Web Bluetooth here, play with the keys and pad" : "Connect a smart cube"}
     >
-      <Keyboard size={12} />
-      {connecting ? "Connecting…" : supported === false ? "Keys & pad" : "Keys & pad · connect cube"}
+      <Keyboard size={14} strokeWidth={1.75} />
+      {connecting ? "Connecting…" : supported === false ? "Keys and pad" : "Connect cube"}
     </button>
   );
 }
@@ -99,7 +95,7 @@ export function TurnPad({ onTurn, labels, className }: { onTurn: (grip: string) 
           key={t}
           type="button"
           onClick={() => onTurn(t)}
-          className="flex h-12 flex-col items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sm font-bold active:scale-95"
+          className="flex h-12 flex-col items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sm font-semibold transition-transform active:translate-y-px active:scale-[0.98]"
           style={{ boxShadow: `inset 0 -3px 0 ${FACE_HEX[HOME_COLOR[t[0]]]}` }}
         >
           {labels?.[t] ?? t}

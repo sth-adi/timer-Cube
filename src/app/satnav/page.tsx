@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, GraduationCap, Loader2, Navigation, PartyPopper, RefreshCw, Timer as TimerIcon } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Loader2, Navigation, RefreshCw, Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { ConnectGate } from "@/components/smartcube/ConnectGate";
@@ -59,10 +59,9 @@ function SatNav() {
           </p>
         ) : step.stage === "solved" ? (
           <div className="flex flex-col items-center gap-2 py-4">
-            <PartyPopper size={28} className="text-accent" />
-            <p className="text-lg font-bold text-foreground">Solved!</p>
+            <p className="text-lg font-semibold text-foreground">Solved</p>
             <p className="text-xs text-muted">
-              {reroutes === 0 ? "Not a single reroute." : `${reroutes} reroute${reroutes === 1 ? "" : "s"} along the way.`} Scramble it and the
+              {reroutes === 0 ? "No reroutes." : `${reroutes} reroute${reroutes === 1 ? "" : "s"} along the way.`} Scramble it and the
               Sat-Nav picks straight back up.
             </p>
           </div>
@@ -94,7 +93,7 @@ function SatNav() {
           type="button"
           onClick={() => setCoach((c) => !c)}
           className={cn(
-            "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
+            "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium",
             coach ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted hover:text-foreground",
           )}
         >
@@ -103,7 +102,7 @@ function SatNav() {
         <button
           type="button"
           onClick={replan}
-          className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground"
+          className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground"
         >
           <RefreshCw size={12} /> Replan
         </button>
@@ -134,7 +133,7 @@ export default function SatNavPage() {
             </h1>
             <p className="text-[11px] text-muted-2">Turn-by-turn directions for the cube in your hands. Go off-route and it recalculates.</p>
           </div>
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-bg-panel-2 p-1">
             {(
               [
                 ["navigate", "Navigate", Navigation],
@@ -147,7 +146,7 @@ export default function SatNavPage() {
                 onClick={() => setMode(id)}
                 aria-pressed={mode === id}
                 className={cn(
-                  "hit-y flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  "hit-y flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold",
                   mode === id ? "bg-accent text-accent-fg" : "text-muted",
                 )}
               >

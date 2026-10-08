@@ -26,8 +26,8 @@ export function PostSolveCoachCard({ rows, totalMs, tps, sessionMeanMs, isNewPB 
   );
 
   return (
-    <div className="w-full rounded-xl bg-bg-panel-2 p-3">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+    <div className="w-full rounded-lg bg-bg-panel-2 p-3">
+      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium text-muted-2">
         <Sparkles size={11} className="text-accent" />
         Coach
       </div>

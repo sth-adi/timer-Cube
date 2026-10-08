@@ -36,7 +36,7 @@ function NextTurn() {
   const { nav } = useSatNavRoute();
   const token = nav.step?.display[nav.position];
   const turn = nav.step?.turns[nav.position];
-  if (!nav.step || nav.step.stage === "solved") return nav.step ? <Bubble text="Solved!" /> : null;
+  if (!nav.step || nav.step.stage === "solved") return nav.step ? <Bubble text="Solved" /> : null;
   if (!token) return null;
   return <Bubble text={token} sub={nav.step.title} swatch={turn ? FACELET_COLORS[turn[0]] : undefined} />;
 }
@@ -48,7 +48,7 @@ function Bubble({ text, sub, swatch }: { text: string; sub?: string; swatch?: st
         {swatch && <span className="h-3 w-3 rounded-sm ring-1 ring-white/40" style={{ background: swatch }} />}
         {text}
       </span>
-      {sub && <span className="text-[10px] text-white/70">{sub}</span>}
+      {sub && <span className="text-[11px] text-white/70">{sub}</span>}
     </div>
   );
 }
@@ -175,7 +175,7 @@ function CubeAR() {
             )}
             <span
               className={cn(
-                "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                "absolute left-2 top-2 text-[11px] font-semibold",
                 found ? "bg-success/80 text-white" : "bg-black/60 text-white/80",
               )}
             >
@@ -204,7 +204,7 @@ function CubeAR() {
               <button
                 type="button"
                 onClick={() => void start(facing)}
-                className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg"
+                className="flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-fg"
               >
                 <Camera size={14} /> Start camera
               </button>
@@ -219,11 +219,11 @@ function CubeAR() {
             <button
               type="button"
               onClick={() => void start(facing === "user" ? "environment" : "user")}
-              className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-foreground"
+              className="flex items-center gap-1 rounded-md bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-foreground"
             >
               <SwitchCamera size={12} /> {facing === "user" ? "Front camera" : "Back camera"}
             </button>
-            <div className="flex overflow-hidden rounded-full bg-bg-panel-2 text-xs">
+            <div className="flex overflow-hidden rounded-md bg-bg-panel-2 text-xs">
               {(Object.keys(VIEWS) as View[]).map((v) => (
                 <button key={v} type="button" onClick={() => setView(v)} className={cn("px-3 py-1.5 font-medium", view === v ? "bg-accent-soft text-accent" : "text-muted")}>
                   {VIEWS[v].label}
@@ -234,7 +234,7 @@ function CubeAR() {
               type="button"
               onClick={() => setDirections((d) => !d)}
               aria-pressed={directions}
-              className={cn("flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium", directions ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
+              className={cn("flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium", directions ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
             >
               <Navigation size={12} /> Directions
             </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bluetooth, Copy, Crown, Eye, Flag, Loader2, LogOut, Play, RotateCcw, Trophy, Users } from "lucide-react";
+import { Bluetooth, Copy, Crown, Eye, Flag, LogOut, Play, RotateCcw, Trophy, Users } from "lucide-react";
 import { COUNTDOWN_MS, useRoomStore, type RoomMode, type RoomRole, type RoomRound } from "@/lib/store/roomStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -74,7 +74,7 @@ function Lobby() {
         className="rounded-lg bg-bg-panel-2 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-2"
         aria-label="Your name in the room"
       />
-      <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1 text-xs">
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-bg-panel-2 p-1 text-xs">
         {(
           [
             ["racer", "Race", Flag],
@@ -86,14 +86,14 @@ function Lobby() {
             type="button"
             onClick={() => setRole(id)}
             aria-pressed={role === id}
-            className={cn("flex items-center justify-center gap-1 rounded-full py-1.5 font-semibold", role === id ? "bg-accent text-accent-fg" : "text-muted")}
+            className={cn("flex items-center justify-center gap-1 rounded-lg py-1.5 font-semibold", role === id ? "bg-accent text-accent-fg" : "text-muted")}
           >
-            <Icon size={12} /> {label}
+            <Icon size={12} strokeWidth={1.75} /> {label}
           </button>
         ))}
       </div>
       <button type="button" onClick={() => go()} className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-accent-fg">
-        <Users size={15} /> Create a room
+        <Users size={15} strokeWidth={1.75} /> Create a room
       </button>
       <div className="flex gap-2">
         <input
@@ -101,7 +101,7 @@ function Lobby() {
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="Room code"
           maxLength={5}
-          className="min-w-0 flex-1 rounded-lg bg-bg-panel-2 px-3 py-2 font-mono text-sm uppercase tracking-widest text-foreground outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-muted-2"
+          className="min-w-0 flex-1 rounded-lg bg-bg-panel-2 px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-muted-2"
         />
         <button
           type="button"
@@ -172,7 +172,7 @@ function MyHeat({ round }: { round: RoomRound }) {
   const countdown = Math.ceil((round.startAt - now) / 1000);
   return (
     <div className="flex flex-col items-center gap-2">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-accent">Your heat</p>
+      <p className="text-[10px] font-medium text-accent">Your heat</p>
       {finished ? (
         <p className="tabular-timer w-full rounded-xl bg-success/15 py-5 text-center text-3xl font-bold text-success">
           {myResult === null ? "DNF" : formatTime(myResult)}
@@ -220,7 +220,7 @@ function RacerTile({ id, round }: { id: string; round: RoomRound }) {
   return (
     <div className="flex flex-col gap-1 rounded-xl bg-bg-panel-2 p-2">
       <p className="flex items-center gap-1 truncate text-[11px] font-semibold text-foreground">
-        {cube && <Bluetooth size={10} className="shrink-0 text-accent" />}
+        {cube && <Bluetooth size={10} className="shrink-0 text-accent" strokeWidth={1.75} />}
         {name}
       </p>
       {done ? (
@@ -246,7 +246,7 @@ function BracketView({ bracket, names }: { bracket: Bracket; names: Record<strin
     <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
       {bracket.rounds.map((round, r) => (
         <div key={r} className="flex min-w-[8.5rem] flex-col justify-around gap-2">
-          <p className="text-center text-[10px] font-medium uppercase tracking-wide text-muted-2">{roundName(r)}</p>
+          <p className="text-center text-[10px] font-medium text-muted-2">{roundName(r)}</p>
           {round.map((m) => (
             <div key={m.id} className={cn("flex flex-col rounded-lg bg-bg-panel-2 text-[11px]", live?.id === m.id && "ring-2 ring-accent")}>
               {[m.a, m.b].map((id, i) => (
@@ -259,7 +259,7 @@ function BracketView({ bracket, names }: { bracket: Bracket; names: Record<strin
                     !id && "italic text-muted-2",
                   )}
                 >
-                  {m.round > 0 && !id && !m.winner ? "—" : label(id)}
+                  {m.round > 0 && !id && !m.winner ? "-" : label(id)}
                 </span>
               ))}
             </div>
@@ -308,7 +308,7 @@ function LiveRoom() {
   if (status === "connecting") {
     return (
       <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
-        <Loader2 size={16} className="animate-spin text-accent" /> Joining room {code}…
+        Joining room {code}…
       </p>
     );
   }
@@ -327,13 +327,13 @@ function LiveRoom() {
           }}
           className="flex items-center gap-2 rounded-lg bg-bg-panel-2 px-3 py-1.5"
         >
-          <span className="font-mono text-lg font-black tracking-[0.25em] text-foreground">{code}</span>
+          <span className="font-mono text-lg font-bold tracking-[0.25em] text-foreground">{code}</span>
           <span className="flex items-center gap-1 text-[10px] text-muted">
-            <Copy size={11} /> {copied ? "Copied" : "Copy"}
+            <Copy size={11} strokeWidth={1.75} /> {copied ? "Copied" : "Copy"}
           </span>
         </button>
-        <button type="button" onClick={leave} className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-danger">
-          <LogOut size={12} /> Leave
+        <button type="button" onClick={leave} className="flex items-center gap-1 rounded-lg bg-bg-panel-2 px-3 py-1.5 text-xs font-medium text-muted hover:text-danger">
+          <LogOut size={12} strokeWidth={1.75} /> Leave
         </button>
       </div>
 
@@ -342,13 +342,13 @@ function LiveRoom() {
           <span
             key={m.id}
             className={cn(
-              "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium",
+              "flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium",
               m.id === me?.id ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-foreground",
               m.role === "spectator" && "opacity-70",
             )}
           >
-            {m.id === hostId && <Crown size={10} className="text-warning" />}
-            {m.role === "spectator" ? <Eye size={10} /> : m.cube ? <Bluetooth size={10} /> : null}
+            {m.id === hostId && <Crown size={10} className="text-warning" strokeWidth={1.75} />}
+            {m.role === "spectator" ? <Eye size={10} strokeWidth={1.75} /> : m.cube ? <Bluetooth size={10} strokeWidth={1.75} /> : null}
             {m.name}
           </span>
         ))}
@@ -360,7 +360,7 @@ function LiveRoom() {
           <button
             type="button"
             onClick={() => setRole(me.role === "racer" ? "spectator" : "racer")}
-            className="rounded-full bg-bg-panel-2 px-2.5 py-1 font-semibold text-foreground"
+            className="rounded-lg bg-bg-panel-2 px-2.5 py-1 font-semibold text-foreground"
           >
             {me.role === "racer" ? "racing" : "spectating"}, switch
           </button>
@@ -369,10 +369,10 @@ function LiveRoom() {
 
       {isHost && !live && (
         <div className="card flex flex-col gap-2 rounded-xl p-3">
-          <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
-            <Crown size={10} className="text-warning" /> You&apos;re hosting
+          <p className="flex items-center gap-1 text-[10px] font-medium text-muted-2">
+            <Crown size={10} className="text-warning" strokeWidth={1.75} /> You&apos;re hosting
           </p>
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1 text-xs">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-bg-panel-2 p-1 text-xs">
             {(
               [
                 ["ffa", "Free-for-all"],
@@ -383,7 +383,7 @@ function LiveRoom() {
                 key={id}
                 type="button"
                 onClick={() => hostSetMode(id)}
-                className={cn("rounded-full py-1.5 font-semibold", state.mode === id ? "bg-accent text-accent-fg" : "text-muted")}
+                className={cn("rounded-lg py-1.5 font-semibold", state.mode === id ? "bg-accent text-accent-fg" : "text-muted")}
               >
                 {label}
               </button>
@@ -395,7 +395,7 @@ function LiveRoom() {
             onClick={() => void start()}
             className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-accent-fg disabled:opacity-40"
           >
-            {starting ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+            {starting ? null : <Play size={14} strokeWidth={1.75} />}
             {state.mode === "bracket"
               ? upcoming
                 ? `Next heat: ${nameOf(upcoming.a!)} vs ${nameOf(upcoming.b!)}`
@@ -406,7 +406,7 @@ function LiveRoom() {
           </button>
           {(state.history.length > 0 || state.bracket) && (
             <button type="button" onClick={hostResetBracket} className="flex items-center justify-center gap-1 text-[11px] text-muted-2 hover:text-foreground">
-              <RotateCcw size={11} /> Reset scores
+              <RotateCcw size={11} strokeWidth={1.75} /> Reset scores
             </button>
           )}
         </div>
@@ -420,7 +420,7 @@ function LiveRoom() {
               {round.matchId ? `Heat · ${round.racers.map(nameOf).join(" vs ")}` : `Round ${round.n}`}
             </p>
             {live && now < round.startAt && (
-              <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-accent-fg">
+              <span className="rounded-lg bg-accent px-2.5 py-0.5 text-xs font-bold text-accent-fg">
                 {Math.max(1, Math.ceil((round.startAt - now) / 1000))}
               </span>
             )}
@@ -462,7 +462,7 @@ function LiveRoom() {
       {state.mode === "bracket" && state.bracket && (
         <div className="card flex flex-col gap-2 rounded-xl p-3">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-            <Trophy size={13} className="text-warning" /> {champ ? `${nameOf(champ)} wins the bracket` : "Bracket"}
+            <Trophy size={13} className="text-warning" strokeWidth={1.75} /> {champ ? `${nameOf(champ)} wins the bracket` : "Bracket"}
           </p>
           <BracketView bracket={state.bracket} names={state.names} />
         </div>
@@ -470,7 +470,7 @@ function LiveRoom() {
 
       {state.mode === "ffa" && table.length > 0 && (
         <div className="card flex flex-col gap-1 rounded-xl p-3">
-          <div className="flex justify-between px-1 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">
+          <div className="flex justify-between px-1 pb-1 text-[10px] font-medium text-muted-2">
             <span>Standings · {state.history.length} round{state.history.length === 1 ? "" : "s"}</span>
             <span>pts · wins · best · mean</span>
           </div>
@@ -479,8 +479,8 @@ function LiveRoom() {
               <span className="w-4 font-bold text-muted-2">{i + 1}</span>
               <span className="flex-1 truncate font-semibold text-foreground">{nameOf(s.id)}</span>
               <span className="tabular-nums text-[11px] text-muted">
-                <span className="font-bold text-foreground">{s.points}</span> · {s.wins} · {s.best === null ? "—" : formatTime(s.best)} ·{" "}
-                {s.mean === null ? "—" : formatTime(s.mean)}
+                <span className="font-bold text-foreground">{s.points}</span> · {s.wins} · {s.best === null ? "-" : formatTime(s.best)} ·{" "}
+                {s.mean === null ? "-" : formatTime(s.mean)}
               </span>
             </div>
           ))}
@@ -500,7 +500,7 @@ export function RoomRace() {
   return (
     <div className="card w-full max-w-xl rounded-xl p-3">
       <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-        <Users size={15} className="text-accent" /> Race room
+        <Users size={15} className="text-accent" strokeWidth={1.75} /> Race room
       </h2>
       {status === "idle" || status === "error" ? <Lobby /> : <LiveRoom />}
     </div>

@@ -75,7 +75,7 @@ export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onCl
       <div
         className={cn(
           "glass-panel flex max-h-[92vh] supports-[height:1dvh]:max-h-[92dvh] w-full flex-col gap-3 overflow-y-auto rounded-t-2xl outline-none p-4 pb-[calc(1rem+var(--safe-bottom))] animate-sheet-in",
-          "sm:max-w-md sm:rounded-2xl sm:animate-fade-in-up",
+          "sm:max-w-md sm:rounded-xl sm:animate-fade-in-up",
         )}
         onClick={(e) => e.stopPropagation()}
         ref={dialogRef}
@@ -101,16 +101,16 @@ export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onCl
         <p className="break-words font-mono text-[11px] text-muted-2">{solve.scramble}</p>
 
         {!b ? (
-          <p className="rounded-xl bg-bg-panel-2 p-3 text-[12px] text-muted">
+          <p className="rounded-lg bg-bg-panel-2 p-3 text-[12px] text-muted">
             This solve&apos;s turns weren&apos;t recorded in full (a keyboard solve, or one whose turns were corrected mid-way), so there&apos;s no step-by-step recap for it.
           </p>
         ) : (
           <>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setReplay(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-accent px-3 py-2 text-sm font-semibold text-accent-fg">
+              <button type="button" onClick={() => setReplay(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-fg">
                 <Play size={14} /> Replay
               </button>
-              <button type="button" onClick={analyze} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-bg-panel-2 px-3 py-2 text-sm font-medium text-muted hover:text-foreground">
+              <button type="button" onClick={analyze} className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-bg-panel-2 px-3 py-2 text-sm font-medium text-muted hover:text-foreground">
                 <Wand2 size={14} /> Analyze
               </button>
             </div>

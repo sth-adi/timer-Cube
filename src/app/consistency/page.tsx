@@ -47,7 +47,7 @@ function SpreadChart({ r }: { r: ConsistencyReport }) {
           <div className="relative h-6 flex-1">
             <span className="absolute left-0 right-0 top-1/2 h-px bg-border" />
             <div
-              {...bind({ value: `${secs(p.p10)} – ${secs(p.p90)}`, label: `${p.phase}: middle 80% of your solves`, detail: `median ${secs(p.p50)} · σ ${secs(p.sd)}` })}
+              {...bind({ value: `${secs(p.p10)} to ${secs(p.p90)}`, label: `${p.phase}: middle 80% of your solves`, detail: `median ${secs(p.p50)} · σ ${secs(p.sd)}` })}
               className="absolute top-1/2 h-2.5 -translate-y-1/2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent"
               style={{ left: `${(p.p10 / max) * 100}%`, width: `${Math.max(1, ((p.p90 - p.p10) / max) * 100)}%`, background: PHASE_COLOR[p.phase], opacity: 0.55 }}
             />
@@ -79,17 +79,17 @@ export default function ConsistencyPage() {
   return (
     <AnalyticsShell
       icon={<Sigma size={17} className="text-accent" />}
-      title="Consistency Lab"
+      title="Consistency lab"
       subtitle="Where your solve-to-solve spread comes from, phase by phase."
     >
       {!r ? (
-        <NotEnough need={MIN_SOLVES} have={metrics.length} what="Consistency Lab" />
+        <NotEnough need={MIN_SOLVES} have={metrics.length} what="Consistency lab" />
       ) : (
         <>
           <Hero value={`±${secs(r.totalSd)}`} label={`solve-to-solve spread (σ) around your ${secs(r.totalMean)} mean`} sub={`${r.solves} smart-cube solves`} />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Share of your inconsistency</SectionTitle>
             <ShareBar r={r} />
             <p className="text-[11px] text-muted-2">
@@ -97,13 +97,13 @@ export default function ConsistencyPage() {
             </p>
           </div>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>How much each phase wanders</SectionTitle>
             <SpreadChart r={r} />
             <p className="text-[11px] text-muted-2">Bars span your 10th to 90th percentile; the dot is the median. CV is the spread relative to the phase&apos;s own length.</p>
           </div>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>What steadying each phase would be worth</SectionTitle>
             {r.whatIf.filter((w) => w.phase !== r.steadiest).map((w) => (
               <div key={w.phase} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2">

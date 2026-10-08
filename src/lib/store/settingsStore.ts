@@ -44,13 +44,13 @@ export const PHASE_LABELS: Record<PhaseCount, readonly string[]> = {
 };
 
 export const THEMES = [
-  { id: "nebula", name: "Nebula", swatch: "#957eff" },
-  { id: "mint", name: "Mint", swatch: "#2dd4bf" },
-  { id: "carbon", name: "Carbon", swatch: "#fafafa" },
-  { id: "sunset", name: "Sunset", swatch: "#ff7a59" },
-  { id: "terminal", name: "Terminal", swatch: "#3ddc84" },
-  { id: "speedcube", name: "Speedcube", swatch: "#ffd500" },
-  { id: "paper", name: "Paper", swatch: "#5b3df5" },
+  { id: "nebula", name: "Slate", swatch: "#6f9be8" },
+  { id: "mint", name: "Mint", swatch: "#3dbfae" },
+  { id: "carbon", name: "Carbon", swatch: "#f1f1f3" },
+  { id: "sunset", name: "Sunset", swatch: "#e08463" },
+  { id: "terminal", name: "Terminal", swatch: "#4ad486" },
+  { id: "speedcube", name: "Speedcube", swatch: "#e3c24a" },
+  { id: "paper", name: "Paper", swatch: "#2c4fb8" },
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];

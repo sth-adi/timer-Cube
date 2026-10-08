@@ -160,7 +160,7 @@ export function SessionSwitcher() {
               type="button"
               disabled={busy}
               onClick={() => void run(() => removeSession(s.id))}
-              className="hit-y rounded-full bg-danger px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              className="hit-y rounded-md bg-danger px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
             >
               Delete
             </button>
@@ -244,7 +244,7 @@ export function SessionSwitcher() {
         )}
         {active && <span className="text-[11px] font-normal tabular-nums text-muted-2">{countOf(active.id)}</span>}
         {active && active.event !== "333" && (
-          <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+          <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
             {WCA_EVENTS.find((e) => e.id === active.event)?.label}
           </span>
         )}
@@ -254,9 +254,9 @@ export function SessionSwitcher() {
         <>
           {/* Tap anywhere else to close. */}
           <button type="button" aria-label="Close sessions" className="fixed inset-0 z-10 cursor-default" onClick={close} />
-          <div className="absolute left-0 top-full z-20 mt-1 w-72 max-w-[calc(100vw-1.5rem)] rounded-xl glass-panel p-1.5 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 w-72 max-w-[calc(100vw-1.5rem)] rounded-lg glass-panel p-1.5 shadow-lg">
             <div className="flex items-center justify-between px-2 pb-2.5 pt-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-2">Sessions</span>
+              <span className="text-[11px] font-semibold text-muted-2">Sessions</span>
               <button
                 type="button"
                 onClick={() => {
@@ -266,7 +266,7 @@ export function SessionSwitcher() {
                 }}
                 aria-pressed={managing}
                 className={cn(
-                  "hit-y flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                  "hit-y flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                   managing ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
                 )}
               >
@@ -331,7 +331,7 @@ export function SessionSwitcher() {
                     type="button"
                     disabled={busy}
                     onClick={() => void run(tidyUp)}
-                    className="hit-y rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-50"
+                    className="hit-y rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-50"
                   >
                     Tidy up
                   </button>

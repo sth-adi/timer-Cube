@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Pencil, Warehouse } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils/cn";
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase text-muted-2">{label}</span>
+      <span className="text-[11px] text-muted-2">{label}</span>
       <span className="tabular-timer text-sm font-semibold">{value}</span>
     </div>
   );
@@ -30,7 +30,7 @@ function CubeRow({ cube, connected }: { cube: GarageCube; connected: boolean }) 
     setEditing(false);
   };
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-bg-panel-2 px-3 py-2.5" data-testid="garage-cube">
+    <div className="flex flex-col gap-2 py-3 first:pt-0" data-testid="garage-cube">
       <div className="flex items-center gap-1.5">
         {editing ? (
           <form
@@ -47,10 +47,10 @@ function CubeRow({ cube, connected }: { cube: GarageCube; connected: boolean }) 
               onChange={(e) => setDraft(e.target.value)}
               onBlur={commit}
               aria-label="Cube nickname"
-              className="min-w-0 flex-1 rounded bg-bg px-1.5 py-0.5 text-[16px] font-semibold outline-none ring-1 ring-accent sm:text-sm"
+              className="min-w-0 flex-1 rounded-sm bg-bg px-1.5 py-0.5 text-[16px] font-semibold outline-none ring-1 ring-accent sm:text-sm"
             />
             <button type="submit" aria-label="Save nickname" className="hit-y shrink-0 px-2 text-accent">
-              <Check size={14} />
+              <Check size={14} strokeWidth={1.75} />
             </button>
           </form>
         ) : (
@@ -65,11 +65,11 @@ function CubeRow({ cube, connected }: { cube: GarageCube; connected: boolean }) 
               aria-label={`Rename ${cube.label}`}
               className="hit text-muted-2 hover:text-foreground"
             >
-              <Pencil size={12} />
+              <Pencil size={12} strokeWidth={1.75} />
             </button>
           </>
         )}
-        {connected && <span className="ml-auto rounded-full bg-success/15 px-1.5 py-0.5 text-[11px] font-medium text-success">connected</span>}
+        {connected && <span className="ml-auto text-xs font-medium text-success">Connected</span>}
       </div>
       {cube.label !== cube.name && <p className="-mt-1.5 text-[11px] text-muted-2">{cube.name}{cube.protocol ? ` · ${cube.protocol}` : ""}</p>}
       <div className="grid grid-cols-4 gap-2">
@@ -116,16 +116,15 @@ export function CubeGarageCard() {
   };
 
   return (
-    <div className="card flex flex-col gap-3 rounded-xl p-3" data-testid="cube-garage">
-      <div className="flex items-center gap-1.5 px-1">
-        <Warehouse size={14} className="text-accent" />
-        <span className="text-[11px] uppercase tracking-wide text-muted-2">Cube garage</span>
-      </div>
+    <div className="card flex flex-col rounded-xl p-4" data-testid="cube-garage">
+      <h3 className="mb-3 text-sm font-semibold tracking-[-0.01em]">Cube garage</h3>
+      {report.cubes.length > 0 && <div className="divide-y divide-border">
       {report.cubes.map((c) => (
         <CubeRow key={c.id} cube={c} connected={connected && here?.id === c.id} />
       ))}
+      </div>}
       {report.notes.length > 0 && (
-        <ul className="flex flex-col gap-1 px-1">
+        <ul className="mt-3 flex flex-col gap-1 border-t border-border pt-3">
           {report.notes.map((n) => (
             <li key={n} className="text-xs leading-snug text-muted">
               {n}
@@ -134,7 +133,7 @@ export function CubeGarageCard() {
         </ul>
       )}
       {report.untracked > 0 && (
-        <div className={cn("flex items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted")}>
+        <div className={cn("flex items-center justify-between gap-2 text-xs text-muted", report.cubes.length > 0 && "mt-3 border-t border-border pt-3")}>
           <span>
             {report.untracked} earlier smart-cube solve{report.untracked === 1 ? "" : "s"} from before cubes were tracked.
           </span>
@@ -143,7 +142,7 @@ export function CubeGarageCard() {
               type="button"
               onClick={() => void claim()}
               disabled={claiming}
-              className="hit-y shrink-0 rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent disabled:opacity-50"
+              className="hit-y shrink-0 rounded-md px-2 py-1 font-medium text-accent disabled:opacity-50"
             >
               {claiming ? "Assigning…" : `They were on ${here.name}`}
             </button>

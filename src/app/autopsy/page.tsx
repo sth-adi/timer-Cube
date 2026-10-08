@@ -59,7 +59,7 @@ function FactorChart({ factors }: { factors: Factor[] }) {
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-[11px] text-foreground">
                 {f.label}
-                {f.family === "luck" && <span className="ml-1.5 rounded bg-bg-panel-2 px-1 py-px text-[11px] font-medium uppercase text-muted-2">luck</span>}
+                {f.family === "luck" && <span className="ml-1.5 rounded bg-bg-panel-2 px-1 py-px text-[11px] font-medium text-muted-2">luck</span>}
               </span>
               <span className="shrink-0 text-[11px] tabular-nums text-muted">
                 {f.format(f.fast)} <span className="text-muted-2">→</span> <span className="font-semibold text-foreground">{f.format(f.slow)}</span>
@@ -95,7 +95,7 @@ export default function AutopsyPage() {
   return (
     <AnalyticsShell
       icon={<Scale size={17} className="text-accent" />}
-      title="Fast vs Slow Autopsy"
+      title="Fast vs slow autopsy"
       subtitle="Your fastest quarter of solves against your slowest, what actually separates them."
     >
       {!a ? (
@@ -105,13 +105,13 @@ export default function AutopsyPage() {
           <Hero value={`+${secs(a.gapMs)}`} label={`slowest ${a.groupSize} solves vs fastest ${a.groupSize}`} sub={`${secs(a.fastMean)} average when it goes well · ${secs(a.slowMean)} when it doesn't`} />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{a.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Where the gap comes from</SectionTitle>
             <GapChart a={a} />
             <p className="text-[11px] text-muted-2">Each phase&apos;s average in your slow solves minus your fast ones. They add up to the whole gap.</p>
           </div>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <div className="flex items-baseline justify-between">
               <SectionTitle>What separates them, biggest first</SectionTitle>
               <span className="text-[11px] text-muted-2">fast → slow</span>

@@ -1,6 +1,5 @@
 "use client";
 
-import { Sparkles, Wand } from "lucide-react";
 import { CaseIcon } from "@/components/algorithms/CaseIcon";
 import { findCase } from "@/lib/algorithms/caseLookup";
 import { invertAlg } from "@/lib/algorithms/algUtils";
@@ -12,7 +11,7 @@ import { cn } from "@/lib/utils/cn";
 const MAX_SHOWN = 6;
 
 export function outcomeLabel(o: LastLayerOutcome): string {
-  if (o.kind === "ll-skip") return "LL skip!";
+  if (o.kind === "ll-skip") return "LL skip";
   if (o.kind === "oll-skip") return "OLL skip";
   const name = o.ollName ?? "Unknown OLL";
   return o.kind === "edges-oriented" ? `${name} · edges oriented` : name;
@@ -37,12 +36,12 @@ function OutcomeIcon({ outcome }: { outcome: LastLayerOutcome }) {
 
 function OptionRow({ option, highlight, tag }: { option: InsertionOption; highlight?: boolean; tag?: string }) {
   return (
-    <div className={cn("flex items-center gap-2.5 rounded-lg px-2.5 py-2", highlight ? "bg-accent-soft ring-1 ring-accent/40" : "bg-bg-panel-2")}>
+    <div className={cn("flex items-center gap-2.5 py-2.5 first:pt-0", highlight && "-mx-2 rounded-lg bg-accent-soft px-2")}>
       <OutcomeIcon outcome={option.outcome} />
       <div className="flex min-w-0 flex-1 flex-col">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
           {outcomeLabel(option.outcome)}
-          {tag && <span className="rounded-full bg-bg-panel px-1.5 py-px text-[11px] font-medium text-muted">{tag}</span>}
+          {tag && <span className="text-[11px] font-medium text-muted-2">({tag})</span>}
         </p>
         <p className="break-words font-mono text-[11px] text-muted">{option.display}</p>
       </div>
@@ -76,19 +75,16 @@ export function LastSlotOracleCard({ report }: { report: OracleReport }) {
   const betterKey = report.better?.moves.join(" ");
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-          <Wand size={13} className="text-accent" /> Last Slot Oracle
-        </p>
+        <h3 className="text-sm font-semibold text-foreground">Last slot oracle</h3>
         <span className="flex items-center gap-1 text-[11px] text-muted">
           <PairChip pair={report.lastPair} /> {report.lastPairLabel} last
         </span>
       </div>
 
       {report.better ? (
-        <p className="flex items-start gap-1.5 rounded-lg bg-success/10 px-2.5 py-2 text-[11px] text-success">
-          <Sparkles size={13} className="mt-px shrink-0" />
+        <p className="text-sm text-success">
           <span>
             <span className="font-mono font-semibold">{report.better.display}</span> would have left{" "}
             <span className="font-semibold">{outcomeLabel(report.better.outcome)}</span>, {report.yours.cost - report.better.cost} turns
@@ -96,14 +92,16 @@ export function LastSlotOracleCard({ report }: { report: OracleReport }) {
           </span>
         </p>
       ) : (
-        <p className="text-[11px] text-muted">Your insertion was already the cheapest way through OLL from here.</p>
+        <p className="text-sm text-muted">Your insertion was already the cheapest way through OLL from here.</p>
       )}
 
       <OptionRow option={report.yours} tag="yours" />
-      {shown.length > 0 && <p className="pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Other insertions from the same spot</p>}
-      {shown.map((o) => (
-        <OptionRow key={o.moves.join(" ")} option={o} highlight={o.moves.join(" ") === betterKey} />
-      ))}
+      {shown.length > 0 && <p className="pt-1 text-xs font-medium text-muted-2">Other insertions from the same spot</p>}
+      <div className="flex flex-col divide-y divide-border">
+        {shown.map((o) => (
+          <OptionRow key={o.moves.join(" ")} option={o} highlight={o.moves.join(" ") === betterKey} />
+        ))}
+      </div>
       <p className="text-[11px] text-muted-2">
         Yellow on top, this slot at front-right. Searched every insertion up to {report.searchedDepth} turns
         {report.partial ? " (search cut short)" : ""}.

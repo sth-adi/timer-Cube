@@ -121,7 +121,6 @@ export function OnlinePresenceBadge() {
       className="chrome-pill bg-bg-panel-2 font-normal text-muted"
       title="Cubers with the app open right now"
     >
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
       <Users size={11} className="shrink-0" />
       <span className="tabular-nums">{count}</span>
     </div>

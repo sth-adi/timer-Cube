@@ -118,7 +118,7 @@ export function SolveHeader({
               type="button"
               autoFocus
               onClick={() => setConfirming(false)}
-              className="-my-3 flex h-10 items-center rounded-full bg-accent px-3.5 text-[11px] font-semibold text-accent-fg"
+              className="-my-3 flex h-10 items-center rounded-md bg-accent px-3.5 text-[11px] font-semibold text-accent-fg"
               data-testid="disconnect-keep"
             >
               Keep solving
@@ -129,7 +129,7 @@ export function SolveHeader({
                 setConfirming(false);
                 onDisconnect(true);
               }}
-              className="-my-3 flex h-10 items-center rounded-full bg-danger/15 px-3.5 text-[11px] font-semibold text-danger"
+              className="-my-3 flex h-10 items-center rounded-md bg-danger/15 px-3.5 text-[11px] font-semibold text-danger"
               title="Disconnect the cube. This solve is dropped, nothing is saved."
               data-testid="disconnect-confirm-yes"
             >

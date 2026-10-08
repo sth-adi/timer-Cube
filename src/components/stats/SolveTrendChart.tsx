@@ -187,7 +187,7 @@ export function SolveTrendChart({ solves }: { solves: Solve[] }) {
     <div>
       {showWindows && (
         <div className="mb-2 flex">
-          <div className="flex gap-0.5 rounded-full bg-bg-panel-2 p-0.5" role="group" aria-label="How many solves to chart">
+          <div className="flex gap-0.5 rounded-md bg-bg-panel-2 p-0.5" role="group" aria-label="How many solves to chart">
             {WINDOWS.map((win) => (
               <button
                 key={win}
@@ -198,7 +198,7 @@ export function SolveTrendChart({ solves }: { solves: Solve[] }) {
                 }}
                 aria-pressed={windowSize === win}
                 className={cn(
-                  "hit-y rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors",
+                  "hit-y rounded-sm px-2.5 py-0.5 text-xs font-medium transition-colors",
                   windowSize === win ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-foreground",
                 )}
               >
@@ -214,7 +214,7 @@ export function SolveTrendChart({ solves }: { solves: Solve[] }) {
         <div className="relative" style={{ height: READOUT_H }} aria-hidden={hoverIndex === null ? undefined : true}>
           {hoverIndex !== null && hoverN !== null ? (
             <div
-              className="pointer-events-none absolute top-0 flex items-stretch rounded-lg border border-border-strong bg-bg-panel-2 px-2 py-1 shadow-lg"
+              className="pointer-events-none absolute top-0 flex items-stretch rounded-md border border-border-strong bg-bg-panel-2 px-2 py-1 shadow-[var(--shadow-sm)]"
               style={{ left: readoutLeft, width: Math.min(READOUT_W, w) }}
             >
               <div className="flex w-10 shrink-0 flex-col justify-center text-[11px] leading-tight text-muted-2">

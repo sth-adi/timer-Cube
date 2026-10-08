@@ -93,7 +93,7 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
             aria-label="Close"
             className="tap-target -mr-2 text-muted hover:text-foreground"
           >
-            <X size={18} />
+            <X size={18} strokeWidth={1.75} />
           </button>
         </div>
 
@@ -106,16 +106,16 @@ export function CaseDetailSheet({ algCase, onClose }: { algCase: AlgCase; onClos
             type="button"
             onClick={onRestart}
             aria-label="Restart"
-            className="tap-target flex items-center justify-center rounded-full bg-bg-panel-2 p-2 text-muted hover:text-foreground"
+            className="tap-target flex items-center justify-center rounded-lg bg-bg-panel-2 p-2 text-muted hover:text-foreground"
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={14} strokeWidth={1.75} />
           </button>
           <button
             type="button"
             onClick={onPlayPause}
-            className="hit-y flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+            className="hit-y flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
           >
-            {playing ? <Pause size={12} /> : <Play size={12} />}
+            {playing ? <Pause size={12} strokeWidth={1.75} /> : <Play size={12} strokeWidth={1.75} />}
             {playing ? "Pause" : "Play"}
           </button>
         </div>

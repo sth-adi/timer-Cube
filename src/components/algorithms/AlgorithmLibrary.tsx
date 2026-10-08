@@ -30,7 +30,7 @@ function CaseCard({ algCase, onOpen }: { algCase: AlgCase; onOpen: () => void })
       <div className="flex w-full items-center justify-between">
         <span className="flex items-center gap-1 text-sm font-medium">
           {algCase.name}
-          {yours && <span className="rounded-full bg-accent-soft px-1.5 py-px text-[11px] font-semibold text-accent">yours</span>}
+          {yours && <span className="text-[11px] font-medium text-accent">yours</span>}
         </span>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[status])} />
       </div>
@@ -63,16 +63,16 @@ export function AlgorithmLibrary({ onStartReview }: { onStartReview: () => void 
         <div>
           <p className="text-sm font-medium">{due.length === 0 ? "Nothing due right now" : `${due.length} due for review`}</p>
           <p className="text-muted-2 text-xs">
-            {due.length === 0 ? "Cases you practice come back here when they're due" : `across ${ALL_CASES_COUNT} PLL + OLL cases`}
+            {due.length === 0 ? "Cases you practice come back here when they're due" : `across ${ALL_CASES_COUNT} PLL and OLL cases`}
           </p>
         </div>
         <button
           type="button"
           onClick={onStartReview}
           disabled={due.length === 0}
-          className="flex items-center gap-1.5 rounded-full bg-accent-soft px-4 py-2.5 text-sm font-medium text-accent disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-40"
         >
-          <RotateCw size={14} /> Review
+          <RotateCw size={14} strokeWidth={1.75} /> Review
         </button>
       </div>
 
@@ -84,7 +84,7 @@ export function AlgorithmLibrary({ onStartReview }: { onStartReview: () => void 
             onClick={() => setGroup(g)}
             aria-pressed={group === g}
             className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
+              "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
               group === g ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
             )}
           >
@@ -94,9 +94,9 @@ export function AlgorithmLibrary({ onStartReview }: { onStartReview: () => void 
       </div>
 
       {grouped.map(([shape, items]) => (
-        <div key={shape} className="card rounded-xl p-4">
-          <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-muted-2">{shape}</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div key={shape} className="border-t border-border pt-4">
+          <p className="mb-3 text-[12px] font-medium text-muted-2">{shape}</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {items.map((c) => (
               <CaseCard key={c.id} algCase={c} onOpen={() => setOpenCase(c)} />
             ))}

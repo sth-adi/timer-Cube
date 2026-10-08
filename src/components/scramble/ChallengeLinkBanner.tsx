@@ -62,7 +62,7 @@ export function ChallengeLinkBanner({ onRace }: { onRace?: () => void }) {
   if (!pending) return null;
 
   return (
-    <div className="mx-4 mb-2 flex items-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-xs">
+    <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-xs">
       <Swords size={14} className="shrink-0 text-accent" />
       <span className="min-w-0 flex-1 truncate text-foreground/90">
         Someone sent you a scramble to race, <span className="font-mono text-accent">{pending}</span>
@@ -74,7 +74,7 @@ export function ChallengeLinkBanner({ onRace }: { onRace?: () => void }) {
           setPending(null);
           onRace?.();
         }}
-        className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-fg"
+        className="shrink-0 rounded-md bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-fg"
       >
         Race it
       </button>

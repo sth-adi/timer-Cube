@@ -106,17 +106,17 @@ export function fitText(ctx: CanvasRenderingContext2D, s: string, x: number, y: 
   return { text: fit.text, px: fit.px, width };
 }
 
-/** Small tracked caps ("LAST 40 SOLVES"), fitted to `maxWidth`. */
+/** A small muted sentence-case label ("Last 40 solves"), fitted to `maxWidth`. */
 export function caps(card: Card, s: string, x: number, y: number, maxWidth: number, opts: { px?: number; color?: string; align?: CanvasTextAlign; weight?: number } = {}): void {
   const { ctx, theme } = card;
   const px = opts.px ?? 24;
-  fitText(ctx, s.toUpperCase(), x, y, maxWidth, {
+  fitText(ctx, s, x, y, maxWidth, {
     maxPx: px,
     minPx: Math.max(12, Math.round(px * 0.6)),
     family: theme.fontSans,
     weight: opts.weight ?? 650,
     color: opts.color ?? rgba(theme.muted, 1),
-    tracking: px * 0.12,
+    tracking: 0,
     align: opts.align,
   });
 }
@@ -158,33 +158,18 @@ function grain(): HTMLCanvasElement | null {
 
 /**
  * The card background: a vertical wash of the theme's own surface colours, a
- * big accent glow in one corner and a cooler one in the opposite, a faint
- * vignette, film grain, and a hairline frame. Flat and calm, not a screensaver.
+ * faint vignette, film grain, and a hairline frame. Flat and calm, not a screensaver.
  */
-export function paintBackground(card: Card, glowAt: "right" | "left" = "right"): void {
+export function paintBackground(card: Card, _glowAt: "right" | "left" = "right"): void {
   const { ctx, spec, theme, scale } = card;
   const { w, h } = spec;
+  void _glowAt; // kept for callers: the corner glow it placed is gone
   const light = theme.isLight;
 
   const base = ctx.createLinearGradient(0, 0, 0, h);
   base.addColorStop(0, rgba(mix(theme.bg, theme.bgElevated, light ? 0 : 0.7), 1));
   base.addColorStop(1, rgba(mix(theme.bg, light ? theme.fg : [0, 0, 0], light ? 0.04 : 0.45), 1));
   ctx.fillStyle = base;
-  ctx.fillRect(0, 0, w, h);
-
-  const big = Math.max(w, h) * (card.format === "portrait" ? 0.78 : 0.62);
-  const gx = glowAt === "right" ? w * 0.92 : w * 0.08;
-  const g1 = ctx.createRadialGradient(gx, h * 0.04, 0, gx, h * 0.04, big);
-  g1.addColorStop(0, rgba(theme.accent, light ? 0.16 : 0.3));
-  g1.addColorStop(1, rgba(theme.accent, 0));
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, w, h);
-
-  const g2x = glowAt === "right" ? w * 0.05 : w * 0.95;
-  const g2 = ctx.createRadialGradient(g2x, h * 1.0, 0, g2x, h * 1.0, big * 0.8);
-  g2.addColorStop(0, rgba(theme.cyan, light ? 0.1 : 0.13));
-  g2.addColorStop(1, rgba(theme.cyan, 0));
-  ctx.fillStyle = g2;
   ctx.fillRect(0, 0, w, h);
 
   if (!light) {
@@ -406,17 +391,14 @@ export function phasePanel(card: Card, b: Box, phases: PhaseShare[], formatMs: (
   let valuePx = 21;
   segs.forEach((s, i) => {
     const room = Math.max(10, s.w - 14);
-    labelPx = Math.min(labelPx, fitSize((px) => measure(ctx, s.label.toUpperCase(), 650, px, theme.fontSans, px * 0.12), room, 19, 13));
+    labelPx = Math.min(labelPx, fitSize((px) => measure(ctx, s.label, 650, px, theme.fontSans), room, 19, 13));
     valuePx = Math.min(valuePx, fitSize((px) => measure(ctx, valueOf(i), 600, px, theme.fontSans), room, 21, 13));
   });
   segs.forEach((s, i) => {
     const sx = b.x + padX + s.x;
     roundRectPath(ctx, { x: sx, y: barY, w: s.w, h: barH }, 8);
     const c = tints[i % tints.length];
-    const g = ctx.createLinearGradient(0, barY, 0, barY + barH);
-    g.addColorStop(0, rgba(mix(c, [255, 255, 255], 0.18), 1));
-    g.addColorStop(1, rgba(c, 1));
-    ctx.fillStyle = g;
+    ctx.fillStyle = rgba(c, 1);
     ctx.fill();
     const labelW = s.w + 2;
     caps(card, s.label, sx, barY + barH + 30, labelW, { px: labelPx, color: rgba(theme.fg, 0.9), weight: 650 });

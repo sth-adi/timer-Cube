@@ -37,7 +37,7 @@ function Sparkline({ values }: { values: (number | null)[] }) {
   const lastValue = values[values.length - 1];
   const last = lastValue === null ? null : pt(lastValue, values.length - 1).split(",");
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-9 w-[7.5rem] shrink-0" aria-hidden>
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-10 w-[8.5rem] shrink-0" aria-hidden>
       <path d={d} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" strokeOpacity={0.9} />
       {last && <circle cx={last[0]} cy={last[1]} r={3} fill="var(--accent)" stroke="var(--bg-panel)" strokeWidth={1.5} />}
     </svg>
@@ -111,8 +111,8 @@ export function StatsPanel() {
     : undefined;
 
   return (
-    <div className="card rounded-xl p-3 lg:p-4">
-      <div className="mb-3 flex flex-wrap gap-1.5 border-b border-border pb-3">
+    <div className="card rounded-xl p-4 lg:p-5">
+      <div className="mb-3 flex flex-wrap gap-1">
         {SCOPES.map((opt) => (
           <button
             key={opt.id}
@@ -120,8 +120,8 @@ export function StatsPanel() {
             onClick={() => setScope(opt.id)}
             aria-pressed={scope === opt.id}
             className={cn(
-              "hit-y rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-              scope === opt.id ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+              "hit-y rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              scope === opt.id ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
             )}
           >
             {opt.label}
@@ -129,14 +129,14 @@ export function StatsPanel() {
         ))}
       </div>
       {presentTags.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-1.5 border-b border-border pb-3">
+        <div className="mb-3 flex flex-wrap gap-1">
           <button
             type="button"
             onClick={() => setSelected(null)}
             aria-pressed={selected === null}
             className={cn(
-              "hit-y rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-              selected === null ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+              "hit-y rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              selected === null ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
             )}
           >
             Normal
@@ -150,8 +150,8 @@ export function StatsPanel() {
                 onClick={() => setSelected(tag)}
                 aria-pressed={selected === tag}
                 className={cn(
-                  "hit-y rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-                  selected === tag ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+                  "hit-y rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                  selected === tag ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
                 )}
               >
                 {meta.label}
@@ -161,30 +161,30 @@ export function StatsPanel() {
         </div>
       )}
 
-      <div className="flex items-end justify-between gap-3">
+      <div className="mt-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-2">Current ao5</p>
-          <p className="tabular-timer text-4xl font-bold leading-none text-foreground">
+          <p className="text-xs font-medium text-muted-2">Current ao5</p>
+          <p className="tabular-timer mt-1 text-5xl font-bold leading-none tracking-[-0.02em] text-foreground">
             {fmt(stats.ao5, stats.ao5Dnf)}
           </p>
           {ao5Delta !== null && (
             <p
               className={cn(
-                "mt-1.5 flex items-center gap-0.5 text-[11px] font-medium tabular-nums",
+                "mt-2.5 flex items-center gap-1 text-xs font-medium tabular-nums",
                 ao5Delta < -5 ? "text-success" : ao5Delta > 5 ? "text-warning" : "text-muted-2",
               )}
             >
-              {ao5Delta < -5 ? <ArrowDownRight size={12} /> : ao5Delta > 5 ? <ArrowUpRight size={12} /> : <Minus size={12} />}
+              {ao5Delta < -5 ? <ArrowDownRight size={13} strokeWidth={1.75} /> : ao5Delta > 5 ? <ArrowUpRight size={13} strokeWidth={1.75} /> : <Minus size={13} strokeWidth={1.75} />}
               {Math.abs(ao5Delta) <= 5 ? "Level" : `${ao5Delta < 0 ? "−" : "+"}${(Math.abs(ao5Delta) / 1000).toFixed(2)}`} since the last solve
             </p>
           )}
-          {ao5Change?.kind === "dnf" && <p className="mt-1.5 text-[11px] font-medium text-warning">Too many DNFs in the last 5</p>}
-          {ao5Change?.kind === "after-dnf" && <p className="mt-1.5 text-[11px] font-medium text-muted-2">Back from a DNF ao5</p>}
+          {ao5Change?.kind === "dnf" && <p className="mt-2.5 text-xs font-medium text-warning">Too many DNFs in the last 5</p>}
+          {ao5Change?.kind === "after-dnf" && <p className="mt-2.5 text-xs font-medium text-muted-2">Back from a DNF ao5</p>}
         </div>
         <Sparkline values={ao5Trail} />
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-1.5">
+      <div className="mt-5 grid grid-cols-3 gap-x-3 gap-y-1 border-t border-border pt-3">
         <StatTile label="best" value={fmt(stats.best)} onClick={onJumpToBest} title={onJumpToBest ? "Jump to this solve's reconstruction" : undefined} />
         <StatTile label="ao12" value={fmt(stats.ao12, stats.ao12Dnf)} />
         <StatTile label="ao100" value={fmt(stats.ao100, stats.ao100Dnf)} />
@@ -195,7 +195,7 @@ export function StatsPanel() {
         <StatTile label="solves" value={String(stats.count)} sub={scope === "all" ? "all sessions" : undefined} />
       </div>
       {solves.length >= 2 && (
-        <div className="mt-3 border-t border-border/60 pt-3 lg:mt-4">
+        <div className="mt-4 border-t border-border pt-4">
           <SolveTrendChart solves={solves} />
         </div>
       )}

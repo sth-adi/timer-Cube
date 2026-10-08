@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Bluetooth, Check, Gavel, Keyboard, Loader2, Medal, Timer as TimerIcon, Trash2, Volume2, VolumeX } from "lucide-react";
+import { Bluetooth, Check, Gavel, Keyboard, Medal, Timer as TimerIcon, Trash2, Volume2, VolumeX } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
@@ -32,7 +32,7 @@ function wallNow(): number {
   return Date.now();
 }
 
-const fmt = (ms: number | null | undefined) => (ms === undefined ? "—" : ms === null ? "DNF" : formatTime(ms));
+const fmt = (ms: number | null | undefined) => (ms === undefined ? "-" : ms === null ? "DNF" : formatTime(ms));
 
 /** Your practice level to judge the round against: the median of your rolling Ao5s over recent solves. */
 function practiceAverage(finals: (number | null)[]): number | null {
@@ -229,7 +229,7 @@ function Scorecard({ format, attempts, pending }: { format: RoundFormat; attempt
   const worst = results.length === 5 ? (results.includes(null) ? null : Math.max(...finite)) : undefined;
   return (
     <div className="card flex flex-col gap-1 rounded-xl p-3">
-      <p className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+      <p className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium text-muted-2">
         <span>Scorecard · {format.kind === "ao5" ? "Average of 5" : "Mean of 3"}</span>
         {format.cutoffMs !== null && <span>cutoff {formatTime(format.cutoffMs)}</span>}
       </p>
@@ -244,7 +244,7 @@ function Scorecard({ format, attempts, pending }: { format: RoundFormat; attempt
             <div className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm", i === pending && !prog.finished ? "bg-accent-soft" : "bg-bg-panel-2", skipped && "opacity-40")}>
               <span className="w-4 text-[11px] text-muted-2">{i + 1}</span>
               <span className={cn("tabular-timer flex-1 font-semibold", trimmed && "text-muted")}>
-                {a ? `${trimmed ? "(" : ""}${fmt(r)}${a.penalty === "plus2" && r !== null ? "+" : ""}${trimmed ? ")" : ""}` : skipped ? "—" : ""}
+                {a ? `${trimmed ? "(" : ""}${fmt(r)}${a.penalty === "plus2" && r !== null ? "+" : ""}${trimmed ? ")" : ""}` : skipped ? "-" : ""}
               </span>
               {a?.bpm && <span className="text-[11px] text-danger">♥ {Math.round(a.bpm)}</span>}
             </div>
@@ -336,9 +336,9 @@ function CompSim() {
     return (
       <div className="flex flex-col gap-3">
         <div className="card flex flex-col gap-3 rounded-xl p-4">
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1 text-xs">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-bg-panel-2 p-1 text-xs">
             {(["ao5", "mo3"] as const).map((k) => (
-              <button key={k} type="button" onClick={() => setFormat((f) => ({ ...f, kind: k }))} className={cn("hit-y rounded-full py-1.5 font-semibold", format.kind === k ? "bg-accent text-accent-fg" : "text-muted")}>
+              <button key={k} type="button" onClick={() => setFormat((f) => ({ ...f, kind: k }))} className={cn("hit-y rounded-lg py-1.5 font-semibold", format.kind === k ? "bg-accent text-accent-fg" : "text-muted")}>
                 {k === "ao5" ? "Average of 5" : "Mean of 3"}
               </button>
             ))}
@@ -376,38 +376,38 @@ function CompSim() {
             <input value={target} inputMode="decimal" onChange={(e) => setTarget(e.target.value)} placeholder="e.g. 15" className="w-24 rounded-lg bg-bg-panel-2 px-2 py-1.5 text-right text-foreground outline-none [@media(pointer:coarse)]:min-h-11" />
           </label>
           <div className="flex flex-wrap items-center gap-2 text-xs [@media(pointer:coarse)]:gap-y-3">
-            <button type="button" onClick={() => setInput("keyboard")} className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", input === "keyboard" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
-              <Keyboard size={12} /> Keyboard / touch
+            <button type="button" onClick={() => setInput("keyboard")} className={cn("hit-y flex items-center gap-1 rounded-lg px-3 py-1.5 font-medium", input === "keyboard" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+              <Keyboard size={12} strokeWidth={1.75} /> Keyboard / touch
             </button>
             <button
               type="button"
               disabled={!cubeConnected}
               onClick={() => setInput("cube")}
               title={cubeConnected ? undefined : "Connect a smart cube on the timer first"}
-              className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium disabled:opacity-40", input === "cube" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
+              className={cn("hit-y flex items-center gap-1 rounded-lg px-3 py-1.5 font-medium disabled:opacity-40", input === "cube" ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
             >
-              <Bluetooth size={12} /> Smart cube
+              <Bluetooth size={12} strokeWidth={1.75} /> Smart cube
             </button>
-            <button type="button" onClick={() => setVoice((v) => !v)} className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", voice ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
-              {voice ? <Volume2 size={12} /> : <VolumeX size={12} />} Judge voice
+            <button type="button" onClick={() => setVoice((v) => !v)} className={cn("hit-y flex items-center gap-1 rounded-lg px-3 py-1.5 font-medium", voice ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+              {voice ? <Volume2 size={12} strokeWidth={1.75} /> : <VolumeX size={12} strokeWidth={1.75} />} Judge voice
             </button>
-            <button type="button" onClick={() => setSave((v) => !v)} className={cn("hit-y flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", save ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
-              <Check size={12} /> Save to session
+            <button type="button" onClick={() => setSave((v) => !v)} className={cn("hit-y flex items-center gap-1 rounded-lg px-3 py-1.5 font-medium", save ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}>
+              <Check size={12} strokeWidth={1.75} /> Save to session
             </button>
           </div>
-          <button type="button" onClick={() => void start()} disabled={stage === "loading"} className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
-            {stage === "loading" ? <Loader2 size={14} className="animate-spin" /> : <Gavel size={14} />} Start the round
+          <button type="button" onClick={() => void start()} disabled={stage === "loading"} className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
+            {stage === "loading" ? "Preparing" : <><Gavel size={14} strokeWidth={1.75} /> Start the round</>}
           </button>
           {practice !== null && <p className="text-center text-[11px] text-muted-2">Your practice Ao5 is about {formatTime(practice)}, the round is judged against it.</p>}
         </div>
 
         {rounds.length > 0 && (
           <div className="card flex flex-col gap-1 rounded-xl p-3">
-            <p className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+            <p className="flex items-center justify-between px-1 pb-1 text-[11px] font-medium text-muted-2">
               <span>Past rounds</span>
               {compPb !== null && (
                 <span className="flex items-center gap-1 text-accent">
-                  <Medal size={11} /> comp PB {formatTime(compPb)}
+                  <Medal size={11} strokeWidth={1.75} /> comp PB {formatTime(compPb)}
                 </span>
               )}
             </p>
@@ -424,7 +424,7 @@ function CompSim() {
                   </span>
                 )}
                 <button type="button" onClick={() => removeRound(r.id)} className="hit -m-2 p-2 text-muted-2 hover:text-danger" aria-label="Delete round">
-                  <Trash2 size={11} />
+                  <Trash2 size={11} strokeWidth={1.75} />
                 </button>
               </div>
             ))}
@@ -441,8 +441,8 @@ function CompSim() {
     <div className="flex flex-col gap-3">
       {stage === "done" && saved ? (
         <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
-          <p className="text-[11px] uppercase tracking-wide text-muted-2">{format.kind === "ao5" ? "Average" : "Mean"}</p>
-          <p className="tabular-timer text-5xl font-black text-foreground">{summary.average === undefined ? "—" : fmt(summary.average)}</p>
+          <p className="text-[11px] text-muted-2">{format.kind === "ao5" ? "Average" : "Mean"}</p>
+          <p className="tabular-timer text-5xl font-bold text-foreground">{summary.average === undefined ? "-" : fmt(summary.average)}</p>
           <p className="text-xs text-muted">best single {fmt(summary.best)}</p>
           <p className="mt-1 text-sm font-medium text-foreground">{summary.headline}</p>
           {targetMs !== null && typeof summary.average === "number" && (
@@ -452,7 +452,7 @@ function CompSim() {
           )}
           {compPb !== null && typeof summary.average === "number" && summary.average <= compPb && (
             <p className="flex items-center gap-1 text-xs font-bold text-accent">
-              <Medal size={12} /> New comp PB
+              <Medal size={12} strokeWidth={1.75} /> New comp PB
             </p>
           )}
         </div>
@@ -493,7 +493,7 @@ function CompSim() {
                     key={p}
                     type="button"
                     onClick={() => confirm(p)}
-                    className={cn("rounded-full px-4 py-2 text-sm font-semibold", p === pending.penalty ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-foreground")}
+                    className={cn("rounded-lg px-4 py-2 text-sm font-semibold", p === pending.penalty ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-foreground")}
                   >
                     {p === "none" ? "OK" : p === "plus2" ? "+2" : "DNF"}
                   </button>
@@ -505,7 +505,7 @@ function CompSim() {
       )}
       <Scorecard format={format} attempts={attempts} pending={i} />
       {stage === "done" && (
-        <button type="button" onClick={() => setStage("setup")} className="self-center rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-fg">
+        <button type="button" onClick={() => setStage("setup")} className="self-center rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-accent-fg">
           Another round
         </button>
       )}
@@ -525,17 +525,17 @@ export default function CompPage() {
     <>
       <AppBootstrap />
       <AppBackground />
-      <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <TimerIcon size={16} className="text-accent" />
+      <div className="flex min-h-dvh flex-col items-center gap-5 px-4 py-6">
+        <Link href="/" className="hit flex items-center gap-1.5 rounded-md text-sm font-semibold text-foreground active:translate-y-px">
+          <TimerIcon size={16} className="text-accent" strokeWidth={1.75} />
           Cube
         </Link>
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Gavel size={17} className="text-accent" /> Comp Sim
+            <h1 className="flex items-center gap-2 text-balance text-xl font-semibold leading-tight tracking-[-0.02em] text-foreground">
+              <Gavel size={17} className="text-accent" strokeWidth={1.75} /> Comp sim
             </h1>
-            <p className="text-[11px] text-muted-2">A full competition round at home, judge calls, cutoff, time limit, official average, and what nerves cost you.</p>
+            <p className="max-w-[65ch] text-pretty text-xs leading-relaxed text-muted-2">A full competition round at home, judge calls, cutoff, time limit, official average, and what nerves cost you.</p>
           </div>
           <CompSim />
         </div>

@@ -22,11 +22,11 @@ export default function TiltPage() {
   return (
     <AnalyticsShell
       icon={<AlertTriangle size={17} className="text-accent" />}
-      title="Tilt Meter"
+      title="Tilt meter"
       subtitle="Does a mistake early in a solve bleed into the phase right after?"
     >
       {!r ? (
-        <NotEnough need={MIN_SAMPLE} have={eligible} what="Tilt Meter" />
+        <NotEnough need={MIN_SAMPLE} have={eligible} what="Tilt meter" />
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -38,7 +38,7 @@ export default function TiltPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Next phase, relative to your own average</SectionTitle>
             {[
               { label: "After a flagged mistake", ratio: r.afterMistakeAvgRatio, n: r.sampleSize },

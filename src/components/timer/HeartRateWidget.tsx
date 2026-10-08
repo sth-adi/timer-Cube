@@ -21,7 +21,7 @@ export function HeartRateWidget() {
         onClick={() => void connect()}
         disabled={connecting}
         title={error ?? "Connect a BLE heart-rate monitor"}
-        className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-muted-2 hover:text-muted disabled:opacity-50"
+        className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-2 hover:text-muted disabled:opacity-50"
       >
         {connecting ? <Loader2 size={11} className="animate-spin" /> : <HeartCrack size={11} />}
         {connecting ? "Connecting…" : "Heart rate"}
@@ -34,7 +34,7 @@ export function HeartRateWidget() {
       type="button"
       onClick={disconnect}
       title={`${deviceName}, click to disconnect`}
-      className="flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-[11px] font-medium text-danger"
+      className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-danger"
     >
       <Heart size={11} fill="currentColor" />
       {bpm ?? "…"} bpm

@@ -1,23 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Eye } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { Grade, InspectionReport } from "@/lib/inspection/report";
 import { cn } from "@/lib/utils/cn";
 
 export const GRADE_STYLE: Record<Grade, string> = {
-  A: "bg-success/15 text-success",
-  B: "bg-accent-soft text-accent",
-  C: "bg-warning/15 text-warning",
-  D: "bg-danger/15 text-danger",
-  F: "bg-danger/25 text-danger",
+  A: "text-success",
+  B: "text-accent",
+  C: "text-warning",
+  D: "text-danger",
+  F: "text-danger",
 };
 
 export function GradeBadge({ grade, size = "md" }: { grade: Grade; size?: "md" | "lg" }) {
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-xl font-black",
+        "flex shrink-0 items-center justify-center font-bold tabular-nums",
         size === "lg" ? "h-16 w-16 text-4xl" : "h-10 w-10 text-xl",
         GRADE_STYLE[grade],
       )}
@@ -49,7 +49,7 @@ export function InspectionGradeCard({ report }: { report: InspectionReport }) {
       <GradeBadge grade={report.grade} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-          <Eye size={13} className="text-accent" /> Inspection
+          Inspection
           <span className="font-normal text-muted-2">
             · planned {report.plannedTurns}/{report.crossTurns} cross turns{report.xcross ? " · x-cross" : ""}
           </span>

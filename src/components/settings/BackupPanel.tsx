@@ -89,7 +89,7 @@ export function BackupPanel() {
 
   return (
     <div className="mt-4 border-t border-border pt-3" data-testid="backup-panel">
-      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Backup</p>
+      <p className="mb-1.5 text-[11px] text-muted-2">Backup</p>
       <p className="mb-2 text-[11px] leading-relaxed text-muted-2">
         Your solves live only in this browser. A backup is one file with everything, solves, sessions, settings, algorithm progress, that you can keep anywhere.
         {lastAt !== null && <> Last backup: {new Date(lastAt).toLocaleDateString()}.</>}

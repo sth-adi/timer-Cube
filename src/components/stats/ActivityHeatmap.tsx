@@ -71,7 +71,7 @@ export function ActivityHeatmap({ solves }: { solves: Solve[] }) {
   }, [grid, activity]);
 
   if (solves.length === 0) {
-    return <p className="text-muted-2 text-sm text-center py-6">Your activity streak will show up here.</p>;
+    return <p className="py-4 text-sm text-muted-2">Your activity streak will show up here.</p>;
   }
 
   const months = grid.months.filter((m) => m.col * step + 30 <= gridW + 4);

@@ -64,17 +64,17 @@ export default function SumOfBestPage() {
   return (
     <AnalyticsShell
       icon={<Medal size={17} className="text-accent" />}
-      title="Sum of Best"
+      title="Sum of best"
       subtitle="Your best-ever cross, pairs, OLL and PLL, added up: the solve you've already proven you can do."
     >
       {!r ? (
-        <NotEnough need={MIN_SOLVES} have={metrics.length} what="Sum of Best" />
+        <NotEnough need={MIN_SOLVES} have={metrics.length} what="Sum of best" />
       ) : (
         <>
           <Hero value={secs(r.sumOfBestMs)} label="sum of your best stretches" sub={`PB ${secs(r.pbMs)}, ${secs(r.headroomMs)} of proven headroom`} />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <div className="flex items-center justify-between">
               <SectionTitle>Every stretch: best, and what it could save</SectionTitle>
             </div>
@@ -95,7 +95,7 @@ export default function SumOfBestPage() {
             </div>
           </div>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Golds, a stretch faster than ever before</SectionTitle>
             <GoldTimeline golds={r.goldsPerSolve} />
             <p className="text-[11px] text-muted">

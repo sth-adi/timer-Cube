@@ -72,11 +72,11 @@ function Result({ id, onSave, saved }: { id: AlgIdentity; onSave: () => void; sa
           <CaseIcon setupAlg={invertAlg(algCase.alg)} kind={group} className="h-14 w-14 shrink-0 overflow-hidden rounded" />
         ) : (
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded bg-bg-panel-2">
-            <Fingerprint size={22} className="text-accent" />
+            <Fingerprint size={22} className="text-accent" strokeWidth={1.75} />
           </div>
         )}
         <div className="flex flex-col">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">{KIND_LABEL[id.kind]}</p>
+          <p className="text-[10px] font-medium text-muted-2">{KIND_LABEL[id.kind]}</p>
           <p className="text-lg font-bold text-foreground">{id.caseName ?? (id.kind === "other" ? "Custom sequence" : KIND_LABEL[id.kind])}</p>
           {id.caseName && (
             <p className={cn("text-[11px] font-medium", id.isBookAlg ? "text-success" : "text-accent")}>
@@ -86,15 +86,15 @@ function Result({ id, onSave, saved }: { id: AlgIdentity; onSave: () => void; sa
         </div>
       </div>
 
-      <p className="break-words rounded-lg bg-bg-panel-2 px-3 py-2 font-mono text-sm font-semibold text-foreground">{id.notation || "—"}</p>
+      <p className="break-words rounded-lg bg-bg-panel-2 px-3 py-2 font-mono text-sm font-semibold text-foreground">{id.notation || "-"}</p>
       {id.bookAlg && !id.isBookAlg && <p className="text-[11px] text-muted">Book alg: <span className="font-mono">{id.bookAlg}</span></p>}
 
       <div className="grid grid-cols-4 gap-1.5 text-center">
         {[
           [id.htm, "turns"],
           [id.qtm, "quarter turns"],
-          [id.durationMs ? `${(id.durationMs / 1000).toFixed(2)}s` : "—", "execution"],
-          [id.tps !== null ? id.tps.toFixed(1) : "—", "TPS"],
+          [id.durationMs ? `${(id.durationMs / 1000).toFixed(2)}s` : "-", "execution"],
+          [id.tps !== null ? id.tps.toFixed(1) : "-", "TPS"],
         ].map(([v, l]) => (
           <div key={l} className="rounded-lg bg-bg-panel-2 px-1 py-1.5">
             <p className="text-sm font-bold tabular-nums text-foreground">{v}</p>
@@ -110,7 +110,7 @@ function Result({ id, onSave, saved }: { id: AlgIdentity; onSave: () => void; sa
 
       {effect.movedCount > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">What it does to the pieces</p>
+          <p className="text-[10px] font-medium text-muted-2">What it does to the pieces</p>
           {effect.cornerCycles.map((c) => (
             <div key={c.join()} className="flex items-center gap-2">
               <span className="w-24 text-[10px] text-muted">{c.length === 2 ? "Swaps corners" : `${c.length}-cycle corners`}</span>
@@ -151,9 +151,9 @@ function Result({ id, onSave, saved }: { id: AlgIdentity; onSave: () => void; sa
           type="button"
           onClick={onSave}
           disabled={saved}
-          className="flex items-center justify-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground disabled:text-success"
+          className="flex items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground disabled:text-success"
         >
-          {saved ? <Check size={13} /> : <BookmarkPlus size={13} />} {saved ? "Saved to My Algs" : "Save to My Algs"}
+          {saved ? <Check size={13} strokeWidth={1.75} /> : <BookmarkPlus size={13} strokeWidth={1.75} />} {saved ? "Saved to My Algs" : "Save to My Algs"}
         </button>
       )}
     </div>
@@ -220,18 +220,18 @@ function AlgIdentifier() {
                 Press record, then do any sequence, a new alg from a video, a trick you found, anything. Recording stops by itself when you
                 pause for {AUTO_STOP_MS / 1000}s. Start from any state: only what the sequence <em>does</em> matters.
               </p>
-              <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-full bg-danger px-5 py-2.5 text-sm font-semibold text-white">
-                <Circle size={12} fill="currentColor" /> Record
+              <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-lg bg-danger px-5 py-2.5 text-sm font-semibold text-white">
+                <Circle size={12} fill="currentColor" strokeWidth={1.75} /> Record
               </button>
             </>
           ) : (
             <>
               <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
-                <Circle size={9} fill="currentColor" /> Recording · {tokens.length} turns
+                <Circle size={9} fill="currentColor" strokeWidth={1.75} /> Recording · {tokens.length} turns
               </p>
               {tokens.length > 0 && <RouteChips display={tokens} turns={tokens} position={tokens.length} variant="color" />}
-              <button type="button" onClick={stop} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
-                <Square size={11} fill="currentColor" /> Stop
+              <button type="button" onClick={stop} className="flex items-center gap-1.5 rounded-lg bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
+                <Square size={11} fill="currentColor" strokeWidth={1.75} /> Stop
               </button>
             </>
           )}
@@ -248,20 +248,20 @@ function AlgIdentifier() {
               setSavedNotation(identity.notation);
             }}
           />
-          <button type="button" onClick={start} className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
-            <Circle size={11} fill="currentColor" /> Record another
+          <button type="button" onClick={start} className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
+            <Circle size={11} fill="currentColor" strokeWidth={1.75} /> Record another
           </button>
         </>
       )}
       {phase === "done" && !identity && (
-        <button type="button" onClick={start} className="rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
+        <button type="button" onClick={start} className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
           Nothing recorded, try again
         </button>
       )}
 
       {savedAlgs.length > 0 && (
         <div className="card flex flex-col gap-1.5 rounded-xl p-3">
-          <p className="px-1 text-[10px] font-medium uppercase tracking-wide text-muted-2">My algs</p>
+          <p className="px-1 text-[10px] font-medium text-muted-2">My algs</p>
           {savedAlgs.map((a) => (
             <div key={a.notation} className="flex items-center gap-2 rounded-lg bg-bg-panel-2 px-2.5 py-2">
               <div className="flex min-w-0 flex-1 flex-col">
@@ -271,11 +271,11 @@ function AlgIdentifier() {
                 <span className="break-words font-mono text-[11px] text-muted">{a.notation}</span>
               </div>
               <div className="flex flex-col items-end text-[10px] tabular-nums text-muted-2">
-                <span>{a.bestMs !== null ? `${(a.bestMs / 1000).toFixed(2)}s best` : "—"}</span>
+                <span>{a.bestMs !== null ? `${(a.bestMs / 1000).toFixed(2)}s best` : "-"}</span>
                 <span>{a.timesRecorded}× recorded</span>
               </div>
               <button type="button" onClick={() => remove(a.notation)} className="text-muted-2 hover:text-danger" aria-label="Remove">
-                <Trash2 size={13} />
+                <Trash2 size={13} strokeWidth={1.75} />
               </button>
             </div>
           ))}
@@ -290,17 +290,17 @@ export default function AlgIdPage() {
     <>
       <AppBootstrap />
       <AppBackground />
-      <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <TimerIcon size={16} className="text-accent" />
+      <div className="flex min-h-dvh flex-col items-center gap-5 px-4 py-6">
+        <Link href="/" className="hit flex items-center gap-1.5 rounded-md text-sm font-semibold text-foreground active:translate-y-px">
+          <TimerIcon size={16} className="text-accent" strokeWidth={1.75} />
           Cube
         </Link>
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Fingerprint size={17} className="text-accent" /> Alg Identifier
+            <h1 className="flex items-center gap-2 text-balance text-xl font-semibold leading-tight tracking-[-0.02em] text-foreground">
+              <Fingerprint size={17} className="text-accent" strokeWidth={1.75} /> Alg identifier
             </h1>
-            <p className="text-[11px] text-muted-2">Do any sequence on your cube and find out exactly what it is.</p>
+            <p className="max-w-[65ch] text-pretty text-xs leading-relaxed text-muted-2">Do any sequence on your cube and find out exactly what it is.</p>
           </div>
           <ConnectGate blurb="The Alg Identifier reads the turns straight off your smart cube, so it needs one connected.">
             <AlgIdentifier />

@@ -563,7 +563,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
         <div className="flex min-h-[3.5rem] w-full flex-col items-center justify-center rounded-xl bg-bg-panel-2 px-3 py-2 text-center" aria-live="polite">
           {caption ? (
             <>
-              <p className={cn("text-[11px] font-bold uppercase tracking-wide", CUE_TONE[caption.tone])}>{caption.title}</p>
+              <p className={cn("text-[11px] font-bold", CUE_TONE[caption.tone])}>{caption.title}</p>
               <p className="text-xs leading-snug text-foreground">{caption.line}</p>
             </>
           ) : (
@@ -648,7 +648,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 ))}
               </div>
               {segments.length > 1 && (
-                <div className="flex h-3.5 px-2 text-[10px] font-medium uppercase leading-3.5 tracking-wide text-muted-2" aria-hidden>
+                <div className="flex h-3.5 px-2 text-[10px] font-medium leading-3.5 text-muted-2" aria-hidden>
                   {segments.map((seg) => {
                     const w = (seg.endMs - seg.startMs) / durationMs;
                     return (

@@ -27,7 +27,7 @@ const PHASE_COLOR: Record<TimerPhase, string> = {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[10px] uppercase tracking-wide text-muted-2">{label}</span>
+      <span className="text-[10px] text-muted-2">{label}</span>
       <span className="tabular-timer text-base font-semibold">{value}</span>
     </div>
   );
@@ -81,7 +81,7 @@ export function TrainerView() {
             type="button"
             onClick={() => void setMode(m)}
             className={cn(
-              "hit-y rounded-full px-4 py-2 text-sm font-medium uppercase transition-colors",
+              "hit-y rounded-lg px-4 py-2 text-sm font-medium transition-colors",
               mode === m ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
             )}
           >
@@ -115,9 +115,9 @@ export function TrainerView() {
       </div>
 
       <div className="card grid w-full grid-cols-3 gap-3 rounded-xl p-3">
-        <Stat label="best" value={best !== null ? formatTime(best) : "—"} />
-        <Stat label="mean" value={mean !== null ? formatTime(mean) : "—"} />
-        <Stat label="ao12" value={ao12 !== null ? formatTime(ao12) : "—"} />
+        <Stat label="best" value={best !== null ? formatTime(best) : "-"} />
+        <Stat label="mean" value={mean !== null ? formatTime(mean) : "-"} />
+        <Stat label="ao12" value={ao12 !== null ? formatTime(ao12) : "-"} />
       </div>
 
       <button
@@ -126,7 +126,7 @@ export function TrainerView() {
         disabled={times.length === 0}
         className="hit-y flex items-center gap-1.5 text-xs text-muted-2 hover:text-muted disabled:opacity-40"
       >
-        <RotateCcw size={11} />
+        <RotateCcw size={11} strokeWidth={1.75} />
         {times.length} practiced, reset
       </button>
     </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Gift, Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
 import { AppBackground } from "@/components/chrome/AppBackground";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { CanvasRecorder, themeAccent } from "@/components/reel/CanvasRecorder";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { achievementSolves } from "@/lib/stats/stats";
@@ -64,11 +65,11 @@ export default function WrappedPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Gift size={17} className="text-accent" /> Cube Wrapped
+              <Gift size={17} className="text-accent" /> Cube wrapped
             </h1>
             <p className="text-[11px] text-muted-2">Your month or year of cubing, as a story you can share.</p>
           </div>
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-bg-panel-2 p-1">
             {(["month", "year"] as const).map((p) => (
               <button
                 key={p}
@@ -78,7 +79,7 @@ export default function WrappedPage() {
                   setPickedAt(null);
                   setSlide(0);
                 }}
-                className={cn("hit-y rounded-full py-1.5 text-xs font-semibold", period === p ? "bg-accent text-accent-fg" : "text-muted")}
+                className={cn("hit-y rounded-md py-1.5 text-xs font-semibold", period === p ? "bg-accent text-accent-fg" : "text-muted")}
               >
                 {p === "month" ? "Month" : "Year"}
               </button>
@@ -94,7 +95,7 @@ export default function WrappedPage() {
                     setPickedAt(o.at);
                     setSlide(0);
                   }}
-                  className={cn("shrink-0 rounded-full px-3 py-1 text-[11px] font-medium pointer-coarse:py-3.5", o.at === at ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
+                  className={cn("shrink-0 rounded-md px-3 py-1 text-[11px] font-medium pointer-coarse:py-3.5", o.at === at ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted")}
                 >
                   {o.label}
                 </button>
@@ -102,7 +103,9 @@ export default function WrappedPage() {
             </div>
           )}
           {!data ? (
-            <div className="card rounded-xl p-6 text-center text-sm text-muted">A few more solves this {period} and your Wrapped is ready.</div>
+            <EmptyState>
+              <p>A few more solves this {period} and your wrapped story is ready.</p>
+            </EmptyState>
           ) : (
             <>
               <CanvasRecorder
@@ -116,13 +119,13 @@ export default function WrappedPage() {
                 ariaLabel="Cube Wrapped story"
               />
               <div className="flex items-center justify-center gap-3">
-                <button type="button" onClick={() => setSlide((s) => Math.max(0, s - 1))} disabled={current === 0} className="hit rounded-full bg-bg-panel-2 p-2 text-foreground disabled:opacity-30" aria-label="Previous card">
+                <button type="button" onClick={() => setSlide((s) => Math.max(0, s - 1))} disabled={current === 0} className="hit rounded-md bg-bg-panel-2 p-2 text-foreground disabled:opacity-30" aria-label="Previous card">
                   <ChevronLeft size={16} />
                 </button>
                 <span className="text-[11px] tabular-nums text-muted">
                   {current + 1} / {slides.length}
                 </span>
-                <button type="button" onClick={() => setSlide((s) => Math.min(slides.length - 1, s + 1))} disabled={current === slides.length - 1} className="hit rounded-full bg-bg-panel-2 p-2 text-foreground disabled:opacity-30" aria-label="Next card">
+                <button type="button" onClick={() => setSlide((s) => Math.min(slides.length - 1, s + 1))} disabled={current === slides.length - 1} className="hit rounded-md bg-bg-panel-2 p-2 text-foreground disabled:opacity-30" aria-label="Next card">
                   <ChevronRight size={16} />
                 </button>
               </div>

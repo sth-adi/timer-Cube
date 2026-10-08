@@ -10,8 +10,7 @@ import { currentOrientation } from "@/lib/play/usePlayInput";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useStored } from "@/lib/play/useStored";
 
-const ACCENT = "#ff4fd8";
-const INK: Record<PieceType, string> = { I: "#38e1ff", O: FACE_HEX.D, T: ACCENT, S: FACE_HEX.F, Z: FACE_HEX.R, J: FACE_HEX.B, L: FACE_HEX.L };
+const INK: Record<PieceType, string> = { I: "#38e1ff", O: FACE_HEX.D, T: FACE_HEX.U, S: FACE_HEX.F, Z: FACE_HEX.R, J: FACE_HEX.B, L: FACE_HEX.L };
 const BEST_KEY = "twistris-best";
 
 /** Grip face → action. Direction doesn't matter except on U, which rotates each way. */
@@ -168,31 +167,31 @@ export default function TwistrisPage() {
   }, []);
 
   return (
-    <PlayShell accent={ACCENT} title="Twistris" tagline="Falling blocks, and your cube is the controller. Turn R to slide right, L to slide left, U to spin, F to slam it down.">
+    <PlayShell title="Twistris" tagline="Falling blocks, and your cube is the controller. Turn R to slide right, L to slide left, U to spin, F to slam it down.">
       <div className="flex items-start justify-center gap-3">
         <div className="relative">
           <canvas ref={canvas} width={COLS * 24} height={ROWS * 24} className="block h-auto w-[216px] rounded-xl border border-white/10 bg-[#0d0612] sm:w-[240px]" />
           {(!started || game.over || paused) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/80 p-4 text-center">
-              <p className="text-2xl font-black tracking-tight">{game.over && started ? "Topped out" : paused ? "Paused" : "Ready?"}</p>
+              <p className="text-2xl font-bold tracking-tight">{game.over && started ? "Topped out" : paused ? "Paused" : "Ready"}</p>
               {game.over && started && <p className="text-sm text-[var(--play-dim)]">{game.score.toLocaleString()} points</p>}
               {paused && started && !game.over ? (
                 <button type="button" onClick={() => setPaused(false)} className="play-btn flex items-center gap-1.5 px-5 py-2 text-sm">
-                  <Play size={15} /> Resume
+                  <Play size={15} strokeWidth={1.75} /> Resume
                 </button>
               ) : (
-                <button type="button" onClick={start} className="play-btn play-glow flex items-center gap-1.5 px-5 py-2 text-sm">
-                  {game.over && started ? <RotateCcw size={15} /> : <Play size={15} />} {game.over && started ? "Again" : "Start"}
+                <button type="button" onClick={start} className="play-btn flex items-center gap-1.5 px-5 py-2 text-sm">
+                  {game.over && started ? <RotateCcw size={15} strokeWidth={1.75} /> : <Play size={15} strokeWidth={1.75} />} {game.over && started ? "Play again" : "Start"}
                 </button>
               )}
-              <p className="text-[11px] text-[var(--play-dim)]">{connected ? "…or turn U to start" : "…or press Enter"}</p>
+              <p className="text-[11px] text-[var(--play-dim)]">{connected ? "Or turn U to start" : "Or press Enter"}</p>
             </div>
           )}
         </div>
         <div className="flex w-[104px] flex-col gap-2.5">
           <Mini label="Hold" type={game.hold} dim={!game.canHold} />
           <div className="play-panel flex flex-col gap-1 rounded-xl p-2">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">Next</span>
+            <span className="text-[11px] font-bold text-[var(--play-dim)]">Next</span>
             {game.queue.slice(0, 3).map((t, i) => (
               <PieceGlyph key={i} type={t} size={i === 0 ? 11 : 8} />
             ))}
@@ -203,8 +202,8 @@ export default function TwistrisPage() {
           <Stat label="Best" value={best.toLocaleString()} />
           <Stat label="TPS" value={tps.toFixed(1)} />
           {started && !game.over && (
-            <button type="button" onClick={() => setPaused((v) => !v)} className="flex items-center justify-center gap-1 rounded-full border border-white/10 py-1.5 text-[11px] text-[var(--play-dim)]">
-              <Pause size={12} /> Pause
+            <button type="button" onClick={() => setPaused((v) => !v)} className="hit-y flex items-center justify-center gap-1 rounded-lg border border-white/10 py-1.5 text-[12px] text-[var(--play-dim)]">
+              <Pause size={12} strokeWidth={1.75} /> Pause
             </button>
           )}
         </div>
@@ -221,7 +220,7 @@ export default function TwistrisPage() {
           ["B", "hold"],
         ].map(([k, v]) => (
           <div key={k} className="flex flex-col">
-            <span className="font-black" style={{ color: ACCENT }}>
+            <span className="font-bold" style={{ color: "var(--play-accent)" }}>
               {k}
             </span>
             <span className="text-[var(--play-dim)]">{v}</span>
@@ -242,8 +241,8 @@ export default function TwistrisPage() {
 function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{label}</span>
-      <span className={big ? "text-xl font-black tabular-nums" : "text-sm font-bold tabular-nums"}>{value}</span>
+      <span className="text-[11px] font-bold text-[var(--play-dim)]">{label}</span>
+      <span className={big ? "text-xl font-bold tabular-nums" : "text-sm font-bold tabular-nums"}>{value}</span>
     </div>
   );
 }
@@ -264,7 +263,7 @@ function PieceGlyph({ type, size }: { type: PieceType; size: number }) {
 function Mini({ label, type, dim }: { label: string; type: PieceType | null; dim: boolean }) {
   return (
     <div className="play-panel flex min-h-[52px] flex-col gap-1 rounded-xl p-2" style={{ opacity: dim ? 0.45 : 1 }}>
-      <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{label}</span>
+      <span className="text-[11px] font-bold text-[var(--play-dim)]">{label}</span>
       {type ? <PieceGlyph type={type} size={10} /> : <span className="text-[11px] text-white/20">turn B</span>}
     </div>
   );

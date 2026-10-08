@@ -50,7 +50,7 @@ export function TimeOfDayChart({ solves }: { solves: Solve[] }) {
 
   const totalSolves = blocks.reduce((n, b) => n + b.count, 0);
   if (totalSolves < 3) {
-    return <p className="text-muted-2 text-sm text-center py-6">Solve at different times of day to see this.</p>;
+    return <p className="py-4 text-sm text-muted-2">Solve at different times of day to see this.</p>;
   }
 
   const means = blocks.map((b) => b.mean).filter((m): m is number => m !== null);

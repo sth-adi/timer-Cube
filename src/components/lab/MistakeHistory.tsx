@@ -58,7 +58,7 @@ export function MistakeHistory({ solves }: { solves: readonly Solve[] }) {
 
       {reports.length > 1 && (
         <div className="flex flex-col gap-1">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Clean score, oldest → newest</p>
+          <p className="text-[10px] font-medium text-muted-2">Clean score, oldest → newest</p>
           <svg viewBox={`0 0 ${w} ${h}`} className="h-11 w-full" preserveAspectRatio="none">
             <polyline points={points} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
@@ -69,7 +69,7 @@ export function MistakeHistory({ solves }: { solves: readonly Solve[] }) {
         <p className="text-xs text-success">No mistakes found in any scanned solve.</p>
       ) : (
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-2">Most expensive habits</p>
+          <p className="text-[10px] font-medium text-muted-2">Most expensive habits</p>
           {habits.map((hb) => (
             <div key={hb.kind} className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-[11px]">

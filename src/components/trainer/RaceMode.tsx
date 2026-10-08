@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bluetooth, ChevronDown, ChevronUp, Loader2, Radio, Swords, Trophy, Wifi, WifiOff, Zap } from "lucide-react";
+import { Bluetooth, ChevronDown, ChevronUp, Radio, Swords, Trophy, Wifi, WifiOff, Zap } from "lucide-react";
 import { useRaceStore, type RaceCubeMove } from "@/lib/store/raceStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -135,9 +135,9 @@ function OpponentPanel({
 }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-2">
+      <p className="flex items-center gap-1 text-[10px] text-muted-2">
         Opponent
-        {opponentHasSmartCube && <Bluetooth size={10} className="text-accent" />}
+        {opponentHasSmartCube && <Bluetooth size={10} className="text-accent" strokeWidth={1.75} />}
       </p>
       {opponentTimeMs !== null ? (
         <p className="tabular-timer w-full rounded-xl bg-bg-panel-2 py-6 text-center text-3xl font-bold text-foreground sm:text-4xl">
@@ -156,7 +156,7 @@ function OpponentPanel({
 
 /** Small "1204" pill next to a ready-status label — only rendered once a rating is known (i.e. that side is signed in), so an anonymous racer's row just has no badge rather than a misleading placeholder. */
 function RatingBadge({ rating }: { rating: number }) {
-  return <span className="rounded-full bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-2">{rating}</span>;
+  return <span className="rounded-md bg-bg-panel-2 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-2">{rating}</span>;
 }
 
 /**
@@ -186,15 +186,15 @@ function RaceLeaderboardPanel() {
     <div className="mt-3 border-t border-border pt-3">
       <button type="button" onClick={toggle} className="flex w-full items-center justify-between text-[11px] font-medium text-muted">
         <span className="flex items-center gap-1.5">
-          <Trophy size={12} className="text-warning" /> Race leaderboard
+          <Trophy size={12} className="text-warning" strokeWidth={1.75} /> Race leaderboard
         </span>
-        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        {open ? <ChevronUp size={13} strokeWidth={1.75} /> : <ChevronDown size={13} strokeWidth={1.75} />}
       </button>
       {open && (
         <div className="mt-2">
           {loading && (
             <p className="flex items-center gap-1.5 text-[11px] text-muted-2">
-              <Loader2 size={12} className="animate-spin" /> Loading…
+              Loading…
             </p>
           )}
           {!loading && board && board.top.length === 0 && (
@@ -367,12 +367,12 @@ export function RaceMode() {
       <div className="card rounded-xl p-3">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-            <Swords size={15} className="text-accent" />
+            <Swords size={15} className="text-accent" strokeWidth={1.75} />
             Live race
           </h2>
           {mode !== "idle" && (
             <span className={cn("flex items-center gap-1 text-[11px] font-medium", connected ? "text-success" : "text-muted-2")}>
-              {connected ? <Wifi size={12} /> : <WifiOff size={12} />}
+              {connected ? <Wifi size={12} strokeWidth={1.75} /> : <WifiOff size={12} strokeWidth={1.75} />}
               {connected ? "Connected" : "Not connected"}
             </span>
           )}
@@ -390,7 +390,7 @@ export function RaceMode() {
                 onClick={() => void quickMatch()}
                 className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-accent-fg"
               >
-                <Zap size={15} /> Quick Match
+                <Zap size={15} strokeWidth={1.75} /> Quick Match
               </button>
             )}
             <div className="flex gap-2">
@@ -399,7 +399,7 @@ export function RaceMode() {
                 onClick={() => void hostQuick()}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-bg-panel-2 px-3 py-2 text-xs font-semibold text-foreground"
               >
-                <Radio size={13} /> Host a race
+                <Radio size={13} strokeWidth={1.75} /> Host a race
               </button>
               <button
                 type="button"
@@ -415,7 +415,7 @@ export function RaceMode() {
 
         {matchmaking && !connected && (
           <div className="flex flex-col items-center gap-2 py-6">
-            <Loader2 size={20} className="animate-spin text-accent" />
+            <span className="block h-6 w-40 animate-pulse rounded-md bg-bg-panel-2" aria-label="Loading" role="status" />
             <p className="text-xs font-medium text-foreground">Finding an opponent…</p>
             <p className="max-w-[16rem] text-center text-[11px] text-muted-2">
               Matches you with anyone else looking for a quick race right now.
@@ -427,7 +427,7 @@ export function RaceMode() {
           <div className="flex flex-col gap-3">
             {busy && !roomCode && !localCode && (
               <p className="flex items-center gap-1.5 text-xs text-muted">
-                <Loader2 size={13} className="animate-spin" /> Setting up your race…
+                Setting up your race…
               </p>
             )}
             {roomCode && (
@@ -435,7 +435,7 @@ export function RaceMode() {
                 <p className="text-[11px] font-medium text-muted">Give them this code</p>
                 <p className="text-4xl font-bold tracking-[0.3em] text-accent">{roomCode}</p>
                 <p className="flex items-center gap-1.5 text-xs text-muted-2">
-                  <Loader2 size={13} className="animate-spin" /> Waiting for them to join…
+                  Waiting for them to join…
                 </p>
               </div>
             )}
@@ -484,7 +484,7 @@ export function RaceMode() {
                 disabled={joinCodeInput.length < 5 || busy}
                 className="flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-fg disabled:opacity-40"
               >
-                {busy ? <Loader2 size={13} className="animate-spin" /> : "Join"}
+                {busy ? "Joining" : "Join"}
               </button>
             </div>
             <button type="button" onClick={() => setManualJoin(true)} className="self-start text-[11px] text-muted-2 underline">
@@ -511,14 +511,14 @@ export function RaceMode() {
                   disabled={!pasteValue.trim() || busy}
                   className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40"
                 >
-                  {busy ? "Working…" : "Generate my code"}
+                  {busy ? "Working" : "Generate my code"}
                 </button>
               </>
             ) : (
               <>
                 <CodeBox label="Send this code back to them" value={localCode} hint="Once they paste it in, you'll connect automatically." />
                 <p className="flex items-center gap-1.5 text-xs text-muted">
-                  <Loader2 size={13} className="animate-spin" /> Waiting for them to connect…
+                  Waiting for them to connect…
                 </p>
               </>
             )}
@@ -537,11 +537,11 @@ export function RaceMode() {
                 <p className="tabular-timer break-words text-center text-sm font-medium leading-relaxed text-foreground/90">{scramble}</p>
                 <div className="flex items-center justify-center gap-3 text-[11px]">
                   <span className={cn("flex items-center gap-1", myReady ? "text-success" : "text-muted-2")}>
-                    {myHasSmartCube && <Bluetooth size={11} />} You {myReady ? "ready" : "not ready"}
+                    {myHasSmartCube && <Bluetooth size={11} strokeWidth={1.75} />} You {myReady ? "ready" : "not ready"}
                     {myRating !== null && <RatingBadge rating={myRating} />}
                   </span>
                   <span className={cn("flex items-center gap-1", opponentReady ? "text-success" : "text-muted-2")}>
-                    {opponentHasSmartCube && <Bluetooth size={11} />} Opponent {opponentReady ? "ready" : "not ready"}
+                    {opponentHasSmartCube && <Bluetooth size={11} strokeWidth={1.75} />} Opponent {opponentReady ? "ready" : "not ready"}
                     {opponentRating !== null && <RatingBadge rating={opponentRating} />}
                   </span>
                 </div>
@@ -566,9 +566,9 @@ export function RaceMode() {
             {raceState === "running" && startAtMs !== null && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col items-center gap-1.5">
-                  <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-2">
+                  <p className="flex items-center gap-1 text-[10px] text-muted-2">
                     You
-                    {myHasSmartCube && <Bluetooth size={10} className="text-accent" />}
+                    {myHasSmartCube && <Bluetooth size={10} className="text-accent" strokeWidth={1.75} />}
                   </p>
                   {myTimeMs !== null ? (
                     <p className="tabular-timer w-full rounded-xl bg-bg-panel-2 py-6 text-center text-3xl font-bold text-foreground sm:text-4xl">
@@ -576,7 +576,7 @@ export function RaceMode() {
                     </p>
                   ) : myHasSmartCube ? (
                     <div className="flex h-32 w-full flex-col items-center justify-center gap-1.5 rounded-xl bg-bg-panel-2">
-                      <Bluetooth size={20} className="text-accent" />
+                      <Bluetooth size={20} className="text-accent" strokeWidth={1.75} />
                       <p className="text-[11px] text-muted-2">solving on your cube…</p>
                     </div>
                   ) : (
@@ -601,21 +601,21 @@ export function RaceMode() {
 
             {raceState === "finished" && myTimeMs !== null && opponentTimeMs !== null && (
               <div className="flex flex-col items-center gap-2 py-4">
-                <Trophy size={22} className={cn(myTimeMs < opponentTimeMs ? "text-warning" : "text-muted-2")} />
+                <Trophy size={22} className={cn(myTimeMs < opponentTimeMs ? "text-warning" : "text-muted-2")} strokeWidth={1.75} />
                 <p className="text-sm font-semibold">
                   {myTimeMs < opponentTimeMs
                     ? `You won by ${formatTime(opponentTimeMs - myTimeMs)}`
                     : myTimeMs > opponentTimeMs
                       ? `You lost by ${formatTime(myTimeMs - opponentTimeMs)}`
-                      : "Tied!"}
+                      : "Tied"}
                 </p>
                 <div className="flex gap-6 text-center">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-2">You</p>
+                    <p className="text-[10px] text-muted-2">You</p>
                     <p className="tabular-timer text-lg font-medium">{formatTime(myTimeMs)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-2">Opponent</p>
+                    <p className="text-[10px] text-muted-2">Opponent</p>
                     <p className="tabular-timer text-lg font-medium">{formatTime(opponentTimeMs)}</p>
                   </div>
                 </div>

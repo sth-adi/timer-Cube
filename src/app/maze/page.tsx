@@ -9,7 +9,6 @@ import { FACE_COLOR_NAMES } from "@/lib/gyro/orientation";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useStored } from "@/lib/play/useStored";
 
-const ACCENT = "#3de8ff";
 const BEST_KEY = "maze-best";
 
 const fmt = (ms: number) => `${(ms / 1000).toFixed(2)}s`;
@@ -26,7 +25,7 @@ export default function MazePage() {
   // A fresh game per level (and per retry): all its state starts over by remounting.
   const [attempt, setAttempt] = useState(0);
   return (
-    <PlayShell accent={ACCENT} title="Tilt Maze" tagline="Your cube is the board. Tilt it to roll the marble; turn a face to open the gate of that color for a few seconds. Mind the holes.">
+    <PlayShell title="Tilt maze" tagline="Your cube is the board. Tilt it to roll the marble; turn a face to open the gate of that color for a few seconds. Mind the holes.">
       <MazeGame
         key={`${level}:${attempt}`}
         level={level}
@@ -159,21 +158,21 @@ function MazeGame({
     <>
       <div className="flex items-end justify-between gap-2">
         <div className="flex flex-col">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">Level</span>
+          <span className="text-[12px] font-medium text-[var(--play-dim)]">Level</span>
           <div className="flex items-center gap-1.5">
-            <button type="button" disabled={level <= 1} onClick={() => setLevel((l) => l - 1)} className="hit h-7 w-7 rounded-full border border-white/10 text-sm disabled:opacity-30">
+            <button type="button" disabled={level <= 1} onClick={() => setLevel((l) => l - 1)} className="hit h-7 w-7 rounded-lg border border-white/10 text-sm disabled:opacity-30">
               ‹
             </button>
-            <span className="w-7 text-center text-2xl font-black tabular-nums">{level}</span>
-            <button type="button" disabled={level >= 12} onClick={() => setLevel((l) => l + 1)} className="hit h-7 w-7 rounded-full border border-white/10 text-sm disabled:opacity-30">
+            <span className="w-7 text-center text-2xl font-bold tabular-nums">{level}</span>
+            <button type="button" disabled={level >= 12} onClick={() => setLevel((l) => l + 1)} className="hit h-7 w-7 rounded-lg border border-white/10 text-sm disabled:opacity-30">
               ›
             </button>
           </div>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-2xl font-black tabular-nums">{fmt(elapsed)}</span>
+          <span className="text-2xl font-bold tabular-nums">{fmt(elapsed)}</span>
           <span className="text-[11px] text-[var(--play-dim)]">
-            {falls} fall{falls === 1 ? "" : "s"} · best {best[level] ? fmt(best[level]) : "—"}
+            {falls} fall{falls === 1 ? "" : "s"}, best {best[level] ? fmt(best[level]) : "-"}
           </span>
         </div>
       </div>
@@ -182,17 +181,17 @@ function MazeGame({
         <canvas ref={canvas} width={maze.w * 64} height={maze.h * 64} className="block h-auto w-full rounded-2xl border border-white/10 bg-[#07141a]" />
         {status === "won" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-black/75 text-center animate-fade-in-up">
-            <p className="text-3xl font-black">Out in {fmt(elapsed)}</p>
+            <p className="text-3xl font-bold">Out in {fmt(elapsed)}</p>
             <p className="text-sm text-[var(--play-dim)]">
-              {falls === 0 ? "Clean, no falls." : `${falls} fall${falls === 1 ? "" : "s"} on the way.`} {best[level] === elapsed ? "New best!" : ""}
+              {falls === 0 ? "Clean, no falls." : `${falls} fall${falls === 1 ? "" : "s"} on the way.`} {best[level] === elapsed ? "New best." : ""}
             </p>
             <div className="mt-2 flex gap-2">
-              <button type="button" onClick={retry} className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold">
+              <button type="button" onClick={retry} className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium">
                 Retry
               </button>
               {level < 12 && (
-                <button type="button" onClick={() => setLevel((l) => l + 1)} className="play-btn play-glow px-5 py-2 text-sm">
-                  Level {level + 1} →
+                <button type="button" onClick={() => setLevel((l) => l + 1)} className="play-btn px-5 py-2 text-sm">
+                  Next level
                 </button>
               )}
             </div>
@@ -200,14 +199,14 @@ function MazeGame({
         )}
         {status === "ready" && (
           <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
-            <span className="rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-[var(--play-accent)]">Tilt to start the clock</span>
+            <span className="rounded-md bg-black/60 px-3 py-1 text-[12px] font-medium text-[var(--play-ink)]">Tilt to start the clock</span>
           </div>
         )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {gateColors.map((c) => (
-          <span key={c} className="flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px]">
+          <span key={c} className="flex items-center gap-1.5 text-[12px] text-[var(--play-dim)]">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: FACE_HEX[c] }} />
             turn {FACE_COLOR_NAMES[c]}
           </span>
@@ -216,13 +215,13 @@ function MazeGame({
 
       <div className="flex flex-wrap gap-2">
         {(gyroActive || phone) && (
-          <button type="button" onClick={levelIt} className="hit-y flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
-            <Crosshair size={13} /> Hold level &amp; tap to zero
+          <button type="button" onClick={levelIt} className="hit-y flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
+            <Crosshair size={14} strokeWidth={1.75} /> Hold level, tap to zero
           </button>
         )}
         {!gyroActive && !phone && (
-          <button type="button" onClick={() => void enablePhone()} className="hit-y flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
-            <Smartphone size={13} /> Tilt this phone instead
+          <button type="button" onClick={() => void enablePhone()} className="hit-y flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-semibold">
+            <Smartphone size={14} strokeWidth={1.75} /> Tilt this phone instead
           </button>
         )}
       </div>
@@ -247,11 +246,13 @@ function draw(c: HTMLCanvasElement | null, m: Maze, ball: Ball, openUntil: Parti
   const ctx = c?.getContext("2d");
   if (!c || !ctx) return;
   const s = c.width / m.w;
+  // Walls follow the theme accent (the Play root sets --play-accent), not a fixed neon.
+  const wall = getComputedStyle(c).getPropertyValue("--play-accent").trim() || "#8aa4d6";
   ctx.clearRect(0, 0, c.width, c.height);
 
   // Floor shading follows the tilt, so you can see which way is down.
   const g = ctx.createLinearGradient(c.width / 2 - tilt.x * c.width, c.height / 2 - tilt.y * c.height, c.width / 2 + tilt.x * c.width, c.height / 2 + tilt.y * c.height);
-  g.addColorStop(0, "rgba(61,232,255,0.07)");
+  g.addColorStop(0, "rgba(255,255,255,0.05)");
   g.addColorStop(1, "rgba(0,0,0,0.25)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, c.width, c.height);
@@ -276,11 +277,8 @@ function draw(c: HTMLCanvasElement | null, m: Maze, ball: Ball, openUntil: Parti
   }
 
   // Walls.
-  ctx.fillStyle = "#3de8ff";
-  ctx.shadowColor = "#3de8ff";
-  ctx.shadowBlur = 10;
+  ctx.fillStyle = wall;
   for (const r of solidRects(m, new Set(m.gates.map((gt) => gt.color)))) ctx.fillRect(r.x0 * s, r.y0 * s, (r.x1 - r.x0) * s, (r.y1 - r.y0) * s);
-  ctx.shadowBlur = 0;
 
   // Gates: solid when shut, a draining dashed outline while open.
   for (const gt of m.gates) {
@@ -292,7 +290,7 @@ function draw(c: HTMLCanvasElement | null, m: Maze, ball: Ball, openUntil: Parti
     ctx.fillStyle = FACE_HEX[gt.color];
     if (!open) {
       ctx.shadowColor = FACE_HEX[gt.color];
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 4;
       ctx.fillRect(x0 - 2, y0 - 2, x1 - x0 + 4, y1 - y0 + 4);
       ctx.shadowBlur = 0;
     } else {
@@ -320,8 +318,8 @@ function draw(c: HTMLCanvasElement | null, m: Maze, ball: Ball, openUntil: Parti
   ctx.fill();
   const bg = ctx.createRadialGradient(bx - r * 0.35, by - r * 0.4, r * 0.1, bx, by, r);
   bg.addColorStop(0, "#ffffff");
-  bg.addColorStop(0.4, "#c9f7ff");
-  bg.addColorStop(1, "#1d8fb0");
+  bg.addColorStop(0.4, "#dfe5ee");
+  bg.addColorStop(1, "#5f6f8a");
   ctx.fillStyle = bg;
   ctx.beginPath();
   ctx.arc(bx, by, r, 0, Math.PI * 2);

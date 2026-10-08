@@ -1,8 +1,8 @@
-import { ScanSearch } from "lucide-react";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { skeletonWidth } from "@/components/ui/skeletonWidths";
 
 const CARD = "card rounded-xl p-3";
+const SECTION = "border-t border-border px-1 pt-5";
 
 /**
  * The analyzer's result area while the worker runs: the same cards, in the same order and about the same sizes as
@@ -24,7 +24,7 @@ export function AnalyzerResultSkeleton() {
         </div>
       </div>
 
-      <div className={CARD}>
+      <div className={SECTION}>
         <Skeleton className="mb-3 h-3 w-28" />
         <div className="space-y-3">
           {[0, 1, 2, 3].map((i) => (
@@ -39,7 +39,7 @@ export function AnalyzerResultSkeleton() {
         </div>
       </div>
 
-      <div className={CARD}>
+      <div className={SECTION}>
         <Skeleton className="mb-3 h-3 w-24" />
         <Skeleton className="mx-auto aspect-square w-full max-w-[16rem] rounded-xl" />
         <Skeleton round className="mx-auto mt-3 h-9 w-full max-w-[16rem]" />
@@ -50,7 +50,7 @@ export function AnalyzerResultSkeleton() {
         </div>
       </div>
 
-      <div className={CARD}>
+      <div className={SECTION}>
         <Skeleton className="mb-3 h-3 w-32" />
         <div className="space-y-1.5">
           {[0, 1, 2, 3].map((i) => (
@@ -66,7 +66,7 @@ export function AnalyzerResultSkeleton() {
         </div>
       </div>
 
-      <div className={CARD}>
+      <div className={SECTION}>
         <Skeleton className="mb-3 h-3 w-28" />
         <div className="space-y-2">
           {[0, 1, 2, 3].map((i) => (
@@ -82,10 +82,9 @@ export function AnalyzerResultSkeleton() {
 export function AnalyzerEmptyState() {
   return (
     <div
-      className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-border-strong px-6 py-8 text-center"
+      className="flex flex-col items-center gap-1 border-y border-border px-6 py-8 text-center"
       data-testid="analyzer-empty"
     >
-      <ScanSearch size={22} aria-hidden="true" className="mb-1.5 text-accent" />
       <p className="text-sm font-medium text-foreground">Your analysis shows up here</p>
       <p className="max-w-[18rem] text-xs leading-relaxed text-muted-2">
         Add a scramble and your moves above, then press Analyze: you get the cost of each phase and what to work on.

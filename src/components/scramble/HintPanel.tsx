@@ -79,20 +79,20 @@ export function HintPanel() {
       <button
         type="button"
         onClick={onReveal}
-        className="hit flex items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-2 hover:text-muted hover:bg-bg-panel-2 transition-colors"
+        className="hit flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-muted-2 hover:text-muted hover:bg-bg-panel-2 transition-colors"
       >
         {hintVisible ? <EyeOff size={13} /> : <Eye size={13} />}
         {hintVisible ? "hide solve hints" : "solve hints"}
       </button>
 
       {hintVisible && (
-        <div className="card animate-fade-in-up w-full max-w-xl rounded-xl p-4 text-sm">
+        <div className="card animate-fade-in-up w-full max-w-xl rounded-lg p-4 text-sm">
           <div className="mb-3 flex gap-2">
             <button
               type="button"
               onClick={() => onTab("cross")}
               className={cn(
-                "rounded-full px-3 py-2 text-xs font-medium transition-colors",
+                "rounded-md px-3 py-2 text-xs font-medium transition-colors",
                 tab === "cross" ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
               )}
             >
@@ -102,7 +102,7 @@ export function HintPanel() {
               type="button"
               onClick={() => onTab("cfop")}
               className={cn(
-                "rounded-full px-3 py-2 text-xs font-medium transition-colors",
+                "rounded-md px-3 py-2 text-xs font-medium transition-colors",
                 tab === "cfop" ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
               )}
             >
@@ -120,7 +120,7 @@ export function HintPanel() {
 
           {!hintLoading && tab === "cross" && crossHint && (
             <div className="space-y-2">
-              <p className="text-muted-2 text-xs uppercase tracking-wide">
+              <p className="text-muted-2 text-xs">
                 Optimal cross &middot; {crossHint.length} move{crossHint.length === 1 ? "" : "s"}
               </p>
               <p
@@ -135,7 +135,7 @@ export function HintPanel() {
           {!hintLoading && tab === "cfop" && cfopHint && (
             <div className="space-y-3">
               <div>
-                <p className="text-muted-2 text-xs uppercase tracking-wide">
+                <p className="text-muted-2 text-xs">
                   A valid computed CFOP solve &middot; {cfopHint.totalMoves} moves
                 </p>
                 <p className="mt-1 text-xs text-muted">
@@ -192,7 +192,7 @@ export function HintPanel() {
 
           {previewMoves !== null && (
             <div className="mt-3">
-              <div className="h-56 rounded-xl overflow-hidden border border-border">
+              <div className="h-56 rounded-lg overflow-hidden border border-border">
                 <CubeViewer
                   alg={previewMoves.join(" ")}
                   setupAlg={scramble}
@@ -205,14 +205,14 @@ export function HintPanel() {
                   type="button"
                   onClick={() => previewHandleRef.current?.jumpToStart()}
                   aria-label="Restart"
-                  className="tap-target flex items-center justify-center rounded-full bg-bg-panel-2 p-2 text-muted hover:text-foreground"
+                  className="tap-target flex items-center justify-center rounded-md bg-bg-panel-2 p-2 text-muted hover:text-foreground"
                 >
                   <RotateCcw size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={() => previewHandleRef.current?.togglePlay()}
-                  className="flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+                  className="flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
                 >
                   {previewPlaying ? <Pause size={12} /> : <Play size={12} />}
                   {previewPlaying ? "Pause" : "Play"}

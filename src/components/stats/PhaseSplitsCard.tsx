@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Split, TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { PHASE_LABELS, type PhaseCount } from "@/lib/store/settingsStore";
 import { computePhaseSplits, normalSolves } from "@/lib/stats/stats";
@@ -25,8 +25,7 @@ export function PhaseSplitsCard() {
   return (
     <div className="card rounded-xl p-4">
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <Split size={14} className="text-accent" />
+        <h3 className="text-sm font-semibold tracking-[-0.01em]">
           Where your time goes
         </h3>
         <span className="text-[11px] text-muted-2">
@@ -98,8 +97,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
   return (
     <div className="card rounded-xl p-4">
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <Split size={14} className="text-accent" />
+        <h3 className="text-sm font-semibold tracking-[-0.01em]">
           Where your time goes
         </h3>
         <span className="text-[11px] text-muted-2">
@@ -113,7 +111,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
         ))}
       </div>
 
-      <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-2">
+      <div className="mb-1 flex items-center gap-2 text-[11px] text-muted-2">
         <span className="w-2 shrink-0" />
         <span className="flex-1">Step</span>
         <span className="w-12 text-right">Mean</span>
@@ -142,7 +140,7 @@ function SmartSteps({ report }: { report: StepStatsReport }) {
                       st.deltaMs === null || Math.abs(st.deltaMs) < 50 ? "text-muted-2" : st.deltaMs < 0 ? "text-success" : "text-danger",
                     )}
                   >
-                    {st.deltaMs !== null && Math.abs(st.deltaMs) >= 50 && (st.deltaMs < 0 ? <TrendingDown size={10} /> : <TrendingUp size={10} />)}
+                    {st.deltaMs !== null && Math.abs(st.deltaMs) >= 50 && (st.deltaMs < 0 ? <TrendingDown size={10} strokeWidth={1.75} /> : <TrendingUp size={10} strokeWidth={1.75} />)}
                     {st.deltaMs !== null ? signed(st.deltaMs) : "—"}
                   </span>
                 )}

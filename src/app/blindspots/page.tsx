@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Crosshair, PauseCircle, Timer as TimerIcon } from "lucide-react";
@@ -30,7 +31,7 @@ const METRICS: { key: Metric; label: string; blurb: string }[] = [
   { key: "totalMs", label: "Total", blurb: "finding plus solving" },
 ];
 
-const secs = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(2)}s`);
+const secs = (ms: number | null) => (ms === null ? "-" : `${(ms / 1000).toFixed(2)}s`);
 
 /** Green at or under your average, through amber, to red at 1.5× it. */
 function heat(ratio: number): string {
@@ -47,7 +48,7 @@ function Cell({ cell, metric, baseline }: { cell: SpotCell; metric: Metric; base
       style={enough ? { background: heat(v! / baseline) } : undefined}
       title={`${CORNER_SPOT_LABEL[cell.corner]}, ${EDGE_SPOT_LABEL[cell.edge]}`}
     >
-      <span className={cn("text-sm font-bold tabular-nums", enough ? "text-foreground" : "text-muted-2")}>{cell.count ? secs(v) : "—"}</span>
+      <span className={cn("text-sm font-bold tabular-nums", enough ? "text-foreground" : "text-muted-2")}>{cell.count ? secs(v) : "-"}</span>
       <span className="text-[11px] text-muted">{cell.count} pair{cell.count === 1 ? "" : "s"}</span>
     </div>
   );
@@ -93,7 +94,7 @@ export default function BlindSpotsPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <PauseCircle size={17} className="text-accent" /> F2L Pause Map
+              <PauseCircle size={17} className="text-accent" /> F2L pause map
             </h1>
             <p className="text-[11px] text-muted-2">
               Where your F2L stops: each hand-off between pairs split into finding the next pair, stalling inside it, and turning, and a drill
@@ -123,21 +124,21 @@ export default function BlindSpotsPage() {
           </div>
 
           {!report ? (
-            <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on a connected smart cube and each F2L pair lands on this map.</div>
+            <EmptyState title="No smart-cube solves yet"><p>Solve on a connected smart cube and each F2L pair lands on this map.</p></EmptyState>
           ) : (
             <>
-              <div className="card flex flex-col gap-3 rounded-xl p-4">
+              <div className="flex flex-col gap-3 border-t border-border pt-5">
                 <p className="text-[11px] text-muted">
                   {report.pairs} pairs from {report.solves} solves. On average a pair takes you {secs(report.overall.findMs)} to find and{" "}
                   {secs(report.overall.execMs)} to solve.
                 </p>
-                <div className="flex rounded-full bg-bg-panel-2 p-1">
+                <div className="flex rounded-lg bg-bg-panel-2 p-1">
                   {METRICS.map((x) => (
                     <button
                       key={x.key}
                       type="button"
                       onClick={() => setMetric(x.key)}
-                      className={cn("hit-y flex-1 rounded-full py-1.5 text-xs font-semibold", metric === x.key ? "bg-accent text-accent-fg" : "text-muted")}
+                      className={cn("hit-y flex-1 rounded-md py-1.5 text-xs font-semibold", metric === x.key ? "bg-accent text-accent-fg" : "text-muted")}
                     >
                       {x.label}
                     </button>
@@ -150,13 +151,13 @@ export default function BlindSpotsPage() {
                 <div className="grid grid-cols-[4.5rem_repeat(3,1fr)] gap-1.5">
                   <span />
                   {SPOTS.map((e) => (
-                    <span key={e} className="text-center text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-2">
+                    <span key={e} className="text-center text-[11px] font-medium leading-tight text-muted-2">
                       Edge {e === "top" ? "up top" : e === "slot" ? "in other slot" : "flipped in slot"}
                     </span>
                   ))}
                   {SPOTS.map((c) => (
                     <div key={c} className="contents">
-                      <span className="flex items-center text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-2">
+                      <span className="flex items-center text-[11px] font-medium leading-tight text-muted-2">
                         Corner {c === "top" ? "up top" : c === "slot" ? "in other slot" : "twisted in slot"}
                       </span>
                       {SPOTS.map((e) => (
@@ -168,8 +169,8 @@ export default function BlindSpotsPage() {
                 <p className="text-[11px] text-muted-2">Green is at or under your average, red is 1.5× it. Needs {MIN_CELL}+ pairs to color a square.</p>
               </div>
 
-              <div className="card flex flex-col gap-2 rounded-xl p-4">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Your blind spots</p>
+              <div className="flex flex-col gap-2 border-t border-border pt-5">
+                <p className="text-[11px] font-medium text-muted-2">Your blind spots</p>
                 {report.insights.length === 0 ? (
                   <p className="text-[11px] text-muted">No situation stands out yet, every kind of pair costs you about the same. That&apos;s a well-rounded F2L.</p>
                 ) : (
@@ -187,9 +188,9 @@ export default function BlindSpotsPage() {
                 )}
               </div>
 
-              <div className="card flex flex-col gap-3 rounded-xl p-4">
+              <div className="flex flex-col gap-3 border-t border-border pt-5">
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">By pair (total time)</p>
+                  <p className="text-[11px] font-medium text-muted-2">By pair (total time)</p>
                   {report.byPair.map((p, i) => (
                     <div key={p.label} className="flex items-center gap-2">
                       <span className="flex w-24 items-center gap-1.5 text-[11px] text-muted">
@@ -201,14 +202,14 @@ export default function BlindSpotsPage() {
                         {p.label}
                       </span>
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-panel-2">
-                        <div className="h-full rounded-full bg-accent/70" style={{ width: `${((p.totalMs ?? 0) / maxPair) * 100}%` }} />
+                        <div className="h-full rounded-md bg-accent/70" style={{ width: `${((p.totalMs ?? 0) / maxPair) * 100}%` }} />
                       </div>
                       <span className="w-12 text-right text-[11px] tabular-nums text-muted-2">{secs(p.totalMs)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Finding time, 1st to 4th pair</p>
+                  <p className="text-[11px] font-medium text-muted-2">Finding time, 1st to 4th pair</p>
                   <div className="flex h-16 items-end gap-2">
                     {report.byOrder.map((o) => (
                       <div key={o.order} className="flex flex-1 flex-col items-center gap-1">

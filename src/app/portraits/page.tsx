@@ -11,7 +11,6 @@ import { formatTime } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import type { Solve } from "@/types";
 
-const ACCENT = "#b36bff";
 const PHASE_NAMES = ["Cross", "F2L", "OLL", "PLL"];
 
 interface Piece {
@@ -97,7 +96,7 @@ async function downloadPoster(piece: Piece) {
   });
   ctx.fillStyle = "#5d5a73";
   ctx.font = "500 22px system-ui, sans-serif";
-  ctx.fillText("Solve Portrait", W - 250, W + 222);
+  ctx.fillText("Solve portrait", W - 250, W + 222);
   const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/png"));
   if (!blob) return;
   const a = document.createElement("a");
@@ -133,10 +132,10 @@ export default function PortraitsPage() {
   const selected = sorted.find((p) => p.solve.id === selectedId) ?? sorted[0] ?? null;
 
   return (
-    <PlayShell accent={ACCENT} title="Solve Portraits" tagline="Every solve you've done, drawn as its own piece of art. Each face swings the pen its own way, pauses shoot out long strokes, and each phase has its own ink." wide>
-      <div className="flex gap-1 self-start rounded-full bg-white/[0.05] p-1">
+    <PlayShell title="Solve portraits" tagline="Every solve you've done, drawn as its own piece of art. Each face swings the pen its own way, pauses shoot out long strokes, and each phase has its own ink." wide>
+      <div className="flex gap-1 self-start rounded-lg bg-white/[0.05] p-1">
         {(["gallery", "sketch"] as const).map((m) => (
-          <button key={m} type="button" onClick={() => setMode(m)} className={cn("hit-y rounded-full px-4 py-1.5 text-[12px] font-bold", mode === m ? "bg-[var(--play-accent)] text-black" : "text-[var(--play-dim)]")}>
+          <button key={m} type="button" onClick={() => setMode(m)} className={cn("hit-y rounded-md px-4 py-1.5 text-[12px] font-semibold", mode === m ? "bg-[var(--play-accent)] text-black" : "text-[var(--play-dim)]")}>
             {m === "gallery" ? "Your solves" : "Live sketch"}
           </button>
         ))}
@@ -151,10 +150,10 @@ export default function PortraitsPage() {
         <>
           <Featured piece={selected} />
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--play-dim)]">{pieces.length} portraits</span>
+            <span className="text-[11px] font-bold text-[var(--play-dim)]">{pieces.length} portraits</span>
             <div className="flex gap-1">
               {(["recent", "fastest"] as const).map((s) => (
-                <button key={s} type="button" onClick={() => setSort(s)} className={cn("hit-y rounded-full px-2.5 py-1 text-[11px] font-semibold", sort === s ? "bg-white/10 text-white" : "text-[var(--play-dim)]")}>
+                <button key={s} type="button" onClick={() => setSort(s)} className={cn("hit-y rounded-md px-2.5 py-1 text-[12px] font-medium", sort === s ? "bg-white/10 text-white" : "text-[var(--play-dim)]")}>
                   {s === "recent" ? "Recent" : "Fastest"}
                 </button>
               ))}
@@ -166,7 +165,7 @@ export default function PortraitsPage() {
             ))}
           </div>
           {shown < sorted.length && (
-            <button type="button" onClick={() => setShown((n) => n + 24)} className="self-center rounded-full border border-white/10 px-4 py-2 text-[12px] font-semibold text-[var(--play-dim)]">
+            <button type="button" onClick={() => setShown((n) => n + 24)} className="self-center rounded-lg border border-white/10 px-4 py-2 text-[12px] font-semibold text-[var(--play-dim)]">
               Show more
             </button>
           )}
@@ -199,7 +198,7 @@ function Featured({ piece }: { piece: Piece }) {
       <canvas ref={ref} width={720} height={720} className="aspect-square w-full rounded-xl sm:w-[60%]" />
       <div className="flex flex-col gap-3 px-1 sm:justify-between sm:py-2">
         <div>
-          <p className="text-4xl font-black tabular-nums">{formatTime(piece.solve.timeMs)}</p>
+          <p className="text-4xl font-bold tabular-nums">{formatTime(piece.solve.timeMs)}</p>
           <p className="text-[12px] text-[var(--play-dim)]">
             {d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} · {piece.art.segs.length} turns · {piece.tps.toFixed(1)} TPS
           </p>
@@ -214,11 +213,11 @@ function Featured({ piece }: { piece: Piece }) {
         </div>
         <p className="text-[11px] leading-snug text-[var(--play-dim)]">Tight knots are fast bursts of turning. Long straight strokes are where you stopped to look.</p>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setRun((r) => r + 1)} className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-[12px] font-semibold">
-            <PlayIcon size={13} /> Redraw
+          <button type="button" onClick={() => setRun((r) => r + 1)} className="flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-[12px] font-semibold">
+            <PlayIcon size={13} strokeWidth={1.75} /> Redraw
           </button>
           <button type="button" onClick={() => void downloadPoster(piece)} className="play-btn flex items-center gap-1.5 px-4 py-2 text-[12px]">
-            <Download size={13} /> Poster PNG
+            <Download size={13} strokeWidth={1.75} /> Poster PNG
           </button>
         </div>
       </div>
@@ -251,7 +250,7 @@ function Sketch() {
         <canvas ref={ref} width={720} height={720} className="aspect-square w-full rounded-xl" />
         {!turns.moves.length && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
-            <p className="text-lg font-black">Draw with your cube</p>
+            <p className="text-lg font-bold">Draw with your cube</p>
             <p className="max-w-[16rem] text-[12px] text-[var(--play-dim)]">Every turn is a stroke, in the color of the face you turned. Turn fast for curls, wait for long lines.</p>
           </div>
         )}
@@ -264,9 +263,9 @@ function Sketch() {
             t0.current = null;
             setTurns({ moves: [], times: [], faces: [] });
           }}
-          className="hit-y flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold"
+          className="hit-y flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-semibold"
         >
-          <Eraser size={13} /> Clear
+          <Eraser size={13} strokeWidth={1.75} /> Clear
         </button>
       </div>
       {!connected && <TurnPad onTurn={press} />}

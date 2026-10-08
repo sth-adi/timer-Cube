@@ -29,11 +29,11 @@ export default function CrossColorPage() {
   return (
     <AnalyticsShell
       icon={<Palette size={17} className="text-accent" />}
-      title="Cross Color Advisor"
+      title="Cross color advisor"
       subtitle="How long your cross would have been on every other color."
     >
       {!r ? (
-        <NotEnough need={MIN_SCRAMBLES} have={eligible} what="Cross Color Advisor" />
+        <NotEnough need={MIN_SCRAMBLES} have={eligible} what="Cross color advisor" />
       ) : (
         <>
           <div className="card flex flex-col items-center gap-1 rounded-xl p-5 text-center">
@@ -43,7 +43,7 @@ export default function CrossColorPage() {
           </div>
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Every color, shortest first</SectionTitle>
             {(() => {
               const max = Math.max(...r.all.map((s) => s.avgLen));
@@ -58,7 +58,7 @@ export default function CrossColorPage() {
                     <div className="absolute inset-y-0 left-0 rounded bg-accent/60" style={{ width: `${max > 0 ? (s.avgLen / max) * 100 : 0}%` }} />
                   </div>
                   <span className="w-16 shrink-0 text-right tabular-nums text-muted-2">{s.avgLen.toFixed(2)}</span>
-                  {s.face === "U" && <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-semibold text-accent">used</span>}
+                  {s.face === "U" && <span className="shrink-0 text-[11px] font-semibold text-accent">used</span>}
                 </div>
               ));
             })()}

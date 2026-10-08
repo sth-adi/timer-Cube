@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bandage, CheckCircle2, ChevronLeft, Crosshair, Loader2, RotateCcw, Square, XCircle } from "lucide-react";
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
@@ -110,7 +111,7 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
         <ChevronLeft size={12} /> All drills
       </button>
       <div className="card flex flex-col gap-1 rounded-xl p-4">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">
+        <p className="text-[11px] font-medium text-muted-2">
           {KIND_LABEL[drill.mistake.kind]} · {drill.mistake.phase} · cost {s2(drill.mistake.costMs)}s
         </p>
         <p className="text-sm font-semibold text-foreground">{drill.mistake.title}</p>
@@ -144,14 +145,14 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
         <div className="card flex flex-col items-center gap-3 rounded-xl p-6 text-center">
           <p className="text-sm font-semibold text-foreground">Going… {moves.length} turns</p>
           <p className="text-[11px] text-muted">Stops when {GOAL_TEXT[drill.goal]}.</p>
-          <button type="button" onClick={finish} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
+          <button type="button" onClick={finish} className="flex items-center gap-1.5 rounded-md bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
             <Square size={11} fill="currentColor" /> Give up
           </button>
         </div>
       )}
 
       {phase === "done" && grade && (
-        <div className="card flex flex-col gap-3 rounded-xl p-4">
+        <div className="flex flex-col gap-3 border-t border-border pt-5">
           <div className="flex flex-col items-center gap-2 text-center">
             {grade.repeated ? <XCircle size={30} className="text-danger" /> : <CheckCircle2 size={30} className="text-success" />}
             <p className={cn("text-sm font-semibold", grade.repeated ? "text-danger" : "text-success")}>{grade.verdict}</p>
@@ -160,7 +161,7 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
             {[
               [`${grade.turns}`, `turns (was ${drill.original.turns})`],
               [`${s2(grade.ms)}s`, `time (was ${s2(drill.original.ms)}s)`],
-              [grade.vsRouteTurns === null ? "—" : `${grade.vsRouteTurns > 0 ? "+" : ""}${grade.vsRouteTurns}`, "vs Sat-Nav"],
+              [grade.vsRouteTurns === null ? "-" : `${grade.vsRouteTurns > 0 ? "+" : ""}${grade.vsRouteTurns}`, "vs Sat-Nav"],
             ].map(([v, l]) => (
               <div key={l} className="rounded-lg bg-bg-panel-2 px-2 py-1.5">
                 <p className="text-base font-bold tabular-nums text-foreground">{v}</p>
@@ -169,12 +170,12 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
             ))}
           </div>
           <div className="flex flex-col gap-1.5">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">What you did</p>
+            <p className="text-[11px] font-medium text-muted-2">What you did</p>
             {moves.length ? <TurnChips moves={moves} /> : <p className="text-[11px] text-muted">No turns.</p>}
           </div>
           {legs && legs.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">The Sat-Nav&apos;s way from here</p>
+              <p className="text-[11px] font-medium text-muted-2">The Sat-Nav&apos;s way from here</p>
               {legs.map((l, i) => (
                 <div key={i} className="rounded-lg bg-bg-panel-2 px-2.5 py-1.5">
                   <p className="text-[11px] font-semibold text-foreground">
@@ -185,7 +186,7 @@ function Runner({ drill, onBack }: { drill: Drill; onBack: () => void }) {
               ))}
             </div>
           )}
-          <button type="button" onClick={start} className="flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
+          <button type="button" onClick={start} className="flex items-center justify-center gap-1.5 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg">
             <RotateCcw size={14} /> Again
           </button>
         </div>
@@ -207,13 +208,13 @@ export default function MistakeDrillsPage() {
   const [active, setActive] = useState<Drill | null>(null);
 
   return (
-    <AnalyticsShell icon={<Bandage size={17} className="text-accent" />} title="Mistake Drills" subtitle="Your costliest mistakes, set back up on your cube, redo them until they're fixed.">
+    <AnalyticsShell icon={<Bandage size={17} className="text-accent" />} title="Mistake drills" subtitle="Your costliest mistakes, set back up on your cube, redo them until they're fixed.">
       {active ? (
         <ConnectGate blurb="Mistake Drills put your cube back to the exact moment of a mistake and watch your retry turn by turn, so they need a connected smart cube.">
           <Runner key={active.id} drill={active} onBack={() => setActive(null)} />
         </ConnectGate>
       ) : drills.length === 0 ? (
-        <div className="card rounded-xl p-6 text-center text-sm text-muted">No mistakes to drill yet, they come from smart-cube solves the Mistake Radar has flagged.</div>
+        <EmptyState title="No mistakes to drill yet"><p>No mistakes to drill yet, they come from smart-cube solves the Mistake Radar has flagged.</p></EmptyState>
       ) : (
         <div className="flex flex-col gap-2">
           <p className="px-1 text-[11px] text-muted">
@@ -237,8 +238,8 @@ export default function MistakeDrillsPage() {
                 </div>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                    status.tone === "good" ? "bg-success/15 text-success" : status.tone === "bad" ? "bg-danger/15 text-danger" : "bg-bg-panel-2 text-muted-2",
+                    "shrink-0 text-[11px] font-semibold",
+                    status.tone === "good" ? "text-success" : status.tone === "bad" ? "text-danger" : "text-muted-2",
                   )}
                 >
                   {status.label}

@@ -116,7 +116,7 @@ export function LiveProjection({
   return (
     <div
       className={cn(
-        "live-readout flex min-h-[2.75rem] w-[18rem] max-w-full flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-1.5 text-center ring-1 ring-inset transition-colors duration-300 motion-reduce:transition-none",
+        "live-readout flex min-h-[2.75rem] w-[18rem] max-w-full flex-col items-center justify-center gap-0.5 rounded-lg px-3 py-1.5 text-center ring-1 ring-inset transition-colors duration-300 motion-reduce:transition-none",
         current.pbPace
           ? "bg-success/10 text-success ring-success/25"
           : current.headline === "PB in reach"

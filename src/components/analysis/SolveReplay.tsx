@@ -161,7 +161,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
   return (
     <div className="card animate-fade-in-up rounded-xl p-3.5">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-2">
+        <h3 className="flex items-center gap-1.5 text-xs font-semibold text-muted-2">
           <Play size={12} className="text-accent" />
           Watch it back
         </h3>
@@ -172,7 +172,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
               onClick={() => setVoice((v) => !v)}
               aria-pressed={voice}
               aria-label={voice ? "Captions only" : "Read the commentary aloud"}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-panel-2 text-muted hover:text-foreground"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-bg-panel-2 text-muted hover:text-foreground"
             >
               {voice ? <Mic size={13} /> : <MicOff size={13} />}
             </button>
@@ -185,7 +185,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
             }}
             aria-pressed={director}
             className={cn(
-              "flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors",
+              "flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors",
               director ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >
@@ -200,7 +200,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
           onClick={() => pick(-1)}
           aria-pressed={isWhole}
           className={cn(
-            "h-8 rounded-full px-3 text-xs font-medium transition-colors",
+            "h-8 rounded-md px-3 text-xs font-medium transition-colors",
             isWhole ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
           )}
         >
@@ -217,7 +217,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
             aria-pressed={selected === i}
             disabled={p.moves.length === 0}
             className={cn(
-              "h-8 rounded-full px-3 text-xs font-medium transition-colors disabled:opacity-35",
+              "h-8 rounded-md px-3 text-xs font-medium transition-colors disabled:opacity-35",
               selected === i ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >
@@ -268,7 +268,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
             onClick={() => setAltTake((v) => !v)}
             aria-pressed={altTake}
             className={cn(
-              "flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+              "flex min-h-8 items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition-colors",
               altTake ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
             )}
           >

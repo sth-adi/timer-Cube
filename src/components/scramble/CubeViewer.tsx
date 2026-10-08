@@ -354,7 +354,7 @@ export function CubeViewer({ alg, setupAlg, className, onReady, fallback }: Cube
           aria-label={gyroOn ? "Turn off tilt-to-rotate" : "Turn on tilt-to-rotate"}
           title={gyroDenied ? "Motion access denied, check your browser's site permissions" : "Tilt phone to rotate"}
           className={cn(
-            "hit absolute bottom-1.5 right-1.5 flex items-center justify-center rounded-full p-1.5 transition-colors",
+            "hit absolute bottom-1.5 right-1.5 flex items-center justify-center rounded-md p-1.5 transition-colors",
             gyroOn ? "bg-accent text-accent-fg" : "bg-bg-panel-2/80 text-muted hover:text-foreground",
           )}
         >

@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Clapperboard, Sparkles, Timer as TimerIcon } from "lucide-react";
@@ -58,24 +59,24 @@ function HighlightReel() {
             key={p}
             type="button"
             onClick={() => setPeriod(p)}
-            className={cn("rounded-full px-3 py-1.5 text-xs font-semibold", period === p ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
+            className={cn("rounded-md px-3 py-1.5 text-xs font-semibold", period === p ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
           >
             {p === "all" ? "All time" : p === "week" ? "This week" : "This month"}
           </button>
         ))}
       </div>
       {highlights.length > 0 && status !== "ready" ? (
-        <div className="card rounded-xl p-6 text-center text-sm text-muted">
+        <div className="border-y border-border py-8 text-center text-sm text-muted">
           {status === "loading" ? "Loading the solves\u2026" : "Couldn\u2019t read these solves from storage. Reload the page to try again."}
         </div>
       ) : !montage ? (
-        <div className="card rounded-xl p-6 text-center text-sm text-muted">
+        <div className="border-y border-border py-8 text-center text-sm text-muted">
           No smart-cube solves {subtitle === "all time" ? "yet" : subtitle} to film. Try a longer stretch, or solve on a connected cube.
         </div>
       ) : (
         <>
           <div className="card flex flex-col gap-1 rounded-xl p-3">
-            <p className="px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">
+            <p className="px-1 pb-1 text-[11px] font-medium text-muted-2">
               The cut · {highlights.length} solve{highlights.length === 1 ? "" : "s"}, building to the fastest
             </p>
             {highlights.map((h, i) => (
@@ -135,7 +136,7 @@ function SingleReel() {
   return (
     <>
           {!selected ? (
-            <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on a connected smart cube and your solves show up here to film.</div>
+            <EmptyState title="No smart-cube solves yet"><p>Solve on a connected smart cube and your solves show up here to film.</p></EmptyState>
           ) : (
             <>
               <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
@@ -160,13 +161,13 @@ function SingleReel() {
                 })}
               </div>
               {!timeline ? (
-                <div className="card rounded-xl p-6 text-center text-sm text-muted">
+                <div className="border-y border-border py-8 text-center text-sm text-muted">
                   {status === "failed" ? "Couldn\u2019t read this solve from storage. Reload the page to try again." : "Loading the solve\u2026"}
                 </div>
               ) : (
                 <ReelPlayer
                   timeline={timeline}
-                  title="Solve Reel"
+                  title="Solve reel"
                   subtitle={new Date(selected.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                   fileName={`solve-${formatTime(selected.timeMs).replace(/[:.]/g, "-")}`}
                   credit={credit}
@@ -192,14 +193,14 @@ export default function ReelPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Clapperboard size={17} className="text-accent" /> Solve Reel
+              <Clapperboard size={17} className="text-accent" /> Solve reel
             </h1>
             <p className="text-[11px] text-muted-2">
               Turn smart-cube solves into video, one solve, or an auto-cut highlight reel of your best, with a soundtrack played off your
               actual turns.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-bg-panel-2 p-1">
             {(
               [
                 ["single", "One solve", Clapperboard],
@@ -212,7 +213,7 @@ export default function ReelPage() {
                 onClick={() => setTab(id)}
                 aria-pressed={tab === id}
                 className={cn(
-                  "hit-y flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  "hit-y flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold",
                   tab === id ? "bg-accent text-accent-fg" : "text-muted",
                 )}
               >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Loader2, RefreshCw, TrendingDown } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { candidateSolves, useWeaknessStore } from "@/lib/store/weaknessStore";
 import type { WeaknessEntry } from "@/lib/analysis/weaknessReport";
@@ -53,17 +53,16 @@ export function WeaknessReportCard() {
   const maxCase = report ? Math.max(1, ...report.cases.map(size)) : 1;
 
   return (
-    <div className="card rounded-xl p-4">
+    <div>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <TrendingDown size={14} className="text-warning" />
+        <h3 className="text-sm font-semibold tracking-[-0.01em]">
           Weakness report
         </h3>
         <button
           type="button"
           onClick={() => void build(solves)}
           disabled={loading}
-          className="hit-y flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground disabled:opacity-50"
+          className="hit-y flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-accent disabled:opacity-50"
         >
           {loading ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
           {report ? "Refresh" : "Build"}
@@ -79,7 +78,7 @@ export function WeaknessReportCard() {
 
       {loading && (
         <p className="text-xs text-muted">
-          Re-analyzing solve {progress.done + 1} of {progress.total}…
+          Re-analyzing solve {progress.done + 1} of {progress.total}
         </p>
       )}
 
@@ -95,7 +94,7 @@ export function WeaknessReportCard() {
           ) : (
             <div className="space-y-3">
               <div>
-                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">By phase</p>
+                <p className="mb-1.5 text-[11px] font-medium text-muted-2">By phase</p>
                 <div className="space-y-1">
                   {report.phases.map((p) => (
                     <Row key={p.label} entry={p} max={maxPhase} byTime={byTime} />
@@ -104,7 +103,7 @@ export function WeaknessReportCard() {
               </div>
               {report.cases.length > 0 && (
                 <div>
-                  <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-2">By case</p>
+                  <p className="mb-1.5 text-[11px] font-medium text-muted-2">By case</p>
                   <div className="space-y-1">
                     {report.cases.slice(0, 5).map((c) => (
                       <Row key={c.label} entry={c} max={maxCase} byTime={byTime} />

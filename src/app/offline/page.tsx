@@ -15,7 +15,7 @@ export default function OfflinePage() {
         Open it once while you&apos;re online and it will work offline from then on. The timer, your solves and your stats are always
         available, and anything you record syncs when you&apos;re back online.
       </p>
-      <Link href="/" className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-fg">
+      <Link href="/" className="rounded-md bg-accent px-5 py-2 text-sm font-semibold text-accent-fg">
         Back to the timer
       </Link>
     </main>

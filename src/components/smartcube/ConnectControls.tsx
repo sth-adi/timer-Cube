@@ -107,7 +107,7 @@ export function ConnectControls({ label = "Connect smart cube", unsupportedLabel
           void connect();
         }}
         disabled={connecting || supported !== true}
-        className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg disabled:opacity-50"
       >
         {connecting && <Loader2 size={14} className="animate-spin" />}
         {supported === false ? (unsupportedLabel ?? label) : connecting ? "Connecting…" : label}
@@ -137,7 +137,7 @@ export function ConnectControls({ label = "Connect smart cube", unsupportedLabel
               preloadCubeViewer();
               void connect({ deviceName: lastCubeName });
             }}
-            className="flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 font-medium text-foreground hover:bg-bg-panel"
+            className="flex items-center gap-1 rounded-md bg-bg-panel-2 px-2.5 py-1 font-medium text-foreground hover:bg-bg-panel"
             title="Only show this cube in the Bluetooth list"
             data-testid="reconnect-last"
           >

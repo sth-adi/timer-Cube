@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Box, RotateCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import type { Solve } from "@/types";
 import { TurnCube } from "@/components/lab/TurnCube";
 import { TwinStage } from "@/components/lab/TwinStage";
@@ -62,13 +62,12 @@ export function HeatCubeCard({ solves }: { solves: Solve[] }) {
   const v = VIEWS[view];
 
   return (
-    <div className="card rounded-xl p-4" data-testid="heat-cube">
+    <div data-testid="heat-cube">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <Box size={14} className="text-accent" />
+        <h3 className="text-sm font-semibold tracking-[-0.01em]">
           Heat cube
         </h3>
-        <div className="flex gap-0.5 rounded-full bg-bg-panel-2 p-0.5" role="group" aria-label="What the colours show">
+        <div className="flex gap-0.5 rounded-md bg-bg-panel-2 p-0.5" role="group" aria-label="What the colours show">
           {MODES.map((m) => {
             const off = m.id === "slow" && !data.hasSpeed;
             return (
@@ -80,7 +79,7 @@ export function HeatCubeCard({ solves }: { solves: Solve[] }) {
                 onClick={() => setWanted(m.id)}
                 aria-pressed={mode === m.id}
                 className={cn(
-                  "hit-y rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-40",
+                  "hit-y rounded-sm px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-40",
                   mode === m.id ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-foreground",
                 )}
               >
@@ -90,7 +89,7 @@ export function HeatCubeCard({ solves }: { solves: Solve[] }) {
           })}
         </div>
       </div>
-      <p className="mb-1 text-[11px] text-muted-2">
+      <p className="mb-1 max-w-[65ch] text-pretty text-xs text-muted-2">
         {mode === "often"
           ? `Each face shaded by its share of your ${data.totalTurns.toLocaleString("en-US")} turns.`
           : "Each face shaded by its average time per turn while you are turning, pauses left out."}
@@ -112,9 +111,9 @@ export function HeatCubeCard({ solves }: { solves: Solve[] }) {
         <button
           type="button"
           onClick={() => setView((i) => (i + 1) % VIEWS.length)}
-          className="hc-view-btn hit-y mb-1 flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-0.5 text-[11px] font-medium text-muted-2 hover:text-foreground"
+          className="hc-view-btn hit-y mb-1 flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs font-medium text-accent"
         >
-          <RotateCw size={11} /> Turn the cube
+          <RotateCw size={12} strokeWidth={1.75} /> Turn the cube
         </button>
       </div>
 
@@ -135,7 +134,7 @@ export function HeatCubeCard({ solves }: { solves: Solve[] }) {
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-3 gap-1.5" role="group" aria-label="Per face">
+      <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-0.5" role="group" aria-label="Per face">
         {FACES_IN_ORDER.map((face) => {
           const on = spot === face;
           return (
@@ -146,8 +145,8 @@ export function HeatCubeCard({ solves }: { solves: Solve[] }) {
               onClick={() => setSpot(on ? null : face)}
               title={`${face}: ${valueOf(face)}${mode === "often" ? `, ${byFace.get(face)!.turns.toLocaleString("en-US")} turns` : ""}`}
               className={cn(
-                "hit-y flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] transition-colors",
-                on ? "bg-accent-soft" : "bg-bg-panel-2 hover:bg-bg-panel-2/70",
+                "hit-y flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors active:translate-y-px",
+                on ? "bg-accent-soft" : "[@media(hover:hover)]:hover:bg-bg-panel-2",
               )}
             >
               <span aria-hidden className="h-3 w-3 shrink-0 rounded-[3px]" style={{ background: rampVar(heat.steps[face]) }} />

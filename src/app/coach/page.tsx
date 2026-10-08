@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
-import { ChevronRight, Flag, GraduationCap, Loader2, ScanLine } from "lucide-react";
+import { ChevronRight, GraduationCap, Loader2 } from "lucide-react";
 import { AnalyticsShell, NotEnough } from "@/components/analytics/AnalyticsShell";
 import { SectionTitle } from "@/components/analytics/ChartKit";
 import { useSessionStore } from "@/lib/store/sessionStore";
@@ -44,32 +45,38 @@ export default function CoachPage() {
             </p>
           )}
 
-          {findings.map((f, i) => (
-            <Link key={f.id} href={f.href} className="card flex flex-col gap-2 rounded-xl p-4 transition-colors hover:bg-bg-panel-2/60">
-              <div className="flex items-start justify-between gap-3">
-                <p className="flex items-start gap-2 text-sm font-semibold leading-snug text-foreground">
-                  <span className="shrink-0 text-sm font-bold tabular-nums text-accent">{i + 1}.</span>
-                  <span>
-                    {f.title}
-                    {f.source === "xray" && (
-                      <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-bg-panel-2 px-1.5 py-0.5 align-middle text-[11px] font-medium text-muted">
-                        <ScanLine size={9} /> X-Ray
-                      </span>
-                    )}
-                  </span>
+          <div className="flex flex-col">
+            {findings.map((f, i) => (
+              <Link
+                key={f.id}
+                href={f.href}
+                className={cn(
+                  "flex flex-col gap-2 transition-colors",
+                  i === 0 ? "card rounded-xl p-4 hover:bg-bg-panel-2/60" : "border-t border-border py-4 first:border-t-0",
+                  i === 1 && "mt-4",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className={cn("flex items-start gap-2 font-semibold leading-snug text-foreground", i === 0 ? "text-base" : "text-sm")}>
+                    <span className="shrink-0 tabular-nums text-accent">{i + 1}.</span>
+                    <span>
+                      {f.title}
+                      {f.source === "xray" && <span className="ml-1.5 align-middle text-[11px] font-medium text-muted-2">from X-Ray</span>}
+                    </span>
+                  </p>
+                  <span className={cn("shrink-0 font-semibold tabular-nums text-accent", i === 0 ? "text-base" : "text-sm")}>{secs(f.msPerSolve)}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-bg-panel-2">
+                  <div className="h-full rounded-md bg-accent/70" style={{ width: `${(f.msPerSolve / max) * 100}%` }} />
+                </div>
+                <p className="text-xs leading-relaxed text-muted">{f.detail}</p>
+                <p className="flex items-center justify-between gap-2 text-xs font-medium text-foreground">
+                  {f.action}
+                  <ChevronRight size={14} className="shrink-0 text-muted-2" />
                 </p>
-                <span className="shrink-0 text-sm font-bold tabular-nums text-accent">{secs(f.msPerSolve)}</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-bg-panel-2">
-                <div className="h-full rounded-full bg-accent/70" style={{ width: `${(f.msPerSolve / max) * 100}%` }} />
-              </div>
-              <p className="text-[11px] leading-relaxed text-muted">{f.detail}</p>
-              <p className="flex items-center justify-between gap-2 text-[11px] font-medium text-foreground">
-                {f.action}
-                <ChevronRight size={14} className="shrink-0 text-muted-2" />
-              </p>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
           {findings.length > 0 && (
             <p className="px-1 text-[11px] text-muted-2">
               Seconds per solve, measured against what you already do on your better solves. Some fixes overlap, so treat a combined total as an upper bound.
@@ -77,10 +84,9 @@ export default function CoachPage() {
           )}
 
           {r?.goal && (
-            <Link href="/goal" className="card flex flex-col gap-2 rounded-xl p-4 transition-colors hover:bg-bg-panel-2/60">
+            <Link href="/goal" className="flex flex-col gap-2 border-t border-border pt-5 transition-colors">
               <SectionTitle>Next goal</SectionTitle>
               <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Flag size={15} className="text-accent" />
                 Sub-{(r.goal.targetMs / 1000).toFixed(0)} from a typical {secs(r.goal.currentMs)}
               </p>
               <p className="text-[11px] leading-relaxed text-muted">{r.goal.headline}</p>

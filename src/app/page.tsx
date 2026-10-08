@@ -199,12 +199,12 @@ function HomeInner() {
         <header className="flex shrink-0 items-center justify-between px-3 py-2">
           <SessionSwitcher />
 
-          <div className="fx-pill hidden items-center gap-1 rounded-full bg-bg-panel-2 p-1 lg:flex">
+          <div className="fx-pill hidden items-center gap-1 rounded-md bg-bg-panel-2 p-1 lg:flex">
             <button
               type="button"
               onClick={() => setTab("timer")}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                 tab !== "trainer" && tab !== "analyze" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
               )}
             >
@@ -214,7 +214,7 @@ function HomeInner() {
               type="button"
               onClick={() => setTab("trainer")}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                 tab === "trainer" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
               )}
             >
@@ -224,13 +224,13 @@ function HomeInner() {
               type="button"
               onClick={() => setTab("analyze")}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                 tab === "analyze" ? "bg-bg-elevated text-foreground shadow-sm" : "text-muted hover:text-foreground",
               )}
             >
               <Wand2 size={13} /> Analyze
             </button>
-            <Link href="/play" className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground">
+            <Link href="/play" className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground">
               <Gamepad2 size={13} /> Play
             </Link>
           </div>
@@ -264,7 +264,7 @@ function HomeInner() {
                 onClick={() => setTimerMode(m)}
                 aria-pressed={timerMode === m}
                 className={cn(
-                  "inline-flex items-center pointer-coarse:min-h-10 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  "inline-flex items-center pointer-coarse:min-h-10 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
                   timerMode === m ? "bg-accent-soft text-accent" : "text-muted-2 hover:text-muted",
                 )}
               >
@@ -317,17 +317,16 @@ function HomeInner() {
               <StatsPanel />
               <Link
                 href="/cases"
-                className="card flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium text-foreground hover:bg-bg-panel-2/60"
+                className="flex items-center justify-between border-t border-border px-1 py-3 text-xs font-medium text-foreground"
               >
                 <span>
                   Case history <span className="font-normal text-muted-2">· every OLL, PLL & F2L case you&apos;ve had</span>
                 </span>
                 <ChevronRight size={14} className="text-muted-2" />
               </Link>
-              <div className="card rounded-xl p-3">
+              <div className="border-t border-border pt-3">
                 <div className="mb-1 flex items-center justify-between px-1">
-                  <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-2">
-                    <span aria-hidden className="h-3 w-0.5 rounded-full bg-accent" />
+                  <span className="text-xs font-medium text-muted">
                     Recent solves
                   </span>
                   <Link
@@ -346,7 +345,7 @@ function HomeInner() {
                 type="button"
                 onClick={() => setMoreInsights((v) => !v)}
                 aria-expanded={moreInsights}
-                className="flex items-center justify-center gap-1 rounded-xl py-2 text-xs font-medium text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
+                className="flex items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium text-muted hover:text-foreground hover:bg-bg-panel-2 transition-colors"
               >
                 {moreInsights ? "Fewer insights" : "More insights"}
                 <ChevronDown size={13} className={cn("transition-transform", moreInsights && "rotate-180")} />

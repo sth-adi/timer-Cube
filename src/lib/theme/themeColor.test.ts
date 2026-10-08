@@ -28,7 +28,7 @@ describe("theme colours", () => {
   it("falls back to the default theme's colour", () => {
     expect(themeColorFor("bogus")).toBe(THEME_COLORS.nebula);
     expect(themeColorFor(undefined)).toBe(THEME_COLORS.nebula);
-    expect(themeColorFor("paper")).toBe("#f4f5f8");
+    expect(themeColorFor("paper")).toBe("#eef0f4");
   });
 
   it("the inline script sets every theme-color meta from <html data-theme>", () => {
@@ -38,6 +38,6 @@ describe("theme colours", () => {
     const document = { documentElement: { dataset: { theme: "paper" } }, querySelectorAll: () => els, head: {}, createElement: () => ({}) };
     new Function("document", THEME_COLOR_SCRIPT)(document);
     // setAttribute above mutates the copies' closures' source objects
-    expect(metas.map((m) => m.content)).toEqual(["#f4f5f8", "#f4f5f8"]);
+    expect(metas.map((m) => m.content)).toEqual(["#eef0f4", "#eef0f4"]);
   });
 });

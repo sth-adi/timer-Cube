@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Dna, Loader2, Pause, Play, Share2 } from "lucide-react";
+import { Loader2, Pause, Play, Share2 } from "lucide-react";
 import { useSessionStore } from "@/lib/store/sessionStore";
 import { computeDnaAxes, MIN_SOLVES_FOR_DNA } from "@/lib/stats/dna";
 import { buildDnaTimeline, compareSnapshots, morphAxes } from "@/lib/stats/dnaTimeline";
@@ -96,8 +96,7 @@ export function CubeDnaCard() {
   if (solves.length < MIN_SOLVES_FOR_DNA) {
     return (
       <div className="card rounded-xl p-4">
-        <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
-          <Dna size={14} className="text-accent" />
+        <h3 className="mb-1 text-sm font-semibold tracking-[-0.01em]">
           Cube DNA
         </h3>
         <p className="text-xs text-muted-2">
@@ -110,15 +109,14 @@ export function CubeDnaCard() {
 
   const canEvolve = timeline.length >= 2;
   return (
-    <div className="card animate-fade-in-up rounded-xl p-4">
+    <div className="card rounded-xl p-4">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <Dna size={14} className="text-accent" />
+        <h3 className="text-sm font-semibold tracking-[-0.01em]">
           Cube DNA
         </h3>
         <div className="flex items-center gap-1.5">
           {canEvolve && (
-            <div className="flex rounded-full bg-bg-panel-2 text-[11px]">
+            <div className="flex gap-0.5 rounded-md bg-bg-panel-2 p-0.5 text-xs">
               {(
                 [
                   ["now", "Now"],
@@ -129,7 +127,7 @@ export function CubeDnaCard() {
                   key={id}
                   type="button"
                   onClick={() => setView(id)}
-                  className={cn("hit-y rounded-full px-2.5 py-1 font-medium", view === id ? "bg-accent-soft text-accent" : "text-muted")}
+                  className={cn("hit-y rounded-sm px-2.5 py-1 font-medium", view === id ? "bg-accent-soft text-accent" : "text-muted")}
                 >
                   {label}
                 </button>
@@ -140,9 +138,9 @@ export function CubeDnaCard() {
             type="button"
             onClick={() => void onShare()}
             disabled={busy}
-            className="hit-y flex items-center gap-1 rounded-full bg-bg-panel-2 px-2.5 py-1 text-[11px] font-medium text-muted hover:text-accent disabled:opacity-50"
+            className="hit-y flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent disabled:opacity-50"
           >
-            {busy ? <Loader2 size={11} className="animate-spin" /> : <Share2 size={11} />}
+            {busy ? <Loader2 size={11} className="animate-spin" /> : <Share2 size={12} strokeWidth={1.75} />}
             Poster
           </button>
         </div>
@@ -160,7 +158,7 @@ export function CubeDnaCard() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <p className="text-base font-bold text-foreground">{snap.trait.name}</p>
+              <p className="text-base font-semibold tracking-[-0.01em] text-foreground">{snap.trait.name}</p>
               <p className="text-[11px] text-muted">
                 {snap.label} · {snap.count} solves{snap.meanMs !== null ? ` · avg ${(snap.meanMs / 1000).toFixed(2)}s` : ""}
               </p>
@@ -172,9 +170,9 @@ export function CubeDnaCard() {
                 setMorph(null);
                 setPlaying((p) => !p);
               }}
-              className="hit-y flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+              className="hit-y flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg active:translate-y-px"
             >
-              {playing ? <Pause size={12} /> : <Play size={12} />} {playing ? "Pause" : "Play"}
+              {playing ? <Pause size={12} strokeWidth={1.75} /> : <Play size={12} strokeWidth={1.75} />} {playing ? "Pause" : "Play"}
             </button>
           </div>
           <RadarChart axes={shownAxes} ghost={morph ? timeline[morph.from].axes : (prev?.axes ?? null)} className="mx-auto w-full max-w-[260px]" />
@@ -189,7 +187,7 @@ export function CubeDnaCard() {
                   setMorph(null);
                   setPicked(i);
                 }}
-                className={cn("hit-y shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium", i === index ? "bg-accent text-accent-fg" : "bg-bg-panel-2 text-muted")}
+                className={cn("hit-y shrink-0 rounded-md px-2.5 py-1 text-xs font-medium", i === index ? "bg-accent-soft text-accent" : "text-muted")}
               >
                 {s.label}
               </button>
@@ -197,13 +195,13 @@ export function CubeDnaCard() {
           </div>
           <Sparkline values={timeline.map((s) => s.meanMs)} active={index} />
           {evolution && !playing && (
-            <div className="flex flex-col gap-1 rounded-lg bg-bg-panel-2 p-2.5">
-              <p className="text-[11px] font-medium text-foreground">{evolution.headline}</p>
-              <div className="flex flex-wrap gap-1">
+            <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+              <p className="text-xs font-medium text-foreground">{evolution.headline}</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
                 {evolution.changes
                   .filter((c) => Math.abs(c.delta) >= 1)
                   .map((c) => (
-                    <span key={c.label} className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", c.delta > 0 ? "bg-success/15 text-success" : "bg-danger/10 text-danger")}>
+                    <span key={c.label} className={cn("tabular-nums text-xs font-medium", c.delta > 0 ? "text-success" : "text-danger")}>
                       {c.label} {c.delta > 0 ? "+" : ""}
                       {Math.round(c.delta)}
                     </span>

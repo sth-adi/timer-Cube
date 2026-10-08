@@ -20,14 +20,14 @@
 /* ---- Cards: one radius, one padding, one heading ---- */
 .rc-card {
   width: 100%;
-  border-radius: 16px;
-  background: var(--bg-panel-2);
-  padding: 12px;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  padding: 16px 0 4px;
   font-variant-numeric: tabular-nums;
 }
 @media (min-width: 640px) {
   .rc-card {
-    padding: 16px;
+    padding: 20px 0 4px;
   }
 }
 
@@ -36,11 +36,9 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 16px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--muted);
 }
 .rc-card-title > svg {

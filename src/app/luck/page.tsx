@@ -52,7 +52,7 @@ function LuckHistogram({ r }: { r: LuckReport }) {
 function Board({ title, list, by }: { title: string; list: LuckSolve[]; by: "raw" | "earned" }) {
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">{title}</p>
+      <p className="text-[11px] font-medium text-muted-2">{title}</p>
       {list.slice(0, 5).map((s, i) => (
         <div key={s.id} className="flex items-baseline justify-between rounded-lg bg-bg-panel-2 px-2 py-1.5">
           <span className="text-[11px] text-muted-2">{i + 1}.</span>
@@ -76,7 +76,7 @@ export default function LuckPage() {
   return (
     <AnalyticsShell
       icon={<Clover size={17} className="text-accent" />}
-      title="Luck Meter"
+      title="Luck meter"
       subtitle="How much of each solve was the scramble, and your solves ranked by the part you earned."
     >
       {!r ? (
@@ -86,7 +86,7 @@ export default function LuckPage() {
           <Hero value={`±${secs(r.luckSpreadMs)}`} label="how much scramble luck typically moves a solve" sub={`fitted to your ${r.solves.length} smart-cube solves, allowing for how much you've improved`} />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>What the scramble is worth, for you</SectionTitle>
             {r.factors.map((f) => (
               <div key={f.key} className="flex items-center justify-between rounded-lg bg-bg-panel-2 px-3 py-2">
@@ -101,7 +101,7 @@ export default function LuckPage() {
             <p className="text-[11px] text-muted-2">Fitted to your own times; factors that never varied in your history (say, you&apos;ve never had an OLL skip) are left out.</p>
           </div>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Luck across all your solves</SectionTitle>
             <LuckHistogram r={r} />
             {Math.abs(r.recentLuckMs) > 50 && (

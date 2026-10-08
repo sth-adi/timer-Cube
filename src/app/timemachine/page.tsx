@@ -151,7 +151,7 @@ function TimeMachine() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="card flex flex-col gap-3 rounded-xl p-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-5">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-foreground">Scrub your history</p>
           <p className="text-[11px] tabular-nums text-muted-2">
@@ -179,7 +179,7 @@ function TimeMachine() {
               type="button"
               disabled={scrubCount === log.length}
               onClick={() => plan(momentAt(log, scrubCount))}
-              className="flex w-fit items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40"
+              className="flex w-fit items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg disabled:opacity-40"
             >
               <Undo2 size={12} /> Rewind to here
             </button>
@@ -196,7 +196,7 @@ function TimeMachine() {
       </button>
 
       <div className="flex flex-col gap-1.5">
-        <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Moments</p>
+        <p className="px-1 text-[11px] font-medium text-muted-2">Moments</p>
         {reversed.length <= 1 && <p className="px-1 text-xs text-muted">Turn the cube, every pause becomes a moment you can jump back to.</p>}
         {reversed.slice(0, 60).map((m) => (
           <button
@@ -212,7 +212,7 @@ function TimeMachine() {
             <div className="flex flex-1 flex-col">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                 {m.count === log.length ? "Now" : m.count === 0 ? "Connected" : timeAgo(m.wallMs)}
-                {m.solved && <span className="rounded-full bg-success/15 px-1.5 py-px text-[11px] font-medium text-success">solved</span>}
+                {m.solved && <span className="text-[11px] font-medium text-success">solved</span>}
               </span>
               <span className="text-[11px] text-muted-2">
                 {m.count === 0 ? "the state you connected in" : `${m.burstTurns} turns in ${(m.burstMs / 1000).toFixed(1)}s · ${log.length - m.count} turns ago`}
@@ -272,14 +272,14 @@ export default function TimeMachinePage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <History size={17} className="text-accent" /> Cube Time Machine
+              <History size={17} className="text-accent" /> Cube time machine
             </h1>
             <p className="text-[11px] text-muted-2">
               An undo button for your physical cube, and a what-if lab for any solve you&apos;ve saved: fork it, play it differently, see how it
               ends.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-bg-panel-2 p-1">
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-bg-panel-2 p-1">
             {(
               [
                 ["rewind", "Rewind my cube", Rewind],
@@ -292,7 +292,7 @@ export default function TimeMachinePage() {
                 onClick={() => setTab(id)}
                 aria-pressed={tab === id}
                 className={cn(
-                  "hit-y flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-semibold",
+                  "hit-y flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold",
                   tab === id ? "bg-accent text-accent-fg" : "text-muted",
                 )}
               >

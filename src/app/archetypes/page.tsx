@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils/cn";
 function ArchetypeCard({ a, maxMs }: { a: Archetype; maxMs: number }) {
   const total = a.phases.reduce((x, y) => x + y, 0);
   return (
-    <div className="card flex flex-col gap-2.5 rounded-xl p-4">
+    <div className="flex flex-col gap-2.5 border-t border-border pt-5">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">{a.name}</p>
         <p className="text-[11px] text-muted">
@@ -65,11 +65,11 @@ export default function ArchetypesPage() {
   return (
     <AnalyticsShell
       icon={<Shapes size={17} className="text-accent" />}
-      title="Solve Archetypes"
+      title="Solve archetypes"
       subtitle="The handful of shapes your solves actually come in, found by clustering, and what each one costs you."
     >
       {!r ? (
-        <NotEnough need={MIN_SOLVES} have={metrics.length} what="Solve Archetypes" />
+        <NotEnough need={MIN_SOLVES} have={metrics.length} what="Solve archetypes" />
       ) : (
         <>
           <Hero value={`${r.archetypes.length}`} label="kinds of solve in your history" sub={`${r.solves} smart-cube solves · overall average ${secs(r.overallMs)}`} />

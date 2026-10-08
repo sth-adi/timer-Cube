@@ -16,7 +16,7 @@ const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string; l
 /** The "What to work on" findings list — shared by the analyzer and the public solve-share page, both driven by the same `Finding[]` from analyzeSolve. */
 export function FindingsList({ findings }: { findings: Finding[] }) {
   return (
-    <div className="card animate-fade-in-up rounded-2xl p-3 sm:p-4">
+    <div className="animate-fade-in-up border-t border-border px-1 pt-5">
       <CardTitle as="h3">What to work on</CardTitle>
       <ul className="mt-4 flex flex-col gap-4">
         {findings.map((f) => {

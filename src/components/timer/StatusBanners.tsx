@@ -48,7 +48,7 @@ export function StatusBanners({ state, onDismissReconnect }: { state: BannerStat
       {state.reconnectNotice && (
         <p className="rc-banner flex max-w-full items-start gap-2 [&>svg]:mt-0.5 [&>svg]:shrink-0" data-tone="warning" role="status" data-testid="reconnect-notice">
           <BluetoothConnected size={14} aria-hidden="true" /> <span className="min-w-0">{reconnectText(state.reconnectNotice.lostMoves)}</span>
-          <button type="button" onClick={onDismissReconnect} aria-label="Dismiss" className="hit -my-1 -mr-2 ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full hover:text-foreground">
+          <button type="button" onClick={onDismissReconnect} aria-label="Dismiss" className="hit -my-1 -mr-2 ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md hover:text-foreground">
             <X size={14} aria-hidden="true" />
           </button>
         </p>
@@ -92,7 +92,7 @@ export function StatusDot({ state }: { state: BannerState }) {
         <span aria-hidden className={cn("h-2 w-2 rounded-full", severe ? "bg-danger" : "bg-warning")} />
       </button>
       {open && (
-        <span role="status" className="absolute right-0 top-full z-30 mt-2 flex w-64 flex-col gap-2 rounded-xl border border-border-strong bg-bg-panel-2 p-3 text-left text-[12px] font-normal leading-4 text-foreground shadow-lg">
+        <span role="status" className="absolute right-0 top-full z-30 mt-2 flex w-64 flex-col gap-2 rounded-lg border border-border-strong bg-bg-panel-2 p-3 text-left text-[12px] font-normal leading-4 text-foreground shadow-lg">
           {messages.map((m) => (
             <span key={m} className="block whitespace-normal">
               {m}

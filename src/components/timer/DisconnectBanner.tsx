@@ -90,7 +90,7 @@ export function DroppedSolveView({
         <p className="timer-digits text-center text-6xl font-bold text-muted" aria-label={frozenMs === null ? "No time: the solve hadn't started" : `Time when the cube dropped: ${formatTime(frozenMs)}`}>
           {frozenMs === null ? "—" : formatTime(frozenMs)}
         </p>
-        <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-xl" aria-hidden="true">
+        <div className="card h-40 w-full max-w-[13rem] overflow-hidden rounded-lg" aria-hidden="true">
           <LiveCubeMimic scramble={scramble} moves={moves} className="h-full w-full" />
         </div>
       </div>

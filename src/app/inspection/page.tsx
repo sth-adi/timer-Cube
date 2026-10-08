@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/analysis/EmptyState";
 import { useMemo } from "react";
 import Link from "next/link";
 import { Eye, Timer as TimerIcon, TrendingDown, TrendingUp } from "lucide-react";
@@ -62,16 +63,16 @@ export default function InspectionPage() {
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
             <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Eye size={17} className="text-accent" /> Inspection Report Card
+              <Eye size={17} className="text-accent" /> Inspection report card
             </h1>
             <p className="text-[11px] text-muted-2">Your inspection, graded from how your cross actually came out on the cube.</p>
           </div>
 
           {!history ? (
-            <div className="card rounded-xl p-6 text-center text-sm text-muted">Solve on a connected smart cube and every inspection gets graded here.</div>
+            <EmptyState title="No smart-cube solves yet"><p>Solve on a connected smart cube and every inspection gets graded here.</p></EmptyState>
           ) : (
             <>
-              <div className="card flex flex-col gap-3 rounded-xl p-4">
+              <div className="flex flex-col gap-3 border-t border-border pt-5">
                 <div className="flex items-center gap-4">
                   <GradeBadge grade={history.grade} size="lg" />
                   <div className="flex flex-col gap-0.5">
@@ -110,14 +111,14 @@ export default function InspectionPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Recent solves</p>
+                <p className="px-1 text-[11px] font-medium text-muted-2">Recent solves</p>
                 {[...rows]
                   .reverse()
                   .slice(0, 40)
                   .map(({ solve, report }) => {
                     const final = solveFinalMs(solve);
                     return (
-                      <div key={solve.id} className="card flex items-center gap-3 rounded-xl p-3">
+                      <div key={solve.id} className="flex items-center gap-3 border-t border-border py-3 first:border-t-0">
                         <GradeBadge grade={report.grade} />
                         <div className="flex min-w-0 flex-1 flex-col gap-1">
                           <div className="flex items-center justify-between text-[11px]">

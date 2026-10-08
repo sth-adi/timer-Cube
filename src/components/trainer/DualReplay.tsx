@@ -143,7 +143,7 @@ export function DualReplay() {
     <div className="flex w-full max-w-2xl flex-col gap-3 pb-4">
       <div className="card rounded-xl p-3">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-          <Film size={15} className="text-accent" />
+          <Film size={15} className="text-accent" strokeWidth={1.75} />
           Dual replay
         </h2>
         <p className="mb-3 text-xs leading-relaxed text-muted">
@@ -203,7 +203,7 @@ export function DualReplay() {
                 (!left || !right) && "opacity-40",
               )}
             >
-              <Play size={13} /> Play together
+              <Play size={13} strokeWidth={1.75} /> Play together
             </button>
             <p className="mt-2 text-center text-[11px] text-muted-2">
               Turning speed is tempo-matched to each solve&apos;s actual turns-per-second, not real-time duration.

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AlertTriangle, Ghost, Loader2, RefreshCw, Timer as TimerIcon, WifiOff } from "lucide-react";
+import { Ghost, RefreshCw, Timer as TimerIcon } from "lucide-react";
+import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { fetchSharedSolve, type SharedSolve, type SharedSolveFailure } from "@/lib/social/shareSolve";
 import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import type { AnalyzeResult } from "@/lib/analysis/analyze";
@@ -129,78 +130,80 @@ export default function SharedSolvePage() {
   const phases = result?.ok ? result.phases : [];
 
   return (
-    <div className="flex flex-col items-center gap-4 px-4 py-6">
-      <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
-        <TimerIcon size={16} className="text-accent" />
+    <div className="flex min-h-dvh flex-col items-center gap-5 px-4 py-6">
+      <Link href="/" className="hit flex items-center gap-1.5 rounded-md text-sm font-semibold text-foreground active:translate-y-px">
+        <TimerIcon size={16} strokeWidth={1.75} className="text-accent" />
         Cube
       </Link>
 
-      <div ref={contentRef} className="flex w-full max-w-2xl flex-col gap-3 pb-8">
+      <div ref={contentRef} className="flex w-full max-w-2xl flex-col gap-4 pb-8">
         {state === "loading" && (
-          <div className="card flex flex-col items-center gap-2 rounded-xl p-8">
-            <Loader2 size={20} className="animate-spin text-accent" />
-            <p className="text-xs text-muted">Loading solve…</p>
-          </div>
+          <SkeletonGroup label="Loading solve" className="card flex flex-col gap-3 rounded-xl p-5">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-12 w-40" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
+          </SkeletonGroup>
         )}
 
         {state !== "loading" && state !== "ready" && (
-          <div className="card flex flex-col items-center gap-2 rounded-xl p-8 text-center" role="alert">
-            {state === "offline" ? <WifiOff size={20} className="text-danger" /> : <AlertTriangle size={20} className="text-danger" />}
-            <p className="text-sm font-medium">{FAILURE_COPY[state].title}</p>
-            <p className="max-w-sm text-xs text-muted">{FAILURE_COPY[state].body}</p>
-            {state !== "not-found" && (
+          <div className="card flex flex-col items-start gap-2 rounded-xl p-6" role="alert">
+            <p className="text-balance text-base font-semibold tracking-[-0.01em]">{FAILURE_COPY[state].title}</p>
+            <p className="max-w-[65ch] text-pretty text-sm text-muted">{FAILURE_COPY[state].body}</p>
+            {state !== "not-found" ? (
               <button
                 type="button"
                 onClick={retry}
-                className="hit mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg"
+                className="hit mt-1 inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg active:translate-y-px"
               >
-                <RefreshCw size={13} /> Retry
+                <RefreshCw size={13} strokeWidth={1.75} /> Retry
               </button>
+            ) : (
+              <Link href="/" className="hit-y mt-1 text-xs font-medium text-accent">
+                Back to the timer
+              </Link>
             )}
           </div>
         )}
 
         {state === "ready" && solve && (
           <>
-            <div className="card rounded-xl p-3">
-              <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-                {puzzleLabel && <span className="rounded-full bg-bg-panel-2 px-2 py-0.5 font-medium text-muted">{puzzleLabel}</span>}
-                {eventLabel && <span className="rounded-full bg-bg-panel-2 px-2 py-0.5 font-medium text-muted">{eventLabel}</span>}
-                {solve.username && <span className="text-muted-2">shared by {solve.username}</span>}
-              </div>
-              <p className="tabular-timer text-3xl font-bold text-foreground">{formatTime(solve.timeMs)}</p>
-              <p className="mt-2 break-words font-mono text-xs leading-relaxed text-muted">{solve.scramble}</p>
+            <div className="card rounded-xl p-5">
+              <p className="text-xs font-medium text-muted-2">
+                {[puzzleLabel, eventLabel, solve.username ? `shared by ${solve.username}` : null].filter(Boolean).join(" · ")}
+              </p>
+              <p className="tabular-timer mt-1.5 text-5xl font-bold leading-none tracking-[-0.02em] text-foreground">{formatTime(solve.timeMs)}</p>
+              <p className="mt-4 break-words border-t border-border pt-3 font-mono text-xs leading-relaxed text-muted">{solve.scramble}</p>
               {solve.puzzle === "333" && (
                 <Link
                   href={`/rematch?ghost=${encodeURIComponent(params.id)}`}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-fg active:translate-y-px"
                 >
-                  <Ghost size={13} /> Race this solve as a ghost
+                  <Ghost size={13} strokeWidth={1.75} /> Race this solve as a ghost
                 </Link>
               )}
             </div>
 
             {result === null && (
-              <div className="card flex items-center gap-2 rounded-xl p-3 text-xs text-muted">
-                <Loader2 size={13} className="animate-spin" /> Analyzing…
-              </div>
+              <SkeletonGroup label="Analyzing" className="flex flex-col gap-2 px-1">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </SkeletonGroup>
             )}
 
             {result && !result.ok && (
-              <div className="card rounded-xl p-3">
-                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-danger">
-                  <AlertTriangle size={13} /> Detailed analysis isn&apos;t available for this solve
-                </p>
-                <p className="mb-2 text-xs text-muted">Here&apos;s the raw reconstruction instead:</p>
-                <p className="break-words font-mono text-[11px] leading-relaxed text-foreground/80">{solve.reconstruction}</p>
+              <div className="border-t border-border px-1 pt-4">
+                <p className="mb-1 text-sm font-semibold text-foreground">Detailed analysis isn&apos;t available for this solve</p>
+                <p className="mb-2 text-xs text-muted">Here&apos;s the raw reconstruction instead.</p>
+                <p className="break-words font-mono text-xs leading-relaxed text-foreground/80">{solve.reconstruction}</p>
               </div>
             )}
 
             {result && result.ok && (
               <>
-                <div className="card animate-fade-in-up rounded-xl p-3">
-                  <p className="text-sm leading-relaxed">{result.summary}</p>
-                  <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
+                <div className="animate-fade-in-up px-1">
+                  <p className="max-w-[65ch] text-pretty text-sm leading-relaxed">{result.summary}</p>
+                  <div className="tabular-timer mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                     <span>
                       Cross on <span className="text-foreground">{result.crossFace}</span>
                     </span>

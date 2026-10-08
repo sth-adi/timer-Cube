@@ -113,11 +113,11 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
     <div className="flex flex-col items-center gap-3 text-center">
       {step === "intro" && (
         <>
-          <Compass size={26} className="text-accent" />
+          <Compass size={26} className="text-accent" strokeWidth={1.75} />
           <p className="max-w-xs text-sm text-muted">
             Teach the app how your cube&apos;s gyro chip is mounted. Three poses, about ten seconds, each one captures itself once you hold still.
           </p>
-          <button type="button" onClick={start} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
+          <button type="button" onClick={start} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
             Start calibration
           </button>
         </>
@@ -157,11 +157,11 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
 
       {step === "done" && (
         <>
-          <Check size={20} className="text-success" />
+          <Check size={20} className="text-success" strokeWidth={1.75} />
           <p className="text-sm font-semibold text-foreground">Calibrated for {protocolName}</p>
           <p className="max-w-xs text-xs text-muted">Saved for every cube using this protocol. The home grip was re-centered too.</p>
           {onClose && (
-            <button type="button" onClick={onClose} className="rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-medium text-foreground">
+            <button type="button" onClick={onClose} className="rounded-lg bg-bg-panel-2 px-4 py-2 text-xs font-medium text-foreground">
               Done
             </button>
           )}
@@ -174,8 +174,8 @@ export function GyroCalibration({ onClose }: { onClose?: () => void }) {
           <p className="max-w-xs text-xs text-muted">
             Usually a rotation went the other way or wasn&apos;t a clean quarter turn. Try again, a bit more deliberately.
           </p>
-          <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
-            <RotateCcw size={13} /> Try again
+          <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
+            <RotateCcw size={13} strokeWidth={1.75} /> Try again
           </button>
         </>
       )}

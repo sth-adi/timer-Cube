@@ -6,7 +6,7 @@ import { AnalyticsShell, NotEnough, useSolveMetrics } from "@/components/analyti
 import { ChartTip, Hero, PHASE_COLOR, SectionTitle, useChartTip } from "@/components/analytics/ChartKit";
 import { MIN_SITTING, buildStamina, type BucketStat } from "@/lib/analytics/stamina";
 
-const pct = (v: number | null, signed = true) => (v === null ? "—" : `${signed && v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(Math.round(v * 100))}%`);
+const pct = (v: number | null, signed = true) => (v === null ? "-" : `${signed && v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(Math.round(v * 100))}%`);
 
 /**
  * Columns from a zero line: slower than your sitting median goes up in the
@@ -117,7 +117,7 @@ export default function StaminaPage() {
   return (
     <AnalyticsShell
       icon={<Thermometer size={17} className="text-accent" />}
-      title="Warm-up & Fatigue"
+      title="Warm-up and fatigue"
       subtitle="How your solving changes across a sitting, how long you take to warm up, and when you start to fade."
     >
       {!r ? (
@@ -131,7 +131,7 @@ export default function StaminaPage() {
           />
           <p className="px-1 text-[12px] leading-relaxed text-foreground">{r.headline}</p>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Solve time by position in the sitting, vs that sitting&apos;s median</SectionTitle>
             <DeltaColumns buckets={r.positions} highlight={(b, i) => i < 3 || i === r.positions.length - 1 || (b.rel !== null && Math.abs(b.rel) === Math.max(...r.positions.map((x) => Math.abs(x.rel ?? 0))))} />
             <div className="flex gap-3 text-[11px] text-muted">
@@ -144,17 +144,17 @@ export default function StaminaPage() {
             </div>
           </div>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Share of each solve spent paused, by position</SectionTitle>
             <PauseLine buckets={r.positions} />
             {r.fatigue !== null && (
               <p className="text-[11px] text-muted">
-                Solves after #30 run {pct(r.fatigue)} against solves 6–30 {r.fatigue > 0.03 ? ", that's fatigue." : ", no real fade."}
+                Solves after #30 run {pct(r.fatigue)} against solves 6-30 {r.fatigue > 0.03 ? ", that's fatigue." : ", no real fade."}
               </p>
             )}
           </div>
 
-          <div className="card flex flex-col gap-2 rounded-xl p-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             <SectionTitle>Which phase is coldest (first 3 solves vs settled)</SectionTitle>
             {r.phaseCold.map((p) => {
               const max = Math.max(50, ...r.phaseCold.map((x) => Math.abs(x.ms)));
@@ -162,7 +162,7 @@ export default function StaminaPage() {
                 <div key={p.phase} className="flex items-center gap-2">
                   <span className="w-10 shrink-0 text-[11px] text-muted">{p.phase}</span>
                   <div className="h-2.5 flex-1 rounded-full bg-bg-panel-2">
-                    <div className="h-full rounded-full" style={{ width: `${Math.max(1, (Math.max(0, p.ms) / max) * 100)}%`, background: PHASE_COLOR[p.phase] }} />
+                    <div className="h-full rounded-md" style={{ width: `${Math.max(1, (Math.max(0, p.ms) / max) * 100)}%`, background: PHASE_COLOR[p.phase] }} />
                   </div>
                   <span className="w-14 shrink-0 text-right text-[11px] font-semibold tabular-nums text-foreground">
                     {p.ms >= 0 ? "+" : "−"}
@@ -171,10 +171,10 @@ export default function StaminaPage() {
                 </div>
               );
             })}
-            <p className="text-[11px] text-muted-2">Extra time each phase takes in your first three solves of a sitting, compared with solves 6–20.</p>
+            <p className="text-[11px] text-muted-2">Extra time each phase takes in your first three solves of a sitting, compared with solves 6-20.</p>
           </div>
 
-          <div className="card flex flex-col gap-3 rounded-xl p-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-5">
             <SectionTitle>Does resting between solves help?</SectionTitle>
             <DeltaColumns buckets={r.rest} highlight={() => true} />
             <p className="text-[11px] text-muted-2">Rest is the time from finishing one solve to starting the next, within a sitting.</p>

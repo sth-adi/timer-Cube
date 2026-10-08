@@ -46,7 +46,7 @@ function NoteEditor({ initial, onSave, onClose }: { initial: string; onSave: (co
       maxLength={200}
       placeholder="Add a note…"
       aria-label="Solve note"
-      className="w-48 max-w-full rounded-full border border-border bg-bg-panel-2 px-3 py-1.5 text-[16px] text-foreground outline-none focus:border-accent sm:text-[11px]"
+      className="w-48 max-w-full rounded-md border border-border bg-bg-panel-2 px-3 py-1.5 text-[16px] text-foreground outline-none focus:border-accent sm:text-[11px]"
       data-testid="solve-note-input"
     />
   );
@@ -83,7 +83,7 @@ export function PostSolveActions({
           onClick={() => setEditing(true)}
           aria-pressed={hasNote}
           className={cn(
-            "hit-y flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+            "hit-y flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
             hasNote ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
           )}
           title={hasNote ? `Note: ${solve.comment}` : "Add a note to this solve"}

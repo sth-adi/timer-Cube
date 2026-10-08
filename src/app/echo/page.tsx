@@ -7,7 +7,6 @@ import { usePlayInput } from "@/lib/play/usePlayInput";
 import { useStored } from "@/lib/play/useStored";
 import { IDLE, echoReduce, showTiming } from "@/lib/play/echo";
 
-const ACCENT = "#3dffb0";
 const BEST_KEY = "echo-best";
 const LEAD_IN_MS = 550;
 
@@ -58,9 +57,9 @@ export default function EchoPage() {
           : "Missed it";
 
   return (
-    <PlayShell accent={ACCENT} title="Echo" tagline="Watch the turns, then play them back from memory. Every round adds one. One wrong turn and it's over.">
-      <div className="play-panel play-glow flex flex-col items-center gap-4 rounded-3xl px-4 py-6" data-testid="echo-stage">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--play-dim)]" data-testid="echo-label">
+    <PlayShell title="Echo" tagline="Watch the turns, then play them back from memory. Every round adds one. One wrong turn and it's over.">
+      <div className="play-panel flex flex-col items-center gap-4 rounded-2xl px-4 py-6" data-testid="echo-stage">
+        <p className="text-[11px] font-bold text-[var(--play-dim)]" data-testid="echo-label">
           {label}
         </p>
 
@@ -68,7 +67,7 @@ export default function EchoPage() {
           {shown ? (
             <span
               key={lit}
-              className="flex h-32 w-32 items-center justify-center rounded-3xl border-4 text-[64px] font-black"
+              className="flex h-32 w-32 items-center justify-center rounded-2xl border-4 text-[64px] font-bold"
               style={{ borderColor: tint(shown), color: tint(shown), boxShadow: `0 0 50px -8px ${tint(shown)}` }}
               data-testid="echo-move"
             >
@@ -77,15 +76,15 @@ export default function EchoPage() {
           ) : over && game.miss ? (
             <div className="flex flex-col items-center gap-1 text-center">
               <p className="text-sm text-[var(--play-dim)]">It wanted</p>
-              <span className="text-[44px] font-black" style={{ color: tint(game.miss.expected) }}>
+              <span className="text-[44px] font-bold" style={{ color: tint(game.miss.expected) }}>
                 {game.miss.expected}
               </span>
               <p className="text-xs text-[var(--play-dim)]">you turned {game.miss.got}</p>
             </div>
           ) : game.phase === "input" ? (
-            <span className="text-[56px] font-black text-white/25">?</span>
+            <span className="text-[56px] font-bold text-white/25">?</span>
           ) : (
-            <span className="text-[56px] font-black text-white/15">·</span>
+            <span className="text-[56px] font-bold text-white/15">·</span>
           )}
         </div>
 
@@ -99,7 +98,7 @@ export default function EchoPage() {
                   game.phase === "show" && i === lit
                     ? "#fff"
                     : i < game.input.length
-                      ? ACCENT
+                      ? "var(--play-accent)"
                       : over && i === game.input.length
                         ? "#ff3b4a"
                         : "rgba(255,255,255,0.14)",
@@ -110,18 +109,18 @@ export default function EchoPage() {
 
         <div className="flex items-end gap-8">
           <div className="text-center">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--play-dim)]">Rounds</p>
-            <p className="text-3xl font-black" data-testid="echo-round">{game.round}</p>
+            <p className="text-[11px] font-bold text-[var(--play-dim)]">Rounds</p>
+            <p className="text-3xl font-bold" data-testid="echo-round">{game.round}</p>
           </div>
           <div className="text-center">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--play-dim)]">Best</p>
-            <p className="text-3xl font-black text-white/70" data-testid="echo-best">{Math.max(best, over ? game.round : 0)}</p>
+            <p className="text-[11px] font-bold text-[var(--play-dim)]">Best</p>
+            <p className="text-3xl font-bold text-white/70" data-testid="echo-best">{Math.max(best, over ? game.round : 0)}</p>
           </div>
         </div>
 
         {(game.phase === "idle" || over) && (
-          <button type="button" onClick={() => dispatch({ type: "start", seed: Date.now() })} className="play-btn flex items-center gap-2 rounded-full px-6 py-3 text-sm font-black">
-            {over ? <RotateCcw size={16} /> : <Play size={16} />} {over ? "Play again" : "Start"}
+          <button type="button" onClick={() => dispatch({ type: "start", seed: Date.now() })} className="play-btn flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold">
+            {over ? <RotateCcw size={16} strokeWidth={1.75} /> : <Play size={16} strokeWidth={1.75} />} {over ? "Play again" : "Start"}
           </button>
         )}
       </div>

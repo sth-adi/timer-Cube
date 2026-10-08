@@ -34,7 +34,7 @@ export function OfflinePanel() {
 
   return (
     <div className="mt-4 border-t border-border pt-3" data-testid="offline-panel">
-      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Offline</p>
+      <p className="mb-1.5 text-[11px] text-muted-2">Offline</p>
       <p className="mb-2 text-xs text-foreground/90" data-testid="offline-status" aria-live="polite">
         {status}
       </p>

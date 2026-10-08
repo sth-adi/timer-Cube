@@ -23,12 +23,9 @@ import { StatTilesGrid } from "./StatTilesGrid";
 
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="card rounded-xl p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-2">
-          <span aria-hidden className="h-3 w-0.5 rounded-full bg-accent" />
-          {title}
-        </p>
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold tracking-[-0.01em]">{title}</h3>
         {action}
       </div>
       {children}
@@ -48,12 +45,12 @@ export function InsightsPanel() {
   const activitySolves = useMemo(() => normalSolves(allSolves), [allSolves]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="card divide-y divide-border rounded-xl px-4 lg:px-5 [&>*]:py-5 [&>:first-child]:pt-4">
       <DailyPracticePlanCard />
-      <div className="card rounded-xl p-4">
+      <div>
         <DailyGoalRing />
       </div>
-      <div className="card rounded-xl p-4">
+      <div>
         <AchievementsPanel />
       </div>
       <CoachTipCard solves={solves} />

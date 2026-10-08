@@ -17,7 +17,7 @@ export function LearnedAlgNotice({ solveDate }: { solveDate: number | null }) {
     <div className="card flex w-full flex-col gap-1.5 rounded-xl p-3 ring-1 ring-accent/40">
       {learned.map((r) => (
         <div key={r.key + r.alg} className="flex items-start gap-2">
-          <Sparkles size={14} className="mt-0.5 shrink-0 text-accent" />
+          <Sparkles size={14} className="mt-0.5 shrink-0 text-accent" strokeWidth={1.75} />
           <div className="min-w-0">
             <p className="text-[12px] font-semibold text-foreground">
               New {r.group} algorithm learned: {r.caseName}

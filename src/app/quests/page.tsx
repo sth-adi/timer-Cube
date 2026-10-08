@@ -24,10 +24,10 @@ function LevelRing({ level, pct }: { level: number; pct: number }) {
         strokeDasharray={`${c * pct} ${c}`}
         transform="rotate(-90 55 55)"
       />
-      <text x="55" y="52" textAnchor="middle" className="fill-foreground text-[30px] font-black">
+      <text x="55" y="52" textAnchor="middle" className="fill-foreground text-[30px] font-bold">
         {level}
       </text>
-      <text x="55" y="72" textAnchor="middle" className="fill-muted-2 text-[11px] font-semibold uppercase tracking-widest">
+      <text x="55" y="72" textAnchor="middle" className="fill-muted-2 text-[11px] font-semibold">
         level
       </text>
     </svg>
@@ -60,11 +60,11 @@ export default function QuestsPage() {
     .slice(0, 3);
 
   return (
-    <AnalyticsShell icon={<Sparkles size={17} className="text-accent" />} title="Quests & Levels" subtitle="Everything you practise earns XP. Three new quests every Monday, aimed at you.">
+    <AnalyticsShell icon={<Sparkles size={17} className="text-accent" strokeWidth={1.75} />} title="Quests and levels" subtitle="Everything you practise earns XP. Three new quests every Monday, aimed at you.">
       <div className="card flex items-center gap-4 rounded-xl p-4">
         <LevelRing level={level.level} pct={level.span ? level.into / level.span : 0} />
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-lg font-black text-foreground">{level.title}</p>
+          <p className="text-lg font-bold text-foreground">{level.title}</p>
           <p className="text-xs tabular-nums text-muted">
             {xp.total.toLocaleString()} XP · {(level.span - level.into).toLocaleString()} to level {level.level + 1}
           </p>
@@ -76,18 +76,19 @@ export default function QuestsPage() {
 
       <div className="flex items-center justify-between px-1">
         <p className="text-sm font-semibold text-foreground">This week&apos;s quests</p>
-        <p className="text-[11px] text-muted-2">
+        <p className="text-[12px] text-muted-2">
           {daysLeft} day{daysLeft === 1 ? "" : "s"} left
         </p>
       </div>
+      <div className="flex flex-col divide-y divide-border border-y border-border">
       {quests.map((q) => {
         const Icon = KIND_ICON[q.kind];
         const isClaimed = !!claimed[q.id];
         return (
-          <div key={q.id} className={cn("card flex flex-col gap-2 rounded-xl p-4", q.done && !isClaimed && "ring-1 ring-accent")}>
+          <div key={q.id} className="flex flex-col gap-2 py-3.5">
             <div className="flex items-start gap-3">
               <span className={cn("mt-0.5 shrink-0", q.done ? "text-success" : "text-accent")}>
-                {q.done ? <Check size={15} /> : <Icon size={15} />}
+                {q.done ? <Check size={15} strokeWidth={1.75} /> : <Icon size={15} strokeWidth={1.75} />}
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-start justify-between gap-2">
@@ -108,21 +109,21 @@ export default function QuestsPage() {
                 (isClaimed ? (
                   <span className="text-[11px] font-semibold text-success">Claimed</span>
                 ) : (
-                  <button type="button" onClick={() => claim(q.id, q.xp)} className="hit flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-fg">
-                    <Gift size={11} /> Claim
+                  <button type="button" onClick={() => claim(q.id, q.xp)} className="hit flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-fg">
+                    <Gift size={12} strokeWidth={1.75} /> Claim
                   </button>
                 ))}
             </div>
           </div>
         );
       })}
+      </div>
 
       {next.length > 0 && (
-        <div className="card flex flex-col gap-2 rounded-xl p-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Closest milestones · +150 XP each</p>
+        <div className="flex flex-col gap-2">
+          <p className="px-1 text-[12px] font-medium text-muted-2">Closest milestones, +150 XP each</p>
           {next.map(({ a, pct }) => (
             <div key={a.id} className="flex items-center gap-2 text-xs">
-              <span className="text-base">{a.icon}</span>
               <span className="flex-1 truncate text-foreground">
                 {a.label} <span className="text-muted-2">: {a.description}</span>
               </span>
@@ -132,8 +133,8 @@ export default function QuestsPage() {
         </div>
       )}
 
-      <div className="card flex flex-col gap-1 rounded-xl p-4">
-        <p className="pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-2">Where your XP came from</p>
+      <div className="flex flex-col gap-1 border-t border-border pt-4">
+        <p className="pb-1 text-[12px] font-medium text-muted-2">Where your XP came from</p>
         {xp.parts.map((p) => (
           <div key={p.label} className="flex justify-between text-xs">
             <span className="text-muted">{p.label}</span>

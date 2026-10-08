@@ -48,7 +48,7 @@ export default function F2lCasesPage() {
   const maxTurns = r ? Math.max(...r.cases.map((c) => c.medianTurns), 1) * 1.1 : 1;
 
   return (
-    <AnalyticsShell icon={<Puzzle size={17} className="text-accent" />} title="F2L Case Consistency" subtitle="Your best turn count on each F2L case against your usual one.">
+    <AnalyticsShell icon={<Puzzle size={17} className="text-accent" strokeWidth={1.75} />} title="F2L case consistency" subtitle="Your best turn count on each F2L case against your usual one.">
       {!r ? (
         <NotEnough need={MIN_SOLVES} have={eligible} what="F2L Case Consistency" />
       ) : (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { Check, Loader2, RefreshCw, Target, X } from "lucide-react";
+import { Check, RefreshCw, Target, X } from "lucide-react";
 import { useCrossDrillStore } from "@/lib/store/crossDrillStore";
 import { ScrambleNet } from "@/components/scramble/ScrambleNet";
 import type { Face } from "@/lib/analysis/frames";
@@ -55,7 +55,7 @@ export function CrossDrill() {
     <div className="flex w-full max-w-xl flex-col gap-3 pb-4">
       <div className="card rounded-xl p-3">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-          <Target size={15} className="text-accent" />
+          <Target size={15} className="text-accent" strokeWidth={1.75} />
           Cross trainer
         </h2>
         <p className="mb-3 text-xs leading-relaxed text-muted">
@@ -93,7 +93,7 @@ export function CrossDrill() {
             onClick={onNext}
             className="tap-target mx-auto mb-3 gap-1.5 rounded-lg bg-accent px-4 text-xs font-semibold text-accent-fg"
           >
-            <RefreshCw size={13} /> Retry
+            <RefreshCw size={13} strokeWidth={1.75} /> Retry
           </button>
         )}
 
@@ -122,7 +122,7 @@ export function CrossDrill() {
               onClick={onNext}
               className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-fg"
             >
-              <RefreshCw size={13} /> Next
+              <RefreshCw size={13} strokeWidth={1.75} /> Next
             </button>
           ) : (
             <button
@@ -131,8 +131,7 @@ export function CrossDrill() {
               disabled={grading || loading || !scramble || !attempt.trim()}
               className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-fg disabled:opacity-40"
             >
-              {grading && <Loader2 size={13} className="animate-spin" />}
-              Check
+              {grading ? "Checking" : "Check"}
             </button>
           )}
         </div>
@@ -151,7 +150,7 @@ export function CrossDrill() {
           {!last.result.solved ? (
             <>
               <p className="flex items-center gap-1.5 text-sm font-semibold text-danger">
-                <X size={15} /> That doesn&apos;t finish the cross
+                <X size={15} strokeWidth={1.75} /> That doesn&apos;t finish the cross
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted">
                 Replayed on a virtual cube, those {last.result.moveCount} moves leave at least one cross edge out
@@ -161,12 +160,12 @@ export function CrossDrill() {
             </>
           ) : last.result.optimal ? (
             <p className="flex items-center gap-1.5 text-sm font-semibold text-success">
-              <Check size={15} /> Optimal, {last.result.moveCount} moves, and nothing shorter exists
+              <Check size={15} strokeWidth={1.75} /> Optimal, {last.result.moveCount} moves, and nothing shorter exists
             </p>
           ) : (
             <>
               <p className="flex items-center gap-1.5 text-sm font-semibold text-warning">
-                <Check size={15} /> Solved in {last.result.moveCount}; {last.result.optimalCount} was available
+                <Check size={15} strokeWidth={1.75} /> Solved in {last.result.moveCount}; {last.result.optimalCount} was available
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted">
                 {last.result.moveCount - last.result.optimalCount} move
@@ -185,7 +184,7 @@ export function CrossDrill() {
       {score.attempts > 0 && (
         <div className="card rounded-xl p-3">
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-2">This session</h3>
+            <h3 className="text-xs font-semibold text-muted-2">This session</h3>
             <button type="button" onClick={reset} className="text-[11px] text-muted hover:text-foreground">
               Reset
             </button>
@@ -195,15 +194,15 @@ export function CrossDrill() {
               <p className="tabular-timer text-lg font-semibold">
                 {score.solved}/{score.attempts}
               </p>
-              <p className="text-[10px] uppercase tracking-wide text-muted-2">solved</p>
+              <p className="text-[10px] text-muted-2">solved</p>
             </div>
             <div>
               <p className="tabular-timer text-lg font-semibold text-success">{score.optimal}</p>
-              <p className="text-[10px] uppercase tracking-wide text-muted-2">optimal</p>
+              <p className="text-[10px] text-muted-2">optimal</p>
             </div>
             <div>
               <p className="tabular-timer text-lg font-semibold text-warning">+{score.meanWaste.toFixed(1)}</p>
-              <p className="text-[10px] uppercase tracking-wide text-muted-2">avg spare</p>
+              <p className="text-[10px] text-muted-2">avg spare</p>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { EmptyState } from "@/components/analysis/EmptyState";
 import Link from "next/link";
 import { Timer as TimerIcon } from "lucide-react";
 import { AppBootstrap } from "@/components/AppBootstrap";
@@ -29,17 +30,17 @@ export function AnalyticsShell({
     <>
       <AppBootstrap />
       <AppBackground />
-      <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <TimerIcon size={16} className="text-accent" />
+      <div className="flex min-h-dvh flex-col items-center gap-5 px-4 py-6">
+        <Link href="/" className="hit flex items-center gap-1.5 rounded-md text-sm font-semibold text-foreground active:translate-y-px">
+          <TimerIcon size={16} strokeWidth={1.75} className="text-accent" />
           Cube
         </Link>
-        <div className="flex w-full max-w-md flex-col gap-3 pb-10">
-          <div className="flex flex-col gap-0.5 px-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+        <div className="flex w-full max-w-md flex-col gap-5 pb-10">
+          <div className="flex flex-col gap-1 px-1">
+            <h1 className="flex items-center gap-2 text-balance text-xl font-semibold leading-tight tracking-[-0.02em] text-foreground">
               {icon} {title}
             </h1>
-            <p className="text-[11px] text-muted-2">{subtitle}</p>
+            <p className="max-w-[65ch] text-pretty text-xs leading-relaxed text-muted-2">{subtitle}</p>
           </div>
           {children}
         </div>
@@ -50,11 +51,8 @@ export function AnalyticsShell({
 
 export function NotEnough({ need, have, what }: { need: number; have: number; what: string }) {
   return (
-    <div className="card flex flex-col gap-1 rounded-xl p-6 text-center">
-      <p className="text-sm text-muted">
-        {what} needs at least {need} complete smart-cube solves, you have {have}.
-      </p>
-      <p className="text-[11px] text-muted-2">Every solve on a connected cube counts; keep going and this fills in.</p>
-    </div>
+    <EmptyState title="Not enough solves yet" need={need} have={have} unit="smart-cube solves">
+      {what} needs at least {need} complete smart-cube solves. Every solve on a connected cube counts.
+    </EmptyState>
   );
 }

@@ -97,7 +97,7 @@ function Report({ report }: { report: TempoReport }) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Every turn against the beat</p>
+        <p className="text-[11px] font-medium text-muted-2">Every turn against the beat</p>
         <div className="flex flex-wrap gap-[3px]">
           {report.turns.map((t, i) => (
             <span key={i} className={cn("h-3 w-3 rounded-sm", JUDGE_COLOR[t.judgement])} title={`${Math.round(t.offsetMs)} ms`} />
@@ -109,7 +109,7 @@ function Report({ report }: { report: TempoReport }) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-2">Where you lost the beat</p>
+        <p className="text-[11px] font-medium text-muted-2">Where you lost the beat</p>
         {phases.map((p) => (
           <div key={p} className="flex items-center gap-2">
             <span className="w-10 text-[11px] text-muted">{p}</span>
@@ -204,7 +204,7 @@ function TempoTrainer() {
         <div
           key={beatPulse}
           className={cn(
-            "flex h-28 w-28 items-center justify-center rounded-full text-3xl font-black transition-transform",
+            "flex h-28 w-28 items-center justify-center rounded-full text-3xl font-bold transition-transform",
             phase === "running" ? "animate-[gyro-pop_0.25s_ease-out]" : "",
             counting ? "bg-warning/20 text-warning" : phase === "running" ? (beatPulse % 4 === 0 ? "bg-accent text-accent-fg" : "bg-accent-soft text-accent") : "bg-bg-panel-2 text-muted",
           )}
@@ -233,8 +233,8 @@ function TempoTrainer() {
               Scramble your cube, then start. After a 4-click count-in, make one turn on every click, no stopping to look. Ends by
               itself when the cube is solved.
             </p>
-            <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
-              <Play size={13} /> {report ? "Go again" : "Start"}
+            <button type="button" onClick={start} className="flex items-center gap-1.5 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg">
+              <Play size={13} strokeWidth={1.75} /> {report ? "Go again" : "Start"}
             </button>
             {report && report.suggestedBpm !== bpm && (
               <button type="button" onClick={() => setBpm(report.suggestedBpm)} className="text-xs font-medium text-accent underline-offset-2 hover:underline">
@@ -249,8 +249,8 @@ function TempoTrainer() {
                 <span key={i} className={cn("h-3 w-3 rounded-sm", JUDGE_COLOR[j])} />
               ))}
             </div>
-            <button type="button" onClick={finish} className="flex items-center gap-1.5 rounded-full bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
-              <Square size={11} fill="currentColor" /> Stop
+            <button type="button" onClick={finish} className="flex items-center gap-1.5 rounded-lg bg-bg-panel-2 px-4 py-2 text-xs font-semibold text-foreground">
+              <Square size={11} fill="currentColor" strokeWidth={1.75} /> Stop
             </button>
           </>
         )}
@@ -266,17 +266,17 @@ export default function TempoPage() {
     <>
       <AppBootstrap />
       <AppBackground />
-      <div className="flex flex-col items-center gap-4 px-4 py-6">
-        <Link href="/" className="hit flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <TimerIcon size={16} className="text-accent" />
+      <div className="flex min-h-dvh flex-col items-center gap-5 px-4 py-6">
+        <Link href="/" className="hit flex items-center gap-1.5 rounded-md text-sm font-semibold text-foreground active:translate-y-px">
+          <TimerIcon size={16} className="text-accent" strokeWidth={1.75} />
           Cube
         </Link>
         <div className="flex w-full max-w-md flex-col gap-3 pb-10">
           <div className="flex flex-col gap-0.5 px-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Metronome size={17} className="text-accent" /> Tempo Trainer
+            <h1 className="flex items-center gap-2 text-balance text-xl font-semibold leading-tight tracking-[-0.02em] text-foreground">
+              <Metronome size={17} className="text-accent" strokeWidth={1.75} /> Tempo trainer
             </h1>
-            <p className="text-[11px] text-muted-2">Solve to a metronome, every turn scored on the beat, every silence traced to its phase.</p>
+            <p className="max-w-[65ch] text-pretty text-xs leading-relaxed text-muted-2">Solve to a metronome, every turn scored on the beat, every silence traced to its phase.</p>
           </div>
           <ConnectGate blurb="The Tempo Trainer times every turn against the click, so it needs a connected smart cube.">
             <TempoTrainer />

@@ -157,7 +157,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
         </div>
 
         <div>
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Appearance</p>
+          <p className="mb-2 text-[11px] text-muted-2">Appearance</p>
           <div className="grid grid-cols-4 gap-2">
             {THEMES.map((t) => (
               <button
@@ -181,7 +181,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
         </div>
 
         <div className="mt-3">
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Background</p>
+          <p className="mb-2 text-[11px] text-muted-2">Background</p>
           <div className="grid grid-cols-4 gap-1.5">
             {BACKGROUND_STYLES.map((b) => (
               <button
@@ -201,7 +201,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
         </div>
 
         <div className="mt-3">
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Visual effects</p>
+          <p className="mb-2 text-[11px] text-muted-2">Visual effects</p>
           <div className="grid grid-cols-3 gap-1.5">
             {FX_LEVELS.map((f) => (
               <button
@@ -224,7 +224,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
         </div>
 
         <div className="mt-3">
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Timer style</p>
+          <p className="mb-2 text-[11px] text-muted-2">Timer style</p>
           <div className="grid grid-cols-4 gap-1.5">
             {TIMER_STYLES.map((t) => (
               <button
@@ -259,7 +259,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
         <HapticsSettings />
 
         <div className="mt-4 border-t border-border pt-3">
-          <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-2">Phase splits</p>
+          <p className="mb-1.5 text-[11px] text-muted-2">Phase splits</p>
           <div className="flex gap-1.5">
             {PHASE_COUNTS.map((count) => (
               <button
@@ -351,7 +351,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
         </div>
 
         <div className="mt-4 border-t border-border pt-3">
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Session data</p>
+          <p className="mb-2 text-[11px] text-muted-2">Session data</p>
           <div className="flex gap-2">
             <button
               type="button"
@@ -411,7 +411,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
         <OfflinePanel />
 
         <div className="mt-4 border-t border-border pt-3">
-          <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-2">Keyboard shortcuts</p>
+          <p className="mb-2 text-[11px] text-muted-2">Keyboard shortcuts</p>
           <ul className="space-y-1 text-xs text-muted">
             <li>
               <kbd className="rounded bg-bg-panel-2 px-1.5 py-0.5 font-mono">Space</kbd> hold to start, tap to stop

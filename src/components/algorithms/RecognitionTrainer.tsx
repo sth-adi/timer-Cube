@@ -118,7 +118,7 @@ export function RecognitionTrainer({ focus }: { focus?: { group: AlgGroup; name:
             onClick={() => startGroup(g.id)}
             aria-pressed={group === g.id}
             className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               group === g.id ? "bg-accent-soft text-accent" : "text-muted hover:text-foreground",
             )}
           >
@@ -133,24 +133,24 @@ export function RecognitionTrainer({ focus }: { focus?: { group: AlgGroup; name:
         aria-pressed={focusWeak}
         title="Weights cases you've marked 'again'/'hard' more often in the Library, and rusty ease scores, instead of picking uniformly at random"
         className={cn(
-          "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+          "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
           focusWeak ? "bg-warning/15 text-warning" : "text-muted-2 hover:text-muted",
           focusPool.length > 0 && "hidden",
         )}
       >
-        <Flame size={12} />
+        <Flame size={12} strokeWidth={1.75} />
         Focus weak cases
       </button>
 
       {stats.total > 0 && (
         <div className="flex items-center gap-4 text-xs text-muted">
           <span className="flex items-center gap-1">
-            <Check size={12} className="text-success" />
+            <Check size={12} className="text-success" strokeWidth={1.75} />
             {accuracy}% ({stats.correct}/{stats.total})
           </span>
           <span className="flex items-center gap-1">
-            <Timer size={12} className="text-accent" />
-            {avgMs !== null ? `${(avgMs / 1000).toFixed(1)}s avg` : "—"}
+            <Timer size={12} className="text-accent" strokeWidth={1.75} />
+            {avgMs !== null ? `${(avgMs / 1000).toFixed(1)}s avg` : "-"}
           </span>
         </div>
       )}
@@ -178,8 +178,8 @@ export function RecognitionTrainer({ focus }: { focus?: { group: AlgGroup; name:
                 revealed && !isCorrect && !isPicked && "bg-bg-panel-2 text-muted-2",
               )}
             >
-              {revealed && isCorrect && <Check size={13} />}
-              {revealed && isPicked && !isCorrect && <X size={13} />}
+              {revealed && isCorrect && <Check size={13} strokeWidth={1.75} />}
+              {revealed && isPicked && !isCorrect && <X size={13} strokeWidth={1.75} />}
               {choice.name}
             </button>
           );
@@ -190,9 +190,9 @@ export function RecognitionTrainer({ focus }: { focus?: { group: AlgGroup; name:
         <button
           type="button"
           onClick={onNext}
-          className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg"
+          className="flex items-center gap-1.5 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg"
         >
-          <Zap size={14} /> Next case
+          <Zap size={14} strokeWidth={1.75} /> Next case
         </button>
       )}
     </div>
