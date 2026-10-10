@@ -70,6 +70,8 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
   const setLiveCoachEnabled = useSettingsStore((s) => s.setLiveCoachEnabled);
   const soundEnabled = useSettingsStore((s) => s.soundEnabled);
   const setSoundEnabled = useSettingsStore((s) => s.setSoundEnabled);
+  const cubeSoundsEnabled = useSettingsStore((s) => s.cubeSoundsEnabled);
+  const setCubeSoundsEnabled = useSettingsStore((s) => s.setCubeSoundsEnabled);
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const backgroundStyle = useSettingsStore((s) => s.backgroundStyle);
@@ -248,6 +250,7 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
           <Toggle checked={hintSolverEnabled} onChange={setHintSolverEnabled} label="Solve hints (cross / CFOP)" />
           <Toggle checked={liveCoachEnabled} onChange={setLiveCoachEnabled} label="Live coach between solves" />
           <Toggle checked={soundEnabled} onChange={setSoundEnabled} label="Sound on solve" />
+          <Toggle checked={cubeSoundsEnabled} onChange={setCubeSoundsEnabled} label="Cube sounds" />
           <Toggle
             checked={hideTimeWhileSolving}
             onChange={setHideTimeWhileSolving}

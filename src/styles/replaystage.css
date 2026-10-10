@@ -1,0 +1,403 @@
+/*
+ * The replay stage (components/replay/ReplayStage): the cube replay dressed like a speedcubing reel. A flat
+ * saturated colour field per theme, a serif move grid across the top, the cube floating in the middle, a
+ * stackmat along the bottom and, at the end, a big serif result. Flat on purpose: no glow, no frosted glass,
+ * no gradient text. The one gradient is a single faint radial lift behind the cube (studio light), and the
+ * stackmat's metal plate (an object, not decoration). Only transform, opacity and filter ever animate.
+ *
+ * Every field below is checked for contrast: the bright text >= 6.5:1, the dim "still to play" text and the
+ * tiny tracked lines >= 4.5:1 on that field.
+ */
+
+/* --- Fields. --stage-bg is the flat colour, --stage-fg the text on it; the dim tones are mixed from both. --- */
+:root {
+  --stage-bg: #1d4cb4;
+  --stage-fg: #ffffff;
+  --stage-lift: 0.07;
+}
+:root[data-theme="mint"] {
+  --stage-bg: #0a6157;
+  --stage-fg: #ffffff;
+}
+:root[data-theme="carbon"] {
+  --stage-bg: #25272d;
+  --stage-fg: #f4f4f6;
+  --stage-lift: 0.05;
+}
+:root[data-theme="sunset"] {
+  --stage-bg: #943316;
+  --stage-fg: #fff6f0;
+}
+:root[data-theme="terminal"] {
+  --stage-bg: #075a2f;
+  --stage-fg: #e4fbec;
+}
+:root[data-theme="speedcube"] {
+  --stage-bg: #724a03;
+  --stage-fg: #fff8e0;
+}
+:root[data-theme="paper"] {
+  --stage-bg: #aec5f7;
+  --stage-fg: #081538;
+  --stage-lift: 0.35;
+}
+
+.replay-stage,
+.replay-stage-box {
+  --stage-dim: color-mix(in srgb, var(--stage-fg) 76%, var(--stage-bg));
+  --stage-mute: color-mix(in srgb, var(--stage-fg) 86%, var(--stage-bg));
+  --stage-hair: color-mix(in srgb, var(--stage-fg) 36%, var(--stage-bg));
+  --stage-serif: var(--font-didone), "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif;
+  --stage-max-w: 22rem;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, var(--stage-max-w));
+  aspect-ratio: 9 / 14;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--stage-bg);
+  color: var(--stage-fg);
+}
+/* On the sheet the viewport's height decides the width (the card is 9:14), room kept for the controls under it. */
+.replay-stage[data-fit="sheet"],
+.replay-stage-box[data-fit="sheet"] {
+  --stage-reserve: 19.8rem;
+  width: min(100%, var(--stage-max-w), max(15rem, calc((100vh - var(--stage-reserve)) * 9 / 14)));
+  width: min(100%, var(--stage-max-w), max(15rem, calc((100dvh - var(--stage-reserve)) * 9 / 14)));
+}
+
+/* Container units (cqw) size the type from the card's own width. */
+.replay-stage {
+  container-type: inline-size;
+}
+
+/* A faint lift behind the cube, like soft studio light: one radial layer, low opacity, nothing else. */
+.replay-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 45% at 50% 38%, rgb(255 255 255 / var(--stage-lift)), transparent 70%);
+}
+:root[data-fx-level="off"] .replay-stage::before {
+  display: none;
+}
+
+/* --- Top: the tracked header and the move grid. --- */
+.replay-stage__top {
+  flex: none;
+  padding: 1.1rem 1rem 0;
+  transition: opacity 0.3s ease-out;
+}
+.replay-eyebrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.45rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--stage-hair);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--stage-mute);
+}
+.replay-eyebrow__phase {
+  margin-left: 0.9em;
+  font-style: italic;
+  font-family: var(--stage-serif);
+  letter-spacing: 0.08em;
+  color: var(--stage-fg);
+}
+.replay-grid__moves {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 7), minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--stage-serif);
+  font-size: var(--fs, 16px);
+  line-height: 1.38;
+  font-feature-settings: "lnum" 1;
+}
+.replay-grid__move {
+  white-space: nowrap;
+  text-align: left;
+  color: var(--stage-dim);
+  font-weight: 400;
+  text-decoration: underline transparent 1px;
+  text-underline-offset: 0.16em;
+}
+.replay-grid__move[data-state="played"] {
+  color: var(--stage-fg);
+  font-weight: 500;
+}
+.replay-grid__move[data-state="current"] {
+  color: var(--stage-fg);
+  font-weight: 600;
+}
+.replay-grid__move[data-turning="true"] {
+  text-decoration-color: var(--stage-fg);
+}
+
+/* --- Middle: the cube. Its own stage box (contact shadow) sits inside; the shadow is softer on a flat field. --- */
+.replay-stage__cube {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 0.25rem;
+  transform-origin: 50% 50%;
+  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.replay-stage__cube .cube-stage {
+  width: 100%;
+  height: 100%;
+  --stage-shadow: 0.3;
+}
+:root[data-theme="paper"] .replay-stage__cube .cube-stage {
+  --stage-shadow: 0.16;
+}
+/* Motion blur while a face turns: the player sets --turn-blur to blur(0.5px to 2px) for the turn, else none. */
+.replay-stage .cube-stage__cube {
+  filter: var(--turn-blur, none);
+  transition: filter 70ms linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .replay-stage .cube-stage__cube {
+    filter: none;
+    transition: none;
+  }
+}
+:root[data-fx-level="off"] .replay-stage .cube-stage__cube {
+  filter: none;
+  transition: none;
+}
+
+/* The 3D cube draws its own contact shadow and a trail on fast turns: no flat shadow or CSS blur under it. */
+.replay-stage[data-cube3d="true"] .cube-stage::after,
+.replay-stage[data-cube3d="true"] .cube-stage::before {
+  display: none;
+}
+.replay-stage[data-cube3d="true"] .cube-stage__cube {
+  filter: none;
+}
+
+/* --- Bottom: the stackmat, bleeding a little past the card's edges like the reference. --- */
+.replay-stage__timer {
+  flex: none;
+  padding-bottom: 0.4rem;
+}
+.replay-stage__stackmat {
+  display: block;
+  width: 114%;
+  margin-left: -7%;
+  height: auto;
+}
+.stackmat__shadow {
+  fill: #000;
+  opacity: 0.22;
+}
+.stackmat__body,
+.stackmat__pad-rim {
+  fill: #15171c;
+}
+.stackmat__tile-gap {
+  fill: color-mix(in srgb, var(--stage-bg) 70%, #000);
+}
+.stackmat__tile {
+  fill: color-mix(in srgb, var(--stage-bg) 55%, #fff);
+}
+.stackmat__metal-hi {
+  stop-color: #d3d6da;
+}
+.stackmat__metal-mid {
+  stop-color: #a6aab2;
+}
+.stackmat__metal-lo {
+  stop-color: #868a93;
+}
+.stackmat__plate {
+  stroke: #0e1014;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.stackmat__lcd {
+  fill: #9db08f;
+  stroke: #15171c;
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.stackmat__seg {
+  fill: #1e2a1d;
+  opacity: 0.07;
+}
+.stackmat__seg--on {
+  opacity: 1;
+}
+.stackmat__led {
+  stroke: #15171c;
+  stroke-width: 1.5;
+}
+.stackmat__led--green {
+  fill: #33b25a;
+}
+.stackmat__led--red {
+  fill: #d6372f;
+}
+.stackmat__led--off {
+  fill: #5b6068;
+}
+.stackmat__button {
+  fill: #1a1c22;
+}
+.stackmat__ring {
+  fill: none;
+  stroke-width: 2.2;
+}
+.stackmat__ring--red {
+  stroke: #e34436;
+}
+.stackmat__ring--gold {
+  stroke: #e6b422;
+  stroke-width: 2.4;
+}
+.stackmat__icon {
+  fill: #d5d8dd;
+}
+.stackmat__hand-disc {
+  fill: #f1dfa3;
+}
+.stackmat__hand {
+  fill: #1a1c22;
+}
+
+/* --- The end card: over the grid's place, fading in while the grid fades out and the cube settles aside. --- */
+.replay-end {
+  position: absolute;
+  z-index: 1;
+  top: 1.1rem;
+  left: 1rem;
+  right: 1rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(0.6rem);
+  transition:
+    opacity 0.45s ease-out,
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0s;
+}
+.replay-end__time {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--stage-serif);
+  font-size: var(--time-size, 24cqw);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  /* A lower optical size keeps the hairline flag of the 1 from vanishing at this size. */
+  font-variation-settings: "opsz" 30;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--stage-fg);
+}
+.replay-end__time sup {
+  margin: 0.14em 0 0 0.05em;
+  font-size: 0.26em;
+  font-weight: 400;
+  line-height: 1;
+}
+.replay-end__caption {
+  margin: 0.35rem 0 0;
+  font-family: var(--stage-serif);
+  font-size: 1.35rem;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--stage-fg);
+}
+.replay-end__rule {
+  width: 2.6rem;
+  margin: 0.7rem 0 0.6rem;
+  border: 0;
+  border-top: 1px solid var(--stage-hair);
+}
+.replay-end__meta {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.75;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--stage-mute);
+}
+
+.replay-stage[data-end="true"] .replay-stage__top {
+  opacity: 0;
+}
+.replay-stage[data-end="true"] .replay-end {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.12s;
+}
+.replay-stage[data-end="true"] .replay-stage__cube {
+  transform: translate(13%, 14%) scale(0.72);
+}
+@media (prefers-reduced-motion: reduce) {
+  .replay-stage__top,
+  .replay-end,
+  .replay-stage__cube {
+    transition: none;
+  }
+  .replay-end {
+    transform: none;
+  }
+}
+:root[data-fx-level="off"] .replay-stage__top,
+:root[data-fx-level="off"] .replay-end,
+:root[data-fx-level="off"] .replay-stage__cube {
+  transition: none;
+}
+:root[data-fx-level="off"] .replay-end {
+  transform: none;
+}
+
+/* --- The sheet's two columns: the card on the left, the controls beside it, on a wide or a short landscape screen. --- */
+@media (min-width: 640px), (orientation: landscape) and (max-height: 32rem) {
+  .replay-host[data-fit="sheet"] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 1.5rem;
+    align-items: center;
+  }
+  /* The card sits in an auto-sized column, so its width can't be a share of it: the height alone decides. */
+  .replay-host[data-fit="sheet"] .replay-stage,
+  .replay-host[data-fit="sheet"] .replay-stage-box {
+    --stage-reserve: 7rem;
+    width: min(var(--stage-max-w), max(15rem, calc((100vh - var(--stage-reserve)) * 9 / 14)));
+    width: min(var(--stage-max-w), max(15rem, calc((100dvh - var(--stage-reserve)) * 9 / 14)));
+  }
+}
+@media (orientation: landscape) and (max-height: 32rem) {
+  .replay-host[data-fit="sheet"] .replay-stage,
+  .replay-host[data-fit="sheet"] .replay-stage-box {
+    --stage-reserve: 4.5rem;
+  }
+}
+
+/* The Gyro Twin over the cube sits bare on the field, bottom left, its label in the field's own text colour. */
+.replay-stage [data-testid="replay-gyro-twin"] {
+  background: transparent;
+}
+.replay-stage [data-testid="replay-gyro-twin"] > span {
+  color: var(--stage-mute);
+}

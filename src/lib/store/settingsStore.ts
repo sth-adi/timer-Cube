@@ -119,6 +119,8 @@ export interface SettingsState {
   /** The Live Session Coach strip between solves. */
   liveCoachEnabled: boolean;
   soundEnabled: boolean;
+  /** Speedcube click-clack and stackmat beeps in the replay; only audible while soundEnabled is on. */
+  cubeSoundsEnabled: boolean;
   /** Target solve count per day, for the practice-goal ring. */
   dailyGoal: number;
   /** Blanks the running digits so you can't pace yourself against them mid-solve. */
@@ -152,6 +154,7 @@ export interface SettingsState {
   setHintSolverEnabled: (v: boolean) => void;
   setLiveCoachEnabled: (v: boolean) => void;
   setSoundEnabled: (v: boolean) => void;
+  setCubeSoundsEnabled: (v: boolean) => void;
   setDailyGoal: (v: number) => void;
   setHideTimeWhileSolving: (v: boolean) => void;
   setPhaseCount: (v: PhaseCount) => void;
@@ -179,6 +182,7 @@ export const useSettingsStore = create<SettingsState>()(
       hintSolverEnabled: true,
       liveCoachEnabled: true,
       soundEnabled: false,
+      cubeSoundsEnabled: true,
       dailyGoal: 20,
       hideTimeWhileSolving: false,
       phaseCount: 1,
@@ -201,6 +205,7 @@ export const useSettingsStore = create<SettingsState>()(
       setHintSolverEnabled: (v) => set({ hintSolverEnabled: v }),
       setLiveCoachEnabled: (v) => set({ liveCoachEnabled: v }),
       setSoundEnabled: (v) => set({ soundEnabled: v }),
+      setCubeSoundsEnabled: (v) => set({ cubeSoundsEnabled: v }),
       setDailyGoal: (v) => set({ dailyGoal: v }),
       setHideTimeWhileSolving: (v) => set({ hideTimeWhileSolving: v }),
       setPhaseCount: (v) => set({ phaseCount: v }),

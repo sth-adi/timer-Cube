@@ -20,6 +20,15 @@ import {
   type PhaseMark,
   type ReplayTimeline,
 } from "@/lib/analysis/replayTiming";
+import { turnBlurPx, type ReplayStageInfo } from "@/lib/analysis/replayStage";
+import { ReplayStage } from "@/components/replay/ReplayStage";
+import { useCubeSounds } from "@/components/replay/useCubeSounds";
+import { webglAvailable } from "@/components/replay/webgl";
+import { ReplayClock } from "@/lib/analysis/replayClock";
+import { planTurnSound } from "@/lib/analysis/replayView";
+import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
+import { useSettingsStore } from "@/lib/store/settingsStore";
+import { ReplayStageCube } from "./ReplayStageCube";
 import { ReplayGhostTwin } from "./ReplayGhostTwin";
 import { ReplayPaceCurve } from "./ReplayPaceCurve";
 import { REPLAY_LATITUDE_LIMIT, useReplayCamera, type ReplayCameraGyro } from "./useReplayCamera";
@@ -77,6 +86,14 @@ interface TimedCubePlayerProps {
    * leaning toward the face being turned. `moveMs` is when each of `alg`'s moves was really made.
    */
   gyro?: ReplayCameraGyro | null;
+  /**
+   * Dresses the cube viewport as a replay stage (components/replay): a colour field, the move grid, a stackmat on
+   * the replay's clock and an end card. The cube, its overlays and every control stay as they are; `className`
+   * is then ignored, the stage sizing itself. Omit for the plain viewport.
+   */
+  stage?: ReplayStageInfo | null;
+  /** How the stage is sized: "sheet" by the viewport's height (the instant replay), "page" a fixed phone-sized card. */
+  stageFit?: "sheet" | "page";
 }
 
 const CUE_TONE: Record<Cue["tone"], string> = { good: "text-success", bad: "text-danger", neutral: "text-accent" };
@@ -145,7 +162,12 @@ function leavesFor(leafMoves: any[], timeline: ReplayTimeline) {
  * (`play()`, `pause()`, the `timestamp` setter), not simulated by swapping
  * `alg` in and out — that doesn't animate anything on its own.
  */
-export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves, overlay, ghost, gyro }: TimedCubePlayerProps) {
+export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves, overlay, ghost, gyro, stage, stageFit = "page" }: TimedCubePlayerProps) {
+  // On the stage the cube is the 3D renderer (ReplayStageCube) on a clock of our own; cubing.js's player is only
+  // the fallback for a browser without WebGL, and for the plain (non-stage) viewport.
+  const [use3d] = useState(() => !!stage && webglAvailable());
+  const [clock] = useState(() => (use3d ? new ReplayClock() : null));
+  const [frameReady, setFrameReady] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,7 +199,18 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   const [positionMs, setPositionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
-  const [soundOn, setSoundOn] = useState(false);
+  // On the stage the speaker starts on when the app's sound setting is (the replay then plays cube sounds).
+  const [soundOn, setSoundOn] = useState(() => {
+    if (!stage) return false;
+    const st = useSettingsStore.getState();
+    return st.soundEnabled && st.cubeSoundsEnabled;
+  });
+  const cubeSoundsEnabled = useSettingsStore((st) => st.cubeSoundsEnabled);
+  // Cube sounds follow the replay's own speaker button; the old synthesised click remains for the plain viewport and for "Cube sounds" off.
+  const cubeAudio = use3d && cubeSoundsEnabled;
+  const sounds = useCubeSounds({ force: soundOn });
+  const soundOnRef = useRef(soundOn);
+  const lastClickRef = useRef(-1e9);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const audioCtxRef = useRef<any>(null);
   const leafStartsRef = useRef<number[]>(realPauses ? timelines.real.starts : timelines.capped.starts);
@@ -192,11 +225,25 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     voiceRef.current = voice;
   }, [voice]);
 
+  const tokens = useMemo(() => alg.split(/\s+/).filter(Boolean), [alg]);
+  // The cube after each move (one more entry than moves), for the 3D stage cube.
+  const faceletsAfter = useMemo(() => (use3d ? faceletsAfterMoves(setupAlg ?? "", tokens) : null), [use3d, setupAlg, tokens]);
+
   useEffect(() => {
     let cancelled = false;
     const container = containerRef.current;
     const initialTimeline = realPauses ? timelines.real : timelines.capped;
     (async () => {
+      if (use3d) {
+        await Promise.resolve();
+        if (cancelled) return;
+        playerRef.current = clock;
+        const ok = tokens.length > 0 && tokens.length === gapsMs.length && !!faceletsAfter;
+        if (ok) leafMovesRef.current = tokens;
+        setTimelineOk(ok);
+        setReady(true);
+        return;
+      }
       let loaded: Awaited<ReturnType<typeof loadCubing>>;
       let player: InstanceType<(typeof import("cubing/twisty"))["TwistyPlayer"]>;
       try {
@@ -277,6 +324,14 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     if (playerRef.current) playerRef.current.tempoScale = speed;
   }, [speed]);
 
+  useEffect(() => {
+    clock?.setDuration(durationMs);
+  }, [clock, durationMs, ready]);
+
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+  }, [soundOn]);
+
   useEffect(
     () => () => {
       void audioCtxRef.current?.close();
@@ -329,7 +384,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
           timer = window.setTimeout(tick, POLL_MS);
           return;
         }
-        if (soundOn) {
+        if (soundOn && !cubeAudio) {
           const prev = lastPolledPosRef.current;
           for (const start of leafStartsRef.current) {
             if (start > prev && start <= t) playClick();
@@ -339,6 +394,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
         setPositionMs(t);
         if (durationMs > 0 && t >= durationMs - 1) {
           setPlaying(false);
+          if (cubeAudio && soundOn) sounds.playStop();
           return;
         }
       }
@@ -349,7 +405,8 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [playing, durationMs, soundOn]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, durationMs, soundOn, cubeAudio]);
 
   const atEnd = durationMs > 0 && positionMs >= durationMs - 1;
 
@@ -415,6 +472,11 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       resetCues(0);
       setCaption(null);
     }
+    // Starting from the top: the stackmat's start beep (and wake the audio, inside this tap).
+    if (cubeAudio && soundOn) {
+      sounds.unlock(true);
+      if (atEnd || lastPolledPosRef.current === 0) sounds.playStart();
+    }
     // A cue on the very first move is read before anything turns.
     const first = lastPolledPosRef.current === 0 ? dueCue(0, 0) : null;
     setPlaying(true);
@@ -471,8 +533,10 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     if (!player || leafMovesRef.current.length === 0) return;
     stopHold();
     player.pause();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    player.experimentalModel.animationTimelineLeavesRequest.set(leavesFor(leafMovesRef.current, to) as any);
+    if (!player.virtual) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      player.experimentalModel.animationTimelineLeavesRequest.set(leavesFor(leafMovesRef.current, to) as any);
+    } else player.setDuration(to.durationMs);
     leafStartsRef.current = to.starts;
     player.timestamp = pos;
     resetCues(pos);
@@ -489,12 +553,23 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       if (Ctor) audioCtxRef.current = new Ctor();
     }
     void audioCtxRef.current?.resume?.();
+    if (cubeAudio && !soundOn) sounds.unlock(true);
     setSoundOn((v) => !v);
   };
 
   const shownPos = Math.min(positionMs, durationMs);
   const activeMove = durationMs > 0 ? activeLeaf(timeline.starts, shownPos) : -1;
   const segments = useMemo(() => (marks && timelineOk ? markSegments(marks, timeline) : []), [marks, timelineOk, timeline]);
+
+  // The 3D cube reports each move as playback enters it: a click for it, thinned out at 2x and 4x, silent when muted.
+  const onTurn = (k: number) => {
+    if (!soundOnRef.current || !cubeAudio) return;
+    const now = performance.now();
+    const plan = planTurnSound({ starts: timeline.starts, ends: timeline.ends, k, speed, sinceLastMs: now - lastClickRef.current });
+    if (!plan) return;
+    lastClickRef.current = now;
+    sounds.playTurn({ token: tokens[k] ?? "", speed: plan.speed, durationMs: plan.durationMs });
+  };
 
   // The camera leans toward each face as it turns (and after the recorded tilt, where there is one).
   const leanTurns = useMemo(() => {
@@ -504,7 +579,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   useReplayCamera({
     playerRef,
     hostRef: containerRef,
-    active: ready && timelineOk,
+    active: ready && timelineOk && !use3d,
     turns: leanTurns,
     starts: timeline.starts,
     durationMs,
@@ -523,19 +598,43 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   const frac = durationMs > 0 ? shownPos / durationMs : 0;
   const scrubFill = `calc(${frac * 100}% + ${(0.5 - frac) * THUMB_PX}px)`;
 
-  return (
-    <div ref={wrapRef} className="flex w-full flex-col items-center gap-3">
+  // A face turning under playback blurs the cube a touch, by how fast it turns (the stage's CSS drops it under reduced motion / FX off).
+  const turningLeaf = stage && !use3d && playing && timelineOk && activeMove >= 0 && shownPos < timeline.ends[activeMove] ? activeMove : -1;
+  const blurPx = turningLeaf >= 0 ? turnBlurPx(timeline.ends[turningLeaf] - timeline.starts[turningLeaf], speed) : 0;
+
+  const cubeStage = (
       <CubeStage
-        className={className}
-        state={loadFailed ? "failed" : ready ? "ready" : "loading"}
+        className={stage ? "h-full w-full" : className}
+        state={loadFailed ? "failed" : ready && (!use3d || frameReady) ? "ready" : "loading"}
         onRetry={() => {
           setLoadFailed(false);
           setLoadAttempt((n) => n + 1);
         }}
       >
-        <div ref={containerRef} className="cube-stage__cube h-full w-full" />
-        {overlay && ready && timelineOk && (
-          <div className="pointer-events-none absolute left-1 top-1">{overlay({ positionMs: shownPos, activeMove, timeline, playing, speed })}</div>
+        {use3d ? (
+          ready && timelineOk && clock && faceletsAfter && (
+            <div ref={containerRef} className="cube-stage__cube h-full w-full">
+              <ReplayStageCube
+                clock={clock}
+                faceletsAfter={faceletsAfter}
+                tokens={tokens}
+                starts={timeline.starts}
+                ends={timeline.ends}
+                stream={gyro?.stream}
+                moveMs={gyro?.moveMs}
+                positionMs={shownPos}
+                playing={playing}
+                speed={speed}
+                onTurn={onTurn}
+                onReady={() => setFrameReady(true)}
+              />
+            </div>
+          )
+        ) : (
+          <div ref={containerRef} className="cube-stage__cube h-full w-full" style={blurPx > 0 ? ({ "--turn-blur": `blur(${blurPx}px)` } as CSSProperties) : undefined} />
+        )}
+        {overlay && !use3d && ready && timelineOk && (
+          <div className={cn("pointer-events-none absolute", stage ? "bottom-1 left-1" : "left-1 top-1")}>{overlay({ positionMs: shownPos, activeMove, timeline, playing, speed })}</div>
         )}
         {ghost && ghostCtl.on && ready && timelineOk && (
           <div className="pointer-events-none absolute right-1 top-1">
@@ -558,7 +657,10 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
           </div>
         )}
       </CubeStage>
+  );
 
+  const side = (
+    <>
       {cues && cues.length > 0 && (
         <div className="flex min-h-[3.5rem] w-full flex-col items-center justify-center rounded-xl bg-bg-panel-2 px-3 py-2 text-center" aria-live="polite">
           {caption ? (
@@ -714,6 +816,23 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       )}
 
       {renderMoves?.(activeMove)}
+    </>
+  );
+
+  if (!stage) {
+    return (
+      <div ref={wrapRef} className="flex w-full flex-col items-center gap-3">
+        {cubeStage}
+        {side}
+      </div>
+    );
+  }
+  return (
+    <div ref={wrapRef} className="replay-host flex w-full flex-col items-center gap-3" data-fit={stageFit}>
+      <ReplayStage info={stage} positionMs={shownPos} activeMove={activeMove} timeline={timeline} playing={playing} speed={speed} atEnd={atEnd && timelineOk} fit={stageFit} cube3d={use3d}>
+        {cubeStage}
+      </ReplayStage>
+      <div className="flex w-full min-w-0 flex-col items-center gap-3">{side}</div>
     </div>
   );
 }

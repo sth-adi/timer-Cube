@@ -184,8 +184,12 @@ await check("smart cube: the replay carries the recorded gyro as a Gyro Twin", a
   await page.waitForTimeout(1500);
   await page.getByTestId("recap-replay").click();
   await page.getByTestId("replay-gyro-twin").waitFor({ timeout: 15000 });
-  // A real cube built of cubies, not six flat faces.
-  assert.ok((await page.getByTestId("replay-gyro-twin").locator("div").count()) > 150, "the twin is drawn as cubies");
+  // A real 3D cube: the WebGL render, or (no WebGL) the CSS cube built of cubies, never six flat faces.
+  const cube = page.getByTestId("replay-gyro-twin").locator('[data-testid="cube3d"]');
+  await cube.waitFor({ timeout: 15000 });
+  const mode = await cube.getAttribute("data-mode");
+  if (mode === "fallback") assert.ok((await cube.locator("div").count()) > 150, "the fallback twin is drawn as cubies");
+  else assert.ok((await cube.locator("canvas").count()) >= 1, "the main cube is a WebGL canvas");
 });
 
 await check("smart cube: the analyzer's replay carries the recorded gyro too", async (page) => {

@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { formatResult } from "@/lib/utils/time";
 import { cn } from "@/lib/utils/cn";
 import { computeReplayGaps } from "@/lib/analysis/replayGaps";
-import { displayIndexForMove, displayMoves } from "@/lib/analysis/replayDisplay";
+import { displayMoves } from "@/lib/analysis/replayDisplay";
 import { phaseMarksFromMilestones } from "@/lib/analysis/replayTiming";
 import { hasBreakdown, solveBreakdown } from "@/lib/analysis/solveBreakdown";
 import { solveFinalMs, type EventTag, type Penalty, type Solve } from "@/types";
@@ -15,14 +15,14 @@ import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
 import { useReplayGhostOption } from "./useReplayGhost";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { ReplayGyroTwin } from "./ReplayGyroTwin";
-import { ReplayPlaceholder } from "@/components/lab/CubeStage";
+import { StagePlaceholder } from "@/components/replay/StagePlaceholder";
+import { useSessionStore } from "@/lib/store/sessionStore";
+import { bigTime, eventCaption, isPersonalBest, tpsLabel, type ReplayStageInfo } from "@/lib/analysis/replayStage";
 
-/** The cube's box: sized once here, so the placeholder and the real player agree. */
-const CUBE_BOX = "mx-auto h-60 w-full max-w-md sm:h-72 [@media(orientation:landscape)_and_(max-height:32rem)]:h-44";
-
+// The player is drawn on the replay stage (components/replay): a coloured card sized by the viewport, so the placeholder is the same card.
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
-  loading: () => <ReplayPlaceholder className={CUBE_BOX} />,
+  loading: () => <StagePlaceholder fit="sheet" />,
 });
 
 interface InstantReplaySheetProps {
@@ -83,27 +83,35 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
 
   const ghost = useReplayGhostOption({ id: solveId, scramble, timeMs, date, event }, hasRealTiming, moves.length, timeMs);
 
-  const moveText = (active: number) => {
-    if (display.length === 0) {
-      return <p className="w-full break-words rounded-xl bg-bg-panel-2/60 px-3 py-2 text-center font-mono text-xs leading-relaxed text-muted">no reconstruction captured</p>;
-    }
-    const current = displayIndexForMove(display, active);
-    return (
-      <p className="w-full break-words rounded-xl bg-bg-panel-2/60 px-3 py-2 text-center font-mono text-xs leading-[1.9] text-foreground/80">
-        {display.map((d, i) => (
-          <span key={i}>
-            {i > 0 && " "}
-            <span
-              aria-current={i === current ? "step" : undefined}
-              className={cn("rounded px-1 py-0.5 transition-colors", i === current && "bg-accent-soft font-semibold text-accent")}
-            >
-              {d.token}
-            </span>
-          </span>
-        ))}
-      </p>
-    );
-  };
+  // The end card's caption: a personal best when this beat every earlier solve of the event, else the event.
+  const allSolves = useSessionStore((st) => st.allSolves);
+  const isPb = useMemo(() => isPersonalBest(allSolves, { id: solveId, timeMs, penalty, date, event }), [allSolves, solveId, timeMs, penalty, date, event]);
+  const finalMs = solveFinalMs({ timeMs, penalty });
+  const stage = useMemo<ReplayStageInfo | null>(() => {
+    if (display.length === 0) return null;
+    const meta: string[] = [];
+    if (date) meta.push(new Date(date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }));
+    meta.push(`${display.length} moves`);
+    const tps = tpsLabel(moves.length, timeMs);
+    if (tps) meta.push(tps);
+    if (penalty === "plus2") meta.push("+2 penalty");
+    return {
+      moves: display,
+      marks,
+      clockMs: timeMs,
+      resultLabel: finalMs === null ? "DNF" : bigTime(finalMs),
+      caption: isPb ? "Personal best" : eventCaption("3x3", event),
+      meta,
+      moveMs: hasRealTiming ? moveTimestamps : undefined,
+    };
+  }, [display, marks, timeMs, finalMs, penalty, date, event, isPb, moves.length, hasRealTiming, moveTimestamps]);
+
+  // Under the controls: the scramble (the grid on the stage already is the move text); without a reconstruction, say so.
+  const moveText = () => (
+    <p className="w-full break-words rounded-xl bg-bg-panel-2/60 px-3 py-2 text-center font-mono text-xs leading-relaxed text-muted max-sm:sr-only">
+      {display.length === 0 ? "no reconstruction captured" : <><span className="mr-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-2">Scramble</span>{scramble}</>}
+    </p>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
@@ -114,9 +122,10 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[88vh] supports-[height:1dvh]:max-h-[88dvh] overflow-y-auto",
-          "sm:max-w-md sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up md:max-w-lg",
-          // A phone on its side is short: give the sheet the width so the cube can sit beside the text.
+          "glass-panel w-full rounded-t-2xl outline-none p-5 pb-[calc(1.25rem+var(--safe-bottom))] animate-sheet-in max-h-[96vh] supports-[height:1dvh]:max-h-[96dvh] overflow-y-auto",
+          // Wide enough for the phone-shaped card with the controls beside it.
+          "sm:max-w-3xl sm:rounded-2xl sm:pb-5 sm:animate-fade-in-up",
+          // A phone on its side is short: the card and the controls sit side by side there too.
           "[@media(orientation:landscape)_and_(max-height:32rem)]:max-w-3xl",
         )}
         onClick={(e) => e.stopPropagation()}
@@ -134,17 +143,11 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
           </button>
         </div>
 
-        <div className="[@media(orientation:landscape)_and_(max-height:32rem)]:grid [@media(orientation:landscape)_and_(max-height:32rem)]:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:32rem)]:items-start [@media(orientation:landscape)_and_(max-height:32rem)]:gap-x-5">
-          <div>
-            <p className="mb-2.5 flex items-baseline gap-2">
-              <span className="tabular-timer text-3xl font-bold leading-none tracking-tight text-foreground">{formatResult(solveFinalMs({ timeMs, penalty }), penalty)}</span>
-              <span className="text-xs text-muted">{display.length} moves</span>
-            </p>
-
-            <p className="mb-3 break-words rounded-xl bg-bg-panel-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
-              {scramble}
-            </p>
-          </div>
+        <div>
+          {/* The stage carries the time and the moves; screen readers still get them here. */}
+          <p className="sr-only">
+            {formatResult(finalMs, penalty)}, {display.length} moves
+          </p>
 
           <TimedCubePlayer
             alg={reconstruction}
@@ -153,6 +156,9 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
             hasRealTiming={hasRealTiming}
             marks={marks}
             renderMoves={moveText}
+            stage={stage}
+            stageFit="sheet"
+            className="mx-auto h-60 w-full max-w-md"
             ghost={ghost}
             gyro={gyroStream && hasRealTiming && moveTimestamps ? { stream: gyroStream, moveMs: moveTimestamps } : undefined}
             overlay={
@@ -172,7 +178,6 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
                   )
                 : undefined
             }
-            className={CUBE_BOX}
           />
         </div>
       </div>

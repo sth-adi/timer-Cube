@@ -13,14 +13,18 @@ import type { EventTag } from "@/types";
 import { useReplayGhostOption } from "./useReplayGhost";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { ReplayGyroTwin } from "./ReplayGyroTwin";
-import { ReplayPlaceholder } from "@/components/lab/CubeStage";
+import { StagePlaceholder } from "@/components/replay/StagePlaceholder";
+import { displayMoves } from "@/lib/analysis/replayDisplay";
+import { bigTime, eventCaption, isPersonalBest, tpsLabel, type ReplayStageInfo } from "@/lib/analysis/replayStage";
+import { useSessionStore } from "@/lib/store/sessionStore";
 
-/** The cube's box: sized once here, so the placeholder and the real player agree. */
+/** The cube's box when there is nothing to draw a stage from (no moves): sized once here. */
 const CUBE_BOX = "mx-auto h-64 w-full max-w-xs";
 
+// The player is drawn on the replay stage (components/replay), a phone-shaped card in the flow of the page.
 const TimedCubePlayer = dynamic(() => import("./TimedCubePlayer").then((m) => m.TimedCubePlayer), {
   ssr: false,
-  loading: () => <ReplayPlaceholder className={CUBE_BOX} />,
+  loading: () => <StagePlaceholder fit="page" />,
 });
 
 const SEVERITY_STYLE: Record<Severity, { icon: typeof Info; className: string }> = {
@@ -55,6 +59,11 @@ interface SolveReplayProps {
    * Omit for a solve that isn't yours (a shared link): no ghost is offered.
    */
   ghostOf?: { id: string; date?: number; event?: EventTag };
+  /** What the end card calls the puzzle ("3x3", the default), and the practice tag (one-handed, ...) when there is one. */
+  puzzleLabel?: string;
+  eventTag?: string | null;
+  /** When it was solved, for the end card's detail lines. */
+  date?: number;
 }
 
 /** A neutral, non-alarming line for a phase that has no specific finding attached. */
@@ -81,7 +90,7 @@ function fallbackCaption(phase: PhaseAnalysis): string {
  * play/pause/scrub controls pace themselves against how long the cuber
  * really took between moves instead of a uniform per-move tempo.
  */
-export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs, gyroStream, ghostOf }: SolveReplayProps) {
+export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs, gyroStream, ghostOf, puzzleLabel = "3x3", eventTag, date }: SolveReplayProps) {
   const [selected, setSelected] = useState<number>(-1);
   const [director, setDirector] = useState(false);
   const [voice, setVoice] = useState(true);
@@ -147,6 +156,36 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
 
   // Phase ticks on the scrubber, for the whole solve only (one phase alone has nothing to divide).
   const marks = useMemo(() => (isWhole ? phaseMarksFromPhases(phases) : undefined), [isWhole, phases]);
+
+  // The stage's words. The stackmat runs on the solve's own clock (zeroed at the start of a phase on its own);
+  // without capture timing it follows the replay's, and the end card has no time to quote.
+  const allSolves = useSessionStore((st) => st.allSolves);
+  const isPb = useMemo(
+    () => !!ghostOf && isWhole && !alt && isPersonalBest(allSolves, { id: ghostOf.id, timeMs: solveMs, date: ghostOf.date, event: ghostOf.event }),
+    [allSolves, ghostOf, isWhole, alt, solveMs],
+  );
+  const stage = useMemo<ReplayStageInfo | null>(() => {
+    if (viewMoves.length === 0) return null;
+    const real = hasRealTiming && !alt && moveTimestamps && moveTimestamps.length === moves.length ? moveTimestamps.slice(startIdx, startIdx + viewMoves.length) : null;
+    const base = real && startIdx > 0 ? (moveTimestamps?.[startIdx - 1] ?? 0) : 0;
+    const clockMs = real ? (isWhole && solveMs > 0 ? solveMs : real[real.length - 1] - base) : undefined;
+    const meta: string[] = [];
+    if (isWhole && date) meta.push(new Date(date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }));
+    meta.push(`${viewMoves.length} moves`);
+    const tps = clockMs ? tpsLabel(viewMoves.length, clockMs) : null;
+    if (tps) meta.push(tps);
+    return {
+      moves: displayMoves(viewMoves, real ?? undefined),
+      marks,
+      title: !phase ? "Reconstruction" : alt ? "Alternate take" : `${phase.label}${phase.slot ? ` ${phase.slot}` : ""}`,
+      clockMs,
+      resultLabel: clockMs ? bigTime(clockMs) : String(viewMoves.length),
+      resultUnit: clockMs ? undefined : "moves",
+      caption: !phase ? (isPb ? "Personal best" : eventCaption(puzzleLabel, eventTag ?? ghostOf?.event)) : alt ? `${phase.label}, shortest` : `${phase.label}${phase.slot ? ` ${phase.slot}` : ""}`,
+      meta,
+      moveMs: real ? real.map((t) => t - base) : undefined,
+    };
+  }, [viewMoves, hasRealTiming, alt, moveTimestamps, moves.length, startIdx, isWhole, solveMs, date, marks, phase, isPb, puzzleLabel, eventTag, ghostOf?.event]);
 
   const cues = useMemo(() => (director ? buildDirectorsCut(phases, findings, moveTimestamps, totalMs) : undefined), [director, phases, findings, moveTimestamps, totalMs]);
 
@@ -237,6 +276,8 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         gapsMs={gaps}
         hasRealTiming={hasRealTiming}
         className={CUBE_BOX}
+        stage={stage}
+        stageFit="page"
         cues={isWhole ? cues : undefined}
         marks={marks}
         voice={voice}

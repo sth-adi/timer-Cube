@@ -232,6 +232,8 @@ export default function SharedSolvePage() {
                     moveTimestamps={solve.moveTimestamps ?? undefined}
                     totalMs={solve.timeMs}
                     gyroStream={solve.gyroStream}
+                    puzzleLabel={puzzleLabel ?? undefined}
+                    eventTag={solve.event}
                   />
                 )}
 

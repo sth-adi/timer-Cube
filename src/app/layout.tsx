@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bodoni_Moda, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "@/styles/themes.css";
 import { UsageTracker } from "@/components/chrome/UsageTracker";
@@ -23,6 +23,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// The replay stage's Didone serif (move grid, big time, italic caption); loaded only where used.
+const didone = Bodoni_Moda({ variable: "--font-didone", subsets: ["latin"], style: ["normal", "italic"], axes: ["opsz"], display: "swap", preload: false });
+
 export const metadata: Metadata = {
   icons: { apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Cube", statusBarStyle: "black-translucent" },
@@ -42,7 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${didone.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

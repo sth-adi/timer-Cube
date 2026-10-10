@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
+    "@types/three": "^0.186.0",
     "clsx": "^2.1.1",
     "cubing": "^0.63.4",
     "date-fns": "^4.4.0",
@@ -27,6 +28,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "smartcube-web-bluetooth": "github:poliva/smartcube-web-bluetooth",
+    "three": "^0.186.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

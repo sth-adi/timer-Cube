@@ -125,7 +125,7 @@ export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onCl
       </div>
       {replay && solve.reconstruction && (
         <div onClick={(e) => e.stopPropagation()}>
-          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} penalty={solve.penalty} moveTimestamps={solve.moveTimestamps} gyroStream={fullForReplay.solve?.gyroStream} onClose={() => setReplay(false)} />
+          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} penalty={solve.penalty} moveTimestamps={solve.moveTimestamps} gyroStream={fullForReplay.solve?.gyroStream} solveId={solve.id} date={solve.date} event={solve.event} onClose={() => setReplay(false)} />
         </div>
       )}
     </div>,
