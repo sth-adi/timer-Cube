@@ -1,9 +1,12 @@
-import { REEL_H, REEL_W } from "@/lib/reel/renderFrame";
+import { LAYOUT_DY, LAYOUT_H, REEL_H, REEL_W } from "@/lib/reel/draw";
 import { SLIDE_MS, type Slide } from "./wrapped";
 
 const SANS = "system-ui, -apple-system, Segoe UI, sans-serif";
 /** Each slide gets its own flat backdrop, cycling, so the story reads as a sequence of cards. Dark neutrals, one tint each, no gradients. */
 const BACKDROPS = ["#14181f", "#161a1e", "#1b1717", "#141a17", "#1a1814", "#15171c", "#191519", "#16161b"];
+
+/** Below the status bar and the app's own top tabs. */
+const PROGRESS_Y = 150;
 
 const ease = (x: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 
@@ -38,12 +41,15 @@ export function renderWrappedFrame(ctx: CanvasRenderingContext2D, slides: readon
   slides.forEach((_, k) => {
     const x = 60 + k * (bw + gap);
     ctx.fillStyle = "#ffffff33";
-    ctx.fillRect(x, 50, bw, 8);
+    ctx.fillRect(x, PROGRESS_Y, bw, 8);
     const fill = k < i ? 1 : k === i ? Math.min(1, local / SLIDE_MS) : 0;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(x, 50, bw * fill, 8);
+    ctx.fillRect(x, PROGRESS_Y, bw * fill, 8);
   });
 
+  // The text block was laid out on a 1080x1500 card: centre it on the taller canvas.
+  ctx.save();
+  ctx.translate(0, LAYOUT_DY);
   const slideIn = ease(local / 350);
   const dx = (1 - slideIn) * 80;
   ctx.globalAlpha = slideIn;
@@ -74,5 +80,6 @@ export function renderWrappedFrame(ctx: CanvasRenderingContext2D, slides: readon
 
   ctx.fillStyle = "#ffffff66";
   ctx.font = `600 28px ${SANS}`;
-  ctx.fillText("Cube wrapped", 80, H - 70);
+  ctx.fillText("Cube wrapped", 80, LAYOUT_H - 70);
+  ctx.restore();
 }

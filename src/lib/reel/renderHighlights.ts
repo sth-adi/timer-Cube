@@ -1,6 +1,6 @@
-import { REEL_H, REEL_W, renderReelFrame } from "./renderFrame";
+import { REEL_H, REEL_W, renderReelDesign } from "./renderFrame";
 import { CARD_MS, OPENER_MS, montageAt, type HighlightKind, type Montage } from "./highlights";
-import { SAFE_X, drawBackdrop, easeOut, fmtTime, fontsFor, roundRectPath, setSpacing } from "./draw";
+import { LAYOUT_DY, LAYOUT_H, SAFE_X, drawBackdrop, easeOut, fmtTime, fontsFor, roundRectPath, setSpacing } from "./draw";
 import { withAlpha } from "./theme";
 
 export interface HighlightStyle {
@@ -18,15 +18,18 @@ const KIND_ICON: Record<HighlightKind, string> = { pb: "★", fastest: "⚡", tp
 const fmt = fmtTime;
 
 function background(ctx: CanvasRenderingContext2D, accent: string, pulse = 0) {
-  drawBackdrop(ctx, accent, REEL_H / 2, pulse);
+  drawBackdrop(ctx, accent, LAYOUT_H / 2, pulse);
 }
 
 /** Fade from/to black over `ms` at either end of a span of length `len`, at local time `t`. */
 function fade(ctx: CanvasRenderingContext2D, t: number, len: number, ms = 220) {
   const a = t < ms ? 1 - t / ms : t > len - ms ? (t - (len - ms)) / ms : 0;
   if (a <= 0) return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = `rgba(0,0,0,${Math.min(1, a)})`;
   ctx.fillRect(0, 0, REEL_W, REEL_H);
+  ctx.restore();
 }
 
 /** Largest size (down from `px`) at which `text` still fits `maxW`, as a ready font string. */
@@ -43,7 +46,7 @@ function credit(ctx: CanvasRenderingContext2D, style: HighlightStyle, F: ReturnT
   ctx.font = F.credit;
   setSpacing(ctx, 1.5);
   ctx.fillStyle = "rgba(255,255,255,0.34)";
-  ctx.fillText(style.credit, REEL_W / 2, 1272);
+  ctx.fillText(style.credit, REEL_W / 2, 1422);
   setSpacing(ctx, 0);
 }
 
@@ -54,9 +57,16 @@ function credit(ctx: CanvasRenderingContext2D, style: HighlightStyle, F: ReturnT
  * area as the Solve Reel, so the cuts between them read as one video.
  */
 export function renderHighlightFrame(ctx: CanvasRenderingContext2D, m: Montage, t: number, style: HighlightStyle): void {
+  ctx.save();
+  ctx.translate(0, LAYOUT_DY);
+  renderHighlightDesign(ctx, m, t, style);
+  ctx.restore();
+}
+
+function renderHighlightDesign(ctx: CanvasRenderingContext2D, m: Montage, t: number, style: HighlightStyle): void {
   const at = montageAt(m, t);
   const W = REEL_W;
-  const H = REEL_H;
+  const H = LAYOUT_H;
   const n = m.segments.length;
   const F = fontsFor(style.sans, style.mono);
   const sans = style.sans ?? "system-ui, sans-serif";
@@ -128,7 +138,7 @@ export function renderHighlightFrame(ctx: CanvasRenderingContext2D, m: Montage, 
   if (at.kind === "solve") {
     const seg = m.segments[at.index];
     const h = seg.highlight;
-    renderReelFrame(ctx, seg.timeline, at.t, {
+    renderReelDesign(ctx, seg.timeline, at.t, {
       accent: style.accent,
       title: `${KIND_ICON[h.kind]} ${h.caption}`,
       subtitle: `${at.index + 1} / ${n}`,
@@ -147,16 +157,16 @@ export function renderHighlightFrame(ctx: CanvasRenderingContext2D, m: Montage, 
   ctx.globalAlpha = k;
   ctx.fillStyle = "#ffffff";
   ctx.font = fitFont(ctx, 800, 80, sans, style.title, maxW);
-  ctx.fillText(style.title, W / 2, 250);
+  ctx.fillText(style.title, W / 2, 350);
   setSpacing(ctx, 4);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = F.caption;
-  ctx.fillText(style.subtitle.toUpperCase(), W / 2, 306);
+  ctx.fillText(style.subtitle.toUpperCase(), W / 2, 406);
   setSpacing(ctx, 0);
   const rows = [...m.segments].sort((a, b) => a.highlight.finalMs - b.highlight.finalMs);
   const rowH = Math.min(120, 600 / Math.max(1, rows.length));
   rows.forEach((seg, i) => {
-    const y = 430 + i * rowH;
+    const y = 530 + i * rowH;
     const rk = easeOut((at.t - i * 120) / 400);
     ctx.globalAlpha = rk * k;
     roundRectPath(ctx, SAFE_X, y - 62, maxW, rowH - 16, 26);
@@ -176,7 +186,7 @@ export function renderHighlightFrame(ctx: CanvasRenderingContext2D, m: Montage, 
   const totalSec = m.segments.reduce((a, s) => a + s.highlight.solve.timeMs, 0) / 1000;
   ctx.fillStyle = "rgba(255,255,255,0.66)";
   ctx.font = F.body;
-  ctx.fillText(`${totalMoves} turns · ${(totalMoves / Math.max(0.001, totalSec)).toFixed(2)} TPS average`, W / 2, 1160);
+  ctx.fillText(`${totalMoves} turns · ${(totalMoves / Math.max(0.001, totalSec)).toFixed(2)} TPS average`, W / 2, 1260);
   credit(ctx, style, F);
   ctx.globalAlpha = 1;
   fade(ctx, at.t, Infinity);

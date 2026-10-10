@@ -2,6 +2,7 @@ import { reelViewInto } from "./camera";
 import { drawCube, drawGroundShadow } from "./cube3d";
 import {
   PHASE_HUES,
+  LAYOUT_DY,
   REEL_H,
   REEL_W,
   SAFE_X,
@@ -39,23 +40,23 @@ export interface ReelStyle {
 // ───────────────────────────── layout (canvas px) ─────────────────────────────
 const CX = REEL_W / 2;
 const HEADER_Y = 204;
-const HERO_Y = 396;
-const CHIP_Y = 478;
-const CUBE_CY = 756;
-const CUBE_SIZE = 156;
+const HERO_Y = 420;
+const CHIP_Y = 500;
+const CUBE_CY = 850;
+const CUBE_SIZE = 190;
 /** Where the soft ground shadow sits: under the lowest the cube's silhouette normally reaches. */
-const SHADOW_Y = CUBE_CY + 246;
-const TICKER_Y = 1066;
-const SCRAMBLE_Y = 1046;
+const SHADOW_Y = CUBE_CY + 300;
+const TICKER_Y = 1216;
+const SCRAMBLE_Y = 1196;
 const BAR_X = SAFE_X;
 const BAR_W = REEL_W - SAFE_X * 2;
-const BAR_Y = 1120;
+const BAR_Y = 1270;
 const BAR_H = 16;
 const SEG_GAP = 8;
 const SEG_MIN_W = 118;
-const LABEL_Y = 1170;
-const SPLIT_Y = 1202;
-const CREDIT_Y = 1272;
+const LABEL_Y = 1320;
+const SPLIT_Y = 1352;
+const CREDIT_Y = 1422;
 /** Turn easing is the same gentle in-out the Gyro Twin uses. */
 const TICKER_SLOTS = 3;
 const TICKER_GAP = 124;
@@ -108,6 +109,14 @@ const VIEW = new Float64Array(9);
  * strings is built per frame.
  */
 export function renderReelFrame(ctx: CanvasRenderingContext2D, tl: ReelTimeline, t: number, style: ReelStyle): void {
+  ctx.save();
+  ctx.translate(0, LAYOUT_DY);
+  renderReelDesign(ctx, tl, t, style);
+  ctx.restore();
+}
+
+/** The frame in design space (a 1080x1500 layout): renderReelFrame centres it on the taller canvas, and the highlight reel does the same once for a whole card. */
+export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline, t: number, style: ReelStyle): void {
   const F = fontsFor(style.sans, style.mono);
   const { accent } = style;
   const { segs, slots } = barFor(tl);
@@ -190,13 +199,13 @@ export function renderReelFrame(ctx: CanvasRenderingContext2D, tl: ReelTimeline,
   // ── The cube, on its soft ground shadow. A layer mid-turn eases in and out.
   const lift = finished ? 1 + 0.03 * bump : 0.94 + 0.06 * introK;
   ctx.globalAlpha = introK;
-  drawGroundShadow(ctx, CX, SHADOW_Y, 216 * lift, 0.95);
+  drawGroundShadow(ctx, CX, SHADOW_Y + LAYOUT_DY, 263 * lift, 0.95);
   reelViewInto(VIEW, tl, atT, easeInOut(outroK));
   const turning =
     frame.turning && t >= 0 && !finished
       ? { token: tl.moves[frame.turning.index], progress: easeInOut(Math.min(1, frame.turning.progress)) }
       : undefined;
-  drawCube(ctx, tl.facelets[frame.done], { cx: CX, cy: CUBE_CY, size: CUBE_SIZE * lift, view: VIEW, turning });
+  drawCube(ctx, tl.facelets[frame.done], { cx: CX, cy: CUBE_CY + LAYOUT_DY, size: CUBE_SIZE * lift, view: VIEW, turning });
 
   // ── Under the cube: the scramble (before and after), or the move ticker while it solves.
   ctx.globalAlpha = introK;

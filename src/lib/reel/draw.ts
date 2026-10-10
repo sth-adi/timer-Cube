@@ -7,13 +7,21 @@ import { DEFAULT_MONO, DEFAULT_SANS, REEL_BG_BOTTOM, REEL_BG_TOP, withAlpha } fr
  * built once per canvas, widths are measured once per string.
  */
 
-/** Reel canvas size: 4:5 portrait, the shape social feeds display largest. */
+/** Reel canvas size: 9:16 portrait, the full-screen shape TikTok, Reels and Shorts play at. */
 export const REEL_W = 1080;
-export const REEL_H = 1350;
+export const REEL_H = 1920;
+/**
+ * The frames were laid out on a 1080x1500 card and keep that layout (every y in the frame code is in that "design"
+ * space). The taller canvas centres it: content is drawn translated down by LAYOUT_DY, the background fills the
+ * whole canvas. Centred, the type and cube sit between y 420 and 1500, clear of the status bar at the top and
+ * the caption and buttons TikTok and Reels lay over the bottom ~380px.
+ */
+export const LAYOUT_H = 1500;
+export const LAYOUT_DY = (REEL_H - LAYOUT_H) / 2;
 
 /**
- * Safe areas. A 1:1 crop of the 4:5 canvas keeps the middle 1080x1080 (y 135..1215); a 9:16 story
- * letterboxes it and keeps everything. Anything that must be seen — type, the cube, the pacing
+ * Safe areas, in design space (see LAYOUT_DY). A 1:1 or 4:5 crop of the 9:16 canvas keeps the middle, where the
+ * content sits; a full-screen 9:16 view keeps everything. Anything that must be seen — type, the cube, the pacing
  * bar — sits inside SAFE_TOP..SAFE_BOTTOM and SAFE_X in from each side; only the faint watermark
  * lives outside, in the part a square crop is allowed to lose.
  */
@@ -95,7 +103,7 @@ export function fontsFor(sans = DEFAULT_SANS, mono = DEFAULT_MONO): Fonts {
   let f = fontCache.get(key);
   if (!f) {
     f = {
-      hero: `700 176px ${mono}`,
+      hero: `700 204px ${mono}`,
       chip: `600 34px ${sans}`,
       tick: `600 38px ${mono}`,
       tickCurrent: `700 50px ${mono}`,
@@ -147,15 +155,19 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, accent: string, glow
     b = { accent, bg, glow, vignette };
     backdrops.set(ctx, b);
   }
+  // The background covers the whole canvas whatever the content offset in force, so it is drawn in canvas space.
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = b.bg;
   ctx.fillRect(0, 0, REEL_W, REEL_H);
-  // The glow gradient is centred on y=0 in its own space; slide it to where the cube is.
-  ctx.save();
-  ctx.translate(0, glowY);
+  // The glow gradient is centred on y=0 in its own space; slide it to where the cube is (glowY is in design space).
+  ctx.translate(0, glowY + LAYOUT_DY);
   ctx.globalAlpha = 0.85 + 0.15 * pulse;
   ctx.fillStyle = b.glow;
-  ctx.fillRect(0, -glowY, REEL_W, REEL_H);
-  ctx.restore();
+  ctx.fillRect(0, -(glowY + LAYOUT_DY), REEL_W, REEL_H);
+  ctx.globalAlpha = 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = b.vignette;
   ctx.fillRect(0, 0, REEL_W, REEL_H);
+  ctx.restore();
 }

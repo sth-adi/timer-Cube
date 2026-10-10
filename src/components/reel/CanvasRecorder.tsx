@@ -58,7 +58,11 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
   const paint = useCallback(
     (t: number) => {
       const ctx = canvasRef.current?.getContext("2d");
-      if (ctx) draw(ctx, t);
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        draw(ctx, t);
+      }
       // The scrubber follows the clock directly (no React render per frame).
       if (scrubRef.current) scrubRef.current.value = String(Math.round(t));
     },
@@ -120,7 +124,7 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
         const mime = format.mime;
         const chunks: Blob[] = [];
         const tracks = [...canvas.captureStream(30).getVideoTracks(), ...(audioOut?.stream.getAudioTracks() ?? [])];
-        recorder = new MediaRecorder(new MediaStream(tracks), { mimeType: mime, videoBitsPerSecond: 6_000_000 });
+        recorder = new MediaRecorder(new MediaStream(tracks), { mimeType: mime, videoBitsPerSecond: 14_000_000 });
         recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
         recorder.onstop = () => {
           const blob = new Blob(chunks, { type: mime.split(";")[0] });
@@ -176,7 +180,8 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
         ref={canvasRef}
         width={REEL_W}
         height={REEL_H}
-        className="w-full max-w-sm rounded-2xl shadow-2xl ring-1 ring-[var(--border-strong)]"
+        className="max-w-full rounded-xl ring-1 ring-[var(--border-strong)]"
+        style={{ aspectRatio: `${REEL_W} / ${REEL_H}`, height: "min(68dvh, 38rem)", width: "auto" }}
         aria-label={ariaLabel ?? title}
       />
       <input

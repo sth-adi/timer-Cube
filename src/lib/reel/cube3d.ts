@@ -228,7 +228,7 @@ function assetsFor(ctx: CanvasRenderingContext2D): Assets {
 
 /**
  * The soft ground shadow under a floating cube: a radial falloff squashed
- * to ~12% height. `y` is the canvas y of the shadow's centre, `rx` its
+ * to ~12% height. `y` is the canvas y of the shadow's centre (canvas space, not affected by any translate), `rx` its
  * half-width; `strength` 0..1 scales the whole thing (to fade it in).
  */
 export function drawGroundShadow(ctx: CanvasRenderingContext2D, cx: number, y: number, rx: number, strength = 1): void {
@@ -296,6 +296,8 @@ const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 export function drawCube(ctx: CanvasRenderingContext2D, facelets: string, o: RenderOptions): void {
   const a = assetsFor(ctx);
   const baseAlpha = ctx.globalAlpha;
+  // The cube sets its own absolute transforms, so give back whatever transform the caller had (the frame's content offset).
+  const base = ctx.getTransform();
   const scale = o.size / 1.5;
   for (let i = 0; i < 9; i++) V[i] = o.view[i];
 
@@ -440,5 +442,5 @@ export function drawCube(ctx: CanvasRenderingContext2D, facelets: string, o: Ren
     }
     ctx.globalAlpha = baseAlpha;
   }
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.setTransform(base);
 }
