@@ -427,3 +427,7 @@ Appended (not regenerated).
 ### Additions — 2026-10-08 (taste rework: calm surfaces, slate palette, sentence case)
 - src/components/analysis/EmptyState.tsx [17] {Analysis / X-Ray} — The shared 'not enough solves yet' block for report pages: title, the number needed, one sentence and one next action. (EmptyState)
 - Taste rework: palettes and radii live in `app/globals.css` + `styles/themes.css` (nebula is shown as Slate); `.card` is a calm panel and flattens card-in-card; report pages use hairline sections and `analysis/EmptyState`; no uppercase tracked labels, pill badges or gradients in the UI.
+
+### Additions — 2026-10-10 (reel records MP4)
+- src/lib/reel/recordFormat.ts [1] {Reel / Wrapped} — Which video format the reel records in: H.264 MP4 first (opens in WhatsApp), WebM only as a fallback, and whether the result is shareable. (RECORD_MIME_CANDIDATES, RecordFormat, pickRecordFormat)
+- Reel video: `reel/recordFormat` picks H.264 MP4 before WebM so the file opens in WhatsApp; `CanvasRecorder` warns when only WebM is possible.

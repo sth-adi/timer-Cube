@@ -6,13 +6,12 @@ import { REEL_H, REEL_W } from "@/lib/reel/renderFrame";
 import type { SoundCue } from "@/lib/reel/highlights";
 import { newAudioContext, playSoundtrack } from "@/lib/reel/soundtrack";
 import { readReelTheme } from "@/lib/reel/theme";
+import { pickRecordFormat, type RecordFormat } from "@/lib/reel/recordFormat";
 import { cn } from "@/lib/utils/cn";
 
-const MIME_CANDIDATES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
-
-function pickMime(): string | null {
+function pickFormat(): RecordFormat | null {
   if (typeof MediaRecorder === "undefined") return null;
-  return MIME_CANDIDATES.find((m) => MediaRecorder.isTypeSupported(m)) ?? null;
+  return pickRecordFormat((m) => MediaRecorder.isTypeSupported(m));
 }
 
 /** The theme's accent, lifted if need be so it reads on the reel's dark card (Paper's violet is too deep as it is). */
@@ -53,8 +52,8 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
   const [mode, setMode] = useState<Mode>("idle");
   const [speed, setSpeed] = useState(1);
   const [sound, setSound] = useState(true);
-  const [video, setVideo] = useState<{ url: string; blob: Blob; ext: string } | null>(null);
-  const [supported] = useState(() => pickMime() !== null);
+  const [video, setVideo] = useState<{ url: string; blob: Blob; ext: string; shareable: boolean } | null>(null);
+  const [supported] = useState(() => pickFormat() !== null);
 
   const paint = useCallback(
     (t: number) => {
@@ -116,15 +115,16 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
         }
       }
       if (record) {
-        const mime = pickMime();
-        if (!mime) return;
+        const format = pickFormat();
+        if (!format) return;
+        const mime = format.mime;
         const chunks: Blob[] = [];
         const tracks = [...canvas.captureStream(30).getVideoTracks(), ...(audioOut?.stream.getAudioTracks() ?? [])];
         recorder = new MediaRecorder(new MediaStream(tracks), { mimeType: mime, videoBitsPerSecond: 6_000_000 });
         recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
         recorder.onstop = () => {
           const blob = new Blob(chunks, { type: mime.split(";")[0] });
-          setVideo({ url: URL.createObjectURL(blob), blob, ext: mime.includes("mp4") ? "mp4" : "webm" });
+          setVideo({ url: URL.createObjectURL(blob), blob, ext: format.ext, shareable: format.shareable });
           setMode("idle");
         };
         recorderRef.current = recorder;
@@ -242,6 +242,11 @@ export function CanvasRecorder({ draw, fromT, toT, posterT, soundtrack, title, f
         </p>
       )}
       {!supported && <p className="text-xs text-muted-2">This browser can&apos;t record canvas video, preview still works.</p>}
+      {video && !busy && !video.shareable && (
+        <p className="text-xs text-muted-2">
+          This browser can only save WebM, which WhatsApp and most gallery apps won&apos;t open. Record in Chrome 126 or newer, or Safari, to get an MP4.
+        </p>
+      )}
       {video && !busy && (
         <div className="flex gap-2">
           <a

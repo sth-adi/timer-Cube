@@ -600,7 +600,8 @@
     {"id":"src/components/smartcube/useScriptedFrames.ts","kind":"hook","area":"Smart cube","exports":["ScriptedFramesOptions","useScriptedFrames"],"summary":"Plays a fixed list of cube states on a timer for the connect animation.","loc":38,"importedBy":1,"hasTest":false},
     {"id":"src/components/timer/finishMoment.ts","kind":"lib","area":"Timer","exports":["CUBE_SETTLE_MS","FINISH_RING_MS","PHASE_HUE_VARS","finishHueVar","lastPhaseIndex"],"summary":"What the finish moment shows: the settle, the one-time ring in the ending phase's colour, and gold markers.","loc":24,"importedBy":1,"hasTest":true},
     {"id":"src/components/timer/tickPlacement.ts","kind":"lib","area":"Timer","exports":["Camera","FaceName","LIVE_CAMERA","TickEdge","faceOnScreen","tickEdge","tickPositionClass"],"summary":"Which edge of the live cube's box a turned face's tick belongs on, worked out from the camera.","loc":69,"importedBy":1,"hasTest":true},
-    {"id":"src/components/analysis/EmptyState.tsx","kind":"component","area":"Analysis / X-Ray","exports":["EmptyState"],"summary":"The shared 'not enough solves yet' block for report pages: title, the number needed, one sentence and one next action.","loc":39,"importedBy":17,"hasTest":false}
+    {"id":"src/components/analysis/EmptyState.tsx","kind":"component","area":"Analysis / X-Ray","exports":["EmptyState"],"summary":"The shared 'not enough solves yet' block for report pages: title, the number needed, one sentence and one next action.","loc":39,"importedBy":17,"hasTest":false},
+    {"id":"src/lib/reel/recordFormat.ts","kind":"lib","area":"Reel / Wrapped","exports":["RECORD_MIME_CANDIDATES","RecordFormat","pickRecordFormat"],"summary":"Which video format the reel records in: H.264 MP4 first (opens in WhatsApp), WebM only as a fallback, and whether the result is shareable.","loc":30,"importedBy":1,"hasTest":true}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},
@@ -2817,7 +2818,8 @@
     {"from":"src/app/wrapped/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
     {"from":"src/app/xray/page.tsx","to":"src/components/analysis/EmptyState.tsx"},
     {"from":"src/components/analytics/AnalyticsShell.tsx","to":"src/components/analysis/EmptyState.tsx"},
-    {"from":"src/components/timemachine/WhatIf.tsx","to":"src/components/analysis/EmptyState.tsx"}
+    {"from":"src/components/timemachine/WhatIf.tsx","to":"src/components/analysis/EmptyState.tsx"},
+    {"from":"src/components/reel/CanvasRecorder.tsx","to":"src/lib/reel/recordFormat.ts"}
   ],
   "routes": {
     "/": "src/app/page.tsx",
