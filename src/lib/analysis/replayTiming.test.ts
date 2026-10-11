@@ -68,7 +68,7 @@ describe("buildTimeline", () => {
     const t = buildTimeline(g, { realPauses: true, fluid: true, scales });
     expect(t.ends).toEqual([300, 800, 920, 2920]);
     const dur = t.ends.map((e, i) => e - t.starts[i]);
-    [190, 190 * 1.4, 112.8, 190 * 1.4].forEach((want, i) => expect(dur[i]).toBeCloseTo(want, 6));
+    [190, 190 * 1.75, 112.8, 190 * 1.75].forEach((want, i) => expect(dur[i]).toBeCloseTo(want, 6));
     expect(t.durationMs).toBe(2920);
   });
 
@@ -78,7 +78,7 @@ describe("buildTimeline", () => {
   });
 
   it("turnScales: half turns are longer than quarter turns, slices equal", () => {
-    expect(turnScales(["R", "R'", "R2", "M", "M2", "x"])).toEqual([1, 1, 1.4, 1, 1.4, 1.15]);
+    expect(turnScales(["R", "R'", "R2", "M", "M2", "x"])).toEqual([1, 1, 1.75, 1, 1.75, 1.15]);
   });
 
   it("is empty for no moves", () => {

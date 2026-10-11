@@ -48,10 +48,16 @@ export interface CubeSceneOptions {
   preserveDrawingBuffer?: boolean;
 }
 
-const QUALITY: Record<CubeQuality, { dpr: number; shadow: number; ghosts: number }> = {
-  low: { dpr: 1.5, shadow: 512, ghosts: 2 },
-  medium: { dpr: 2, shadow: 1024, ghosts: 3 },
-  high: { dpr: 3, shadow: 2048, ghosts: 3 },
+/**
+ * What each tier costs. A phone GPU cannot afford a soft shadow map, a clearcoat shader and extra motion-blur copies of
+ * the cube every frame (that ran at a couple of frames a second), so only "high" (a desktop with room to spare) pays for
+ * a shadow map and clearcoat; "low" and "medium" draw the cube with a flat contact shadow and no extra passes.
+ * The scene also steps itself down at runtime if frames come slowly (see watchFrameRate).
+ */
+const QUALITY: Record<CubeQuality, { dpr: number; shadow: number; ghosts: number; clearcoat: boolean }> = {
+  low: { dpr: 1.5, shadow: 0, ghosts: 0, clearcoat: false },
+  medium: { dpr: 2, shadow: 0, ghosts: 1, clearcoat: false },
+  high: { dpr: 2, shadow: 1024, ghosts: 2, clearcoat: true },
 };
 
 /** The fixed camera: slightly above and to the right, three faces in view (the twin's rotateX(-24) rotateY(-32)). */
@@ -64,7 +70,7 @@ const FOV = 26;
 const BODY = 0.982;
 const HALF = BODY / 2;
 
-function stickerGeometry(): ExtrudeGeometry {
+function stickerGeometry(fine: boolean): ExtrudeGeometry {
   const size = 0.86;
   const bevel = 0.032;
   const r = 0.2;
@@ -80,7 +86,7 @@ function stickerGeometry(): ExtrudeGeometry {
   s.absarc(-h + r, h - r, r, Math.PI / 2, Math.PI, false);
   s.lineTo(-h, -h + r);
   s.absarc(-h + r, -h + r, r, Math.PI, Math.PI * 1.5, false);
-  return new ExtrudeGeometry(s, { depth: 0.008, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 4, curveSegments: 10 });
+  return new ExtrudeGeometry(s, { depth: 0.008, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: fine ? 3 : 2, curveSegments: fine ? 6 : 4 });
 }
 
 function contactTexture(): CanvasTexture | null {
@@ -128,17 +134,26 @@ export class CubeScene {
   private height = 0;
   private quality: CubeQuality;
   private disposed = false;
+  /** adaptive quality: the pixel-ratio cap and ghost budget now in force, stepped down if frames arrive slowly */
+  private ratioCap: number;
+  private ghostBudget: number;
+  private lastDpr = 1;
+  private lastFrameAt = 0;
+  private frameEma = 0;
+  private frameSamples = 0;
 
   constructor(canvas: HTMLCanvasElement, opts: CubeSceneOptions = {}) {
     this.quality = opts.quality ?? "high";
     const q = QUALITY[this.quality];
-    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.preserveDrawingBuffer });
+    this.ratioCap = q.dpr;
+    this.ghostBudget = q.ghosts;
+    const renderer = new WebGLRenderer({ canvas, antialias: (window.devicePixelRatio || 1) < 2, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.preserveDrawingBuffer });
     this.renderer = renderer;
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = SRGBColorSpace;
     renderer.toneMapping = ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = q.shadow > 0;
     renderer.shadowMap.type = VSMShadowMap;
 
     // Studio: a procedural room for reflections and soft fill, one key light for the shadows.
@@ -154,15 +169,15 @@ export class CubeScene {
     this.scene.add(new AmbientLight(0xffffff, 0.12));
     const key = new DirectionalLight(0xfff6ea, 2.6);
     key.position.set(-1.5, 14, 3);
-    key.castShadow = true;
-    key.shadow.mapSize.set(q.shadow, q.shadow);
+    key.castShadow = q.shadow > 0;
+    if (q.shadow > 0) key.shadow.mapSize.set(q.shadow, q.shadow);
     const sc = key.shadow.camera;
     sc.left = sc.bottom = -9;
     sc.right = sc.top = 9;
     sc.near = 1;
     sc.far = 30;
-    key.shadow.radius = 9;
-    key.shadow.blurSamples = 16;
+    key.shadow.radius = 5;
+    key.shadow.blurSamples = 8;
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.02;
     this.key = key;
@@ -171,13 +186,15 @@ export class CubeScene {
     this.scene.add(fill);
     this.scene.add(key);
 
-    // Shadow-only ground, so the stage behind the canvas shows through.
-    const ground = new Mesh(new PlaneGeometry(30, 30), new ShadowMaterial({ opacity: 0.18 }));
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = FLOOR_Y;
-    ground.receiveShadow = true;
-    this.scene.add(ground);
-    this.disposables.push(ground.geometry, ground.material as ShadowMaterial);
+    // Shadow-only ground, so the stage behind the canvas shows through (only when there is a shadow map to receive).
+    if (q.shadow > 0) {
+      const ground = new Mesh(new PlaneGeometry(30, 30), new ShadowMaterial({ opacity: 0.18 }));
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = FLOOR_Y;
+      ground.receiveShadow = true;
+      this.scene.add(ground);
+      this.disposables.push(ground.geometry, ground.material as ShadowMaterial);
+    }
     const tex = contactTexture();
     if (tex) {
       const mat = new MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false });
@@ -191,10 +208,10 @@ export class CubeScene {
     }
 
     // Cubies.
-    this.bodyGeo = new RoundedBoxGeometry(BODY, BODY, BODY, 5, 0.11);
-    this.stickerGeo = stickerGeometry();
+    this.bodyGeo = new RoundedBoxGeometry(BODY, BODY, BODY, q.clearcoat ? 4 : 3, 0.11);
+    this.stickerGeo = stickerGeometry(q.clearcoat);
     this.disposables.push(this.bodyGeo, this.stickerGeo);
-    this.bodyMat = new MeshPhysicalMaterial({ color: new Color(CUBE_BODY).multiplyScalar(1.3), roughness: 0.38, metalness: 0, clearcoat: 0.7, clearcoatRoughness: 0.18, envMapIntensity: 0.8 });
+    this.bodyMat = new MeshPhysicalMaterial({ color: new Color(CUBE_BODY).multiplyScalar(1.3), roughness: q.clearcoat ? 0.38 : 0.3, metalness: 0, clearcoat: q.clearcoat ? 0.7 : 0, clearcoatRoughness: 0.18, envMapIntensity: 0.8 });
     this.disposables.push(this.bodyMat);
     const core = new Mesh(new BoxGeometry(2, 2, 2), new MeshPhysicalMaterial({ color: 0x050507, roughness: 0.8 }));
     this.cube.add(core);
@@ -203,17 +220,17 @@ export class CubeScene {
       const group = new Group();
       group.position.set(...c.pos);
       const body = new Mesh(this.bodyGeo, this.bodyMat);
-      body.castShadow = true;
-      body.receiveShadow = true;
+      body.castShadow = q.shadow > 0;
+      body.receiveShadow = q.shadow > 0;
       group.add(body);
       const stickers: CubieObj["stickers"] = [];
       for (const s of c.stickers) {
-        const material = new MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0, specularIntensity: 0.3, clearcoat: 0, sheen: 0.08, sheenRoughness: 0.6, sheenColor: new Color(0xffffff), envMapIntensity: 1 });
+        const material = new MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0, specularIntensity: 0.3, clearcoat: 0, ...(q.clearcoat ? { sheen: 0.08, sheenRoughness: 0.6, sheenColor: new Color(0xffffff) } : {}), envMapIntensity: 1 });
         const mesh = new Mesh(this.stickerGeo, material);
         const n = new Vector3(...s.normal);
         mesh.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), n);
         mesh.position.copy(n).multiplyScalar(HALF - 0.004);
-        mesh.receiveShadow = true;
+        mesh.receiveShadow = q.shadow > 0;
         group.add(mesh);
         stickers.push({ index: s.index, mesh, material });
         this.disposables.push(material);
@@ -228,7 +245,8 @@ export class CubeScene {
   resize(w: number, h: number, dpr: number): void {
     w = Math.max(1, Math.round(w));
     h = Math.max(1, Math.round(h));
-    const ratio = Math.max(1, Math.min(dpr, QUALITY[this.quality].dpr));
+    this.lastDpr = dpr;
+    const ratio = Math.max(1, Math.min(dpr, this.ratioCap));
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
     this.width = w;
@@ -293,6 +311,27 @@ export class CubeScene {
     }
   }
 
+  /**
+   * Watches how often frames really arrive while a turn is playing and steps the cost down if they are slow: first the
+   * motion-blur copies, then the pixel ratio (never below 1). A phone that cannot keep up gets a cheaper picture
+   * instead of a slideshow. Never steps back up, so it does not flap.
+   */
+  private watchFrameRate(turning: boolean): void {
+    const now = performance.now();
+    const dt = now - this.lastFrameAt;
+    this.lastFrameAt = now;
+    if (!turning || dt > 250 || dt <= 0) return;
+    this.frameEma = this.frameSamples === 0 ? dt : this.frameEma * 0.85 + dt * 0.15;
+    if (++this.frameSamples < 8 || this.frameEma < 26) return;
+    this.frameSamples = 0;
+    if (this.ghostBudget > 0) this.ghostBudget = 0;
+    else if (this.ratioCap > 1) {
+      this.ratioCap = Math.max(1, this.ratioCap * 0.75);
+      this.renderer.setPixelRatio(Math.max(1, Math.min(this.lastDpr, this.ratioCap)));
+      this.renderer.setSize(this.width, this.height, false);
+    }
+  }
+
   /** Apply a state and draw one frame. */
   render(state: CubeSceneState): void {
     if (this.disposed || !this.width) return;
@@ -302,7 +341,8 @@ export class CubeScene {
     else this.cube.quaternion.identity();
 
     const turns = cubieTurns(state.turning?.turn ?? null, state.turning?.progress ?? 0);
-    const ghosts = state.motionBlur ? QUALITY[this.quality].ghosts : 0;
+    const ghosts = state.motionBlur ? this.ghostBudget : 0;
+    this.watchFrameRate(!!state.turning);
     const q = new Quaternion();
     const axes = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)];
     const place = (g: Group, ci: number, angle: number, axis: 0 | 1 | 2) => {

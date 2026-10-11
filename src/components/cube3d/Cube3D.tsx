@@ -7,6 +7,17 @@ import type { CubeQuality, CubeScene } from "@/lib/cube3d/scene";
 
 export type { CubeQuality };
 
+/** Phones and tablets (touch, small screens) get the cheap tier; a desktop gets the middle tier. The scene steps itself down further if frames are slow. */
+function defaultQuality(): CubeQuality {
+  try {
+    const touch = window.matchMedia("(pointer: coarse)").matches;
+    const small = Math.min(window.screen.width, window.screen.height) < 700;
+    return touch || small ? "low" : "medium";
+  } catch {
+    return "low";
+  }
+}
+
 export interface Cube3DProps {
   /** the cube BEFORE `turning` (54 facelets, U R F D L B) */
   facelets: string;
@@ -37,13 +48,14 @@ function motionAllowed(): boolean {
  * contact shadow on a transparent canvas, a little motion blur on fast turns. Renders only when its props
  * change. Falls back to the CSS TurnCube when WebGL is unavailable, fails to start or its context is lost.
  */
-export const Cube3D = memo(function Cube3D({ facelets, turning = null, size, className, orientation = null, quality = "high" }: Cube3DProps) {
+export const Cube3D = memo(function Cube3D({ facelets, turning = null, size, className, orientation = null, quality }: Cube3DProps) {
   const boxRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<CubeScene | null>(null);
   const visibleRef = useRef(true);
   const rafRef = useRef(0);
   const latest = useRef({ facelets, turning, orientation });
+  const [tier] = useState<CubeQuality>(() => quality ?? defaultQuality());
   const [mode, setMode] = useState<"loading" | "gl" | "fallback">("loading");
   const [px, setPx] = useState(size ?? 0);
 
@@ -100,7 +112,7 @@ export const Cube3D = memo(function Cube3D({ facelets, turning = null, size, cla
     import("@/lib/cube3d/scene")
       .then(({ CubeScene: Scene }) => {
         if (dead) return;
-        const scene = new Scene(canvas, { quality });
+        const scene = new Scene(canvas, { quality: tier });
         sceneRef.current = scene;
         setMode("gl");
         fit();
@@ -129,7 +141,7 @@ export const Cube3D = memo(function Cube3D({ facelets, turning = null, size, cla
       sceneRef.current?.dispose();
       sceneRef.current = null;
     };
-  }, [quality]);
+  }, [tier]);
 
   const fallbackSize = Math.max(24, Math.round(px * 0.5));
   return (

@@ -29,10 +29,10 @@ export const MIN_TURN_MS = 12;
  */
 export const FLUID_TURN_FRAC = 0.94;
 export const FLUID_TURN_MS = 190;
-/** A half turn (U2) travels twice the angle: it gets 1.4x the time, not 2x, as a real double turn is quicker per degree. */
-export const HALF_TURN_SCALE = 1.4;
+/** A half turn (U2) travels twice the angle: it gets 1.75x the time, not 2x, as a real double turn is a little quicker per degree. */
+export const HALF_TURN_SCALE = 1.75;
 
-/** How long each move's turn naturally takes, relative to a quarter turn: 1 for U/R'/M, 1.4 for U2, a little more for a rotation. */
+/** How long each move's turn naturally takes, relative to a quarter turn: 1 for U/R'/M, 1.75 for U2, a little more for a rotation. */
 export function turnScales(tokens: readonly string[]): number[] {
   return tokens.map((t) => (t.endsWith("2") ? HALF_TURN_SCALE : /^[xyz]/.test(t) ? 1.15 : 1));
 }
