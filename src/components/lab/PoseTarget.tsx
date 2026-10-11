@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { HOME_ORIENTATION, cssMatrix3d, matToQuat, mul, quatToMat, slerpQuat, tokenMatrix, type Mat3 } from "@/lib/gyro/orientation";
+import { HOME_ORIENTATION, matToQuat, mul, quatToMat, slerpQuat, tokenMatrix, type Mat3 } from "@/lib/gyro/orientation";
 import { motionIsOff } from "@/components/motion/motionOff";
 import { SOLVED_FACELETS } from "@/lib/store/smartCubeStore";
-import { GYRO_TWIN_CAMERA } from "./GyroTwin";
-import { TurnCube } from "./TurnCube";
-import { TwinStage } from "./TwinStage";
+import { Cube3D, type Cube3DHandle } from "@/components/cube3d/Cube3D";
+import { useCubeLook } from "@/components/settings/useCubeLook";
 
 export type CalibrationPose = "home" | "y" | "yx";
 
@@ -15,6 +14,8 @@ const HOME_MAT: Mat3 = HOME_ORIENTATION;
 const Y_MAT: Mat3 = mul(tokenMatrix("y"), HOME_MAT);
 const YX_MAT: Mat3 = mul(tokenMatrix("x"), Y_MAT);
 export const POSE_MATRIX: Record<CalibrationPose, Mat3> = { home: HOME_MAT, y: Y_MAT, yx: YX_MAT };
+
+const HOME_QUAT = matToQuat(HOME_MAT);
 
 /** The pose before each one (the first starts at home). */
 const PREVIOUS: Record<CalibrationPose, CalibrationPose> = { home: "home", y: "home", yx: "y" };
@@ -31,14 +32,13 @@ const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2,
  * itself is shown, not just its result; with reduced motion or effects off it just shows the new grip.
  */
 export function PoseTarget({ pose, size }: { pose: CalibrationPose; size: number }) {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<Cube3DHandle | null>(null);
+  const look = useCubeLook();
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const cube = ref.current;
+    if (!cube) return;
     const to = matToQuat(POSE_MATRIX[pose]);
-    const set = (m: Mat3) => {
-      el.style.transform = `${GYRO_TWIN_CAMERA} ${cssMatrix3d(m)}`;
-    };
+    const set = (m: Mat3) => cube.setOrientation(matToQuat(m));
     if (motionIsOff() || pose === "home") {
       set(POSE_MATRIX[pose]);
       return;
@@ -56,15 +56,5 @@ export function PoseTarget({ pose, size }: { pose: CalibrationPose; size: number
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, [pose]);
-  return (
-    <TwinStage size={size}>
-      <div
-        ref={ref}
-        className="relative"
-        style={{ width: size, height: size, transformStyle: "preserve-3d", transform: `${GYRO_TWIN_CAMERA} ${cssMatrix3d(HOME_MAT)}` }}
-      >
-        <TurnCube facelets={SOLVED_FACELETS} turning={null} size={size} />
-      </div>
-    </TwinStage>
-  );
+  return <Cube3D ref={ref} size={Math.round(size * 1.9)} facelets={SOLVED_FACELETS} orientation={HOME_QUAT} look={look} />;
 }

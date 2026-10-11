@@ -7,6 +7,7 @@ import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { tickPositionClass } from "@/components/timer/tickPlacement";
 import { MIMIC_STABLE_MS, faceletsOf, fixAfter, mimicAlg, mimicSyncVerdict, mimicView, movesToReach, type MimicFix } from "@/lib/analysis/mimicSync";
 import { Cube3D } from "@/components/cube3d/Cube3D";
+import { useCubeLook } from "@/components/settings/useCubeLook";
 import { HOME_ORIENTATION, matToQuat } from "@/lib/gyro/orientation";
 import { useTurnAnimation } from "@/components/lab/useTurnAnimation";
 import { useProgressFills } from "@/components/lab/useProgressFills";
@@ -130,6 +131,7 @@ export function LiveCubeMimic({
   // The facelets to draw: what the alg works out to (the cube's own report only if that alg can't be parsed).
   const turnView = useTurnAnimation(expected ?? liveFacelets, { jiggle: true });
   // The cube is drawn in px, so it takes its size from the box it is given (the stage is 1.9 cubes across).
+  const look = useCubeLook();
   const boxRef = useRef<HTMLDivElement>(null);
   const [cubeSize, setCubeSize] = useState(0);
   const progressFills = useProgressFills(turnView.facelets, ownSolveLive && !idle, cubeSize);
@@ -154,6 +156,7 @@ export function LiveCubeMimic({
         stickerFills={progressFills}
         jiggle={turnView.jiggle}
         cameraYaw={MIMIC_CAMERA_YAW}
+        look={look}
       />
       {tickFace && <TurnTick key={tokens.length} face={tickFace} />}
     </div>

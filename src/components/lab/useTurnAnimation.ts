@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { applyMove, inferMove, isFaceMove, moveToken, pairOf, type MoveSpec } from "@/lib/cube-engine/stickerTurns";
 import { SLICE_PAIR_WINDOW_MS } from "@/lib/smartcube/slicePair";
 import type { TurnState } from "./TurnCube";
-import { REST_JIGGLE, WOBBLE_MS, turnKick, wobbleAt, type CubeJiggle, type JiggleEvent } from "@/lib/cube3d/jiggle";
+import { REST_JIGGLE, WOBBLE_MS, rattleAt, turnKick, wobbleAt, type CubeJiggle, type JiggleEvent } from "@/lib/cube3d/jiggle";
 import { motionIsOff } from "@/components/motion/motionOff";
 
 export interface TurnView {
@@ -178,7 +178,7 @@ export function useTurnAnimation(target: string, opts?: { jiggle?: boolean }): T
         return null;
       }
       eventsRef.current = eventsRef.current.filter((e) => now - e.endMs < WOBBLE_MS);
-      return eventsRef.current.length ? { wobble: wobbleAt(eventsRef.current, now) } : REST_JIGGLE;
+      return eventsRef.current.length ? { wobble: wobbleAt(eventsRef.current, now), rattle: rattleAt(eventsRef.current, now) } : REST_JIGGLE;
     };
     const frame = (now: number) => {
       rafRef.current = 0;
@@ -197,7 +197,7 @@ export function useTurnAnimation(target: string, opts?: { jiggle?: boolean }): T
       if (jiggleOnRef.current) {
         for (const f of stepped.finished) {
           const kick = turnKick(f.turn, f.dur);
-          if (kick) eventsRef.current.push({ endMs: f.endAt, kick });
+          if (kick) eventsRef.current.push({ endMs: f.endAt, kick, turn: f.turn });
         }
       }
       shownRef.current = stepped.shown;
@@ -219,7 +219,7 @@ export function useTurnAnimation(target: string, opts?: { jiggle?: boolean }): T
         return;
       }
       const jiggle = jiggleAt(now);
-      setView({ facelets: shownRef.current, turning: { turn: active.turn, progress: (now - active.start) / active.dur }, ...(jiggle === undefined ? {} : { jiggle }) });
+      setView({ facelets: shownRef.current, turning: { turn: active.turn, progress: (now - active.start) / active.dur, turnMs: active.dur }, ...(jiggle === undefined ? {} : { jiggle }) });
       rafRef.current = requestAnimationFrame(frameRef.current);
     };
     frameRef.current = frame;

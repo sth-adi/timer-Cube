@@ -1,4 +1,5 @@
 import { isSliceMove, moveGeometry, parseMove, type MoveSpec } from "@/lib/cube-engine/stickerTurns";
+import { stickerJitter } from "./layout";
 
 /**
  * Slight secondary motion for the 3D cube, as pure functions of time so nothing is simulated: a replay can scrub to any
@@ -37,15 +38,24 @@ export interface JiggleKick {
   strength: number;
 }
 
-/** A kick and when its turn ended (ms on the caller's clock). */
+/** A kick and when its turn ended (ms on the caller's clock); `turn` says which layer, for the rattle of its cubies. */
 export interface JiggleEvent {
   endMs: number;
   kick: JiggleKick;
+  turn?: MoveSpec;
 }
 
-/** What Cube3D is told to draw: the whole cube's wobble as a small rotation vector (radians, cube frame). Present means layer tilt is on too. */
+/** The loose cubies of the layer that has just stopped: which turn, how long ago it ended (ms) and how hard it hit (0..1). */
+export interface CubieRattle {
+  turn: MoveSpec;
+  ageMs: number;
+  strength: number;
+}
+
+/** What Cube3D is told to draw: the whole cube's wobble as a small rotation vector (radians, cube frame), plus the rattle of the cubies of the layer that just stopped. Present means layer tilt is on too. */
 export interface CubeJiggle {
   wobble: readonly [number, number, number];
+  rattle?: CubieRattle | null;
 }
 
 export const REST_JIGGLE: CubeJiggle = { wobble: [0, 0, 0] };
@@ -109,7 +119,7 @@ export function buildJiggleEvents(
     const startMs = h ? h.firstStart : starts[k];
     if (!move || endMs === undefined || startMs === undefined) continue;
     const kick = turnKick(h ? ({ ...move, quarters: 2 } as MoveSpec) : move, endMs - startMs);
-    if (kick) out.push({ endMs, kick });
+    if (kick) out.push({ endMs, kick, turn: h ? ({ ...move, quarters: 2 } as MoveSpec) : move });
   }
   out.sort((a, b) => a.endMs - b.endMs);
   return out;
@@ -150,4 +160,50 @@ export function layerTilt(turn: MoveSpec | null, progress: number): { axis: 0 | 
   const s = Math.sin(Math.PI * clamp01(progress));
   const dir = (geo.axis === 1 ? 1 : -1) * Math.sign(degrees);
   return { axis: ((geo.axis + 1) % 3) as 0 | 1 | 2, angle: dir * TILT_MAX_DEG * RAD * s * s };
+}
+
+/** How long the cubies of a layer that has just stopped keep rattling (ms), and the most any of them turns, in degrees. */
+export const RATTLE_MS = 150;
+export const RATTLE_MAX_DEG = 0.75;
+const RATTLE_PERIOD_MS = 46;
+const RATTLE_TAU_MS = 42;
+
+function rattleShape(ageMs: number, rate = 1): number {
+  if (!(ageMs > 0) || ageMs >= RATTLE_MS) return 0;
+  return Math.exp(-ageMs / RATTLE_TAU_MS) * Math.sin((2 * Math.PI * ageMs * rate) / RATTLE_PERIOD_MS) * (1 - smoothstep(RATTLE_MS * 0.6, RATTLE_MS, ageMs));
+}
+
+const RATTLE_PEAK = (() => {
+  let peak = 0;
+  for (let t = 0; t < RATTLE_MS; t += 0.1) peak = Math.max(peak, Math.abs(rattleShape(t)));
+  return peak || 1;
+})();
+
+/**
+ * A loose cubie's tiny offset `ageMs` after its layer stopped, as a rotation vector (radians, about x, y, z of the cube's frame).
+ * Each cubie (by its index in CUBIE_LAYOUT) has its own steady direction and a slightly different swing rate, so the layer
+ * does not move as one piece. A pure function of age; zero at age 0 and from RATTLE_MS on.
+ */
+export function rattleOffset(ageMs: number, cubie: number, strength: number): [number, number, number] {
+  const amp = clamp01(strength) * RATTLE_MAX_DEG * RAD;
+  const s = (amp * rattleShape(ageMs, 1 + 0.18 * stickerJitter(cubie * 7 + 3))) / RATTLE_PEAK;
+  if (s === 0) return [0, 0, 0];
+  return [s * stickerJitter(cubie * 3), s * stickerJitter(cubie * 3 + 1), s * stickerJitter(cubie * 3 + 2)];
+}
+
+/** The rattle at `nowMs` from the latest turn that has ended (same clock and `timeScale` as wobbleAt), or null when none is within RATTLE_MS. `gain` scales its strength (0..1). */
+export function rattleAt(events: readonly JiggleEvent[], nowMs: number, timeScale = 1, gain = 1): CubieRattle | null {
+  const scale = timeScale > 0 ? timeScale : 1;
+  let lo = 0;
+  let hi = events.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (events[mid].endMs <= nowMs) lo = mid + 1;
+    else hi = mid;
+  }
+  const e = events[lo - 1];
+  if (!e || !e.turn) return null;
+  const age = (nowMs - e.endMs) / scale;
+  if (age <= 0 || age >= RATTLE_MS) return null;
+  return { turn: e.turn, ageMs: age, strength: e.kick.strength * gain };
 }

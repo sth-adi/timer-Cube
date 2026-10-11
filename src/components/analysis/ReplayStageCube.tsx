@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Cube3D } from "@/components/cube3d/Cube3D";
+import { useCubeLook } from "@/components/settings/useCubeLook";
 import type { TurnState } from "@/components/lab/TurnCube";
-import { REST_JIGGLE, buildJiggleEvents, wobbleAt, type CubeJiggle } from "@/lib/cube3d/jiggle";
+import { REST_JIGGLE, buildJiggleEvents, rattleAt, wobbleAt, type CubeJiggle } from "@/lib/cube3d/jiggle";
 import { quatToMat, type Quat } from "@/lib/gyro/orientation";
 import { solveMsAtPosition, streamQuatAt } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
@@ -27,6 +28,14 @@ interface View {
 export interface StageClock {
   now(): number;
   readonly playing: boolean;
+}
+
+/** How long move `k` takes on screen: its time on the replay's clock (a double played as two quarters: the mean of the two) over the playback speed. */
+function turnScreenMs(d: { starts: readonly number[]; ends: readonly number[]; halves?: ReplayTimeline["halves"]; speed: number }, k: number): number | undefined {
+  const h = d.halves?.[k];
+  const ms = h ? (h.firstEnd - h.firstStart + (h.secondEnd - h.secondStart)) / 2 : (d.ends[k] ?? 0) - (d.starts[k] ?? 0);
+  const speed = d.speed > 0 ? d.speed : 1;
+  return ms > 0 ? ms / speed : undefined;
 }
 
 /**
@@ -73,6 +82,7 @@ export function ReplayStageCube({
   /** The first frame is drawn (three.js loads lazily, so the stage shows its placeholder until then). */
   onReady?: () => void;
 }) {
+  const look = useCubeLook();
   const boxRef = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState<View>(() => ({ facelets: faceletsAfter[0], turning: null, orientation: FIXED_VIEW, jiggle: null }));
   const kickRef = useRef<() => void>(() => {});
@@ -168,7 +178,9 @@ export function ReplayStageCube({
           return f;
         },
       });
-      const { k, facelets, turning } = state;
+      const { k, facelets } = state;
+      // How long the turn in flight takes on screen (the replay's own time for it over the playback speed): the 3D cube sizes its motion blur from it.
+      const turning = state.turning ? { ...state.turning, turnMs: turnScreenMs(d, k) } : null;
       const progress = turning ? turning.progress : 1;
       const orientation = viewOrientation(base, spring, orbitRef.current);
       let jiggle: CubeJiggle | null = null;
@@ -177,9 +189,10 @@ export function ReplayStageCube({
         if (!running && jiggleGain < 0.002) jiggleGain = 0;
         else if (jiggleGain > 0) settled = settled && running;
         const w = jiggleGain > 0 ? wobbleAt(jiggleEvents, pos, Math.max(0.25, Math.min(2, d.speed))) : null;
-        jiggle = w ? { wobble: [w[0] * jiggleGain, w[1] * jiggleGain, w[2] * jiggleGain] } : REST_JIGGLE;
+        const timeScale = Math.max(0.25, Math.min(2, d.speed));
+        jiggle = w ? { wobble: [w[0] * jiggleGain, w[1] * jiggleGain, w[2] * jiggleGain], rattle: rattleAt(jiggleEvents, pos, timeScale, jiggleGain) } : REST_JIGGLE;
       }
-      const sig = `${facelets}|${turning ? `${k}:${progress.toFixed(4)}` : ""}|${orientation.x.toFixed(5)},${orientation.y.toFixed(5)},${orientation.z.toFixed(5)},${orientation.w.toFixed(5)}|${jiggle ? jiggle.wobble.map((v) => v.toFixed(5)).join(",") : ""}`;
+      const sig = `${facelets}|${turning ? `${k}:${progress.toFixed(4)}` : ""}|${orientation.x.toFixed(5)},${orientation.y.toFixed(5)},${orientation.z.toFixed(5)},${orientation.w.toFixed(5)}|${jiggle ? jiggle.wobble.map((v) => v.toFixed(5)).join(",") : ""}|${jiggle?.rattle ? `${jiggle.rattle.ageMs.toFixed(1)}:${jiggle.rattle.strength.toFixed(3)}` : ""}`;
       if (sig !== lastKey) {
         lastKey = sig;
         setView({ facelets, turning, orientation, jiggle });
@@ -270,7 +283,7 @@ export function ReplayStageCube({
       data-halves={halves?.some(Boolean) ? JSON.stringify(halves.flatMap((h, i) => (h ? [[i, h.firstStart, h.firstEnd, h.secondStart, h.secondEnd]] : []))) : undefined}
     >
       {/* The box is 78% of the stage's width: the cube itself then fills about 56% of it. */}
-      <Cube3D facelets={view.facelets} turning={view.turning} orientation={view.orientation} jiggle={view.jiggle} className="h-[78cqw] w-[78cqw] shrink-0" />
+      <Cube3D look={look} facelets={view.facelets} turning={view.turning} orientation={view.orientation} jiggle={view.jiggle} className="h-[78cqw] w-[78cqw] shrink-0" />
     </div>
   );
 }

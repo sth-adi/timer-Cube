@@ -159,3 +159,16 @@ export function ghostOpacity(i: number, count: number, speed: number, minSpeed =
 
 /** Fraction of a turn's estimated speed used when the real frame-to-frame speed is unknown (first frame, headless render): about a 160 ms turn at 60 fps. */
 export const ASSUMED_TURN_FRAMES = 20;
+
+/** Milliseconds per frame the per-frame blur speed is measured in (60 fps). */
+export const FRAME_MS = 1000 / 60;
+
+/**
+ * A turning layer's angular speed in radians per frame, from `slope` (radians per unit of progress, eased and signed, see
+ * LayerAngle) and how long the turn really takes on screen. A fast turn covers more angle per frame, so it blurs more.
+ * Without a duration it assumes ASSUMED_TURN_FRAMES.
+ */
+export function turnSpeedPerFrame(slope: number, turnMs?: number): number {
+  if (turnMs !== undefined && Number.isFinite(turnMs) && turnMs > 0) return (slope * FRAME_MS) / Math.max(20, turnMs);
+  return slope / ASSUMED_TURN_FRAMES;
+}

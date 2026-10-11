@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseMove } from "@/lib/cube-engine/stickerTurns";
-import { CUBIE_LAYOUT, blurTrail, cubieTurns, easeTurn, easeTurnSlope, fillToHex, ghostOpacity, liftColor, rotateAbout, stickerJitter, toneColor } from "./layout";
+import { CUBIE_LAYOUT, blurTrail, cubieTurns, easeTurn, easeTurnSlope, fillToHex, ghostOpacity, liftColor, rotateAbout, stickerJitter, toneColor, turnSpeedPerFrame, ASSUMED_TURN_FRAMES } from "./layout";
 
 const near = (a: readonly number[], b: readonly number[]) => a.every((v, i) => Math.abs(v - b[i]) < 1e-9);
 
@@ -123,5 +123,23 @@ describe("fillToHex", () => {
     expect(fillToHex(undefined)).toBeNull();
     expect(fillToHex("")).toBeNull();
     expect(fillToHex("red")).toBeNull();
+  });
+});
+
+describe("turnSpeedPerFrame", () => {
+  it("falls back to the assumed duration without a real one", () => {
+    expect(turnSpeedPerFrame(3)).toBeCloseTo(3 / ASSUMED_TURN_FRAMES);
+    expect(turnSpeedPerFrame(3, undefined)).toBeCloseTo(3 / ASSUMED_TURN_FRAMES);
+    expect(turnSpeedPerFrame(3, NaN)).toBeCloseTo(3 / ASSUMED_TURN_FRAMES);
+  });
+  it("is faster the shorter the turn and keeps the sign", () => {
+    expect(turnSpeedPerFrame(3, 100)).toBeGreaterThan(turnSpeedPerFrame(3, 300));
+    expect(turnSpeedPerFrame(-3, 100)).toBeCloseTo(-turnSpeedPerFrame(3, 100));
+    expect(turnSpeedPerFrame(3, 100)).toBeCloseTo((3 * 1000) / 60 / 100);
+  });
+  it("a fast turn blurs more than a slow one", () => {
+    const sweep = (ms: number) => Math.abs(blurTrail(0, turnSpeedPerFrame(2, ms), 2)[1] ?? 0);
+    expect(sweep(80)).toBeGreaterThan(sweep(200));
+    expect(blurTrail(0, turnSpeedPerFrame(2, 1500), 2)).toEqual([]);
   });
 });

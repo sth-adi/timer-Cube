@@ -460,3 +460,13 @@ Appended (not regenerated).
 ### Additions — 2026-10-13 (live-solve 3D cube, jiggle)
 - src/lib/cube3d/jiggle.ts [4] {Lab / Play} — Pure jiggle for the 3D cube: a small damped wobble after each turn and a slight layer tilt while it turns, computed from time since the turn ended. (CubeJiggle, JiggleEvent, JiggleKick, REST_JIGGLE, TILT_MAX_DEG, WOBBLE_MAX_DEG, WOBBLE_MS, buildJiggleEvents, layerTilt, turnKick, wobbleAngle, wobbleAt)
 - The live-solve cube is now `cube3d/Cube3D` too (LiveCubeMimic and GyroTwin; TurnCube is only the fallback); `cube3d/jiggle` adds a deterministic wobble so scrubbing stays exact.
+
+### Additions — 2026-10-14 (cube realism, looks, reel on 3D)
+- src/lib/cube3d/look.ts [10] {Lab / Play} — The cube look options (sticker style and body colour), their labels and a safe fallback for stored values. (BODY_COLORS, BODY_LABELS, BodyColor, CubeLook, DEFAULT_LOOK, STICKER_STYLES, STICKER_STYLE_LABELS, StickerStyle, normalizeLook)
+- src/lib/cube3d/lookStyle.ts [1] {Lab / Play} — Turns a cube look into the colours and finishes the 3D renderer uses. (BODY_SPECS, BodySpec, PlateKind, STICKER_SPECS, StickerStyleSpec, StudioLight, hexToRgb, pastelize, studioLight, styleColor)
+- src/lib/cube3d/sticker.ts [1] {Lab / Play} — Pillowy rounded sticker shape for the 3D cube. (PLATE_SPECS, PillowMesh, PillowSpec, buildPillow, roundedOutline)
+- src/lib/cube3d/framing.ts [1] {Lab / Play} — Fits the 3D cube's real silhouette and shadow in its canvas, tight or loose. (CUBE_HALF, FitInput, cubePoints, fitDistance)
+- src/lib/reel/cubeLayer.ts [2] {Reel / Wrapped} — One offscreen 3D cube the reel video draws into its canvas each frame, with the 2D renderer as fallback. (CUBE_LAYER_PX, CUBE_LAYER_SCALE, CubeLayerFrame, cubeLayerReady, drawCubeLayer, preloadCubeLayer)
+- src/components/settings/CubeLookSettings.tsx [1] {Settings} — The Cube look section in Settings: sticker style, body colour and a live preview. (CubeLookSettings)
+- src/components/settings/useCubeLook.ts [4] {Settings} — Reads the saved cube look for every 3D cube on screen. (useCubeLook)
+- Cube looks: `cube3d/look` options are stored in settings (`cubeLook`) and passed as `look` to every Cube3D; the reel video draws the same 3D cube through `reel/cubeLayer`.

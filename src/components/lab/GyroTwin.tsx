@@ -12,6 +12,7 @@ import { springStep, type SpringPose } from "@/lib/gyro/smooth";
 import { liveMoveLabel } from "@/lib/smartcube/moveLabel";
 import { TurnCube } from "./TurnCube";
 import { Cube3D, type Cube3DHandle } from "@/components/cube3d/Cube3D";
+import { useCubeLook } from "@/components/settings/useCubeLook";
 import { TwinStage } from "./TwinStage";
 import { useTurnAnimation } from "./useTurnAnimation";
 import { useProgressFills } from "./useProgressFills";
@@ -74,6 +75,7 @@ interface GyroTwinProps {
 export function GyroTwin({ size = 120, className, showControls = true, camera = GYRO_TWIN_CAMERA, onRotation, navLocked = false }: GyroTwinProps) {
   const cubeRef = useRef<HTMLDivElement | null>(null);
   const glRef = useRef<Cube3DHandle | null>(null);
+  const look = useCubeLook();
   // The photoreal WebGL cube (falls back to the CSS cube by itself); a custom camera angle keeps the CSS cube, whose camera is a CSS transform.
   const useGl = camera === GYRO_TWIN_CAMERA;
   const facelets = useSmartCubeStore((s) => s.liveFacelets);
@@ -181,8 +183,10 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
             facelets={turnView.facelets}
             turning={turnView.turning}
             orientation={HOME_QUAT}
+            look={look}
             stickerFills={progressFills}
             jiggle={turnView.jiggle}
+            fit="loose"
             faceLetters={faceLetters && size >= FACE_LETTERS_MIN_SIZE}
           />
         ) : (

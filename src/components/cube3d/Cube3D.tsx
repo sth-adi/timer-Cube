@@ -6,6 +6,7 @@ import { FaceLetters } from "@/components/lab/FaceLetters";
 import { cssMatrix3d, quatToMat } from "@/lib/gyro/orientation";
 import type { CubeQuality, CubeScene } from "@/lib/cube3d/scene";
 import type { CubeJiggle } from "@/lib/cube3d/jiggle";
+import type { CubeLook } from "@/lib/cube3d/look";
 
 export type { CubeQuality };
 
@@ -33,7 +34,7 @@ function defaultQuality(): CubeQuality {
 export interface Cube3DProps {
   /** the cube BEFORE `turning` (54 facelets, U R F D L B) */
   facelets: string;
-  /** a turn part-way through; `progress` is linear 0..1 and the cube eases it */
+  /** a turn part-way through; `progress` is linear 0..1 and the cube eases it; `turnMs` (how long the turn takes on screen) sizes the motion blur */
   turning?: TurnState | null;
   /** square CSS size in px; omit to fill a box sized by `className` */
   size?: number;
@@ -49,6 +50,10 @@ export interface Cube3DProps {
   faceLetters?: boolean;
   /** degrees to the right of the cube's front the fixed camera sits (default 32); negative looks from the left */
   cameraYaw?: number;
+  /** sticker style and body colour (Settings); changing it re-dresses the cube without rebuilding it */
+  look?: CubeLook;
+  /** "tight" (default) frames the cube close; "loose" leaves room for a cube spun to any grip (the gyro twin) */
+  fit?: "tight" | "loose";
 }
 
 /** The twin's camera, for the CSS fallback. */
@@ -71,7 +76,7 @@ function motionAllowed(): boolean {
  */
 export const Cube3D = memo(
   forwardRef<Cube3DHandle, Cube3DProps>(function Cube3D(
-    { facelets, turning = null, size, className, orientation = null, quality, stickerFills, jiggle = null, faceLetters = false, cameraYaw = DEFAULT_YAW },
+    { facelets, turning = null, size, className, orientation = null, quality, stickerFills, jiggle = null, faceLetters = false, cameraYaw = DEFAULT_YAW, look, fit: fitMode = "tight" },
     handle,
   ) {
     const boxRef = useRef<HTMLDivElement | null>(null);
@@ -80,7 +85,7 @@ export const Cube3D = memo(
     const sceneRef = useRef<CubeScene | null>(null);
     const visibleRef = useRef(true);
     const rafRef = useRef(0);
-    const latest = useRef({ facelets, turning, orientation, stickerFills, jiggle, faceLetters });
+    const latest = useRef({ facelets, turning, orientation, stickerFills, jiggle, faceLetters, look });
     const poseRef = useRef<Quat | null>(null);
     const yawRef = useRef(cameraYaw);
     const [tier] = useState<CubeQuality>(() => quality ?? defaultQuality());
@@ -107,6 +112,7 @@ export const Cube3D = memo(
               stickerFills: s.stickerFills,
               jiggle: motion ? s.jiggle : null,
               faceLetters: s.faceLetters,
+              look: s.look,
             });
           } catch {
             setMode("fallback");
@@ -136,9 +142,9 @@ export const Cube3D = memo(
     }, [mode]);
 
     useEffect(() => {
-      latest.current = { facelets, turning, orientation, stickerFills, jiggle, faceLetters };
+      latest.current = { facelets, turning, orientation, stickerFills, jiggle, faceLetters, look };
       schedule.current();
-    }, [facelets, turning, orientation, stickerFills, jiggle, faceLetters]);
+    }, [facelets, turning, orientation, stickerFills, jiggle, faceLetters, look]);
 
     useEffect(() => {
       yawRef.current = cameraYaw;
@@ -153,6 +159,7 @@ export const Cube3D = memo(
       let dead = false;
       let ro: ResizeObserver | null = null;
       let io: IntersectionObserver | null = null;
+      let themeObserver: MutationObserver | null = null;
       const fit = () => {
         const scene = sceneRef.current;
         const r = box.getBoundingClientRect();
@@ -175,7 +182,7 @@ export const Cube3D = memo(
       import("@/lib/cube3d/scene")
         .then(({ CubeScene: Scene }) => {
           if (dead) return;
-          const scene = new Scene(canvas, { quality: tier, cameraYaw: yawRef.current });
+          const scene = new Scene(canvas, { quality: tier, cameraYaw: yawRef.current, fit: fitMode });
           sceneRef.current = scene;
           setMode("gl");
           fit();
@@ -186,6 +193,12 @@ export const Cube3D = memo(
             if (visibleRef.current) schedule.current();
           });
           io.observe(box);
+          // a theme change re-tints the studio light
+          themeObserver = new MutationObserver(() => {
+            sceneRef.current?.applyTheme();
+            schedule.current();
+          });
+          themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
         })
         .catch(() => {
           if (dead) return;
@@ -199,12 +212,13 @@ export const Cube3D = memo(
         canvas.removeEventListener("webglcontextrestored", onRestored);
         ro?.disconnect();
         io?.disconnect();
+        themeObserver?.disconnect();
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
         sceneRef.current?.dispose();
         sceneRef.current = null;
       };
-    }, [tier]);
+    }, [tier, fitMode]);
 
     const fallbackSize = Math.max(24, Math.round(px * 0.5));
     return (

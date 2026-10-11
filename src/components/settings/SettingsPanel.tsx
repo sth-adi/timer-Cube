@@ -5,6 +5,7 @@ import { Download, Upload, X } from "lucide-react";
 import { BackupPanel } from "./BackupPanel";
 import { SmartCubeSettings } from "./SmartCubeSettings";
 import { HapticsSettings } from "./HapticsSettings";
+import { CubeLookSettings } from "./CubeLookSettings";
 import { BACKGROUND_STYLES, FX_LEVELS, PHASE_COUNTS, PHASE_LABELS, THEMES, TIMER_STYLES, useSettingsStore } from "@/lib/store/settingsStore";
 import { useScrambleStore } from "@/lib/store/scrambleStore";
 import { PRACTICE_SCRAMBLE_LENGTHS } from "@/lib/cube-engine/practiceScramble";
@@ -244,6 +245,8 @@ export function SettingsPanel({ onClose, closing = false }: { onClose: () => voi
             ))}
           </div>
         </div>
+
+        <CubeLookSettings />
 
         <div className="mt-4 divide-y divide-border border-t border-border pt-1">
           <Toggle checked={inspectionEnabled} onChange={setInspectionEnabled} label="WCA 15s inspection" />

@@ -1,5 +1,7 @@
 import { reelViewInto } from "./camera";
 import { drawCube, drawGroundShadow } from "./cube3d";
+import { CUBE_LAYER_PX, drawCubeLayer } from "./cubeLayer";
+import type { CubeLook } from "@/lib/cube3d/look";
 import {
   PHASE_HUES,
   LAYOUT_DY,
@@ -35,6 +37,8 @@ export interface ReelStyle {
   /** The app's own font stacks, when known (see readReelTheme). */
   sans?: string;
   mono?: string;
+  /** How the 3D cube is dressed (the Settings choice). */
+  look?: CubeLook;
 }
 
 // ───────────────────────────── layout (canvas px) ─────────────────────────────
@@ -199,13 +203,14 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
   // ── The cube, on its soft ground shadow. A layer mid-turn eases in and out.
   const lift = finished ? 1 + 0.03 * bump : 0.94 + 0.06 * introK;
   ctx.globalAlpha = introK;
-  drawGroundShadow(ctx, CX, SHADOW_Y + LAYOUT_DY, 263 * lift, 0.95);
   reelViewInto(VIEW, tl, atT, easeInOut(outroK));
-  const turning =
-    frame.turning && t >= 0 && !finished
-      ? { token: tl.moves[frame.turning.index], progress: easeInOut(Math.min(1, frame.turning.progress)) }
-      : undefined;
-  drawCube(ctx, tl.facelets[frame.done], { cx: CX, cy: CUBE_CY + LAYOUT_DY, size: CUBE_SIZE * lift, view: VIEW, turning });
+  const lin = frame.turning && t >= 0 && !finished ? { token: tl.moves[frame.turning.index], progress: Math.min(1, frame.turning.progress) } : null;
+  // The photoreal cube (with its own contact shadow) when three.js is up; otherwise the 2D software cube on a drawn shadow.
+  if (!drawCubeLayer(ctx, { facelets: tl.facelets[frame.done], turning: lin, view: VIEW, look: style.look }, CX, CUBE_CY + LAYOUT_DY, CUBE_LAYER_PX * lift)) {
+    drawGroundShadow(ctx, CX, SHADOW_Y + LAYOUT_DY, 263 * lift, 0.95);
+    const turning = lin ? { token: lin.token, progress: easeInOut(lin.progress) } : undefined;
+    drawCube(ctx, tl.facelets[frame.done], { cx: CX, cy: CUBE_CY + LAYOUT_DY, size: CUBE_SIZE * lift, view: VIEW, turning });
+  }
 
   // ── Under the cube: the scramble (before and after), or the move ticker while it solves.
   ctx.globalAlpha = introK;

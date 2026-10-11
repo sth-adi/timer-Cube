@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { DEFAULT_LOOK, normalizeLook, type CubeLook } from "@/lib/cube3d/look";
 import type { GyroCalibration } from "@/lib/gyro/orientation";
 import type { VoiceMode } from "@/lib/smartcube/voiceCoach";
 import type { StatsScope } from "@/lib/stats/scope";
@@ -144,6 +145,9 @@ export interface SettingsState {
    * which renders "keyboard" until after hydration.
    */
   timerMode: TimerMode;
+  /** How the 3D cube is dressed (sticker style, body colour), everywhere it is drawn. */
+  cubeLook: CubeLook;
+  setCubeLook: (v: CubeLook) => void;
   setInspectionEnabled: (v: boolean) => void;
   setInputMethod: (v: InputMethod) => void;
   setHoldToStartMs: (v: number) => void;
@@ -195,6 +199,8 @@ export const useSettingsStore = create<SettingsState>()(
       cubeNicknames: {},
       statsScope: "session",
       timerMode: "keyboard",
+      cubeLook: DEFAULT_LOOK,
+      setCubeLook: (v) => set({ cubeLook: normalizeLook(v) }),
       setInspectionEnabled: (v) => set({ inspectionEnabled: v }),
       setInputMethod: (v) => set({ inputMethod: v }),
       setHoldToStartMs: (v) => set({ holdToStartMs: v }),
@@ -234,6 +240,11 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: "cube-timer-settings",
       version: 2,
+      // A stored look from an older or hand-edited blob is cleaned up (unknown options fall back to the default).
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SettingsState>;
+        return { ...current, ...p, cubeLook: normalizeLook(p.cubeLook) };
+      },
       // v1 stored theme as "dark" | "light"; map those onto named themes so
       // an existing install doesn't land on an undefined data-theme.
       migrate: (persisted, version) => {

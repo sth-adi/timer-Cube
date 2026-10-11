@@ -2,10 +2,11 @@ import {
   ACESFilmicToneMapping,
   AmbientLight,
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
   CanvasTexture,
   Color,
   DirectionalLight,
-  ExtrudeGeometry,
   Group,
   Matrix4,
   Mesh,
@@ -17,27 +18,30 @@ import {
   PMREMGenerator,
   Quaternion,
   Scene,
-  Shape,
   ShadowMaterial,
   SRGBColorSpace,
   Vector3,
   WebGLRenderer,
-  type BufferGeometry,
+  type Texture,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import type { MoveSpec } from "@/lib/cube-engine/stickerTurns";
 import { CUBE_BODY } from "@/components/scramble/cubeColors";
-import { ASSUMED_TURN_FRAMES, CUBIE_LAYOUT, blurTrail, cubieTurns, fillToHex, ghostOpacity, toneColor } from "./layout";
-import { layerTilt, type CubeJiggle } from "./jiggle";
+import { CUBIE_LAYOUT, blurTrail, cubieTurns, fillToHex, ghostOpacity, toneColor, turnSpeedPerFrame } from "./layout";
+import { layerTilt, rattleOffset, type CubeJiggle } from "./jiggle";
+import { DEFAULT_LOOK, type CubeLook } from "./look";
+import { BODY_SPECS, STICKER_SPECS, hexToRgb, studioLight, styleColor, type PlateKind } from "./lookStyle";
+import { PLATE_SPECS, buildPillow } from "./sticker";
+import { fitDistance } from "./framing";
 
 export type CubeQuality = "low" | "medium" | "high";
 
 export interface CubeSceneState {
   /** the cube BEFORE `turning` */
   facelets: string;
-  turning: { turn: MoveSpec; progress: number } | null;
+  turning: { turn: MoveSpec; progress: number; /** how long this turn takes on screen (ms); sizes the motion blur, which assumes a mid-speed turn without it */ turnMs?: number } | null;
   /** gyro tilt, a unit quaternion in the viewer frame (x right, y up, z toward the viewer) */
   orientation?: { x: number; y: number; z: number; w: number } | null;
   /** draw the trailing ghosts of a fast turn */
@@ -48,6 +52,8 @@ export interface CubeSceneState {
   jiggle?: CubeJiggle | null;
   /** U/F/R... on the six centre stickers */
   faceLetters?: boolean;
+  /** how the cube is dressed (sticker style and body colour); changing it swaps materials without rebuilding the scene */
+  look?: CubeLook;
 }
 
 export interface CubeSceneOptions {
@@ -56,6 +62,10 @@ export interface CubeSceneOptions {
   preserveDrawingBuffer?: boolean;
   /** degrees the fixed camera sits to the right of the cube's front (default 32; negative looks from the left) */
   cameraYaw?: number;
+  /** "tight" (default) frames the cube close for a fixed or lightly tilted grip; "loose" leaves room for a cube spun to any grip (the gyro twin) */
+  fit?: "tight" | "loose";
+  /** draw the faint floor reflection where the tier allows it (default true); the reel video turns it off so it never reaches the text below the cube */
+  reflection?: boolean;
 }
 
 /**
@@ -64,20 +74,30 @@ export interface CubeSceneOptions {
  * a shadow map and clearcoat; "low" and "medium" draw the cube with a flat contact shadow and no extra passes.
  * The scene also steps itself down at runtime if frames come slowly (see watchFrameRate).
  */
-const QUALITY: Record<CubeQuality, { dpr: number; shadow: number; ghosts: number; clearcoat: boolean }> = {
-  low: { dpr: 1.5, shadow: 0, ghosts: 0, clearcoat: false },
-  medium: { dpr: 2, shadow: 0, ghosts: 1, clearcoat: false },
-  high: { dpr: 2, shadow: 1024, ghosts: 2, clearcoat: true },
+const QUALITY: Record<CubeQuality, { dpr: number; shadow: number; ghosts: number; clearcoat: boolean; fine: boolean; reflect: boolean; rim: boolean }> = {
+  low: { dpr: 1.5, shadow: 0, ghosts: 0, clearcoat: false, fine: false, reflect: false, rim: false },
+  medium: { dpr: 2, shadow: 0, ghosts: 1, clearcoat: false, fine: false, reflect: true, rim: true },
+  high: { dpr: 2, shadow: 1024, ghosts: 2, clearcoat: true, fine: true, reflect: true, rim: true },
 };
 
 /** The fixed camera: slightly above and to the right, three faces in view (the twin's rotateX(-24) rotateY(-32)). */
 const CAM_PITCH = (24 * Math.PI) / 180;
 const DEFAULT_CAM_YAW = 32;
-const FIT_RADIUS = 2.7;
 /** A canvas this small (CSS px) costs next to nothing to draw at a high pixel ratio, so it gets one: stickers stay crisp in the compact live cube. */
 const SMALL_CANVAS_PX = 260;
 const SMALL_CANVAS_RATIO = 2.5;
-const FLOOR_Y = -2.45;
+const FLOOR_Y = -1.95;
+const LOOK_Y = -0.3;
+/** How the cube is framed: the lean, grips and layer sweep it must stay in frame for, and how far below the floor the reflection may reach. */
+const FIT = {
+  tight: { tiltDeg: 8, yawSpanDeg: 20, sweep: 0.8 },
+  loose: { tiltDeg: 14, yawSpanDeg: 45, sweep: 1 },
+} as const;
+const FLOOR_MARGIN = 0.7;
+/** The floor reflection: a squashed mirrored copy drawn faintly, fading out below the floor. */
+const REFL_SQUASH = 0.55;
+const REFL_ALPHA = 0.2;
+const REFL_FADE = 0.9;
 const FOV = 26;
 
 const BODY = 0.982;
@@ -85,23 +105,38 @@ const HALF = BODY / 2;
 
 const AXES = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)];
 
-function stickerGeometry(fine: boolean): ExtrudeGeometry {
-  const size = 0.86;
-  const bevel = 0.032;
-  const r = 0.2;
-  const w = size - bevel * 2;
-  const h = w / 2;
-  const s = new Shape();
-  s.moveTo(-h + r, -h);
-  s.lineTo(h - r, -h);
-  s.absarc(h - r, -h + r, r, -Math.PI / 2, 0, false);
-  s.lineTo(h, h - r);
-  s.absarc(h - r, h - r, r, 0, Math.PI / 2, false);
-  s.lineTo(-h + r, h);
-  s.absarc(-h + r, h - r, r, Math.PI / 2, Math.PI, false);
-  s.lineTo(-h, -h + r);
-  s.absarc(-h + r, -h + r, r, Math.PI, Math.PI * 1.5, false);
-  return new ExtrudeGeometry(s, { depth: 0.008, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: fine ? 3 : 2, curveSegments: fine ? 6 : 4 });
+function pillowGeometry(kind: PlateKind, fine: boolean): BufferGeometry {
+  const m = buildPillow(PLATE_SPECS[kind][fine ? "fine" : "coarse"]);
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(m.positions, 3));
+  g.setAttribute("uv", new BufferAttribute(m.uvs, 2));
+  g.setIndex(new BufferAttribute(m.indices, 1));
+  g.computeVertexNormals();
+  return g;
+}
+
+/** The centre cap's emblem: a small ring and dot, a shade darker than the cap, on white (the texture multiplies the cap colour). */
+function emblemTexture(size: number, mark: boolean): CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, size, size);
+  if (mark) {
+    g.strokeStyle = g.fillStyle = "#c4c4c4";
+    g.lineWidth = size * 0.045;
+    g.beginPath();
+    g.arc(size / 2, size / 2, size * 0.2, 0, Math.PI * 2);
+    g.stroke();
+    g.beginPath();
+    g.arc(size / 2, size / 2, size * 0.065, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  return t;
 }
 
 function contactTexture(): CanvasTexture | null {
@@ -123,10 +158,22 @@ function contactTexture(): CanvasTexture | null {
 
 interface CubieObj {
   group: Group;
-  stickers: { index: number; mesh: Mesh; material: MeshPhysicalMaterial }[];
+  body: Mesh;
+  stickers: { index: number; mesh: Mesh; material: MeshPhysicalMaterial; centre: boolean }[];
+  /** stickerless: this cubie's own body geometry with per-vertex colours, and which sticker (slot in `stickers`) each vertex takes its colour from; built on first use */
+  paint?: { geo: BufferGeometry; slot: Int8Array };
   /** ghost copies, one group per trail sample, built on first use */
   ghosts: Group[];
   ghostStickers: { index: number; mesh: Mesh }[][];
+}
+
+/** The floor reflection: the cubies again, under a root that mirrors and squashes them. Only built on the tiers that can afford it. */
+interface Reflection {
+  root: Group;
+  cube: Group;
+  cubies: { group: Group; body: Mesh; stickers: Mesh[] }[];
+  mats: Map<string, MeshBasicMaterial>;
+  bodyMat: MeshBasicMaterial;
 }
 
 /** The renderer, scene and 26 cubies for one canvas. Create it in the browser only; call `dispose()` when done. */
@@ -141,12 +188,25 @@ export class CubeScene {
   private ghostLevel = new Map<MeshBasicMaterial, number>();
   private bodyGeo: BufferGeometry;
   private stickerGeo: BufferGeometry;
+  private plates = new Map<PlateKind, BufferGeometry>();
   private bodyMat: MeshPhysicalMaterial;
+  private paintMat: MeshPhysicalMaterial;
+  private core: Mesh;
   private key: DirectionalLight;
+  private fill: DirectionalLight;
+  private rim: DirectionalLight | null = null;
+  private refl: Reflection | null = null;
+  private reflFloor = { value: FLOOR_Y };
+  private look: CubeLook = DEFAULT_LOOK;
+  private colorsDirty = true;
+  private emblem: Texture | null = null;
+  private blank: Texture | null = null;
+  private fitMode: "tight" | "loose";
   private contact: Mesh | null = null;
   private lastFacelets = "";
   private lastFills: readonly (string | undefined)[] | undefined;
   private letters: Group | null = null;
+  private lettersOn = false;
   private camYaw: number;
   private tiltQ = new Quaternion();
   private wobbleQ = new Quaternion();
@@ -169,6 +229,7 @@ export class CubeScene {
     this.ratioCap = q.dpr;
     this.ghostBudget = q.ghosts;
     this.camYaw = ((opts.cameraYaw ?? DEFAULT_CAM_YAW) * Math.PI) / 180;
+    this.fitMode = opts.fit ?? "tight";
     const renderer = new WebGLRenderer({ canvas, antialias: (window.devicePixelRatio || 1) < 2, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.preserveDrawingBuffer });
     this.renderer = renderer;
     renderer.setClearColor(0x000000, 0);
@@ -205,8 +266,17 @@ export class CubeScene {
     this.key = key;
     const fill = new DirectionalLight(0xeaf2ff, 1.0);
     fill.position.set(6, 2.5, 5);
+    this.fill = fill;
     this.scene.add(fill);
     this.scene.add(key);
+    if (q.rim) {
+      // a soft rim from behind and above, so the far edges pick up a thin highlight against the stage
+      const rim = new DirectionalLight(0xffffff, 0.8);
+      rim.position.set(-5, 3.5, -6);
+      this.rim = rim;
+      this.scene.add(rim);
+    }
+    this.applyTheme();
 
     // Shadow-only ground, so the stage behind the canvas shows through (only when there is a shadow map to receive).
     if (q.shadow > 0) {
@@ -231,11 +301,18 @@ export class CubeScene {
 
     // Cubies.
     this.bodyGeo = new RoundedBoxGeometry(BODY, BODY, BODY, q.clearcoat ? 4 : 3, 0.11);
-    this.stickerGeo = stickerGeometry(q.clearcoat);
-    this.disposables.push(this.bodyGeo, this.stickerGeo);
+    this.stickerGeo = this.plateGeo("dome");
+    this.disposables.push(this.bodyGeo);
+    // the centre caps carry a small emblem (a shared texture; a plain white one stands in while the face letters are on)
+    this.emblem = emblemTexture(q.fine ? 128 : 64, true);
+    this.blank = emblemTexture(4, false);
+    if (this.emblem) this.disposables.push(this.emblem);
+    if (this.blank) this.disposables.push(this.blank);
     this.bodyMat = new MeshPhysicalMaterial({ color: new Color(CUBE_BODY).multiplyScalar(1.3), roughness: q.clearcoat ? 0.38 : 0.3, metalness: 0, clearcoat: q.clearcoat ? 0.7 : 0, clearcoatRoughness: 0.18, envMapIntensity: 0.8 });
-    this.disposables.push(this.bodyMat);
+    this.paintMat = new MeshPhysicalMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.38, metalness: 0, specularIntensity: 0.5, envMapIntensity: 0.9 });
+    this.disposables.push(this.bodyMat, this.paintMat);
     const core = new Mesh(new BoxGeometry(2, 2, 2), new MeshPhysicalMaterial({ color: 0x050507, roughness: 0.8 }));
+    this.core = core;
     this.cube.add(core);
     this.disposables.push(core.geometry, core.material as MeshPhysicalMaterial);
     for (const c of CUBIE_LAYOUT) {
@@ -247,20 +324,179 @@ export class CubeScene {
       group.add(body);
       const stickers: CubieObj["stickers"] = [];
       for (const s of c.stickers) {
-        const material = new MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0, specularIntensity: 0.3, clearcoat: 0, ...(q.clearcoat ? { sheen: 0.08, sheenRoughness: 0.6, sheenColor: new Color(0xffffff) } : {}), envMapIntensity: 1 });
+        const centre = s.index % 9 === 4;
+        const material = new MeshPhysicalMaterial({ color: 0xffffff, ...(centre && this.emblem ? { map: this.emblem } : {}), roughness: 0.55, metalness: 0, specularIntensity: 0.3, clearcoat: 0, ...(q.clearcoat ? { sheen: 0.08, sheenRoughness: 0.6, sheenColor: new Color(0xffffff) } : {}), envMapIntensity: 1 });
         const mesh = new Mesh(this.stickerGeo, material);
         const n = new Vector3(...s.normal);
         mesh.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), n);
         mesh.position.copy(n).multiplyScalar(HALF - 0.004);
         mesh.receiveShadow = q.shadow > 0;
         group.add(mesh);
-        stickers.push({ index: s.index, mesh, material });
+        stickers.push({ index: s.index, mesh, material, centre });
         this.disposables.push(material);
       }
       this.cube.add(group);
-      this.cubies.push({ group, stickers, ghosts: [], ghostStickers: [] });
+      this.cubies.push({ group, body, stickers, ghosts: [], ghostStickers: [] });
     }
     this.scene.add(this.cube);
+    if (q.reflect && opts.reflection !== false) this.buildReflection();
+    this.applyLook();
+  }
+
+  /** Sticker plate geometry by shape, built the first time a look asks for it. */
+  private plateGeo(kind: PlateKind): BufferGeometry {
+    let g = this.plates.get(kind);
+    if (!g) {
+      g = pillowGeometry(kind, QUALITY[this.quality].fine);
+      this.plates.set(kind, g);
+      this.disposables.push(g);
+    }
+    return g;
+  }
+
+  /** The studio light for the current theme, read from its CSS variables (key warmer or cooler, fill and rim carry a little of the accent). Call again if the theme changes. */
+  applyTheme(): void {
+    if (typeof document === "undefined") return;
+    const css = getComputedStyle(document.documentElement);
+    const light = studioLight(css.getPropertyValue("--accent").trim(), css.getPropertyValue("--background").trim());
+    this.key.color.setRGB(...light.key, SRGBColorSpace);
+    this.fill.color.setRGB(...light.fill, SRGBColorSpace);
+    this.rim?.color.setRGB(...light.rim, SRGBColorSpace);
+  }
+
+  /**
+   * The faint mirrored copy of the cube under it. Opaque unlit meshes whose fragments are faded (and premultiplied) by their
+   * height below the floor, so no blending or sorting is needed and the copy occludes itself properly.
+   */
+  private buildReflection(): void {
+    const root = new Group();
+    root.scale.set(1, -REFL_SQUASH, 1);
+    root.position.y = FLOOR_Y * (1 + REFL_SQUASH);
+    const cube = new Group();
+    root.add(cube);
+    const bodyMat = this.reflMaterial(new Color(0x08080a));
+    const cubies: Reflection["cubies"] = [];
+    for (const c of this.cubies) {
+      const group = new Group();
+      const body = new Mesh(this.bodyGeo, bodyMat);
+      group.add(body);
+      const stickers = c.stickers.map((s) => {
+        const mesh = new Mesh(this.stickerGeo, bodyMat);
+        mesh.position.copy(s.mesh.position);
+        mesh.quaternion.copy(s.mesh.quaternion);
+        group.add(mesh);
+        return mesh;
+      });
+      cube.add(group);
+      cubies.push({ group, body, stickers });
+    }
+    this.scene.add(root);
+    this.refl = { root, cube, cubies, mats: new Map(), bodyMat };
+  }
+
+  private reflMaterial(color: Color): MeshBasicMaterial {
+    const m = new MeshBasicMaterial({ color, toneMapped: false });
+    const floor = this.reflFloor;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uFloor = floor;
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vWorldY;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvWorldY = (modelMatrix * vec4(transformed, 1.0)).y;");
+      sh.fragmentShader = sh.fragmentShader
+        .replace("#include <common>", "#include <common>\nvarying float vWorldY;\nuniform float uFloor;")
+        .replace("#include <dithering_fragment>", `#include <dithering_fragment>\n{ float rf = ${REFL_ALPHA.toFixed(3)} * clamp(1.0 - (uFloor - vWorldY) / ${REFL_FADE.toFixed(3)}, 0.0, 1.0); gl_FragColor = vec4(gl_FragColor.rgb * rf, rf); }`);
+    };
+    m.customProgramCacheKey = () => "cube-reflection";
+    this.disposables.push(m);
+    return m;
+  }
+
+  /** The reflection's material for a sticker colour (shared between stickers of about the same colour). */
+  private reflSticker(color: Color): MeshBasicMaterial {
+    const refl = this.refl;
+    if (!refl) return this.ghostMaterial("body", 0);
+    const key = `${Math.round(color.r * 24)},${Math.round(color.g * 24)},${Math.round(color.b * 24)}`;
+    let m = refl.mats.get(key);
+    if (!m) {
+      m = this.reflMaterial(color.clone());
+      refl.mats.set(key, m);
+    }
+    return m;
+  }
+
+  /** Dress the cube in `look`: swap the sticker plates, their materials and the body colour. No rebuild: geometry and materials are shared and reassigned. */
+  setLook(look: CubeLook): void {
+    if (look.stickerStyle === this.look.stickerStyle && look.body === this.look.body) return;
+    this.look = { stickerStyle: look.stickerStyle, body: look.body };
+    this.applyLook();
+  }
+
+  private applyLook(): void {
+    const { stickerStyle, body } = this.look;
+    const st = STICKER_SPECS[stickerStyle];
+    const bd = BODY_SPECS[body];
+    const plate = this.plateGeo(st.plate);
+    this.stickerGeo = plate;
+    for (const c of this.cubies) {
+      for (const s of c.stickers) {
+        s.mesh.geometry = plate;
+        s.material.roughness = s.centre ? st.roughness - 0.08 : st.roughness;
+        s.material.specularIntensity = s.centre ? st.specular + 0.15 : st.specular;
+      }
+      for (const g of c.ghostStickers) for (const s of g) s.mesh.geometry = plate;
+      if (st.paintedBody) {
+        this.ensurePaint(c);
+        c.body.geometry = c.paint?.geo ?? this.bodyGeo;
+        c.body.material = c.paint ? this.paintMat : this.bodyMat;
+      } else {
+        c.body.geometry = this.bodyGeo;
+        c.body.material = this.bodyMat;
+      }
+    }
+    if (this.refl) for (const rc of this.refl.cubies) for (const m of rc.stickers) m.geometry = plate;
+    if (bd.hex) this.bodyMat.color.setRGB(...hexToRgb(bd.hex), SRGBColorSpace);
+    else this.bodyMat.color.set(CUBE_BODY).multiplyScalar(1.3);
+    this.bodyMat.roughness = QUALITY[this.quality].clearcoat ? bd.roughness + 0.08 : bd.roughness;
+    ((this.core.material as MeshPhysicalMaterial).color as Color).set(bd.core);
+    this.ghostMats.forEach((m, k) => {
+      if (k.startsWith("body")) m.color.setRGB(...bd.ghost, SRGBColorSpace);
+    });
+    const rb = bd.hex ? hexToRgb(bd.hex) : ([0.03, 0.03, 0.035] as const);
+    this.refl?.bodyMat.color.setRGB(rb[0], rb[1], rb[2], SRGBColorSpace);
+    this.colorsDirty = true;
+  }
+
+  /** Build a cubie's own painted body: its vertices tagged with the sticker on the side they face. */
+  private ensurePaint(c: CubieObj): void {
+    if (c.paint) return;
+    const geo = this.bodyGeo.clone();
+    const n = geo.getAttribute("normal");
+    const slot = new Int8Array(n.count).fill(-1);
+    c.stickers.forEach((s, i) => {
+      const dir = new Vector3(0, 0, 1).applyQuaternion(s.mesh.quaternion);
+      for (let v = 0; v < n.count; v++) {
+        const nx = n.getX(v);
+        const ny = n.getY(v);
+        const nz = n.getZ(v);
+        const m = Math.max(Math.abs(nx), Math.abs(ny), Math.abs(nz));
+        // the dominant axis of the vertex normal decides which face it belongs to
+        if (Math.abs(nx * dir.x + ny * dir.y + nz * dir.z) >= m - 1e-4 && nx * dir.x + ny * dir.y + nz * dir.z > 0.45) slot[v] = i;
+      }
+    });
+    geo.setAttribute("color", new BufferAttribute(new Float32Array(n.count * 3).fill(0.02), 3));
+    this.disposables.push(geo);
+    c.paint = { geo, slot };
+  }
+
+  /** Stickerless: colour each body vertex like the sticker on its side, so the whole facelet reads as solid plastic. */
+  private paintBody(c: CubieObj): void {
+    const p = c.paint;
+    if (!p) return;
+    const attr = p.geo.getAttribute("color") as BufferAttribute;
+    for (let v = 0; v < p.slot.length; v++) {
+      const s = c.stickers[p.slot[v]];
+      if (s) attr.setXYZ(v, s.material.color.r, s.material.color.g, s.material.color.b);
+      else attr.setXYZ(v, 0.02, 0.02, 0.025);
+    }
+    attr.needsUpdate = true;
   }
 
   /** Size in CSS pixels; the drawing buffer is that times the device pixel ratio (capped by quality). */
@@ -292,12 +528,10 @@ export class CubeScene {
   private placeCamera(): void {
     const aspect = this.width / this.height;
     this.camera.aspect = aspect;
-    // fit the cube's bounding sphere in the narrower dimension
-    const half = (FOV * Math.PI) / 360;
-    const fitHalf = aspect >= 1 ? half : Math.atan(Math.tan(half) * aspect);
-    const dist = (FIT_RADIUS * 1.06) / Math.sin(fitHalf);
+    // fit the cube's real silhouette (over the lean and layer sweep it is shown with) and its contact shadow, not its bounding sphere
+    const dist = fitDistance({ aspect, fovDeg: FOV, camYawDeg: (this.camYaw * 180) / Math.PI, camPitchDeg: (CAM_PITCH * 180) / Math.PI, lookY: LOOK_Y, floorY: FLOOR_Y, floorMargin: FLOOR_MARGIN, margin: 1.02, ...FIT[this.fitMode] });
     this.camera.position.set(Math.sin(this.camYaw) * Math.cos(CAM_PITCH), Math.sin(CAM_PITCH), Math.cos(this.camYaw) * Math.cos(CAM_PITCH)).multiplyScalar(dist);
-    this.camera.lookAt(0, -0.3, 0);
+    this.camera.lookAt(0, LOOK_Y, 0);
     this.camera.updateProjectionMatrix();
   }
 
@@ -305,7 +539,7 @@ export class CubeScene {
     const k = `${letter}${level}`;
     let m = this.ghostMats.get(k);
     if (!m) {
-      const [r, g, b] = letter === "body" ? [0.04, 0.04, 0.05] : toneColor(FACELET_COLORS[letter] ?? "#888888", 0);
+      const [r, g, b] = letter === "body" ? BODY_SPECS[this.look.body].ghost : styleColor(toneColor(FACELET_COLORS[letter] ?? "#888888", 0), this.look.stickerStyle);
       m = new MeshBasicMaterial({ color: new Color().setRGB(r, g, b, SRGBColorSpace), transparent: true, opacity: 0, depthWrite: false });
       this.ghostMats.set(k, m);
       this.ghostLevel.set(m, level);
@@ -337,18 +571,23 @@ export class CubeScene {
   }
 
   private setFacelets(facelets: string, fills?: readonly (string | undefined)[]): void {
-    if (facelets === this.lastFacelets && fills === this.lastFills) return;
+    if (facelets === this.lastFacelets && fills === this.lastFills && !this.colorsDirty) return;
     this.lastFacelets = facelets;
     this.lastFills = fills;
-    for (const c of this.cubies) {
-      for (const s of c.stickers) {
-        const [r, g, b] = toneColor(fillToHex(fills?.[s.index]) ?? FACELET_COLORS[facelets[s.index]] ?? "#555555", s.index);
+    this.colorsDirty = false;
+    const style = this.look.stickerStyle;
+    const painted = STICKER_SPECS[style].paintedBody;
+    this.cubies.forEach((c, ci) => {
+      c.stickers.forEach((s, si) => {
+        const [r, g, b] = styleColor(toneColor(fillToHex(fills?.[s.index]) ?? FACELET_COLORS[facelets[s.index]] ?? "#555555", s.index), style);
         s.material.color.setRGB(r, g, b, SRGBColorSpace);
-      }
+        if (this.refl) this.refl.cubies[ci].stickers[si].material = this.reflSticker(s.material.color);
+      });
+      if (painted) this.paintBody(c);
       c.ghostStickers.forEach((sts, level) => {
         for (const s of sts) s.mesh.material = this.ghostMaterial(facelets[s.index], level);
       });
-    }
+    });
   }
 
   /** The six face letters on the centre stickers, built the first time they are asked for. Part of the cube group, so they tilt and wobble with it. */
@@ -386,7 +625,7 @@ export class CubeScene {
         const uv = new Vector3(...up);
         basis.makeBasis(new Vector3().crossVectors(uv, nv), uv, nv);
         mesh.quaternion.setFromRotationMatrix(basis);
-        mesh.position.copy(nv).multiplyScalar(HALF + 0.03);
+        mesh.position.copy(nv).multiplyScalar(1 + HALF + 0.07);
         mesh.renderOrder = 2;
         group.add(mesh);
         this.disposables.push(tex, mat);
@@ -395,11 +634,16 @@ export class CubeScene {
       this.cube.add(group);
     }
     this.letters.visible = on;
+    // the emblem would sit under the letter: a plain white map (same shader) takes its place while letters are on
+    if (this.emblem && this.blank && on !== this.lettersOn) {
+      this.lettersOn = on;
+      for (const c of this.cubies) for (const s of c.stickers) if (s.centre) s.material.map = on ? this.blank : this.emblem;
+    }
   }
 
   /**
    * Watches how often frames really arrive while a turn is playing and steps the cost down if they are slow: first the
-   * motion-blur copies, then the pixel ratio (never below 1). A phone that cannot keep up gets a cheaper picture
+   * motion-blur copies and the floor reflection, then the pixel ratio (never below 1). A phone that cannot keep up gets a cheaper picture
    * instead of a slideshow. Never steps back up, so it does not flap.
    */
   private watchFrameRate(turning: boolean): void {
@@ -410,8 +654,10 @@ export class CubeScene {
     this.frameEma = this.frameSamples === 0 ? dt : this.frameEma * 0.85 + dt * 0.15;
     if (++this.frameSamples < 8 || this.frameEma < 26) return;
     this.frameSamples = 0;
-    if (this.ghostBudget > 0) this.ghostBudget = 0;
-    else if (this.ratioCap > 1) {
+    if (this.ghostBudget > 0 || this.refl?.root.visible) {
+      this.ghostBudget = 0;
+      if (this.refl) this.refl.root.visible = false;
+    } else if (this.ratioCap > 1) {
       this.ratioCap = Math.max(1, this.ratioCap * 0.75);
       this.applyRatio();
     }
@@ -420,6 +666,7 @@ export class CubeScene {
   /** Apply a state and draw one frame. */
   render(state: CubeSceneState): void {
     if (this.disposed || !this.width) return;
+    if (state.look) this.setLook(state.look);
     this.setFacelets(state.facelets.length === 54 ? state.facelets : this.lastFacelets || state.facelets, state.stickerFills);
     this.setFaceLetters(!!state.faceLetters);
     const o = state.orientation;
@@ -432,6 +679,9 @@ export class CubeScene {
       const mag = Math.hypot(wx, wy, wz);
       if (mag > 1e-7) this.cube.quaternion.multiply(this.wobbleQ.setFromAxisAngle(this.wobbleAxis.set(wx / mag, wy / mag, wz / mag), mag));
     }
+    const rat = jig?.rattle && !state.turning ? jig.rattle : null;
+    const rattling = rat ? cubieTurns(rat.turn, 1) : null;
+    const rq = this.wobbleQ;
     const tilt = jig && state.turning ? layerTilt(state.turning.turn, state.turning.progress) : null;
     if (tilt) this.tiltQ.setFromAxisAngle(AXES[tilt.axis], tilt.angle);
 
@@ -453,9 +703,15 @@ export class CubeScene {
       else {
         c.group.position.set(...CUBIE_LAYOUT[ci].pos);
         c.group.quaternion.identity();
+        // the loose cubies of the layer that has just stopped rattle a fraction of a degree
+        if (rat && rattling?.[ci]) {
+          const [rx, ry, rz] = rattleOffset(rat.ageMs, ci, rat.strength);
+          const mag = Math.hypot(rx, ry, rz);
+          if (mag > 1e-8) c.group.quaternion.copy(rq.setFromAxisAngle(this.wobbleAxis.set(rx / mag, ry / mag, rz / mag), mag));
+        }
       }
-      // Speed in radians per frame, estimated from the eased slope (a turn takes about ASSUMED_TURN_FRAMES frames).
-      const speed = t ? t.slope / ASSUMED_TURN_FRAMES : 0;
+      // Speed in radians per frame from the eased slope and how long the turn really takes on screen (a mid-speed turn when that is unknown).
+      const speed = t ? turnSpeedPerFrame(t.slope, state.turning?.turnMs) : 0;
       const trail = t && ghosts ? blurTrail(t.angle, speed, ghosts) : [];
       if (trail.length) this.ensureGhosts(ci, ghosts, this.lastFacelets);
       c.ghosts.forEach((g, i) => {
@@ -467,6 +723,14 @@ export class CubeScene {
       if (trail.length) ghostOp = trail.map((_, i) => ghostOpacity(i, ghosts, speed));
     });
     this.ghostLevel.forEach((level, m) => (m.opacity = ghostOp[level] ?? 0));
+    if (this.refl?.root.visible) {
+      this.refl.cube.quaternion.copy(this.cube.quaternion);
+      this.cubies.forEach((c, ci) => {
+        const g = this.refl!.cubies[ci].group;
+        g.position.copy(c.group.position);
+        g.quaternion.copy(c.group.quaternion);
+      });
+    }
     this.key.target.position.set(0, 0, 0);
     this.renderer.render(this.scene, this.camera);
   }

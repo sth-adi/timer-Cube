@@ -2,6 +2,7 @@ import { REEL_H, REEL_W, renderReelDesign } from "./renderFrame";
 import { CARD_MS, OPENER_MS, montageAt, type HighlightKind, type Montage } from "./highlights";
 import { LAYOUT_DY, LAYOUT_H, SAFE_X, drawBackdrop, easeOut, fmtTime, fontsFor, roundRectPath, setSpacing } from "./draw";
 import { withAlpha } from "./theme";
+import type { CubeLook } from "@/lib/cube3d/look";
 
 export interface HighlightStyle {
   accent: string;
@@ -11,6 +12,7 @@ export interface HighlightStyle {
   credit?: string;
   sans?: string;
   mono?: string;
+  look?: CubeLook;
 }
 
 const KIND_ICON: Record<HighlightKind, string> = { pb: "★", fastest: "⚡", tps: "✋", efficient: "◆" };
@@ -145,6 +147,7 @@ function renderHighlightDesign(ctx: CanvasRenderingContext2D, m: Montage, t: num
       credit: style.credit,
       sans: style.sans,
       mono: style.mono,
+      look: style.look,
     });
     const local = at.t + (seg.solveStartMs - seg.startMs - CARD_MS);
     fade(ctx, local, seg.endMs - seg.startMs - CARD_MS);

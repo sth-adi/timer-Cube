@@ -12,6 +12,8 @@ import { STICKERS, moveGeometry, type MoveSpec, type Vec3 } from "@/lib/cube-eng
 export interface TurnState {
   turn: MoveSpec;
   progress: number;
+  /** how long the turn takes on screen, when known (the 3D cube sizes its motion blur from it) */
+  turnMs?: number;
 }
 
 /** Fixed brightness per facing, baked into the sticker colour: flat light-to-dark from the top face down to the bottom one, so the three faces in view always read as separate planes. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseMove } from "@/lib/cube-engine/stickerTurns";
-import { TILT_MAX_DEG, WOBBLE_MAX_DEG, WOBBLE_MS, buildJiggleEvents, layerTilt, turnKick, wobbleAngle, wobbleAt } from "./jiggle";
+import { RATTLE_MS, TILT_MAX_DEG, WOBBLE_MAX_DEG, WOBBLE_MS, buildJiggleEvents, layerTilt, rattleAt, rattleOffset, turnKick, wobbleAngle, wobbleAt } from "./jiggle";
 
 const DEG = 180 / Math.PI;
 const kickOf = (token: string, ms = 100) => turnKick(parseMove(token), ms);
@@ -147,5 +147,45 @@ describe("layerTilt", () => {
     expect(layerTilt(parseMove("R"), 0.5)!.angle).toBe(-layerTilt(parseMove("R'"), 0.5)!.angle);
     expect(layerTilt(parseMove("y"), 0.5)).toBeNull();
     expect(layerTilt(null, 0.5)).toBeNull();
+  });
+});
+
+describe("rattleOffset", () => {
+  const mag = (v: number[]) => Math.hypot(...v);
+  it("is zero when the layer stops and once RATTLE_MS has passed", () => {
+    expect(rattleOffset(0, 5, 1)).toEqual([0, 0, 0]);
+    expect(rattleOffset(RATTLE_MS, 5, 1)).toEqual([0, 0, 0]);
+    expect(rattleOffset(RATTLE_MS + 40, 5, 1)).toEqual([0, 0, 0]);
+  });
+  it("stays under a degree per axis and is deterministic", () => {
+    let peak = 0;
+    for (let t = 0; t < RATTLE_MS; t += 2) for (let c = 0; c < 26; c++) peak = Math.max(peak, ...rattleOffset(t, c, 1).map(Math.abs));
+    expect(peak).toBeLessThan(Math.PI / 180);
+    expect(peak).toBeGreaterThan(0);
+    expect(rattleOffset(33, 7, 0.6)).toEqual(rattleOffset(33, 7, 0.6));
+  });
+  it("differs between cubies and scales with strength", () => {
+    expect(rattleOffset(30, 1, 1)).not.toEqual(rattleOffset(30, 2, 1));
+    expect(mag(rattleOffset(30, 3, 0.4))).toBeLessThan(mag(rattleOffset(30, 3, 1)));
+    expect(rattleOffset(30, 3, 0)).toEqual([0, 0, 0]);
+  });
+});
+
+describe("rattleAt", () => {
+  const events = buildJiggleEvents(["R", "U"], [0, 200], [150, 350]);
+  it("names the layer of the latest ended turn while it rattles", () => {
+    const r = rattleAt(events, 350 + 40);
+    expect(r?.turn).toEqual(parseMove("U"));
+    expect(r?.ageMs).toBeCloseTo(40);
+    expect(r?.strength).toBeGreaterThan(0);
+  });
+  it("is null before any turn ends, after RATTLE_MS and in the instant it ends", () => {
+    expect(rattleAt(events, 100)).toBeNull();
+    expect(rattleAt(events, 350)).toBeNull();
+    expect(rattleAt(events, 350 + RATTLE_MS + 1)).toBeNull();
+  });
+  it("stretches with the playback speed and scales with gain", () => {
+    expect(rattleAt(events, 350 + 40, 0.5)?.ageMs).toBeCloseTo(80);
+    expect(rattleAt(events, 350 + 40, 1, 0.5)?.strength).toBeCloseTo((rattleAt(events, 390)?.strength ?? 0) / 2);
   });
 });
