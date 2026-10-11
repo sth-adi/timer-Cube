@@ -181,9 +181,11 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   // true one. Turns snap under prefers-reduced-motion.
   const [timelines] = useState(() => {
     const turnMs = prefersReducedMotion() ? SNAP_TURN_MS : TURN_MS;
+    // The photoreal 3D cube flows from move to move (turns fill their gap); the cubing.js fallback keeps the short fixed turn.
+    const fluid = use3d && !prefersReducedMotion();
     return {
-      capped: buildTimeline(gapsMs, { realPauses: false, turnMs }),
-      real: buildTimeline(gapsMs, { realPauses: true, turnMs }),
+      capped: buildTimeline(gapsMs, { realPauses: false, turnMs, fluid }),
+      real: buildTimeline(gapsMs, { realPauses: true, turnMs, fluid }),
       turnMs,
     };
   });

@@ -44,16 +44,27 @@ export const CUBIE_LAYOUT: readonly CubieLayout[] = (() => {
   return [...map.values()];
 })();
 
-/** Same ease as TurnCube's layers: cubic in-out. */
+/**
+ * The turn ease: smootherstep (slow in, no jerk at either end) plus a small settle at the end, so a layer glides up to the
+ * quarter turn, goes about 2% past it and eases back, the way a real layer seats on its detent. It ends at exactly 1 with zero
+ * speed, and passes 0.5 at the half.
+ */
+export const SETTLE = 0.03;
 export function easeTurn(t: number): number {
   const c = Math.max(0, Math.min(1, t));
-  return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
+  const s = c * c * c * (c * (c * 6 - 15) + 10);
+  const x = Math.max(0, Math.min(1, (c - 0.8) / 0.2));
+  const sx = Math.sin(Math.PI * x);
+  return s + SETTLE * sx * sx;
 }
 
 /** Slope of easeTurn (d eased / d t), used to estimate how fast a turn is moving. */
 export function easeTurnSlope(t: number): number {
   const c = Math.max(0, Math.min(1, t));
-  return c < 0.5 ? 12 * c * c : 3 * Math.pow(-2 * c + 2, 2);
+  const s = 30 * c * c * (1 - c) * (1 - c);
+  const x = (c - 0.8) / 0.2;
+  const bump = x > 0 && x < 1 ? (SETTLE * Math.PI * Math.sin(2 * Math.PI * x)) / 0.2 : 0;
+  return s + bump;
 }
 
 /** One turning group of cubies: angle (radians, three.js sense) about three.js axis `axis` (0 x, 1 y, 2 z). */
@@ -133,4 +144,4 @@ export function ghostOpacity(i: number, count: number, speed: number, minSpeed =
 }
 
 /** Fraction of a turn's estimated speed used when the real frame-to-frame speed is unknown (first frame, headless render): about a 160 ms turn at 60 fps. */
-export const ASSUMED_TURN_FRAMES = 10;
+export const ASSUMED_TURN_FRAMES = 20;

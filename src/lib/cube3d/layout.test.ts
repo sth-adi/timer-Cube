@@ -60,8 +60,17 @@ describe("easing", () => {
     expect(easeTurn(0)).toBe(0);
     expect(easeTurn(1)).toBe(1);
     expect(easeTurn(0.5)).toBeCloseTo(0.5);
-    for (const t of [0.1, 0.3, 0.5, 0.8]) expect((easeTurn(t + 1e-6) - easeTurn(t - 1e-6)) / 2e-6).toBeCloseTo(easeTurnSlope(t), 3);
+    for (const t of [0.1, 0.3, 0.5, 0.8, 0.85, 0.9, 0.95]) expect((easeTurn(t + 1e-6) - easeTurn(t - 1e-6)) / 2e-6).toBeCloseTo(easeTurnSlope(t), 3);
   });
+
+  it("settles: goes a little past the quarter turn, then ends at exactly 1 with no speed", () => {
+    const peak = Math.max(...Array.from({ length: 101 }, (_, i) => easeTurn(i / 100)));
+    expect(peak).toBeGreaterThan(1.01);
+    expect(peak).toBeLessThan(1.05);
+    expect(easeTurnSlope(1)).toBeCloseTo(0, 6);
+    expect(easeTurnSlope(0)).toBe(0);
+    // it never runs backwards early: monotonic up to the settle
+    for (let i = 1; i <= 80; i++) expect(easeTurn(i / 100)).toBeGreaterThanOrEqual(easeTurn((i - 1) / 100));  });
 });
 
 describe("colours", () => {

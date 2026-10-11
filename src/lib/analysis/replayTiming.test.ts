@@ -61,6 +61,14 @@ describe("buildTimeline", () => {
     expect(t.durationMs).toBe(GAPS.reduce((a, b) => a + b, 0));
   });
 
+  it("fluid: each turn fills most of its gap (up to a cap) and still ends at the recorded time", () => {
+    const g = [300, 500, 120, 2000];
+    const t = buildTimeline(g, { realPauses: true, fluid: true });
+    expect(t.ends).toEqual([300, 800, 920, 2920]);
+    t.ends.forEach((e, i) => expect(e - t.starts[i]).toBeCloseTo([282, 440, 112.8, 440][i], 6));
+    expect(t.durationMs).toBe(2920);
+  });
+
   it("is empty for no moves", () => {
     expect(buildTimeline([])).toEqual({ starts: [], ends: [], durationMs: 0 });
   });

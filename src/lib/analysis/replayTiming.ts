@@ -22,6 +22,9 @@ export interface ReplayTimeline {
 
 /** No turn is drawn shorter than this, so the player never gets a zero-length animation. */
 export const MIN_TURN_MS = 12;
+/** Fluid replay: a turn takes this share of the gap before it (so the cube is nearly always in motion), at most FLUID_TURN_MAX_MS. */
+export const FLUID_TURN_FRAC = 0.94;
+export const FLUID_TURN_MAX_MS = 440;
 
 /**
  * Lays moves out on a timeline from the real gap before each one (ms since the
@@ -34,11 +37,14 @@ export const MIN_TURN_MS = 12;
  * keeps the true gaps, so each turn then ends at its recorded timestamp and
  * the replay lasts exactly as long as the solve.
  *
+ * `fluid` is for a smooth 3D replay: each turn takes most of the gap before it (up to FLUID_TURN_MAX_MS) instead of a fixed short
+ * turn, so the cube flows from move to move; every turn still ends at its recorded timestamp.
+ *
  * A gap too short to hold even MIN_TURN_MS (two halves of a slice turn
  * arriving together) borrows the difference from the next idle time, so the
  * replay doesn't drift away from the clock the solve ran on.
  */
-export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: boolean; turnMs?: number; idleCapMs?: number } = {}): ReplayTimeline {
+export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: boolean; turnMs?: number; idleCapMs?: number; fluid?: boolean } = {}): ReplayTimeline {
   const turnMax = opts.turnMs ?? TURN_MS;
   const turnMin = Math.min(MIN_TURN_MS, turnMax);
   const cap = opts.idleCapMs ?? IDLE_CAP_MS;
@@ -48,7 +54,7 @@ export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: bo
   let debt = 0;
   for (const raw of gapsMs) {
     const gap = Math.max(0, raw);
-    const turn = Math.max(turnMin, Math.min(turnMax, gap));
+    const turn = opts.fluid ? Math.max(turnMin, Math.min(FLUID_TURN_MAX_MS, gap * FLUID_TURN_FRAC)) : Math.max(turnMin, Math.min(turnMax, gap));
     let idle = Math.max(0, gap - turn);
     const repaid = Math.min(debt, idle);
     idle -= repaid;
