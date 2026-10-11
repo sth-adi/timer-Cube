@@ -1,4 +1,4 @@
-import type { BodyColor, StickerStyle } from "./look";
+import type { BodyColor, StickerStyle, Wear } from "./look";
 import { fillToHex } from "./layout";
 
 /** Pure colour and material numbers behind the cube looks and the per-theme studio light (no three.js, so cheap to test). */
@@ -82,4 +82,31 @@ export function studioLight(accentCss: string | null | undefined, backgroundCss?
   const light = bgHex ? luma(hexToRgb(bgHex)) > 0.6 : false;
   const k = light ? 0.1 : 0.16;
   return { key: mix(KEY_BASE, bright, k), fill: mix(FILL_BASE, bright, k), rim: mix([1, 1, 1], bright, 0.55) };
+}
+
+/** How much a cube shows its age: a tone nudge per sticker, a roughness nudge per piece, and how much rougher the plastic edges get. */
+export interface WearSpec {
+  /** largest fractional brightness change of a sticker, on top of the always-on small variation */
+  tone: number;
+  /** largest roughness change of a sticker or body piece */
+  rough: number;
+  /** extra roughness at the body's edges (0 = no edge texture) */
+  edge: number;
+  /** largest fractional brightness change of a body piece */
+  body: number;
+}
+
+export const WEAR_SPECS: Record<Wear, WearSpec> = {
+  none: { tone: 0, rough: 0, edge: 0, body: 0 },
+  light: { tone: 0.03, rough: 0.05, edge: 0.35, body: 0.05 },
+  worn: { tone: 0.07, rough: 0.12, edge: 0.8, body: 0.11 },
+};
+
+/** The six colour-blind glyphs, in the order of the faces U R F D L B. */
+export const SYMBOL_GLYPHS = ["dot", "bar", "triangle", "square", "cross", "ring"] as const;
+export type SymbolGlyph = (typeof SYMBOL_GLYPHS)[number];
+
+/** Which glyph marks the stickers of a face letter (the face the colour belongs to); -1 for anything else. */
+export function glyphIndex(letter: string): number {
+  return ["U", "R", "F", "D", "L", "B"].indexOf(letter);
 }

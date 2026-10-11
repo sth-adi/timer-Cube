@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { subscribeRawMoves } from "@/lib/store/smartCubeBus";
 import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { createTickLimiter, HAPTIC_PATTERNS, patternDurationMs, solveHapticFor } from "@/lib/utils/hapticsModel";
-import { getHapticsLevel, haptic } from "@/lib/utils/haptics";
+import { getHapticsLevel, haptic, turnTick } from "@/lib/utils/haptics";
 
 /**
  * Tactile feedback for a live smart-cube solve: a faint tick per turn (Full
@@ -26,10 +26,15 @@ export function useTurnHaptics(): void {
       if (haptic(kind)) limiter.hold(performance.now() + patternDurationMs(HAPTIC_PATTERNS[kind]) + 20);
     });
 
+    let lastMoveAt = -Infinity;
     const unsubMoves = subscribeRawMoves(() => {
+      const now = performance.now();
+      const gap = now - lastMoveAt;
+      lastMoveAt = now;
       if (getHapticsLevel() !== "full") return;
       if (!useSmartCubeStore.getState().recording) return;
-      if (limiter.allow(performance.now())) haptic("turn");
+      // Same cap and scaling as the replay's ticks: the faster the turns come, the shorter the tick.
+      turnTick(gap, limiter);
     });
 
     return () => {

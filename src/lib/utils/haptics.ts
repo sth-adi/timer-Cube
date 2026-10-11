@@ -4,6 +4,9 @@ import {
   HAPTIC_PATTERNS,
   levelAllows,
   parseHapticsPref,
+  createTickLimiter,
+  tickMsFor,
+  type TickLimiter,
   serializeHapticsPref,
   type HapticKind,
   type HapticPattern,
@@ -93,4 +96,25 @@ export function previewHaptics(preview: Exclude<HapticsLevel, "off">): boolean {
   if (!hapticsSupported()) return false;
   // One call only: a second vibrate() cancels the first, so Full previews the tick as a lead-in inside one pattern.
   return rawVibrate(preview === "full" ? [8, 90, 8, 90, 8, 160, ...HAPTIC_PATTERNS.finish as number[]] : HAPTIC_PATTERNS.finish);
+}
+
+function reducedMotion(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
+const replayLimiter = createTickLimiter();
+
+/**
+ * One faint tick for a turn snapping into place (replay or live): 6-10 ms by how fast the turns are coming (`spanMs`),
+ * at most one per TURN_TICK_MIN_GAP_MS through `limiter` (the replay's shared one by default), never under reduced motion
+ * or with haptics off. Returns whether a vibration was requested.
+ */
+export function turnTick(spanMs: number, limiter: TickLimiter = replayLimiter): boolean {
+  if (!hapticsSupported() || getHapticsLevel() === "off" || reducedMotion()) return false;
+  if (!limiter.allow(performance.now())) return false;
+  return rawVibrate(tickMsFor(spanMs));
 }

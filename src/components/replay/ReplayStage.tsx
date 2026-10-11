@@ -8,6 +8,7 @@ import { MoveGrid } from "./MoveGrid";
 import { StackmatTimer } from "./StackmatTimer";
 import { useElementWidth } from "./useElementWidth";
 import { useSmoothPosition } from "./useSmoothPosition";
+import { useStageBackground } from "./useStageBackground";
 import "@/styles/replaystage.css";
 
 /**
@@ -50,6 +51,7 @@ export function ReplayStage({
   children: ReactNode;
 }) {
   const [topRef, topWidth] = useElementWidth<HTMLDivElement>();
+  const bg = useStageBackground();
   const current = displayIndexForMove(info.moves, activeMove);
   const turning = activeMove >= 0 && positionMs < (timeline.ends[activeMove] ?? 0);
   const phase = phaseAt(info.marks, activeMove);
@@ -63,6 +65,7 @@ export function ReplayStage({
       className={["replay-stage", className].filter(Boolean).join(" ")}
       data-testid="replay-stage"
       data-fit={fit}
+      data-bg={bg}
       data-cube3d={cube3d ? "true" : undefined}
       data-end={atEnd ? "true" : "false"}
       data-playing={playing ? "true" : "false"}

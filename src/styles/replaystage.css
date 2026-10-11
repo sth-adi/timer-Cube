@@ -42,6 +42,27 @@
   --stage-lift: 0.35;
 }
 
+/* --- Setting "Replay stage background": a fixed field instead of the theme's. Contrast of fg / dim / mute on bg:
+   cobalt 7.7 / 5.1 / 6.1, black 17.5 / 10.2 / 12.9, light 16.4 / 8.1 / 11.4 (all >= 4.5:1). --- */
+.replay-stage[data-bg="cobalt"],
+.replay-stage-box[data-bg="cobalt"] {
+  --stage-bg: #1d4cb4;
+  --stage-fg: #ffffff;
+  --stage-lift: 0.07;
+}
+.replay-stage[data-bg="black"],
+.replay-stage-box[data-bg="black"] {
+  --stage-bg: #0e0f12;
+  --stage-fg: #f4f4f6;
+  --stage-lift: 0.05;
+}
+.replay-stage[data-bg="light"],
+.replay-stage-box[data-bg="light"] {
+  --stage-bg: #eef1f7;
+  --stage-fg: #0b1226;
+  --stage-lift: 0.3;
+}
+
 .replay-stage,
 .replay-stage-box {
   --stage-dim: color-mix(in srgb, var(--stage-fg) 76%, var(--stage-bg));

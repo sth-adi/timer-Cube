@@ -88,6 +88,8 @@ export const FX_LEVELS = [
   { id: "spicy", name: "Spicy" },
   { id: "insane", name: "Insane" },
 ] as const;
+export const STAGE_BACKGROUNDS = ["theme", "cobalt", "black", "light"] as const;
+export type StageBackground = (typeof STAGE_BACKGROUNDS)[number];
 export type FxLevelId = (typeof FX_LEVELS)[number]["id"];
 
 export const TIMER_STYLES = [
@@ -122,6 +124,10 @@ export interface SettingsState {
   soundEnabled: boolean;
   /** Speedcube click-clack and stackmat beeps in the replay; only audible while soundEnabled is on. */
   cubeSoundsEnabled: boolean;
+  /** The flat field behind the replay stage: the theme's own colour, or a fixed cobalt / black / light one. */
+  stageBackground: StageBackground;
+  /** A very short vibration on each replay turn snap (only with the replay speaker on and where the device can vibrate). */
+  replayHaptics: boolean;
   /** Target solve count per day, for the practice-goal ring. */
   dailyGoal: number;
   /** Blanks the running digits so you can't pace yourself against them mid-solve. */
@@ -159,6 +165,8 @@ export interface SettingsState {
   setLiveCoachEnabled: (v: boolean) => void;
   setSoundEnabled: (v: boolean) => void;
   setCubeSoundsEnabled: (v: boolean) => void;
+  setStageBackground: (v: StageBackground) => void;
+  setReplayHaptics: (v: boolean) => void;
   setDailyGoal: (v: number) => void;
   setHideTimeWhileSolving: (v: boolean) => void;
   setPhaseCount: (v: PhaseCount) => void;
@@ -187,6 +195,8 @@ export const useSettingsStore = create<SettingsState>()(
       liveCoachEnabled: true,
       soundEnabled: false,
       cubeSoundsEnabled: true,
+      stageBackground: "theme",
+      replayHaptics: true,
       dailyGoal: 20,
       hideTimeWhileSolving: false,
       phaseCount: 1,
@@ -212,6 +222,8 @@ export const useSettingsStore = create<SettingsState>()(
       setLiveCoachEnabled: (v) => set({ liveCoachEnabled: v }),
       setSoundEnabled: (v) => set({ soundEnabled: v }),
       setCubeSoundsEnabled: (v) => set({ cubeSoundsEnabled: v }),
+      setStageBackground: (v) => set({ stageBackground: v }),
+      setReplayHaptics: (v) => set({ replayHaptics: v }),
       setDailyGoal: (v) => set({ dailyGoal: v }),
       setHideTimeWhileSolving: (v) => set({ hideTimeWhileSolving: v }),
       setPhaseCount: (v) => set({ phaseCount: v }),
@@ -243,7 +255,7 @@ export const useSettingsStore = create<SettingsState>()(
       // A stored look from an older or hand-edited blob is cleaned up (unknown options fall back to the default).
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SettingsState>;
-        return { ...current, ...p, cubeLook: normalizeLook(p.cubeLook) };
+        return { ...current, ...p, cubeLook: normalizeLook(p.cubeLook), stageBackground: STAGE_BACKGROUNDS.includes(p.stageBackground as StageBackground) ? (p.stageBackground as StageBackground) : "theme" };
       },
       // v1 stored theme as "dark" | "light"; map those onto named themes so
       // an existing install doesn't land on an undefined data-theme.

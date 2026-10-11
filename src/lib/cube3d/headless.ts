@@ -30,7 +30,7 @@ export async function renderCubeFrameToCanvas(canvas: HTMLCanvasElement, opts: C
     const w = opts.width ?? opts.size ?? canvas.width / dpr;
     const h = opts.height ?? opts.size ?? canvas.height / dpr;
     scene.resize(w, h, dpr);
-    scene.render({ facelets: opts.facelets, turning: opts.turning, orientation: opts.orientation, motionBlur: opts.motionBlur ?? true, look: opts.look, jiggle: opts.jiggle, faceLetters: opts.faceLetters, stickerFills: opts.stickerFills });
+    scene.render({ facelets: opts.facelets, turning: opts.turning, orientation: opts.orientation, motionBlur: opts.motionBlur ?? true, look: opts.look, jiggle: opts.jiggle, faceLetters: opts.faceLetters, stickerFills: opts.stickerFills, opacity: opts.opacity, nextMove: opts.nextMove, highlight: opts.highlight });
     return true;
   } catch {
     scenes.delete(canvas);

@@ -108,6 +108,12 @@ export function createTickLimiter(minGapMs: number = TURN_TICK_MIN_GAP_MS): Tick
   };
 }
 
+/** Length of a turn tick for a turn lasting (or, live, following the previous one after) `spanMs`: 6 ms when fast, up to 10 ms when unhurried, so a quick run is a lighter patter. */
+export function tickMsFor(spanMs: number): number {
+  const t = Math.min(1, Math.max(0, ((Number.isFinite(spanMs) ? spanMs : 160) - 60) / 100));
+  return Math.round(6 + 4 * t);
+}
+
 /** The slice of the smart-cube store that decides a haptic, so it can be tested without the store. */
 export interface SolveProgress {
   recording: boolean;

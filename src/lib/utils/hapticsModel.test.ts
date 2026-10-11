@@ -117,3 +117,13 @@ describe("solveHapticFor", () => {
     expect(solveHapticFor(armed, { ...base, crossAtMs: 1000 })).toBe("phase");
   });
 });
+
+describe("tickMsFor", () => {
+  it("scales a turn tick from 6 ms (fast) to 10 ms (unhurried)", async () => {
+    const { tickMsFor } = await import("./hapticsModel");
+    expect(tickMsFor(40)).toBe(6);
+    expect(tickMsFor(110)).toBe(8);
+    expect(tickMsFor(400)).toBe(10);
+    expect(tickMsFor(Infinity)).toBe(10);
+  });
+});

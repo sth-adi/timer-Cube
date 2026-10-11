@@ -470,3 +470,13 @@ Appended (not regenerated).
 - src/components/settings/CubeLookSettings.tsx [1] {Settings} — The Cube look section in Settings: sticker style, body colour and a live preview. (CubeLookSettings)
 - src/components/settings/useCubeLook.ts [4] {Settings} — Reads the saved cube look for every 3D cube on screen. (useCubeLook)
 - Cube looks: `cube3d/look` options are stored in settings (`cubeLook`) and passed as `look` to every Cube3D; the reel video draws the same 3D cube through `reel/cubeLayer`.
+
+### Additions — 2026-10-15 (replay director, wear and schemes, context pool)
+- src/lib/analysis/replayDirector.ts [1] {Analysis / X-Ray} — Plans the replay's key moments (cross done, last pair, OLL and PLL start, long pauses): a small camera nudge and a brief slow-mo. (BIG_PAUSE_MS, DIP_HALF_MS, DIP_RATE, DirectorFrame, DirectorMoment, LEAD_MS, MomentKind, NO_DIRECTION, TAIL_MS, directorAt, planMoments)
+- src/lib/analysis/replayHighlight.ts [1] {Analysis / X-Ray} — Which stickers glow, and how strongly, just after a phase finishes in the replay. (HIGHLIGHT_MS, HighlightEvent, highlightAt, newlyHome, planHighlights)
+- src/components/replay/useStageBackground.ts [2] {Analysis / X-Ray} — Reads the chosen replay stage background (theme, cobalt, black or light). (useStageBackground)
+- src/components/settings/ReplayExtrasSettings.tsx [1] {Settings} — Settings for the replay stage background and turn haptics. (ReplayExtrasSettings)
+- src/lib/gyro/predict.ts [1] {Lab / Play} — Aims the gyro twin a short way ahead of the newest sample to hide the 20 Hz lag, with a clamp and a stale-stream cut-off. (PREDICT_LEAD_MS, PREDICT_MAX_LEAD_DEG, PREDICT_STALE_MS, PredictOptions, TimedQuat, predictOrientation)
+- src/lib/cube3d/arrow.ts [1] {Lab / Play} — Shape and placement of the turn arrow drawn on the cube for the upcoming move. (ArrowMesh, ArrowSpec, Vec3, arrowMesh, arrowSpec)
+- src/lib/cube3d/contextPool.ts [1] {Lab / Play} — Caps how many 3D cubes hold a live WebGL context at once; the others use the fallback until a slot frees. (ContextPool, PoolClient, contextPool)
+- Replay extras: `analysis/replayDirector` (camera and slow-mo), `replayHighlight` (glow as pieces land), turn arrows, 3D PB ghost, stage backgrounds and turn haptics; the cube look now also has wear, colour schemes, emblems and colour-blind symbols; `cube3d/contextPool` limits live WebGL contexts.

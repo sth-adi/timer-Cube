@@ -628,7 +628,14 @@
     {"id":"src/lib/cube3d/framing.ts","kind":"lib","area":"Lab / Play","exports":["CUBE_HALF","FitInput","cubePoints","fitDistance"],"summary":"Fits the 3D cube's real silhouette and shadow in its canvas, tight or loose.","loc":89,"importedBy":1,"hasTest":true},
     {"id":"src/lib/reel/cubeLayer.ts","kind":"lib","area":"Reel / Wrapped","exports":["CUBE_LAYER_PX","CUBE_LAYER_SCALE","CubeLayerFrame","cubeLayerReady","drawCubeLayer","preloadCubeLayer"],"summary":"One offscreen 3D cube the reel video draws into its canvas each frame, with the 2D renderer as fallback.","loc":92,"importedBy":2,"hasTest":false},
     {"id":"src/components/settings/CubeLookSettings.tsx","kind":"component","area":"Settings","exports":["CubeLookSettings"],"summary":"The Cube look section in Settings: sticker style, body colour and a live preview.","loc":59,"importedBy":1,"hasTest":false},
-    {"id":"src/components/settings/useCubeLook.ts","kind":"hook","area":"Settings","exports":["useCubeLook"],"summary":"Reads the saved cube look for every 3D cube on screen.","loc":9,"importedBy":4,"hasTest":false}
+    {"id":"src/components/settings/useCubeLook.ts","kind":"hook","area":"Settings","exports":["useCubeLook"],"summary":"Reads the saved cube look for every 3D cube on screen.","loc":9,"importedBy":4,"hasTest":false},
+    {"id":"src/lib/analysis/replayDirector.ts","kind":"lib","area":"Analysis / X-Ray","exports":["BIG_PAUSE_MS","DIP_HALF_MS","DIP_RATE","DirectorFrame","DirectorMoment","LEAD_MS","MomentKind","NO_DIRECTION","TAIL_MS","directorAt","planMoments"],"summary":"Plans the replay's key moments (cross done, last pair, OLL and PLL start, long pauses): a small camera nudge and a brief slow-mo.","loc":103,"importedBy":1,"hasTest":true},
+    {"id":"src/lib/analysis/replayHighlight.ts","kind":"lib","area":"Analysis / X-Ray","exports":["HIGHLIGHT_MS","HighlightEvent","highlightAt","newlyHome","planHighlights"],"summary":"Which stickers glow, and how strongly, just after a phase finishes in the replay.","loc":61,"importedBy":1,"hasTest":false},
+    {"id":"src/components/replay/useStageBackground.ts","kind":"hook","area":"Analysis / X-Ray","exports":["useStageBackground"],"summary":"Reads the chosen replay stage background (theme, cobalt, black or light).","loc":7,"importedBy":2,"hasTest":false},
+    {"id":"src/components/settings/ReplayExtrasSettings.tsx","kind":"component","area":"Settings","exports":["ReplayExtrasSettings"],"summary":"Settings for the replay stage background and turn haptics.","loc":40,"importedBy":1,"hasTest":false},
+    {"id":"src/lib/gyro/predict.ts","kind":"lib","area":"Lab / Play","exports":["PREDICT_LEAD_MS","PREDICT_MAX_LEAD_DEG","PREDICT_STALE_MS","PredictOptions","TimedQuat","predictOrientation"],"summary":"Aims the gyro twin a short way ahead of the newest sample to hide the 20 Hz lag, with a clamp and a stale-stream cut-off.","loc":70,"importedBy":1,"hasTest":true},
+    {"id":"src/lib/cube3d/arrow.ts","kind":"lib","area":"Lab / Play","exports":["ArrowMesh","ArrowSpec","Vec3","arrowMesh","arrowSpec"],"summary":"Shape and placement of the turn arrow drawn on the cube for the upcoming move.","loc":66,"importedBy":1,"hasTest":true},
+    {"id":"src/lib/cube3d/contextPool.ts","kind":"lib","area":"Lab / Play","exports":["ContextPool","PoolClient","contextPool"],"summary":"Caps how many 3D cubes hold a live WebGL context at once; the others use the fallback until a slot frees.","loc":59,"importedBy":1,"hasTest":true}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},
@@ -2935,7 +2942,23 @@
     {"from":"src/components/analysis/ReplayStageCube.tsx","to":"src/components/settings/useCubeLook.ts"},
     {"from":"src/components/lab/GyroTwin.tsx","to":"src/components/settings/useCubeLook.ts"},
     {"from":"src/components/lab/PoseTarget.tsx","to":"src/components/settings/useCubeLook.ts"},
-    {"from":"src/components/timer/LiveCubeMimic.tsx","to":"src/components/settings/useCubeLook.ts"}
+    {"from":"src/components/timer/LiveCubeMimic.tsx","to":"src/components/settings/useCubeLook.ts"},
+    {"from":"src/lib/analysis/replayDirector.ts","to":"src/lib/analysis/replayTiming.ts"},
+    {"from":"src/components/analysis/ReplayStageCube.tsx","to":"src/lib/analysis/replayDirector.ts"},
+    {"from":"src/lib/analysis/replayHighlight.ts","to":"src/lib/analysis/replayTiming.ts"},
+    {"from":"src/lib/analysis/replayHighlight.ts","to":"src/lib/cube-engine/stickerTurns.ts"},
+    {"from":"src/components/analysis/ReplayStageCube.tsx","to":"src/lib/analysis/replayHighlight.ts"},
+    {"from":"src/components/replay/useStageBackground.ts","to":"src/lib/store/settingsStore.ts"},
+    {"from":"src/components/replay/ReplayStage.tsx","to":"src/components/replay/useStageBackground.ts"},
+    {"from":"src/components/replay/StagePlaceholder.tsx","to":"src/components/replay/useStageBackground.ts"},
+    {"from":"src/components/settings/ReplayExtrasSettings.tsx","to":"src/lib/store/settingsStore.ts"},
+    {"from":"src/components/settings/ReplayExtrasSettings.tsx","to":"src/lib/utils/cn.ts"},
+    {"from":"src/components/settings/SettingsPanel.tsx","to":"src/components/settings/ReplayExtrasSettings.tsx"},
+    {"from":"src/lib/gyro/predict.ts","to":"src/lib/gyro/orientation.ts"},
+    {"from":"src/lib/gyro/predict.ts","to":"src/lib/gyro/smooth.ts"},
+    {"from":"src/components/lab/GyroTwin.tsx","to":"src/lib/gyro/predict.ts"},
+    {"from":"src/lib/cube3d/scene.ts","to":"src/lib/cube3d/arrow.ts"},
+    {"from":"src/components/cube3d/Cube3D.tsx","to":"src/lib/cube3d/contextPool.ts"}
   ],
   "routes": {
     "/": "src/app/page.tsx",

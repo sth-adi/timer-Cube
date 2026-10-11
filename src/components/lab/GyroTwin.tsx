@@ -9,6 +9,7 @@ import { useSmartCubeStore } from "@/lib/store/smartCubeStore";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, matToQuat, orientationLabel, quatToMat, type Quat } from "@/lib/gyro/orientation";
 import { springStep, type SpringPose } from "@/lib/gyro/smooth";
+import { predictOrientation, type TimedQuat } from "@/lib/gyro/predict";
 import { liveMoveLabel } from "@/lib/smartcube/moveLabel";
 import { TurnCube } from "./TurnCube";
 import { Cube3D, type Cube3DHandle } from "@/components/cube3d/Cube3D";
@@ -117,6 +118,9 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     // stepping once per sample. With reduced motion it just snaps.
     let pose: SpringPose | null = null;
     let target: Quat | null = null;
+    // the last two samples (arrival times), to aim the spring a few tens of ms ahead of the newest one
+    let latest: TimedQuat | null = null;
+    let before: TimedQuat | null = null;
     let raf = 0;
     let lastFrameAt = 0;
     let rotationId = 0;
@@ -124,15 +128,18 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     const frame = (now: number) => {
       raf = 0;
       if (!target) return;
+      // aim slightly ahead along the last angular velocity; stale or reduced motion gives the sample itself
+      const aim = latest ? predictOrientation(before, latest, performance.now(), !reduceMotion) : target;
       const dt = lastFrameAt ? Math.min(100, now - lastFrameAt) : 1000 / 60;
       lastFrameAt = now;
       let settled = true;
       if (!pose || reduceMotion) {
         pose = { q: target, w: [0, 0, 0] };
       } else {
-        const next = springStep(pose, target, dt);
+        const next = springStep(pose, aim, dt);
         pose = next;
-        settled = next.settled;
+        // a stale lead is dropped, so the spring only rests once it is on the real sample
+        settled = next.settled && aim === target;
       }
       setPose(pose.q);
       if (settled) lastFrameAt = 0;
@@ -141,6 +148,8 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
     const unsubscribe = subscribeGyro((sample) => {
       const out = tracker.push(sample);
       target = matToQuat(out.orientation);
+      before = latest;
+      latest = { q: target, atMs: performance.now() };
       if (!raf) raf = requestAnimationFrame(frame);
       if (out.segment) setLabel(orientationLabel(out.segment.orientation));
       if (out.rotation) {

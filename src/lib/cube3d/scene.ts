@@ -6,6 +6,7 @@ import {
   BufferGeometry,
   CanvasTexture,
   Color,
+  DoubleSide,
   DirectionalLight,
   Group,
   Matrix4,
@@ -17,11 +18,13 @@ import {
   PlaneGeometry,
   PMREMGenerator,
   Quaternion,
+  RepeatWrapping,
   Scene,
   ShadowMaterial,
   SRGBColorSpace,
   Vector3,
   WebGLRenderer,
+  type Material,
   type Texture,
 } from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -29,10 +32,11 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import type { MoveSpec } from "@/lib/cube-engine/stickerTurns";
 import { CUBE_BODY } from "@/components/scramble/cubeColors";
-import { CUBIE_LAYOUT, blurTrail, cubieTurns, fillToHex, ghostOpacity, toneColor, turnSpeedPerFrame } from "./layout";
+import { CUBIE_LAYOUT, blurTrail, cubieTurns, fillToHex, ghostOpacity, stickerJitter, toneColor, turnSpeedPerFrame } from "./layout";
 import { layerTilt, rattleOffset, type CubeJiggle } from "./jiggle";
-import { DEFAULT_LOOK, type CubeLook } from "./look";
-import { BODY_SPECS, STICKER_SPECS, hexToRgb, studioLight, styleColor, type PlateKind } from "./lookStyle";
+import { DEFAULT_LOOK, schemeColors, type CubeLook, type Emblem } from "./look";
+import { BODY_SPECS, STICKER_SPECS, WEAR_SPECS, glyphIndex, hexToRgb, studioLight, styleColor, type PlateKind } from "./lookStyle";
+import { arrowMesh, arrowSpec } from "./arrow";
 import { PLATE_SPECS, buildPillow } from "./sticker";
 import { fitDistance } from "./framing";
 
@@ -54,6 +58,12 @@ export interface CubeSceneState {
   faceLetters?: boolean;
   /** how the cube is dressed (sticker style and body colour); changing it swaps materials without rebuilding the scene */
   look?: CubeLook;
+  /** whole-cube alpha 0..1 (a ghost cube); materials only turn transparent below 1 */
+  opacity?: number;
+  /** the upcoming move ("R", "U'", "F2", "M"...): a curved arrow hovers over the layer it turns; null or a rotation hides it */
+  nextMove?: string | null;
+  /** facelet indices that glow, `strength` 0..1 (pieces lighting up as they are solved) */
+  highlight?: { stickers: readonly number[]; strength: number } | null;
 }
 
 export interface CubeSceneOptions {
@@ -115,8 +125,8 @@ function pillowGeometry(kind: PlateKind, fine: boolean): BufferGeometry {
   return g;
 }
 
-/** The centre cap's emblem: a small ring and dot, a shade darker than the cap, on white (the texture multiplies the cap colour). */
-function emblemTexture(size: number, mark: boolean): CanvasTexture | null {
+/** The centre cap's emblem, a shade darker than the cap, on white (the texture multiplies the cap colour). "none" is plain white. */
+function emblemTexture(size: number, kind: Emblem | "blank"): CanvasTexture | null {
   if (typeof document === "undefined") return null;
   const c = document.createElement("canvas");
   c.width = c.height = size;
@@ -124,19 +134,95 @@ function emblemTexture(size: number, mark: boolean): CanvasTexture | null {
   if (!g) return null;
   g.fillStyle = "#ffffff";
   g.fillRect(0, 0, size, size);
-  if (mark) {
-    g.strokeStyle = g.fillStyle = "#c4c4c4";
-    g.lineWidth = size * 0.045;
+  g.strokeStyle = g.fillStyle = "#c4c4c4";
+  g.lineWidth = size * 0.045;
+  const m = size / 2;
+  if (kind === "ring" || kind === "dot") {
+    if (kind === "ring") {
+      g.beginPath();
+      g.arc(m, m, size * 0.2, 0, Math.PI * 2);
+      g.stroke();
+    }
     g.beginPath();
-    g.arc(size / 2, size / 2, size * 0.2, 0, Math.PI * 2);
-    g.stroke();
+    g.arc(m, m, size * (kind === "dot" ? 0.12 : 0.065), 0, Math.PI * 2);
+    g.fill();
+  } else if (kind === "star") {
     g.beginPath();
-    g.arc(size / 2, size / 2, size * 0.065, 0, Math.PI * 2);
+    for (let i = 0; i < 10; i++) {
+      const r = size * (i % 2 ? 0.1 : 0.24);
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      g.lineTo(m + Math.cos(a) * r, m + Math.sin(a) * r);
+    }
+    g.closePath();
     g.fill();
   }
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   return t;
+}
+
+/** One strip of six colour-blind glyphs (dot, bar, triangle, square, cross, ring), a dark mark on white in each 64 px cell. */
+function glyphAtlas(): CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  const cell = 64;
+  const c = document.createElement("canvas");
+  c.width = cell * 6;
+  c.height = cell;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = g.strokeStyle = "#2c2c2c";
+  g.lineWidth = 7;
+  g.lineJoin = "round";
+  for (let i = 0; i < 6; i++) {
+    const x = i * cell + cell / 2;
+    const y = cell / 2;
+    g.beginPath();
+    if (i === 0) g.arc(x, y, 11, 0, Math.PI * 2);
+    else if (i === 1) g.rect(x - 17, y - 5, 34, 10);
+    else if (i === 2) {
+      g.moveTo(x, y - 14);
+      g.lineTo(x + 15, y + 11);
+      g.lineTo(x - 15, y + 11);
+      g.closePath();
+    } else if (i === 3) g.rect(x - 11, y - 11, 22, 22);
+    else if (i === 4) {
+      g.rect(x - 4, y - 16, 8, 32);
+      g.rect(x - 16, y - 4, 32, 8);
+    } else {
+      g.arc(x, y, 13, 0, Math.PI * 2);
+      g.fill("evenodd");
+      g.beginPath();
+      g.arc(x, y, 6, 0, Math.PI * 2);
+      g.fillStyle = "#ffffff";
+    }
+    g.fill();
+    g.fillStyle = "#2c2c2c";
+  }
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  return t;
+}
+
+/** Roughness for worn plastic: smoother in the middle of a face, rougher toward the edges (the green channel multiplies the material's roughness). */
+function edgeWearTexture(): CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  const n = 32;
+  const c = document.createElement("canvas");
+  c.width = c.height = n;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  const img = g.createImageData(n, n);
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++) {
+      const d = Math.min(x + 0.5, n - x - 0.5, y + 0.5, n - y - 0.5) / (n / 2);
+      const t = Math.min(1, d / 0.35);
+      const v = Math.round(255 * (1 - 0.45 * t * t * (3 - 2 * t)));
+      img.data.set([v, v, v, 255], (y * n + x) * 4);
+    }
+  g.putImageData(img, 0, 0);
+  return new CanvasTexture(c);
 }
 
 function contactTexture(): CanvasTexture | null {
@@ -160,6 +246,8 @@ interface CubieObj {
   group: Group;
   body: Mesh;
   stickers: { index: number; mesh: Mesh; material: MeshPhysicalMaterial; centre: boolean }[];
+  /** this piece's own body material while the cube is worn (a slightly different tone and roughness each) */
+  wearMat?: MeshPhysicalMaterial;
   /** stickerless: this cubie's own body geometry with per-vertex colours, and which sticker (slot in `stickers`) each vertex takes its colour from; built on first use */
   paint?: { geo: BufferGeometry; slot: Int8Array };
   /** ghost copies, one group per trail sample, built on first use */
@@ -199,8 +287,19 @@ export class CubeScene {
   private reflFloor = { value: FLOOR_Y };
   private look: CubeLook = DEFAULT_LOOK;
   private colorsDirty = true;
-  private emblem: Texture | null = null;
-  private blank: Texture | null = null;
+  private emblems = new Map<Emblem | "blank", Texture | null>();
+  private glyphs: Texture[] = [];
+  private edgeTex: Texture | null = null;
+  private palette: Record<string, string> = FACELET_COLORS;
+  private byIndex: (CubieObj["stickers"][number] | undefined)[] = [];
+  private opacity = 1;
+  private opacityDirty = true;
+  private reflDegraded = false;
+  private arrow: { group: Group; mesh: Mesh; geos: Map<number, BufferGeometry>; mat: MeshBasicMaterial } | null = null;
+  private arrowKey = "";
+  private accentHex = "#ffffff";
+  private lit: number[] = [];
+  private arrowNormal = new Vector3();
   private fitMode: "tight" | "loose";
   private contact: Mesh | null = null;
   private lastFacelets = "";
@@ -304,10 +403,7 @@ export class CubeScene {
     this.stickerGeo = this.plateGeo("dome");
     this.disposables.push(this.bodyGeo);
     // the centre caps carry a small emblem (a shared texture; a plain white one stands in while the face letters are on)
-    this.emblem = emblemTexture(q.fine ? 128 : 64, true);
-    this.blank = emblemTexture(4, false);
-    if (this.emblem) this.disposables.push(this.emblem);
-    if (this.blank) this.disposables.push(this.blank);
+    // (the emblem textures are built on first use, see emblemFor)
     this.bodyMat = new MeshPhysicalMaterial({ color: new Color(CUBE_BODY).multiplyScalar(1.3), roughness: q.clearcoat ? 0.38 : 0.3, metalness: 0, clearcoat: q.clearcoat ? 0.7 : 0, clearcoatRoughness: 0.18, envMapIntensity: 0.8 });
     this.paintMat = new MeshPhysicalMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.38, metalness: 0, specularIntensity: 0.5, envMapIntensity: 0.9 });
     this.disposables.push(this.bodyMat, this.paintMat);
@@ -325,14 +421,16 @@ export class CubeScene {
       const stickers: CubieObj["stickers"] = [];
       for (const s of c.stickers) {
         const centre = s.index % 9 === 4;
-        const material = new MeshPhysicalMaterial({ color: 0xffffff, ...(centre && this.emblem ? { map: this.emblem } : {}), roughness: 0.55, metalness: 0, specularIntensity: 0.3, clearcoat: 0, ...(q.clearcoat ? { sheen: 0.08, sheenRoughness: 0.6, sheenColor: new Color(0xffffff) } : {}), envMapIntensity: 1 });
+        const material = new MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0, specularIntensity: 0.3, clearcoat: 0, ...(q.clearcoat ? { sheen: 0.08, sheenRoughness: 0.6, sheenColor: new Color(0xffffff) } : {}), envMapIntensity: 1 });
         const mesh = new Mesh(this.stickerGeo, material);
         const n = new Vector3(...s.normal);
         mesh.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), n);
         mesh.position.copy(n).multiplyScalar(HALF - 0.004);
         mesh.receiveShadow = q.shadow > 0;
         group.add(mesh);
-        stickers.push({ index: s.index, mesh, material, centre });
+        const entry = { index: s.index, mesh, material, centre };
+        stickers.push(entry);
+        this.byIndex[s.index] = entry;
         this.disposables.push(material);
       }
       this.cube.add(group);
@@ -362,6 +460,8 @@ export class CubeScene {
     this.key.color.setRGB(...light.key, SRGBColorSpace);
     this.fill.color.setRGB(...light.fill, SRGBColorSpace);
     this.rim?.color.setRGB(...light.rim, SRGBColorSpace);
+    this.accentHex = fillToHex(css.getPropertyValue("--accent").trim()) ?? "#ffffff";
+    this.arrow?.mat.color.set(this.accentHex);
   }
 
   /**
@@ -424,21 +524,77 @@ export class CubeScene {
 
   /** Dress the cube in `look`: swap the sticker plates, their materials and the body colour. No rebuild: geometry and materials are shared and reassigned. */
   setLook(look: CubeLook): void {
-    if (look.stickerStyle === this.look.stickerStyle && look.body === this.look.body) return;
-    this.look = { stickerStyle: look.stickerStyle, body: look.body };
+    const p = this.look;
+    if (look.stickerStyle === p.stickerStyle && look.body === p.body && look.wear === p.wear && look.scheme === p.scheme && look.emblem === p.emblem && look.symbols === p.symbols && look.customColors.join() === p.customColors.join()) return;
+    this.look = { stickerStyle: look.stickerStyle, body: look.body, wear: look.wear, scheme: look.scheme, customColors: [...look.customColors], emblem: look.emblem, symbols: look.symbols };
     this.applyLook();
   }
 
+  /** The emblem texture for a kind, built the first time it is asked for. */
+  private emblemFor(kind: Emblem | "blank"): Texture | null {
+    if (!this.emblems.has(kind)) {
+      const t = emblemTexture(kind === "blank" ? 4 : QUALITY[this.quality].fine ? 128 : 64, kind);
+      if (t) this.disposables.push(t);
+      this.emblems.set(kind, t);
+    }
+    return this.emblems.get(kind) ?? null;
+  }
+
+  /** One texture per glyph, all views of a single shared strip (same image, different offset). */
+  private glyphFor(letter: string): Texture | null {
+    const i = glyphIndex(letter);
+    if (i < 0) return null;
+    if (!this.glyphs.length) {
+      const atlas = glyphAtlas();
+      if (!atlas) return null;
+      for (let k = 0; k < 6; k++) {
+        const t = k === 0 ? atlas : atlas.clone();
+        t.wrapS = RepeatWrapping;
+        t.repeat.set(1 / 6, 1);
+        t.offset.set(k / 6, 0);
+        t.needsUpdate = true;
+        this.glyphs.push(t);
+        this.disposables.push(t);
+      }
+    }
+    return this.glyphs[i] ?? null;
+  }
+
+  /** The map a sticker shows: the face letter's blank, else a colour-blind glyph, else (centres) the emblem. */
+  private stickerMap(s: CubieObj["stickers"][number], letter: string): Texture | null {
+    if (s.centre && this.lettersOn) return this.emblemFor("blank");
+    if (this.look.symbols) return this.glyphFor(letter);
+    return s.centre ? this.emblemFor(this.look.emblem === "none" ? "blank" : this.look.emblem) : null;
+  }
+
+  private setMap(m: MeshPhysicalMaterial, t: Texture | null): void {
+    if (m.map === t) return;
+    // a material compiled with no map needs a new program to take one (and the reverse)
+    if (!m.map || !t) m.needsUpdate = true;
+    m.map = t;
+  }
+
   private applyLook(): void {
-    const { stickerStyle, body } = this.look;
+    const { stickerStyle, body, wear } = this.look;
     const st = STICKER_SPECS[stickerStyle];
     const bd = BODY_SPECS[body];
+    const ws = WEAR_SPECS[wear];
+    this.palette = schemeColors(this.look, FACELET_COLORS);
     const plate = this.plateGeo(st.plate);
     this.stickerGeo = plate;
-    for (const c of this.cubies) {
+    if (bd.hex) this.bodyMat.color.setRGB(...hexToRgb(bd.hex), SRGBColorSpace);
+    else this.bodyMat.color.set(CUBE_BODY).multiplyScalar(1.3);
+    const baseRough = QUALITY[this.quality].clearcoat ? bd.roughness + 0.08 : bd.roughness;
+    this.bodyMat.roughness = baseRough;
+    if (ws.edge > 0 && !this.edgeTex) {
+      this.edgeTex = edgeWearTexture();
+      if (this.edgeTex) this.disposables.push(this.edgeTex);
+    }
+    this.cubies.forEach((c, ci) => {
       for (const s of c.stickers) {
         s.mesh.geometry = plate;
-        s.material.roughness = s.centre ? st.roughness - 0.08 : st.roughness;
+        const base = s.centre ? st.roughness - 0.08 : st.roughness;
+        s.material.roughness = Math.min(1, Math.max(0.05, base + stickerJitter(s.index + 77) * ws.rough));
         s.material.specularIntensity = s.centre ? st.specular + 0.15 : st.specular;
       }
       for (const g of c.ghostStickers) for (const s of g) s.mesh.geometry = plate;
@@ -448,20 +604,38 @@ export class CubeScene {
         c.body.material = c.paint ? this.paintMat : this.bodyMat;
       } else {
         c.body.geometry = this.bodyGeo;
-        c.body.material = this.bodyMat;
+        if (wear === "none") c.body.material = this.bodyMat;
+        else {
+          // worn: each piece its own tone and roughness, and rougher plastic toward its edges
+          const m = (c.wearMat ??= this.bodyMat.clone());
+          m.color.copy(this.bodyMat.color).multiplyScalar(1 + stickerJitter(ci + 301) * ws.body);
+          m.roughness = Math.min(1, (baseRough + stickerJitter(ci + 509) * ws.rough) * (1 + ws.edge));
+          m.roughnessMap = this.edgeTex;
+          m.needsUpdate = true;
+          c.body.material = m;
+          this.opacityDirty = true;
+        }
       }
-    }
+    });
     if (this.refl) for (const rc of this.refl.cubies) for (const m of rc.stickers) m.geometry = plate;
-    if (bd.hex) this.bodyMat.color.setRGB(...hexToRgb(bd.hex), SRGBColorSpace);
-    else this.bodyMat.color.set(CUBE_BODY).multiplyScalar(1.3);
-    this.bodyMat.roughness = QUALITY[this.quality].clearcoat ? bd.roughness + 0.08 : bd.roughness;
     ((this.core.material as MeshPhysicalMaterial).color as Color).set(bd.core);
     this.ghostMats.forEach((m, k) => {
       if (k.startsWith("body")) m.color.setRGB(...bd.ghost, SRGBColorSpace);
+      else {
+        const [r, g, b] = styleColor(toneColor(this.palette[k[0]] ?? "#888888", 0), stickerStyle);
+        m.color.setRGB(r, g, b, SRGBColorSpace);
+      }
     });
     const rb = bd.hex ? hexToRgb(bd.hex) : ([0.03, 0.03, 0.035] as const);
     this.refl?.bodyMat.color.setRGB(rb[0], rb[1], rb[2], SRGBColorSpace);
+    this.refreshMaps();
     this.colorsDirty = true;
+  }
+
+  /** Sticker maps (emblem, glyphs) from the facelet letters now shown. */
+  private refreshMaps(): void {
+    const f = this.lastFacelets;
+    for (const c of this.cubies) for (const s of c.stickers) this.setMap(s.material, this.stickerMap(s, f[s.index] ?? ""));
   }
 
   /** Build a cubie's own painted body: its vertices tagged with the sticker on the side they face. */
@@ -539,7 +713,7 @@ export class CubeScene {
     const k = `${letter}${level}`;
     let m = this.ghostMats.get(k);
     if (!m) {
-      const [r, g, b] = letter === "body" ? BODY_SPECS[this.look.body].ghost : styleColor(toneColor(FACELET_COLORS[letter] ?? "#888888", 0), this.look.stickerStyle);
+      const [r, g, b] = letter === "body" ? BODY_SPECS[this.look.body].ghost : styleColor(toneColor(this.palette[letter] ?? "#888888", 0), this.look.stickerStyle);
       m = new MeshBasicMaterial({ color: new Color().setRGB(r, g, b, SRGBColorSpace), transparent: true, opacity: 0, depthWrite: false });
       this.ghostMats.set(k, m);
       this.ghostLevel.set(m, level);
@@ -577,9 +751,11 @@ export class CubeScene {
     this.colorsDirty = false;
     const style = this.look.stickerStyle;
     const painted = STICKER_SPECS[style].paintedBody;
+    const tone = 0.035 + WEAR_SPECS[this.look.wear].tone;
     this.cubies.forEach((c, ci) => {
       c.stickers.forEach((s, si) => {
-        const [r, g, b] = styleColor(toneColor(fillToHex(fills?.[s.index]) ?? FACELET_COLORS[facelets[s.index]] ?? "#555555", s.index), style);
+        const [r, g, b] = styleColor(toneColor(fillToHex(fills?.[s.index]) ?? this.palette[facelets[s.index]] ?? "#555555", s.index, tone), style);
+        if (this.look.symbols) this.setMap(s.material, this.stickerMap(s, facelets[s.index]));
         s.material.color.setRGB(r, g, b, SRGBColorSpace);
         if (this.refl) this.refl.cubies[ci].stickers[si].material = this.reflSticker(s.material.color);
       });
@@ -635,9 +811,9 @@ export class CubeScene {
     }
     this.letters.visible = on;
     // the emblem would sit under the letter: a plain white map (same shader) takes its place while letters are on
-    if (this.emblem && this.blank && on !== this.lettersOn) {
+    if (on !== this.lettersOn) {
       this.lettersOn = on;
-      for (const c of this.cubies) for (const s of c.stickers) if (s.centre) s.material.map = on ? this.blank : this.emblem;
+      this.refreshMaps();
     }
   }
 
@@ -656,10 +832,107 @@ export class CubeScene {
     this.frameSamples = 0;
     if (this.ghostBudget > 0 || this.refl?.root.visible) {
       this.ghostBudget = 0;
+      this.reflDegraded = true;
       if (this.refl) this.refl.root.visible = false;
     } else if (this.ratioCap > 1) {
       this.ratioCap = Math.max(1, this.ratioCap * 0.75);
       this.applyRatio();
+    }
+  }
+
+  /** Whole-cube alpha. Materials only go transparent below 1, so an opaque cube costs what it always did. */
+  private applyOpacity(o: number): void {
+    const v = Math.min(1, Math.max(0, o));
+    if (v === this.opacity && !this.opacityDirty) return;
+    const ghost = v < 1;
+    this.opacity = v;
+    this.opacityDirty = false;
+    const set = (m: Material) => {
+      if (m.transparent !== ghost) {
+        m.transparent = ghost;
+        m.needsUpdate = true;
+      }
+      m.opacity = v;
+    };
+    set(this.bodyMat);
+    set(this.paintMat);
+    this.core.visible = !ghost;
+    for (const c of this.cubies) {
+      if (c.wearMat) set(c.wearMat);
+      for (const s of c.stickers) set(s.material);
+    }
+    if (this.contact) (this.contact.material as MeshBasicMaterial).opacity = v;
+    if (this.refl) this.refl.root.visible = !ghost && !this.reflDegraded;
+  }
+
+  /** The curved arrow over the layer the next move turns; hidden for null or a rotation. Built the first time it is asked for. */
+  private setNextMove(token: string | null | undefined): void {
+    const key = token ?? "";
+    if (key !== this.arrowKey) {
+      this.arrowKey = key;
+      const spec = arrowSpec(token);
+      if (!spec) {
+        if (this.arrow) this.arrow.group.visible = false;
+      } else {
+        if (!this.arrow) {
+          const mat = new MeshBasicMaterial({ color: new Color(this.accentHex), side: DoubleSide, transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
+          const mesh = new Mesh(new BufferGeometry(), mat);
+          mesh.renderOrder = 4;
+          const group = new Group();
+          group.add(mesh);
+          this.cube.add(group);
+          this.disposables.push(mat);
+          this.arrow = { group, mesh, geos: new Map(), mat };
+        }
+        const a = this.arrow;
+        const span = spec.double ? 250 : 120;
+        const gk = (spec.slice ? 1000 : 0) + span;
+        let geo = a.geos.get(gk);
+        if (!geo) {
+          const m = spec.slice ? arrowMesh(0.5, 0.14, span) : arrowMesh(1.02, 0.2, span);
+          geo = new BufferGeometry();
+          geo.setAttribute("position", new BufferAttribute(new Float32Array(m.positions), 3));
+          geo.setIndex(m.indices);
+          a.geos.set(gk, geo);
+          this.disposables.push(geo);
+        }
+        a.mesh.geometry = geo;
+        // mirrored in x for a counter-clockwise turn
+        a.mesh.scale.set(spec.prime ? -1 : 1, 1, 1);
+        const n = new Vector3(...spec.normal);
+        a.group.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), n);
+        a.group.position.copy(n).multiplyScalar(HALF + 1 + 0.1);
+        a.group.visible = true;
+        this.arrowNormal.copy(n);
+      }
+    }
+    // an arrow on a face turned away from the camera shows through the cube, fainter
+    if (this.arrow?.group.visible) {
+      const facing = this.arrowNormal.clone().applyQuaternion(this.cube.quaternion).dot(this.camera.position) > 0;
+      this.arrow.mat.opacity = (facing ? 0.95 : 0.4) * this.opacity;
+    }
+  }
+
+  /** Facelets that glow: their emissive follows their colour, scaled by strength, with a slight swell. Reset when cleared. */
+  private setHighlight(h: CubeSceneState["highlight"]): void {
+    const next = h && h.strength > 0.001 ? h.stickers : [];
+    for (const i of this.lit) {
+      if (next.includes(i)) continue;
+      const s = this.byIndex[i];
+      if (!s) continue;
+      s.material.emissive.setRGB(0, 0, 0);
+      s.material.emissiveIntensity = 1;
+      s.mesh.scale.setScalar(1);
+    }
+    this.lit = [...next];
+    if (!h) return;
+    const k = Math.min(1, Math.max(0, h.strength));
+    for (const i of next) {
+      const s = this.byIndex[i];
+      if (!s) continue;
+      s.material.emissive.copy(s.material.color);
+      s.material.emissiveIntensity = 0.85 * k;
+      s.mesh.scale.setScalar(1 + 0.07 * k);
     }
   }
 
@@ -669,9 +942,12 @@ export class CubeScene {
     if (state.look) this.setLook(state.look);
     this.setFacelets(state.facelets.length === 54 ? state.facelets : this.lastFacelets || state.facelets, state.stickerFills);
     this.setFaceLetters(!!state.faceLetters);
+    this.applyOpacity(state.opacity ?? 1);
+    this.setHighlight(state.highlight);
     const o = state.orientation;
     if (o) this.cube.quaternion.set(o.x, o.y, o.z, o.w).normalize();
     else this.cube.quaternion.identity();
+    this.setNextMove(state.nextMove);
     // Secondary motion: the whole cube rocks a little after a turn lands (a rotation vector in the cube's own frame).
     const jig = state.jiggle ?? null;
     if (jig) {

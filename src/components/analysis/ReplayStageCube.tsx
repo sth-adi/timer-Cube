@@ -10,7 +10,9 @@ import { solveMsAtPosition, streamQuatAt } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { springStep, type SpringPose } from "@/lib/gyro/smooth";
 import { REST_SPRING, buildLeanTurns, cameraMotionAllowed, leanAt, stepLean, type LeanSpring } from "@/lib/analysis/replayCamera";
-import { activeLeaf, type ReplayTimeline } from "@/lib/analysis/replayTiming";
+import { activeLeaf, type PhaseMark, type ReplayTimeline } from "@/lib/analysis/replayTiming";
+import { NO_DIRECTION, directorAt, planMoments, type DirectorMoment } from "@/lib/analysis/replayDirector";
+import { highlightAt, planHighlights, type HighlightEvent } from "@/lib/analysis/replayHighlight";
 import { FIXED_VIEW, halfwayFacelets, stageStateAt, viewOrientation } from "@/lib/analysis/replayView";
 
 /** Degrees of turn per pixel of drag. */
@@ -23,11 +25,19 @@ interface View {
   turning: TurnState | null;
   orientation: Quat;
   jiggle: CubeJiggle | null;
+  /** Director push-in (1 = none). */
+  zoom: number;
+  /** Pieces just solved glow for a moment. */
+  highlight: { stickers: readonly number[]; strength: number } | null;
+  /** The move to be played next, drawn as an arrow (the Arrows toggle). */
+  nextMove: string | null;
 }
 
 export interface StageClock {
   now(): number;
   readonly playing: boolean;
+  /** The Director's momentary slow-motion factor on top of the playback speed (ReplayClock has it). */
+  rateMul?: number;
 }
 
 /** How long move `k` takes on screen: its time on the replay's clock (a double played as two quarters: the mean of the two) over the playback speed. */
@@ -64,6 +74,9 @@ export function ReplayStageCube({
   speed,
   onTurn,
   onReady,
+  marks,
+  director = false,
+  arrows = false,
 }: {
   clock: StageClock;
   faceletsAfter: readonly string[];
@@ -81,20 +94,26 @@ export function ReplayStageCube({
   onTurn?: (k: number, part?: 0 | 1) => void;
   /** The first frame is drawn (three.js loads lazily, so the stage shows its placeholder until then). */
   onReady?: () => void;
+  /** Phase marks, for the Director's key moments and the solved-piece glow. */
+  marks?: readonly PhaseMark[];
+  /** Auto camera nudges and slow-motion dips at key moments (never under reduced motion). */
+  director?: boolean;
+  /** An arrow for the move about to be played (not while playing above 1x). */
+  arrows?: boolean;
 }) {
   const look = useCubeLook();
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const [view, setView] = useState<View>(() => ({ facelets: faceletsAfter[0], turning: null, orientation: FIXED_VIEW, jiggle: null }));
+  const [view, setView] = useState<View>(() => ({ facelets: faceletsAfter[0], turning: null, orientation: FIXED_VIEW, jiggle: null, zoom: 1, highlight: null, nextMove: null }));
   const kickRef = useRef<() => void>(() => {});
   const orbitRef = useRef({ yaw: 0, pitch: 0 });
-  const dataRef = useRef({ clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, speed, onTurn, onReady });
+  const dataRef = useRef({ clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, speed, onTurn, onReady, marks, director, arrows });
   useEffect(() => {
-    dataRef.current = { clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, speed, onTurn, onReady };
+    dataRef.current = { clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, speed, onTurn, onReady, marks, director, arrows };
     kickRef.current();
   });
   useEffect(() => {
     kickRef.current();
-  }, [positionMs, playing, speed]);
+  }, [positionMs, playing, speed, director, arrows]);
 
   useEffect(() => {
     const reduce = !cameraMotionAllowed();
@@ -109,6 +128,11 @@ export function ReplayStageCube({
     let jiggleEvents: ReturnType<typeof buildJiggleEvents> = [];
     // Wobble is shown while playing and eased out when paused, so a pause never leaves the cube crooked; it is a pure function of the position.
     let jiggleGain = 0;
+    let moments: DirectorMoment[] = [];
+    let momentsKey = "";
+    let glow: HighlightEvent[] = [];
+    let glowFor: readonly string[] | null = null;
+    let glowMarks: readonly PhaseMark[] | undefined;
     let halfOf = new Map<number, string>();
     let halfFor: readonly string[] | null = null;
     const frame = (now: number) => {
@@ -128,6 +152,25 @@ export function ReplayStageCube({
       }
       const dt = last ? Math.min(100, now - last) : 1000 / 60;
       last = now;
+      let settled = true;
+
+      // The Director: key moments follow the timeline; the camera nudge is a function of the position, the slow-mo dip a rate factor on the clock.
+      const mKey = `${key}:${d.marks?.length ?? 0}`;
+      if (mKey !== momentsKey) {
+        momentsKey = mKey;
+        moments = planMoments({ marks: d.marks, starts: d.starts, ends: d.ends });
+      }
+      const dir = d.director && !reduce ? directorAt(moments, pos) : NO_DIRECTION;
+      const wantMul = running ? dir.rate : 1;
+      if (d.clock.rateMul !== undefined && d.clock.rateMul !== wantMul) d.clock.rateMul = wantMul;
+      if (glowFor !== d.faceletsAfter || glowMarks !== d.marks) {
+        glowFor = d.faceletsAfter;
+        glowMarks = d.marks;
+        glow = planHighlights({ marks: d.marks, ends: d.ends, faceletsAfter: d.faceletsAfter });
+      }
+      const highlight = reduce ? null : highlightAt(glow, pos);
+      if (highlight) settled = false;
+      const nextMove = d.arrows && !(running && d.speed > 1) ? (d.tokens[activeLeaf(d.starts, pos) + 1] ?? null) : null;
 
       // Sound: a move entered since the last frame, only while really playing (never on a scrub or a seek).
       if (running && pos >= prevPos) {
@@ -140,7 +183,6 @@ export function ReplayStageCube({
       }
       prevPos = pos;
 
-      let settled = true;
       let base: Quat = FIXED_VIEW;
       const target = d.stream && d.moveMs ? streamQuatAt(d.stream, solveMsAtPosition(d.starts, d.moveMs, pos)) : null;
       if (target) {
@@ -182,7 +224,7 @@ export function ReplayStageCube({
       // How long the turn in flight takes on screen (the replay's own time for it over the playback speed): the 3D cube sizes its motion blur from it.
       const turning = state.turning ? { ...state.turning, turnMs: turnScreenMs(d, k) } : null;
       const progress = turning ? turning.progress : 1;
-      const orientation = viewOrientation(base, spring, orbitRef.current);
+      const orientation = viewOrientation(base, spring, { yaw: orbitRef.current.yaw + dir.yaw, pitch: orbitRef.current.pitch + dir.pitch });
       let jiggle: CubeJiggle | null = null;
       if (!reduce) {
         jiggleGain += ((running ? 1 : 0) - jiggleGain) * Math.min(1, dt / 90);
@@ -192,10 +234,10 @@ export function ReplayStageCube({
         const timeScale = Math.max(0.25, Math.min(2, d.speed));
         jiggle = w ? { wobble: [w[0] * jiggleGain, w[1] * jiggleGain, w[2] * jiggleGain], rattle: rattleAt(jiggleEvents, pos, timeScale, jiggleGain) } : REST_JIGGLE;
       }
-      const sig = `${facelets}|${turning ? `${k}:${progress.toFixed(4)}` : ""}|${orientation.x.toFixed(5)},${orientation.y.toFixed(5)},${orientation.z.toFixed(5)},${orientation.w.toFixed(5)}|${jiggle ? jiggle.wobble.map((v) => v.toFixed(5)).join(",") : ""}|${jiggle?.rattle ? `${jiggle.rattle.ageMs.toFixed(1)}:${jiggle.rattle.strength.toFixed(3)}` : ""}`;
+      const sig = `${facelets}|${turning ? `${k}:${progress.toFixed(4)}` : ""}|${orientation.x.toFixed(5)},${orientation.y.toFixed(5)},${orientation.z.toFixed(5)},${orientation.w.toFixed(5)}|${jiggle ? jiggle.wobble.map((v) => v.toFixed(5)).join(",") : ""}|${jiggle?.rattle ? `${jiggle.rattle.ageMs.toFixed(1)}:${jiggle.rattle.strength.toFixed(3)}` : ""}|${dir.zoom.toFixed(4)}|${highlight ? `${highlight.stickers.length}:${highlight.strength.toFixed(3)}` : ""}|${nextMove ?? ""}`;
       if (sig !== lastKey) {
         lastKey = sig;
-        setView({ facelets, turning, orientation, jiggle });
+        setView({ facelets, turning, orientation, jiggle, zoom: dir.zoom, highlight, nextMove });
       }
       if (running || !settled) raf = requestAnimationFrame(frame);
       else last = 0;
@@ -207,6 +249,7 @@ export function ReplayStageCube({
     return () => {
       if (raf) cancelAnimationFrame(raf);
       kickRef.current = () => {};
+      if (dataRef.current.clock.rateMul !== undefined) dataRef.current.clock.rateMul = 1;
     };
   }, []);
 
@@ -283,7 +326,18 @@ export function ReplayStageCube({
       data-halves={halves?.some(Boolean) ? JSON.stringify(halves.flatMap((h, i) => (h ? [[i, h.firstStart, h.firstEnd, h.secondStart, h.secondEnd]] : []))) : undefined}
     >
       {/* The box is 78% of the stage's width: the cube itself then fills about 56% of it. */}
-      <Cube3D look={look} facelets={view.facelets} turning={view.turning} orientation={view.orientation} jiggle={view.jiggle} className="h-[78cqw] w-[78cqw] shrink-0" />
+      <div className="h-[78cqw] w-[78cqw] shrink-0" style={view.zoom !== 1 ? { transform: `scale(${view.zoom})` } : undefined}>
+        <Cube3D
+          look={look}
+          facelets={view.facelets}
+          turning={view.turning}
+          orientation={view.orientation}
+          jiggle={view.jiggle}
+          nextMove={view.nextMove}
+          highlight={view.highlight}
+          className="h-full w-full"
+        />
+      </div>
     </div>
   );
 }

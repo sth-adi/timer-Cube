@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Cube3D } from "@/components/cube3d/Cube3D";
+import { useCubeLook } from "@/components/settings/useCubeLook";
 import { GYRO_TWIN_CAMERA } from "@/components/lab/GyroTwin";
 import { TurnCube } from "@/components/lab/TurnCube";
 import { TwinStage } from "@/components/lab/TwinStage";
@@ -11,6 +13,7 @@ import type { Ghost } from "@/lib/rematch/ghost";
 import { REST_SPRING, buildLeanTurns, cameraMotionAllowed, leanAt, stepLean, type LeanSpring } from "@/lib/analysis/replayCamera";
 import { ghostFrameAt, ghostTimeline } from "@/lib/analysis/replayGhost";
 import { remapPosition, type ReplayTimeline } from "@/lib/analysis/replayTiming";
+import { FIXED_VIEW } from "@/lib/analysis/replayView";
 
 /** The twin's camera, nudged by a lean (degrees) the way the Gyro Twin's fixed camera is: yaw swings it right, pitch raises it. */
 const cameraFor = (yaw: number, pitch: number) => `rotateX(${(-24 - pitch).toFixed(2)}deg) rotateY(${(-32 - yaw).toFixed(2)}deg)`;
@@ -28,6 +31,7 @@ const GRIP = cssMatrix3d(HOME_ORIENTATION);
  * player's ~80 ms reports.
  */
 export function ReplayGhostTwin({
+  use3d = false,
   ghost,
   caption,
   shown,
@@ -48,7 +52,10 @@ export function ReplayGhostTwin({
   /** Length of one turn's animation, as the replay's own (shorter under reduced motion). */
   turnMs: number;
   size?: number;
+  /** Draw the ghost as a see-through 3D cube (the stage's renderer); false keeps the CSS cube, for browsers without WebGL. */
+  use3d?: boolean;
 }) {
+  const look = useCubeLook();
   const orientRef = useRef<HTMLDivElement | null>(null);
   const timeline = useMemo(() => ghostTimeline(ghost, turnMs), [ghost, turnMs]);
   const faceletsAfter = useMemo(() => faceletsAfterMoves(ghost.scramble, ghost.moves), [ghost]);
@@ -70,8 +77,6 @@ export function ReplayGhostTwin({
   }, [positionMs, playing, speed]);
 
   useEffect(() => {
-    const el = orientRef.current;
-    if (!el) return undefined;
     const lean = cameraMotionAllowed();
     let spring: LeanSpring = REST_SPRING;
     let raf = 0;
@@ -83,7 +88,8 @@ export function ReplayGhostTwin({
       const shownPos = Math.max(0, Math.min(d.shown.durationMs, a.pos + (a.rate ? (now - a.at) * a.rate : 0)));
       const pos = d.shown === d.real ? shownPos : remapPosition(shownPos, d.shown, d.real);
       let settled = true;
-      if (lean) {
+      const el = orientRef.current;
+      if (lean && el) {
         const dt = last ? Math.min(100, now - last) : 1000 / 60;
         last = now;
         const step = stepLean(spring, leanAt(d.turns, pos, HOME_ORIENTATION), dt);
@@ -114,6 +120,17 @@ export function ReplayGhostTwin({
   const turning = turn && frame.turning ? { turn, progress: frame.turning.progress } : null;
   const facelets = faceletsAfter?.[turning && frame.turning ? frame.turning.index : frame.done];
   if (!facelets) return null;
+  const caption3d = <span className="max-w-[7rem] truncate text-[9px] font-medium text-muted-2">{frame.finished ? `${caption} done` : caption}</span>;
+  if (use3d) {
+    return (
+      <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-panel/70 p-1" aria-hidden="true" data-testid="replay-ghost-twin" data-ghost3d="true">
+        <div style={{ width: size * 1.4, height: size * 1.4 }}>
+          <Cube3D look={look} facelets={facelets} turning={turning} orientation={FIXED_VIEW} opacity={0.55} className="h-full w-full" />
+        </div>
+        {caption3d}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col items-center gap-0.5 rounded-xl bg-bg-panel/70 p-1" aria-hidden="true" data-testid="replay-ghost-twin">
       <div className="opacity-60">

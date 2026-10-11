@@ -28,6 +28,7 @@ import { webglAvailable } from "@/components/replay/webgl";
 import { ReplayClock } from "@/lib/analysis/replayClock";
 import { gapsToTimes, splitDoubles } from "@/lib/analysis/doubleSplit";
 import { planTurnSound } from "@/lib/analysis/replayView";
+import { turnTick } from "@/lib/utils/haptics";
 import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { ReplayStageCube } from "./ReplayStageCube";
@@ -145,6 +146,25 @@ function readRealPauses(): boolean {
   }
 }
 
+const STAGE_FLAG_PREFIX = "cube-timer-replay-";
+
+/** A remembered on/off choice on the stage controls (Director, Arrows); off by default and when storage is blocked. */
+function readStageFlag(name: string): boolean {
+  try {
+    return localStorage.getItem(STAGE_FLAG_PREFIX + name) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeStageFlag(name: string, on: boolean) {
+  try {
+    localStorage.setItem(STAGE_FLAG_PREFIX + name, on ? "1" : "0");
+  } catch {
+    // Not remembered beyond this view.
+  }
+}
+
 function writeRealPauses(on: boolean) {
   try {
     localStorage.setItem(REAL_PAUSES_KEY, on ? "1" : "0");
@@ -212,6 +232,18 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, halvesMs, hasRealTiming
   const [positionMs, setPositionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
+  // Stage extras on the 3D cube: the Director (camera nudges and brief slow-motion at key moments) and turn arrows; both remembered, off by default.
+  const reducedMotion = use3d && prefersReducedMotion();
+  const [directorOn, setDirectorOn] = useState(() => use3d && readStageFlag("director"));
+  const [arrowsOn, setArrowsOn] = useState(() => use3d && readStageFlag("arrows"));
+  const toggleDirector = () => {
+    writeStageFlag("director", !directorOn);
+    setDirectorOn(!directorOn);
+  };
+  const toggleArrows = () => {
+    writeStageFlag("arrows", !arrowsOn);
+    setArrowsOn(!arrowsOn);
+  };
   // On the stage the speaker starts on when the app's sound setting is (the replay then plays cube sounds).
   const [soundOn, setSoundOn] = useState(() => {
     if (!stage) return false;
@@ -548,6 +580,8 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, halvesMs, hasRealTiming
     if (!plan) return;
     lastClickRef.current = now;
     sounds.playTurn({ token: tokens[k] ?? "", speed: plan.speed, durationMs: plan.durationMs });
+    // The snap is felt as well as heard: a faint tick on the same plan (shorter for fast turns), if the person has it on.
+    if (useSettingsStore.getState().replayHaptics) turnTick(plan.durationMs);
   };
 
   useEffect(() => {
@@ -611,6 +645,9 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, halvesMs, hasRealTiming
                 speed={speed}
                 onTurn={onTurn}
                 onReady={() => setFrameReady(true)}
+                marks={marks}
+                director={directorOn && !reducedMotion}
+                arrows={arrowsOn}
               />
             </div>
           )
@@ -624,6 +661,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, halvesMs, hasRealTiming
           <div className="pointer-events-none absolute right-1 top-1">
             {ghostCtl.ghost ? (
               <ReplayGhostTwin
+                use3d={use3d}
                 ghost={ghostCtl.ghost}
                 caption={ghost.caption}
                 shown={timeline}
@@ -776,6 +814,35 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, halvesMs, hasRealTiming
               >
                 Real pauses
               </button>
+            )}
+            {use3d && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleDirector}
+                  disabled={reducedMotion}
+                  aria-pressed={directorOn && !reducedMotion}
+                  title="A gentle camera nudge and a brief slow-motion dip at key moments: cross done, last pair, OLL / PLL start, long pauses."
+                  className={cn(
+                    "hit-y h-7 rounded-full px-3 text-[11px] font-medium transition-colors disabled:opacity-50",
+                    directorOn && !reducedMotion ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+                  )}
+                >
+                  Director
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleArrows}
+                  aria-pressed={arrowsOn}
+                  title="An arrow on the cube for the move that comes next (not while playing faster than 1x)."
+                  className={cn(
+                    "hit-y h-7 rounded-full px-3 text-[11px] font-medium transition-colors",
+                    arrowsOn ? "bg-accent-soft text-accent" : "bg-bg-panel-2 text-muted hover:text-foreground",
+                  )}
+                >
+                  Arrows
+                </button>
+              </>
             )}
             {ghost && hasRealTiming && (
               <button

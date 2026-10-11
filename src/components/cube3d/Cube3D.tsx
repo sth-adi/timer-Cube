@@ -7,6 +7,7 @@ import { cssMatrix3d, quatToMat } from "@/lib/gyro/orientation";
 import type { CubeQuality, CubeScene } from "@/lib/cube3d/scene";
 import type { CubeJiggle } from "@/lib/cube3d/jiggle";
 import type { CubeLook } from "@/lib/cube3d/look";
+import { contextPool, type PoolClient } from "@/lib/cube3d/contextPool";
 
 export type { CubeQuality };
 
@@ -54,6 +55,12 @@ export interface Cube3DProps {
   look?: CubeLook;
   /** "tight" (default) frames the cube close; "loose" leaves room for a cube spun to any grip (the gyro twin) */
   fit?: "tight" | "loose";
+  /** whole-cube alpha 0..1, for a ghost cube (default 1; the cube only turns transparent below 1) */
+  opacity?: number;
+  /** the upcoming move ("R", "U'", "F2", "M"...): a curved arrow over the layer it turns; null hides it */
+  nextMove?: string | null;
+  /** facelet indices that glow, strength 0..1 (pieces lighting up as they are solved) */
+  highlight?: { stickers: readonly number[]; strength: number } | null;
 }
 
 /** The twin's camera, for the CSS fallback. */
@@ -76,16 +83,21 @@ function motionAllowed(): boolean {
  */
 export const Cube3D = memo(
   forwardRef<Cube3DHandle, Cube3DProps>(function Cube3D(
-    { facelets, turning = null, size, className, orientation = null, quality, stickerFills, jiggle = null, faceLetters = false, cameraYaw = DEFAULT_YAW, look, fit: fitMode = "tight" },
+    { facelets, turning = null, size, className, orientation = null, quality, stickerFills, jiggle = null, faceLetters = false, cameraYaw = DEFAULT_YAW, look, fit: fitMode = "tight", opacity = 1, nextMove = null, highlight = null },
     handle,
   ) {
     const boxRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const fallbackRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<CubeScene | null>(null);
-    const visibleRef = useRef(true);
+    const visibleRef = useRef(false);
+    // false until the first intersection report (a cube that starts off screen never builds a scene); without IntersectionObserver always on
+    const [visible, setVisible] = useState(() => typeof IntersectionObserver === "undefined");
+    // bumped to give the cube a fresh canvas (a canvas whose context was released cannot get a new one) and re-acquire a context
+    const [gen, setGen] = useState(0);
+    const releasedRef = useRef(false);
     const rafRef = useRef(0);
-    const latest = useRef({ facelets, turning, orientation, stickerFills, jiggle, faceLetters, look });
+    const latest = useRef({ facelets, turning, orientation, stickerFills, jiggle, faceLetters, look, opacity, nextMove, highlight });
     const poseRef = useRef<Quat | null>(null);
     const yawRef = useRef(cameraYaw);
     const [tier] = useState<CubeQuality>(() => quality ?? defaultQuality());
@@ -113,6 +125,9 @@ export const Cube3D = memo(
               jiggle: motion ? s.jiggle : null,
               faceLetters: s.faceLetters,
               look: s.look,
+              opacity: s.opacity,
+              nextMove: s.nextMove,
+              highlight: s.highlight,
             });
           } catch {
             setMode("fallback");
@@ -142,9 +157,9 @@ export const Cube3D = memo(
     }, [mode]);
 
     useEffect(() => {
-      latest.current = { facelets, turning, orientation, stickerFills, jiggle, faceLetters, look };
+      latest.current = { facelets, turning, orientation, stickerFills, jiggle, faceLetters, look, opacity, nextMove, highlight };
       schedule.current();
-    }, [facelets, turning, orientation, stickerFills, jiggle, faceLetters, look]);
+    }, [facelets, turning, orientation, stickerFills, jiggle, faceLetters, look, opacity, nextMove, highlight]);
 
     useEffect(() => {
       yawRef.current = cameraYaw;
@@ -152,13 +167,30 @@ export const Cube3D = memo(
       schedule.current();
     }, [cameraYaw]);
 
+    // On screen or not. An off-screen cube lets go of its WebGL context (see lib/cube3d/contextPool) and builds a fresh scene when it is seen again.
+    useEffect(() => {
+      const box = boxRef.current;
+      if (!box || typeof IntersectionObserver === "undefined") return;
+      const io = new IntersectionObserver((entries) => {
+        const on = entries[entries.length - 1]?.isIntersecting ?? true;
+        visibleRef.current = on;
+        if (on && releasedRef.current) {
+          releasedRef.current = false;
+          setGen((g) => g + 1);
+        }
+        setVisible(on);
+        if (on) schedule.current();
+      });
+      io.observe(box);
+      return () => io.disconnect();
+    }, []);
+
     useEffect(() => {
       const box = boxRef.current;
       const canvas = canvasRef.current;
-      if (!box || !canvas) return;
+      if (!box || !canvas || !visible) return;
       let dead = false;
       let ro: ResizeObserver | null = null;
-      let io: IntersectionObserver | null = null;
       let themeObserver: MutationObserver | null = null;
       const fit = () => {
         const scene = sceneRef.current;
@@ -177,22 +209,34 @@ export const Cube3D = memo(
         setMode("gl");
         schedule.current();
       };
+      const client: PoolClient = {
+        visible: () => visibleRef.current,
+        evict: () => {
+          // taken by a cube that is on screen: drop the scene now; this canvas is replaced when the cube is seen again
+          releasedRef.current = true;
+          sceneRef.current?.dispose();
+          sceneRef.current = null;
+        },
+        retry: () => setGen((g) => g + 1),
+      };
       canvas.addEventListener("webglcontextlost", onLost);
       canvas.addEventListener("webglcontextrestored", onRestored);
       import("@/lib/cube3d/scene")
         .then(({ CubeScene: Scene }) => {
           if (dead) return;
+          if (!contextPool.acquire(client)) {
+            // every context is in use by a cube on screen: stay on the CSS cube until one frees up
+            const r = box.getBoundingClientRect();
+            setPx(Math.round(Math.min(r.width, r.height)));
+            setMode("fallback");
+            return;
+          }
           const scene = new Scene(canvas, { quality: tier, cameraYaw: yawRef.current, fit: fitMode });
           sceneRef.current = scene;
           setMode("gl");
           fit();
           ro = new ResizeObserver(fit);
           ro.observe(box);
-          io = new IntersectionObserver((entries) => {
-            visibleRef.current = entries[entries.length - 1]?.isIntersecting ?? true;
-            if (visibleRef.current) schedule.current();
-          });
-          io.observe(box);
           // a theme change re-tints the studio light
           themeObserver = new MutationObserver(() => {
             sceneRef.current?.applyTheme();
@@ -202,6 +246,7 @@ export const Cube3D = memo(
         })
         .catch(() => {
           if (dead) return;
+          contextPool.release(client);
           const r = box.getBoundingClientRect();
           setPx(Math.round(Math.min(r.width, r.height)));
           setMode("fallback");
@@ -211,19 +256,20 @@ export const Cube3D = memo(
         canvas.removeEventListener("webglcontextlost", onLost);
         canvas.removeEventListener("webglcontextrestored", onRestored);
         ro?.disconnect();
-        io?.disconnect();
         themeObserver?.disconnect();
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
+        if (sceneRef.current) releasedRef.current = true;
         sceneRef.current?.dispose();
         sceneRef.current = null;
+        contextPool.release(client);
       };
-    }, [tier, fitMode]);
+    }, [tier, fitMode, visible, gen]);
 
     const fallbackSize = Math.max(24, Math.round(px * 0.5));
     return (
       <div ref={boxRef} className={className} style={size ? { width: size, height: size, position: "relative" } : { position: "relative" }} data-testid="cube3d" data-mode={mode}>
-        <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: mode === "fallback" ? "none" : "block" }} aria-hidden="true" />
+        <canvas key={gen} ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: mode === "fallback" ? "none" : "block" }} aria-hidden="true" />
         {mode === "fallback" && px > 0 && (
           <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", perspective: px * 3 }}>
             <div
