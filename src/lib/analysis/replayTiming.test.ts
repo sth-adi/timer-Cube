@@ -8,6 +8,7 @@ import {
   phaseMarksFromMilestones,
   phaseMarksFromPhases,
   remapPosition,
+  turnScales,
 } from "./replayTiming";
 
 // 5 moves: quick, a 3s recognition pause, quick, a 700ms pause, quick.
@@ -61,12 +62,23 @@ describe("buildTimeline", () => {
     expect(t.durationMs).toBe(GAPS.reduce((a, b) => a + b, 0));
   });
 
-  it("fluid: each turn fills most of its gap (up to a cap) and still ends at the recorded time", () => {
+  it("fluid: a turn lasts its natural time, a half turn longer, and a short gap is nearly all turn; ends stay on the recorded times", () => {
     const g = [300, 500, 120, 2000];
-    const t = buildTimeline(g, { realPauses: true, fluid: true });
+    const scales = turnScales(["R", "U2", "L'", "F2"]);
+    const t = buildTimeline(g, { realPauses: true, fluid: true, scales });
     expect(t.ends).toEqual([300, 800, 920, 2920]);
-    t.ends.forEach((e, i) => expect(e - t.starts[i]).toBeCloseTo([282, 440, 112.8, 440][i], 6));
+    const dur = t.ends.map((e, i) => e - t.starts[i]);
+    [190, 190 * 1.4, 112.8, 190 * 1.4].forEach((want, i) => expect(dur[i]).toBeCloseTo(want, 6));
     expect(t.durationMs).toBe(2920);
+  });
+
+  it("fluid: a long pause never turns into a slow turn", () => {
+    const t = buildTimeline([4000], { realPauses: true, fluid: true, scales: [1] });
+    expect(t.ends[0] - t.starts[0]).toBe(190);
+  });
+
+  it("turnScales: half turns are longer than quarter turns, slices equal", () => {
+    expect(turnScales(["R", "R'", "R2", "M", "M2", "x"])).toEqual([1, 1, 1.4, 1, 1.4, 1.15]);
   });
 
   it("is empty for no moves", () => {

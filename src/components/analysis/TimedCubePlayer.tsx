@@ -15,6 +15,7 @@ import {
   TURN_MS,
   activeLeaf,
   buildTimeline,
+  turnScales,
   markSegments,
   remapPosition,
   type PhaseMark,
@@ -183,9 +184,10 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     const turnMs = prefersReducedMotion() ? SNAP_TURN_MS : TURN_MS;
     // The photoreal 3D cube flows from move to move (turns fill their gap); the cubing.js fallback keeps the short fixed turn.
     const fluid = use3d && !prefersReducedMotion();
+    const scales = turnScales(alg.split(/\s+/).filter(Boolean));
     return {
-      capped: buildTimeline(gapsMs, { realPauses: false, turnMs, fluid }),
-      real: buildTimeline(gapsMs, { realPauses: true, turnMs, fluid }),
+      capped: buildTimeline(gapsMs, { realPauses: false, turnMs, fluid, scales }),
+      real: buildTimeline(gapsMs, { realPauses: true, turnMs, fluid, scales }),
       turnMs,
     };
   });

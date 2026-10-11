@@ -22,9 +22,20 @@ export interface ReplayTimeline {
 
 /** No turn is drawn shorter than this, so the player never gets a zero-length animation. */
 export const MIN_TURN_MS = 12;
-/** Fluid replay: a turn takes this share of the gap before it (so the cube is nearly always in motion), at most FLUID_TURN_MAX_MS. */
+/**
+ * Fluid replay (the 3D cube): a turn is as long as a real quarter turn feels (FLUID_TURN_MS, scaled up for a half turn),
+ * or, when the cuber was quicker than that, almost the whole gap (FLUID_TURN_FRAC), so fast stretches flow instead of
+ * snapping. A long pause never stretches a turn into slow motion.
+ */
 export const FLUID_TURN_FRAC = 0.94;
-export const FLUID_TURN_MAX_MS = 440;
+export const FLUID_TURN_MS = 190;
+/** A half turn (U2) travels twice the angle: it gets 1.4x the time, not 2x, as a real double turn is quicker per degree. */
+export const HALF_TURN_SCALE = 1.4;
+
+/** How long each move's turn naturally takes, relative to a quarter turn: 1 for U/R'/M, 1.4 for U2, a little more for a rotation. */
+export function turnScales(tokens: readonly string[]): number[] {
+  return tokens.map((t) => (t.endsWith("2") ? HALF_TURN_SCALE : /^[xyz]/.test(t) ? 1.15 : 1));
+}
 
 /**
  * Lays moves out on a timeline from the real gap before each one (ms since the
@@ -37,14 +48,14 @@ export const FLUID_TURN_MAX_MS = 440;
  * keeps the true gaps, so each turn then ends at its recorded timestamp and
  * the replay lasts exactly as long as the solve.
  *
- * `fluid` is for a smooth 3D replay: each turn takes most of the gap before it (up to FLUID_TURN_MAX_MS) instead of a fixed short
- * turn, so the cube flows from move to move; every turn still ends at its recorded timestamp.
+ * `fluid` is for the smooth 3D replay (see FLUID_TURN_MS): turns last their natural time, or most of a short gap, and `scales`
+ * (one per move, see turnScales) makes a half turn longer than a quarter turn. Every turn still ends at its recorded timestamp.
  *
  * A gap too short to hold even MIN_TURN_MS (two halves of a slice turn
  * arriving together) borrows the difference from the next idle time, so the
  * replay doesn't drift away from the clock the solve ran on.
  */
-export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: boolean; turnMs?: number; idleCapMs?: number; fluid?: boolean } = {}): ReplayTimeline {
+export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: boolean; turnMs?: number; idleCapMs?: number; fluid?: boolean; scales?: readonly number[] } = {}): ReplayTimeline {
   const turnMax = opts.turnMs ?? TURN_MS;
   const turnMin = Math.min(MIN_TURN_MS, turnMax);
   const cap = opts.idleCapMs ?? IDLE_CAP_MS;
@@ -52,9 +63,10 @@ export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: bo
   const ends: number[] = [];
   let end = 0;
   let debt = 0;
-  for (const raw of gapsMs) {
-    const gap = Math.max(0, raw);
-    const turn = opts.fluid ? Math.max(turnMin, Math.min(FLUID_TURN_MAX_MS, gap * FLUID_TURN_FRAC)) : Math.max(turnMin, Math.min(turnMax, gap));
+  for (let m = 0; m < gapsMs.length; m++) {
+    const gap = Math.max(0, gapsMs[m]);
+    const natural = FLUID_TURN_MS * (opts.scales?.[m] ?? 1);
+    const turn = opts.fluid ? Math.max(turnMin, Math.min(natural, gap * FLUID_TURN_FRAC)) : Math.max(turnMin, Math.min(turnMax, gap));
     let idle = Math.max(0, gap - turn);
     const repaid = Math.min(debt, idle);
     idle -= repaid;
