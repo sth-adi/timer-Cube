@@ -115,11 +115,11 @@ export function intensityForSpeed(speed: number): number {
   return clamp(speed / FAST_TPS, 0, 1);
 }
 
-/** A fixed per-letter pitch offset (-6%..+6%) so each face has its own voice. */
+/** A fixed per-letter pitch offset (-6%..+6%) a faint per-face colour, kept tiny so no note can be heard. */
 function faceVoice(base: string): number {
   let h = 0;
   for (let i = 0; i < base.length; i++) h = (h * 31 + base.charCodeAt(i)) >>> 0;
-  return 0.94 + ((h % 13) / 12) * 0.12;
+  return 0.98 + ((h % 13) / 12) * 0.04;
 }
 
 const LAYER_GAIN: Record<TurnLayer, number> = { face: 1, wide: 0.88, slice: 0.5, rotation: 0.32 };

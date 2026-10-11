@@ -42,6 +42,8 @@ export interface CubeSoundsOptions {
 
 /** Everything a turn schedules starts this far ahead of "now" at the earliest. */
 const LOOKAHEAD_S = 0.004;
+/** Band-passed noise carries far less energy than a sine of the same gain, so the knocks are scaled up to sit where the sine rings did. */
+const KNOCK_NOISE_GAIN = 2.6;
 const NOISE_SECONDS = 2;
 
 function noiseBuffer(ctx: BaseAudioContext, rng: Rng): AudioBuffer {
@@ -137,22 +139,30 @@ export function createCubeSounds(ctx: BaseAudioContext, opts: CubeSoundsOptions 
     track(src, g);
   };
 
-  /** A damped sine ("ring") with an exponential decay of time constant decayS. */
+  /**
+   * A short damped "knock": noise pushed through a low-Q band-pass, so it has a colour (a plastic "tok") but no musical
+   * pitch. Pure sine rings here sounded like a struck xylophone bar; real cube clacks are broadband bursts with a
+   * wide, quickly dying resonance, which is what this makes. `decayS` is the time constant of the decay.
+   */
   const ring = (out: AudioNode, t: number, hz: number, decayS: number, gain: number, attackS = 0.0004) => {
     if (gain <= 0) return;
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.value = hz;
+    const src = ctx.createBufferSource();
+    src.buffer = noise;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = hz;
+    bp.Q.value = hz < 400 ? 0.9 : 1.6;
     const g = ctx.createGain();
-    const end = t + decayS * 8;
+    const end = t + decayS * 7;
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(gain, t + attackS);
+    g.gain.linearRampToValueAtTime(gain * KNOCK_NOISE_GAIN, t + attackS);
     g.gain.setTargetAtTime(0, t + attackS, decayS);
-    osc.connect(g);
+    src.connect(bp);
+    bp.connect(g);
     g.connect(out);
-    osc.start(t);
-    osc.stop(end);
-    track(osc, g);
+    src.start(t, rng() * (NOISE_SECONDS - 0.5));
+    src.stop(end);
+    track(src, g);
   };
 
   const scrape = (out: AudioNode, t: number, p: NonNullable<TurnParams["scrape"]>) => {
