@@ -26,6 +26,7 @@ import { ReplayStage } from "@/components/replay/ReplayStage";
 import { useCubeSounds } from "@/components/replay/useCubeSounds";
 import { webglAvailable } from "@/components/replay/webgl";
 import { ReplayClock } from "@/lib/analysis/replayClock";
+import { gapsToTimes, splitDoubles } from "@/lib/analysis/doubleSplit";
 import { planTurnSound } from "@/lib/analysis/replayView";
 import { faceletsAfterMoves } from "@/lib/gyro/replayGyro";
 import { useSettingsStore } from "@/lib/store/settingsStore";
@@ -48,6 +49,11 @@ interface TimedCubePlayerProps {
    * actually took.
    */
   gapsMs: number[];
+  /**
+   * When the first quarter of each merged double turn was made, on the same clock as `gapsMs` added up (null for
+   * other moves). Omit for the estimate (lib/analysis/doubleSplit); only used with real timing on the 3D stage.
+   */
+  halvesMs?: readonly (number | null)[] | null;
   /** Whether `gapsMs` is real capture timing (vs. a level fallback pace) — only changes the badge text below the controls. */
   hasRealTiming: boolean;
   /** Applied to the cube viewport itself, not the controls beneath it. */
@@ -163,7 +169,7 @@ function leavesFor(leafMoves: any[], timeline: ReplayTimeline) {
  * (`play()`, `pause()`, the `timestamp` setter), not simulated by swapping
  * `alg` in and out — that doesn't animate anything on its own.
  */
-export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, className, cues, voice = true, marks, renderMoves, overlay, ghost, gyro, stage, stageFit = "page" }: TimedCubePlayerProps) {
+export function TimedCubePlayer({ alg, setupAlg, gapsMs, halvesMs, hasRealTiming, className, cues, voice = true, marks, renderMoves, overlay, ghost, gyro, stage, stageFit = "page" }: TimedCubePlayerProps) {
   // On the stage the cube is the 3D renderer (ReplayStageCube) on a clock of our own; cubing.js's player is only
   // the fallback for a browser without WebGL, and for the plain (non-stage) viewport.
   const [use3d] = useState(() => !!stage && webglAvailable());
@@ -184,10 +190,13 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     const turnMs = prefersReducedMotion() ? SNAP_TURN_MS : TURN_MS;
     // The photoreal 3D cube flows from move to move (turns fill their gap); the cubing.js fallback keeps the short fixed turn.
     const fluid = use3d && !prefersReducedMotion();
-    const scales = turnScales(alg.split(/\s+/).filter(Boolean));
+    const moves = alg.split(/\s+/).filter(Boolean);
+    const scales = turnScales(moves);
+    // A double (U2) plays as its two real quarter turns, when the timing is real.
+    const halves = fluid && hasRealTiming ? splitDoubles(moves, gapsToTimes(gapsMs), halvesMs) : undefined;
     return {
-      capped: buildTimeline(gapsMs, { realPauses: false, turnMs, fluid, scales }),
-      real: buildTimeline(gapsMs, { realPauses: true, turnMs, fluid, scales }),
+      capped: buildTimeline(gapsMs, { realPauses: false, turnMs, fluid, scales, halves }),
+      real: buildTimeline(gapsMs, { realPauses: true, turnMs, fluid, scales, halves }),
       turnMs,
     };
   });
@@ -209,14 +218,11 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     const st = useSettingsStore.getState();
     return st.soundEnabled && st.cubeSoundsEnabled;
   });
-  const cubeSoundsEnabled = useSettingsStore((st) => st.cubeSoundsEnabled);
-  // Cube sounds follow the replay's own speaker button; the old synthesised click remains for the plain viewport and for "Cube sounds" off.
-  const cubeAudio = use3d && cubeSoundsEnabled;
+  // The speaker button drives the cube-sound engine in every replay path; the "Cube sounds" setting still gates it (useCubeSounds).
   const sounds = useCubeSounds({ force: soundOn });
   const soundOnRef = useRef(soundOn);
+  const onTurnRef = useRef<(k: number, part?: 0 | 1) => void>(() => {});
   const lastClickRef = useRef(-1e9);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const audioCtxRef = useRef<any>(null);
   const leafStartsRef = useRef<number[]>(realPauses ? timelines.real.starts : timelines.capped.starts);
   const lastPolledPosRef = useRef(0);
   const [caption, setCaption] = useState<Cue | null>(null);
@@ -336,33 +342,6 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
     soundOnRef.current = soundOn;
   }, [soundOn]);
 
-  useEffect(
-    () => () => {
-      void audioCtxRef.current?.close();
-      audioCtxRef.current = null;
-    },
-    [],
-  );
-
-  // A short percussive tick for one move — cheap synthesis (no audio file),
-  // fired from the poll loop below rather than scheduled in advance on the
-  // AudioContext's own clock, so it stays correct through pausing, seeking,
-  // and speed changes for free instead of needing to re-derive a schedule
-  // for each.
-  const playClick = () => {
-    const ctx = audioCtxRef.current;
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "square";
-    osc.frequency.value = 950;
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.035);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.035);
-  };
-
   // Polls the player's own timeline position while playing, so the scrubber
   // tracks native playback instead of a second clock of our own that could
   // drift from it. Self-rescheduling (like the rest of this codebase's
@@ -388,17 +367,19 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
           timer = window.setTimeout(tick, POLL_MS);
           return;
         }
-        if (soundOn && !cubeAudio) {
+        // The cubing.js fallback has no frame loop of its own: a click per move that started since the last poll.
+        if (!use3d && soundOnRef.current) {
           const prev = lastPolledPosRef.current;
-          for (const start of leafStartsRef.current) {
-            if (start > prev && start <= t) playClick();
+          const starts = leafStartsRef.current;
+          for (let k = 0; k < starts.length; k++) {
+            if (starts[k] > prev && starts[k] <= t) onTurnRef.current(k);
           }
         }
         lastPolledPosRef.current = t;
         setPositionMs(t);
         if (durationMs > 0 && t >= durationMs - 1) {
           setPlaying(false);
-          if (cubeAudio && soundOn) sounds.playStop();
+          if (soundOn) sounds.playStop();
           return;
         }
       }
@@ -410,7 +391,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, durationMs, soundOn, cubeAudio]);
+  }, [playing, durationMs, soundOn]);
 
   const atEnd = durationMs > 0 && positionMs >= durationMs - 1;
 
@@ -477,7 +458,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
       setCaption(null);
     }
     // Starting from the top: the stackmat's start beep (and wake the audio, inside this tap).
-    if (cubeAudio && soundOn) {
+    if (soundOn) {
       sounds.unlock(true);
       if (atEnd || lastPolledPosRef.current === 0) sounds.playStart();
     }
@@ -550,14 +531,8 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   };
 
   const onToggleSound = () => {
-    // Created inside this click handler (a real user gesture), not lazily
-    // from the poll loop, so browsers' autoplay policy doesn't suspend it.
-    if (!audioCtxRef.current) {
-      const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (Ctor) audioCtxRef.current = new Ctor();
-    }
-    void audioCtxRef.current?.resume?.();
-    if (cubeAudio && !soundOn) sounds.unlock(true);
+    // Woken inside this click (a real user gesture), so the browser's autoplay policy lets the engine run.
+    if (!soundOn) sounds.unlock(true);
     setSoundOn((v) => !v);
   };
 
@@ -566,14 +541,18 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
   const segments = useMemo(() => (marks && timelineOk ? markSegments(marks, timeline) : []), [marks, timelineOk, timeline]);
 
   // The 3D cube reports each move as playback enters it: a click for it, thinned out at 2x and 4x, silent when muted.
-  const onTurn = (k: number) => {
-    if (!soundOnRef.current || !cubeAudio) return;
+  const onTurn = (k: number, part?: 0 | 1) => {
+    if (!soundOnRef.current) return;
     const now = performance.now();
-    const plan = planTurnSound({ starts: timeline.starts, ends: timeline.ends, k, speed, sinceLastMs: now - lastClickRef.current });
+    const plan = planTurnSound({ starts: timeline.starts, ends: timeline.ends, k, speed, sinceLastMs: now - lastClickRef.current, halves: timeline.halves, part });
     if (!plan) return;
     lastClickRef.current = now;
     sounds.playTurn({ token: tokens[k] ?? "", speed: plan.speed, durationMs: plan.durationMs });
   };
+
+  useEffect(() => {
+    onTurnRef.current = onTurn;
+  });
 
   // The camera leans toward each face as it turns (and after the recorded tilt, where there is one).
   const leanTurns = useMemo(() => {
@@ -624,6 +603,7 @@ export function TimedCubePlayer({ alg, setupAlg, gapsMs, hasRealTiming, classNam
                 tokens={tokens}
                 starts={timeline.starts}
                 ends={timeline.ends}
+                halves={timeline.halves}
                 stream={gyro?.stream}
                 moveMs={gyro?.moveMs}
                 positionMs={shownPos}

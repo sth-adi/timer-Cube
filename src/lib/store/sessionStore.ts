@@ -172,6 +172,8 @@ interface SessionState {
     cube?: Solve["cube"],
     /** A turn put back (or removed) from the cube's own state report. */
     repaired?: Solve["repaired"],
+    /** Parallel to moveTimestamps: when the first quarter of each merged double turn was made (null elsewhere). */
+    moveHalfTimestamps?: (number | null)[],
   ) => Promise<string | undefined>;
   setPenalty: (solveId: string, penalty: Penalty) => Promise<void>;
   setComment: (solveId: string, comment: string) => Promise<void>;
@@ -345,7 +347,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty, cube, repaired) => {
+  recordSolve: async (timeMs, scramble, splits, event, reconstruction, heartRate, crossMs, moveTimestamps, gyro, penalty, cube, repaired, moveHalfTimestamps) => {
     // Not ready yet (history still loading, or the database never opened): wait for the load rather
     // than drop the solve, and say so if it can't be saved.
     if (!get().activeSessionId) {
@@ -388,6 +390,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         heartRate,
         crossMs,
         moveTimestamps,
+        moveHalfTimestamps,
         rotations: gyro?.rotations,
         orientedReconstruction: gyro?.orientedReconstruction,
         gyroStream: gyro?.stream ?? undefined,

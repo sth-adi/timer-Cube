@@ -217,3 +217,41 @@ describe("phase marks", () => {
     expect(capped.durationMs).toBeLessThan(real.durationMs);
   });
 });
+
+describe("buildTimeline with split doubles", () => {
+  const opts = { fluid: true, realPauses: true, scales: [1, 1.75, 1] };
+  it("plays a double as two quarter turns ending at their real times", () => {
+    // R at 400, U2 made of quarters at 880 and 1000, then R' at 1380.
+    const gaps = [400, 600, 380];
+    const tl = buildTimeline(gaps, { ...opts, halves: [null, 880, null] });
+    const h = tl.halves![1]!;
+    expect(tl.halves![0]).toBeNull();
+    expect(h.firstEnd).toBeCloseTo(880, 6);
+    expect(h.secondEnd).toBeCloseTo(1000, 6);
+    expect(tl.starts[1]).toBe(h.firstStart);
+    expect(tl.ends[1]).toBe(h.secondEnd);
+    // the first quarter has the long gap, so a natural quarter turn; the second only most of its 120ms gap
+    expect(h.firstEnd - h.firstStart).toBeCloseTo(190, 6);
+    expect(h.secondEnd - h.secondStart).toBeCloseTo(120 * 0.94, 6);
+    expect(h.secondStart).toBeGreaterThanOrEqual(h.firstEnd);
+    expect(tl.durationMs).toBeCloseTo(1380, 6);
+    expect(tl.ends[2]).toBeCloseTo(1380, 6);
+  });
+  it("a slow-fast double looks slow-fast, a fast-slow one the other way", () => {
+    const slowFast = buildTimeline([200, 700], { fluid: true, realPauses: true, halves: [null, 820] }).halves![1]!;
+    const durs = (h: NonNullable<typeof slowFast>) => [h.firstEnd - h.firstStart, h.secondEnd - h.secondStart];
+    expect(durs(slowFast)[0]).toBeGreaterThan(durs(slowFast)[1]);
+  });
+  it("keeps total duration equal to the solve time in real-pause mode", () => {
+    const gaps = [250, 90, 700, 110, 300];
+    const tl = buildTimeline(gaps, { fluid: true, realPauses: true, halves: [null, null, 1000, null, null] });
+    expect(tl.durationMs).toBeCloseTo(gaps.reduce((a, b) => a + b, 0), 6);
+    for (let i = 1; i < tl.starts.length; i++) expect(tl.starts[i]).toBeGreaterThanOrEqual(tl.ends[i - 1] - 1e-9);
+  });
+  it("ignores halves outside the gap, in the non-fluid fallback, and when none are given", () => {
+    expect(buildTimeline([400, 600], { fluid: true, halves: [null, 300] }).halves).toBeUndefined();
+    const a = buildTimeline([400, 600], { halves: [null, 900] });
+    expect(a.halves).toBeUndefined();
+    expect(a).toEqual(buildTimeline([400, 600]));
+  });
+});

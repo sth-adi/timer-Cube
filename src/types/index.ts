@@ -80,6 +80,13 @@ export interface Solve {
    */
   moveTimestamps?: number[];
   /**
+   * Parallel to `moveTimestamps`: for a move that merged two quarter turns into a double (U2), when the FIRST quarter
+   * was made (same clock, ms from solve start); null for every other move. Absent when the solve had no double or
+   * predates this field; the replay then estimates the split (lib/analysis/doubleSplit). Local only: not synced to
+   * the cloud or shared.
+   */
+  moveHalfTimestamps?: (number | null)[];
+  /**
    * Whole-cube rotations (x, y, z…) a gyro-equipped smart cube saw during
    * this solve, each at its elapsed ms from solve start. Kept separate from
    * `reconstruction` — which stays the physical, center-color-named move

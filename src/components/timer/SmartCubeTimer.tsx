@@ -58,7 +58,7 @@ import { PostSolveActions } from "@/components/timer/PostSolveActions";
 import { LiveAura, LiveElapsed, LiveMoveLine } from "@/components/timer/liveClock";
 import { liveElapsedMs } from "@/components/timer/liveClockMath";
 import { StatusBanners, StatusDot, LOW_BATTERY_PERCENT, type BannerState } from "@/components/timer/StatusBanners";
-import { assembleSolveSave, guardedStep, inspectionPenaltyFor, solveSaveExtras, type PhaseBoundaries } from "@/components/timer/smartCubeSave";
+import { assembleSolveSave, guardedStep, halvesFor, inspectionPenaltyFor, solveSaveExtras, type PhaseBoundaries } from "@/components/timer/smartCubeSave";
 import { TimerStage } from "@/components/timer/TimerStage";
 import { useFxPhase } from "@/lib/fx/useFxPhase";
 import { fxImpact, type FxPhase } from "@/lib/fx/fxBus";
@@ -125,6 +125,7 @@ const MIN_CADENCE_GAPS = 12;
 
 /** Stable empties for the post-solve values, so a solve in progress doesn't rebuild them on every move. */
 const NO_NUMBERS: number[] = [];
+const NO_HALVES: (number | null)[] = [];
 const NO_TOKENS: string[] = [];
 const NO_ROWS: ReturnType<typeof buildPostSolveRows> = [];
 const NO_MOVES: SmartCubeMove[] = [];
@@ -639,6 +640,12 @@ export function SmartCubeTimer() {
     [moves, startedAtMs, finished],
   );
 
+  // Parallel to moveTimestampsRel: the first quarter of each double turn the store merged (null elsewhere), if any.
+  const moveHalvesRel = useMemo(() => {
+    if (!finished || startedAtMs === null || !moves.some((m) => m.halfMs !== undefined)) return NO_HALVES;
+    return moves.map((m) => (m.halfMs === undefined ? null : m.halfMs - startedAtMs));
+  }, [moves, startedAtMs, finished]);
+
   // The scramble the currently-shown recap belongs to. Captured the instant
   // a solve saves (see the effect below) rather than read live, because
   // this component silently rolls the next target scramble the moment a
@@ -677,7 +684,7 @@ export function SmartCubeTimer() {
     // still recorded with its time, scramble and turns, just without that step's extras.
     const startMs = startedAtMs!;
     const assembly = assembleSolveSave(
-      { startedAtMs: startMs, reconstruction, moveTimestampsRel, correctedDuringSolve },
+      { startedAtMs: startMs, reconstruction, moveTimestampsRel, moveHalfTimestampsRel: moveHalvesRel, correctedDuringSolve },
       {
         gyro: () => summarizeSolveGyro(getGyroLog(), useGyroStore.getState().ref, calibrationFor(protocolName).calibration, moves, startMs),
         startFacelets: () => scrambleToFacelets(scramble),
@@ -732,6 +739,7 @@ export function SmartCubeTimer() {
       extras.penalty,
       cube ? { ...cube, corrected: correctedDuringSolve } : undefined,
       repair?.change,
+      assembly.moveHalfTimestamps,
     )
       .then((id) => {
         if (id) setSavedIdFor({ solvedAtMs: savedFor, id });
@@ -765,6 +773,7 @@ export function SmartCubeTimer() {
     nextScramble,
     reconstruction,
     moveTimestampsRel,
+    moveHalvesRel,
     protocolName,
     correctedDuringSolve,
     cube,
@@ -858,6 +867,7 @@ export function SmartCubeTimer() {
     reconstruction: string;
     timeMs: number;
     moveTimestamps?: number[];
+    moveHalfTimestamps?: (number | null)[];
   } | null>(null);
 
   // A manual escape hatch for "I don't want to physically re-scramble to
@@ -945,6 +955,7 @@ export function SmartCubeTimer() {
       // "It's solved" with the app's turns short of it: if a lost turn can be put back, the solve keeps its recap.
       let reconstructionOut: string | undefined;
       let timestampsOut: number[] | undefined;
+      let halvesOut: (number | null)[] | undefined;
       let fix: TurnRepair | null = null;
       if (how === "solved") {
         const tokens = moves.map((m) => m.token);
@@ -953,6 +964,7 @@ export function SmartCubeTimer() {
         if (r === "intact") {
           reconstructionOut = tokens.join(" ");
           timestampsOut = rel;
+          halvesOut = halvesFor(moves.some((m) => m.halfMs !== undefined) ? moves.map((m) => (m.halfMs === undefined ? null : m.halfMs - startedAtMs)) : undefined, moves.length);
         } else if (r) {
           fix = r;
           reconstructionOut = r.tokens.join(" ");
@@ -961,7 +973,7 @@ export function SmartCubeTimer() {
       }
       // The same penalty and splits as the automatic save: an inspection +2 and the phase splits survive "It's solved", and a chosen DNF wins.
       const extras = solveSaveExtras({ startedAtMs, inspectionStartedAtMs: flow.inspectionStartedAtMs, boundaries, forcePenalty: how === "dnf" ? "dnf" : undefined });
-      void recordSolve(timeMs, scramble, extras.splits, pendingEventAtStart ?? undefined, reconstructionOut, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, timestampsOut, undefined, extras.penalty, cube ? { ...cube, corrected: correctedDuringSolve } : undefined, fix?.change);
+      void recordSolve(timeMs, scramble, extras.splits, pendingEventAtStart ?? undefined, reconstructionOut, summarizeHeartRate(startedAtMs) ?? undefined, crossMs, timestampsOut, undefined, extras.penalty, cube ? { ...cube, corrected: correctedDuringSolve } : undefined, fix?.change, halvesOut);
     }
     // "It's solved" means the real cube is solved whatever the app thought — put the two back in step.
     if (how === "solved") resyncSolved();
@@ -1025,6 +1037,7 @@ export function SmartCubeTimer() {
         reconstruction: lastSolve.reconstruction,
         timeMs: lastSolve.timeMs,
         moveTimestamps: lastSolve.moveTimestamps,
+        moveHalfTimestamps: lastSolve.moveHalfTimestamps,
       });
       return "Replaying last solve";
     },
@@ -1553,6 +1566,7 @@ export function SmartCubeTimer() {
           reconstruction={savedReplay.reconstruction}
           timeMs={savedReplay.timeMs}
           moveTimestamps={savedReplay.moveTimestamps}
+          moveHalfTimestamps={savedReplay.moveHalfTimestamps}
           onClose={() => setSavedReplay(null)}
         />
       )}
@@ -1564,6 +1578,7 @@ export function SmartCubeTimer() {
           timeMs={elapsedMs}
           penalty={savedSolve?.penalty}
           moveTimestamps={moveTimestampsRel}
+          moveHalfTimestamps={moveHalvesRel.length > 0 ? moveHalvesRel : savedSolve?.moveHalfTimestamps}
           gyroStream={savedFull.solve?.gyroStream}
           solveId={savedSolve?.id}
           date={savedSolve?.date}

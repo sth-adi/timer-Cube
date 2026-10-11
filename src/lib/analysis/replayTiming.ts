@@ -18,6 +18,12 @@ export interface ReplayTimeline {
   /** When each move's turn finishes. */
   ends: number[];
   durationMs: number;
+  /**
+   * Index = move index. Non-null only for a double turn played as its two real quarter turns (see doubleSplit): the
+   * first quarter runs firstStart..firstEnd (ending at its recorded time), the second secondStart..secondEnd.
+   * `starts[i]` is then firstStart and `ends[i]` secondEnd. Absent when no double was split.
+   */
+  halves?: ({ firstStart: number; firstEnd: number; secondStart: number; secondEnd: number } | null)[];
 }
 
 /** No turn is drawn shorter than this, so the player never gets a zero-length animation. */
@@ -51,21 +57,27 @@ export function turnScales(tokens: readonly string[]): number[] {
  * `fluid` is for the smooth 3D replay (see FLUID_TURN_MS): turns last their natural time, or most of a short gap, and `scales`
  * (one per move, see turnScales) makes a half turn longer than a quarter turn. Every turn still ends at its recorded timestamp.
  *
+ * `halves` (fluid only): per move, when its first quarter turn was made, on the same clock as the gaps added up
+ * (see lib/analysis/doubleSplit). Such a move is laid out as two quarter turns, each by the rules above against its own
+ * gap (the first from the previous move's end to t1, the second from t1 to the move's time), and reported in `halves`.
+ *
  * A gap too short to hold even MIN_TURN_MS (two halves of a slice turn
  * arriving together) borrows the difference from the next idle time, so the
  * replay doesn't drift away from the clock the solve ran on.
  */
-export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: boolean; turnMs?: number; idleCapMs?: number; fluid?: boolean; scales?: readonly number[] } = {}): ReplayTimeline {
+export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: boolean; turnMs?: number; idleCapMs?: number; fluid?: boolean; scales?: readonly number[]; halves?: readonly (number | null | undefined)[] } = {}): ReplayTimeline {
   const turnMax = opts.turnMs ?? TURN_MS;
   const turnMin = Math.min(MIN_TURN_MS, turnMax);
   const cap = opts.idleCapMs ?? IDLE_CAP_MS;
   const starts: number[] = [];
   const ends: number[] = [];
+  const halves: NonNullable<ReplayTimeline["halves"]> = [];
+  let anyHalf = false;
   let end = 0;
   let debt = 0;
-  for (let m = 0; m < gapsMs.length; m++) {
-    const gap = Math.max(0, gapsMs[m]);
-    const natural = FLUID_TURN_MS * (opts.scales?.[m] ?? 1);
+  let clock = 0;
+  /** One turn after `gap` ms of real time, lasting up to `natural`: where it starts and ends. */
+  const place = (gap: number, natural: number): [number, number] => {
     const turn = opts.fluid ? Math.max(turnMin, Math.min(natural, gap * FLUID_TURN_FRAC)) : Math.max(turnMin, Math.min(turnMax, gap));
     let idle = Math.max(0, gap - turn);
     const repaid = Math.min(debt, idle);
@@ -73,10 +85,28 @@ export function buildTimeline(gapsMs: readonly number[], opts: { realPauses?: bo
     debt += Math.max(0, turn - gap) - repaid;
     const start = end + (opts.realPauses ? idle : Math.min(idle, cap));
     end = start + turn;
-    starts.push(start);
-    ends.push(end);
+    return [start, end];
+  };
+  for (let m = 0; m < gapsMs.length; m++) {
+    const gap = Math.max(0, gapsMs[m]);
+    const t2 = clock + gap;
+    const t1 = opts.fluid ? opts.halves?.[m] : null;
+    if (typeof t1 === "number" && t1 > clock && t1 < t2) {
+      const [firstStart, firstEnd] = place(t1 - clock, FLUID_TURN_MS);
+      const [secondStart, secondEnd] = place(t2 - t1, FLUID_TURN_MS);
+      starts.push(firstStart);
+      ends.push(secondEnd);
+      halves.push({ firstStart, firstEnd, secondStart, secondEnd });
+      anyHalf = true;
+    } else {
+      const [start, stop] = place(gap, FLUID_TURN_MS * (opts.scales?.[m] ?? 1));
+      starts.push(start);
+      ends.push(stop);
+      halves.push(null);
+    }
+    clock = t2;
   }
-  return { starts, ends, durationMs: end };
+  return { starts, ends, durationMs: end, ...(anyHalf ? { halves } : {}) };
 }
 
 /** The edges of every turn in order: 0, start0, end0, start1, end1, … — what a position is measured against. */

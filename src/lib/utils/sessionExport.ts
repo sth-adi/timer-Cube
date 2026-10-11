@@ -35,6 +35,7 @@ export interface SessionExport {
     heartRate?: { avg: number; max: number };
     crossMs?: number;
     moveTimestamps?: number[];
+    moveHalfTimestamps?: (number | null)[];
     rotations?: { atMs: number; token: string }[];
     orientedReconstruction?: string;
     gyroStream?: GyroStream;
@@ -63,6 +64,7 @@ export function buildSessionExport(sessionName: string, solves: FullSolve[]): Se
       heartRate: s.heartRate,
       crossMs: s.crossMs,
       moveTimestamps: s.moveTimestamps,
+      moveHalfTimestamps: s.moveHalfTimestamps,
       rotations: s.rotations,
       orientedReconstruction: s.orientedReconstruction,
       gyroStream: s.gyroStream,
@@ -116,6 +118,7 @@ function isRotationList(v: unknown): v is { atMs: number; token: string }[] {
 }
 
 const isFiniteNumberList = (v: unknown): v is number[] => Array.isArray(v) && v.every((n) => typeof n === "number" && Number.isFinite(n));
+const isHalfList = (v: unknown): v is (number | null)[] => Array.isArray(v) && v.every((n) => n === null || (typeof n === "number" && Number.isFinite(n)));
 
 function isGyroStream(v: unknown): v is GyroStream {
   if (typeof v !== "object" || v === null) return false;
@@ -162,6 +165,7 @@ export function parseSessionExport(raw: unknown): SessionExport["solves"] {
       heartRate: isHeartRate(s.heartRate) ? s.heartRate : undefined,
       crossMs: typeof s.crossMs === "number" && Number.isFinite(s.crossMs) ? s.crossMs : undefined,
       moveTimestamps: isFiniteNumberList(s.moveTimestamps) ? s.moveTimestamps : undefined,
+      moveHalfTimestamps: isHalfList(s.moveHalfTimestamps) ? s.moveHalfTimestamps : undefined,
       rotations: isRotationList(s.rotations) ? s.rotations : undefined,
       orientedReconstruction: typeof s.orientedReconstruction === "string" ? s.orientedReconstruction : undefined,
       gyroStream: isGyroStream(s.gyroStream) ? s.gyroStream : undefined,

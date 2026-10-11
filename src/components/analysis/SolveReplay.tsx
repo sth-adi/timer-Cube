@@ -50,6 +50,8 @@ interface SolveReplayProps {
    * replay plays back at the cuber's actual pace instead of a level tempo.
    */
   moveTimestamps?: number[];
+  /** Parallel to `moveTimestamps`: when each double turn's first quarter was made (null elsewhere); without it the replay estimates the split. */
+  moveHalfTimestamps?: (number | null)[];
   /** The solve's time, for the Director's Cut sign-off. */
   totalMs?: number;
   /** The solve's recorded cube orientation: with real timing on a phase you did yourself, a small Gyro Twin tilts with it over the replay. */
@@ -90,7 +92,7 @@ function fallbackCaption(phase: PhaseAnalysis): string {
  * play/pause/scrub controls pace themselves against how long the cuber
  * really took between moves instead of a uniform per-move tempo.
  */
-export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, totalMs, gyroStream, ghostOf, puzzleLabel = "3x3", eventTag, date }: SolveReplayProps) {
+export function SolveReplay({ scramble, phases, moves, findings, summary, moveTimestamps, moveHalfTimestamps, totalMs, gyroStream, ghostOf, puzzleLabel = "3x3", eventTag, date }: SolveReplayProps) {
   const [selected, setSelected] = useState<number>(-1);
   const [director, setDirector] = useState(false);
   const [voice, setVoice] = useState(true);
@@ -135,6 +137,14 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
     return { gaps: viewMoves.map(() => FALLBACK_GAP_MS), hasRealTiming: false };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moveTimestamps, moves.length, movesBefore.length, viewMoves.length, alt]);
+
+  // The first-quarter times of the doubles in the phase on screen, on the same clock as its gaps (zeroed at the move before it).
+  const halvesMs = useMemo(() => {
+    if (!hasRealTiming || alt || !moveTimestamps || moveHalfTimestamps?.length !== moves.length) return undefined;
+    const from = movesBefore.length;
+    const base = from > 0 ? (moveTimestamps[from - 1] ?? 0) : 0;
+    return moveHalfTimestamps.slice(from, from + viewMoves.length).map((h) => (h === null ? null : h - base));
+  }, [hasRealTiming, alt, moveTimestamps, moveHalfTimestamps, moves.length, movesBefore.length, viewMoves.length]);
 
   // The Gyro Twin: only for what you really did (not the alternate take), with the real time of each move
   // it plays and the stickers the cube had after each one.
@@ -274,6 +284,7 @@ export function SolveReplay({ scramble, phases, moves, findings, summary, moveTi
         alg={fullAlg}
         setupAlg={setupAlg}
         gapsMs={gaps}
+        halvesMs={halvesMs}
         hasRealTiming={hasRealTiming}
         className={CUBE_BOX}
         stage={stage}

@@ -52,6 +52,11 @@ export function solveSaveExtras({
   };
 }
 
+/** The halves worth saving: only when they line up with the turns and at least one move was a merged double. */
+export function halvesFor(halves: readonly (number | null)[] | undefined, moveCount: number): (number | null)[] | undefined {
+  return halves && halves.length === moveCount && halves.some((h) => h !== null) ? [...halves] : undefined;
+}
+
 /** Runs one optional analysis step: whatever it throws, the step just yields `fallback` and the save carries on without its extras. */
 export function guardedStep<T>(step: () => T, fallback: T, onFail?: (error: unknown) => void): T {
   try {
@@ -81,6 +86,8 @@ export interface SolveSaveInput {
   /** The turns as recorded, joined, and their ms from the first turn. */
   reconstruction: string;
   moveTimestampsRel: number[];
+  /** Parallel to moveTimestampsRel: the first quarter of each merged double turn (null elsewhere); omit or leave empty when none. */
+  moveHalfTimestampsRel?: (number | null)[];
   /** The cube reported a turn went missing and corrected itself mid-solve. */
   correctedDuringSolve: boolean;
 }
@@ -92,6 +99,8 @@ export interface SolveSaveAssembly {
   /** The reconstruction and its timestamps to save; undefined when the turns can't be trusted to solve the scramble. */
   reconstruction: string | undefined;
   moveTimestamps: number[] | undefined;
+  /** The first-quarter times of merged doubles, parallel to moveTimestamps; undefined with no double, or when a repair changed the turns (the halves would no longer line up). */
+  moveHalfTimestamps: (number | null)[] | undefined;
   repair: TurnRepair | null;
   repairedSplits: number[] | undefined;
   repairedCrossMs: number | undefined;
@@ -126,6 +135,7 @@ export function assembleSolveSave(input: SolveSaveInput, steps: SolveSaveSteps):
     gaze,
     reconstruction: input.reconstruction,
     moveTimestamps: input.moveTimestampsRel,
+    moveHalfTimestamps: halvesFor(input.moveHalfTimestampsRel, input.moveTimestampsRel.length),
     repair: null,
     repairedSplits: undefined,
     repairedCrossMs: undefined,
@@ -141,12 +151,14 @@ export function assembleSolveSave(input: SolveSaveInput, steps: SolveSaveSteps):
   if (fixed === null) {
     out.reconstruction = undefined;
     out.moveTimestamps = undefined;
+    out.moveHalfTimestamps = undefined;
     out.turnLoss = { kind: "time-only" };
     return out;
   }
   out.repair = fixed;
   out.reconstruction = fixed.tokens.join(" ");
   out.moveTimestamps = fixed.times;
+  out.moveHalfTimestamps = undefined;
   out.turnLoss = { kind: "repaired", change: fixed.change };
   const m = guardedStep(() => steps.milestonesOf(fixed), null, note("milestones"));
   if (m) {

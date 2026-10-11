@@ -27,6 +27,7 @@ export async function addSolve(input: {
   heartRate?: { avg: number; max: number };
   crossMs?: number;
   moveTimestamps?: number[];
+  moveHalfTimestamps?: (number | null)[];
   rotations?: { atMs: number; token: string }[];
   orientedReconstruction?: string;
   gyroStream?: GyroStream;
@@ -49,6 +50,7 @@ export async function addSolve(input: {
     ...(input.heartRate ? { heartRate: input.heartRate } : {}),
     ...(input.crossMs !== undefined ? { crossMs: input.crossMs } : {}),
     ...(input.moveTimestamps && input.moveTimestamps.length > 0 ? { moveTimestamps: input.moveTimestamps } : {}),
+    ...(input.moveHalfTimestamps && input.moveHalfTimestamps.some((h) => h !== null) ? { moveHalfTimestamps: input.moveHalfTimestamps } : {}),
     ...(input.rotations ? { rotations: input.rotations } : {}),
     ...(input.orientedReconstruction ? { orientedReconstruction: input.orientedReconstruction } : {}),
     ...(input.gyroStream ? { gyroStream: input.gyroStream } : {}),
@@ -252,6 +254,7 @@ function importedSolve(s: ImportRow, id: string, sessionId: string, updatedAt: n
     ...(s.heartRate ? { heartRate: s.heartRate } : {}),
     ...(s.crossMs !== undefined ? { crossMs: s.crossMs } : {}),
     ...(s.moveTimestamps && s.moveTimestamps.length > 0 ? { moveTimestamps: s.moveTimestamps } : {}),
+    ...(s.moveHalfTimestamps && s.moveHalfTimestamps.some((h) => h !== null) ? { moveHalfTimestamps: s.moveHalfTimestamps } : {}),
     ...(s.rotations ? { rotations: s.rotations } : {}),
     ...(s.orientedReconstruction ? { orientedReconstruction: s.orientedReconstruction } : {}),
     ...(s.gyroStream ? { gyroStream: s.gyroStream } : {}),
@@ -261,7 +264,7 @@ function importedSolve(s: ImportRow, id: string, sessionId: string, updatedAt: n
 }
 
 /** What a smart cube recorded during a solve: an import that lacks it never erases it from a solve already here. */
-const RECORDED_FIELDS = ["gyroStream", "moveTimestamps", "rotations", "orientedReconstruction"] as const;
+const RECORDED_FIELDS = ["gyroStream", "moveTimestamps", "moveHalfTimestamps", "rotations", "orientedReconstruction"] as const;
 
 /** Content without the revision, for telling a same-revision copy apart from a real edit. */
 const contentOf = (s: FullSolve) => contentKey({ ...s, updatedAt: undefined });

@@ -206,6 +206,58 @@ await check("smart cube: the analyzer's replay carries the recorded gyro too", a
   await page.getByTestId("replay-gyro-twin").waitFor({ timeout: 60000 });
 });
 
+await check("smart cube: a double turn replays as its two real quarter turns", async (page) => {
+  await connectSmartCube(page);
+  await page.evaluate(() => window.__cubeSim.gyro({ x: 0, y: 0, z: 0, w: 1 }));
+  await playTurns(page, quarterTurns(sim.scramble), 10);
+  await page.waitForTimeout(500);
+  // Quarters of a double 120ms apart, everything else 60ms.
+  await page.evaluate(async (moves) => {
+    let prev = "";
+    for (const m of moves) {
+      await new Promise((r) => setTimeout(r, m === prev ? 120 : 60));
+      window.__cubeSim.turn(m);
+      prev = m;
+    }
+  }, sim.solve);
+  await page.waitForFunction(() => /Saved/.test(document.body.innerText), null, { timeout: 20000 });
+  await page.waitForTimeout(1500);
+  const solve = await lastSolve(page);
+  const halves = solve.moveHalfTimestamps;
+  assert.ok(Array.isArray(halves) && halves.length === solve.moveTimestamps.length, "the solve saved its double-turn halves");
+  const idx = halves.flatMap((h, i) => (h === null ? [] : [i]));
+  assert.ok(idx.length > 3, "several doubles were merged");
+  for (const i of idx) {
+    const gap = solve.moveTimestamps[i] - halves[i];
+    assert.ok(gap > 80 && gap < 200, `quarter ${i} was ${gap}ms before the second`);
+    assert.ok(halves[i] > (solve.moveTimestamps[i - 1] ?? 0), "the first quarter comes after the previous move");
+  }
+  await page.getByTestId("recap-replay").click();
+  const stage = page.getByTestId("replay-main-cube");
+  await stage.waitFor({ timeout: 15000 });
+  await page.waitForTimeout(500);
+  const windows = JSON.parse((await stage.getAttribute("data-halves")) ?? "[]");
+  assert.equal(windows.length, idx.length, "the stage splits every merged double");
+  const scrub = page.getByLabel("Scrub through the moves");
+  const at = async (ms) => {
+    await scrub.fill(String(Math.ceil(ms)));
+    await page.waitForTimeout(250);
+    return { facelets: await stage.getAttribute("data-facelets"), turning: await stage.getAttribute("data-turning") };
+  };
+  const [, firstStart, firstEnd, secondStart, secondEnd] = windows[0];
+  const before = await at(firstStart - 1);
+  const first = await at((firstStart + firstEnd) / 2);
+  const second = await at((secondStart + secondEnd) / 2);
+  const after = await at(secondEnd + 2);
+  assert.equal(first.turning, "true");
+  assert.equal(first.facelets, before.facelets, "the first quarter turns the cube from before the double");
+  assert.equal(second.turning, "true");
+  assert.notEqual(second.facelets, before.facelets, "the second quarter starts from the half-way cube");
+  assert.notEqual(second.facelets, after.facelets, "and ends on the cube after the double");
+  assert.equal(after.turning, "false");
+  assert.equal((await at(secondEnd)).facelets, after.facelets, "the double ends exactly on its recorded time");
+});
+
 for (const r of results) console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.ok ? "" : `\n      ${r.why}`}`);
 const failed = results.filter((r) => !r.ok).length;
 console.log(failed ? `\n${failed} of ${results.length} failed` : `\nall ${results.length} passed`);

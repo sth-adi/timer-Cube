@@ -45,8 +45,17 @@ export function withLocalOnlyFields(remote: FullSolve[], local: readonly FullSol
     // wipe what this device captured when it wins the merge.
     const gyroStream = !r.gyroStream && mine?.gyroStream ? mine.gyroStream : undefined;
     const moveTimestamps = !r.moveTimestamps && mine?.moveTimestamps ? mine.moveTimestamps : undefined;
-    if (!cube && !repaired && !gyroStream && !moveTimestamps) return r;
-    return { ...r, ...(cube ? { cube } : {}), ...(repaired ? { repaired } : {}), ...(gyroStream ? { gyroStream } : {}), ...(moveTimestamps ? { moveTimestamps } : {}) };
+    // Not a cloud column at all (see Solve.moveHalfTimestamps): always the local copy, when this device has one.
+    const moveHalfTimestamps = !r.moveHalfTimestamps && mine?.moveHalfTimestamps ? mine.moveHalfTimestamps : undefined;
+    if (!cube && !repaired && !gyroStream && !moveTimestamps && !moveHalfTimestamps) return r;
+    return {
+      ...r,
+      ...(cube ? { cube } : {}),
+      ...(repaired ? { repaired } : {}),
+      ...(gyroStream ? { gyroStream } : {}),
+      ...(moveTimestamps ? { moveTimestamps } : {}),
+      ...(moveHalfTimestamps ? { moveHalfTimestamps } : {}),
+    };
   });
 }
 

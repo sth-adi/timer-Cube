@@ -34,6 +34,8 @@ interface InstantReplaySheetProps {
   penalty?: Penalty;
   /** Elapsed ms from solve start for each move, one-for-one with `reconstruction`'s tokens — real capture timing off a smart cube, not a retyped guess. */
   moveTimestamps?: number[];
+  /** Parallel to moveTimestamps: when the first quarter of each double turn (U2) was made, null elsewhere. Without it the replay estimates the split. */
+  moveHalfTimestamps?: (number | null)[];
   /** The solve's recorded cube orientation (see lib/gyro/solveGyro): when there is one, a small Gyro Twin tilts with it over the replay. */
   gyroStream?: GyroStreamData | null;
   /** The solve's id, date and event when the caller has them: a "vs PB" ghost is then your best solve from before this one, in the same event. */
@@ -51,7 +53,7 @@ interface InstantReplaySheetProps {
  * optimal-solution comparison): it's the fast "let me see that again" replay
  * Cubeast's own post-solve screen offers, not a second copy of the analyzer.
  */
-export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty = "none", moveTimestamps, gyroStream, solveId, date, event, onClose }: InstantReplaySheetProps) {
+export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty = "none", moveTimestamps, moveHalfTimestamps, gyroStream, solveId, date, event, onClose }: InstantReplaySheetProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useModalLayer(dialogRef, onClose);
@@ -153,6 +155,7 @@ export function InstantReplaySheet({ scramble, reconstruction, timeMs, penalty =
             alg={reconstruction}
             setupAlg={scramble}
             gapsMs={gaps}
+            halvesMs={hasRealTiming && moveHalfTimestamps?.length === moves.length ? moveHalfTimestamps : undefined}
             hasRealTiming={hasRealTiming}
             marks={marks}
             renderMoves={moveText}

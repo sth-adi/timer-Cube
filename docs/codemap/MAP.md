@@ -452,3 +452,7 @@ Appended (not regenerated).
 - src/lib/cube3d/headless.ts [0] {Lab / Play} — Renders one cube frame onto any canvas, for the reel video. (CubeFrameOptions, disposeCubeFrameCanvas, renderCubeFrameToCanvas)
 - src/components/cube3d/Cube3D.tsx [1] {Lab / Play} — The photoreal 3D cube component: lazy-loads Three.js, falls back to the CSS cube without WebGL. (Cube3D, Cube3DProps)
 - Replay: `replay/ReplayStage` wraps the cube in a flat colour field with serif move grid, `StackmatTimer` and an end card; the main cube is `cube3d/Cube3D` (Three.js, lazy) driven by `analysis/replayClock` and the recorded gyro, with `audio/cubeSounds` on each turn. TwistyPlayer is only the no-WebGL fallback.
+
+### Additions — 2026-10-12 (exact double-turn timing in the replay)
+- src/lib/analysis/doubleSplit.ts [1] {Analysis / X-Ray} — Splits a merged double turn (U2) back into its two quarter turns at their real times, using the recorded first-quarter time or an estimate. (DOUBLE_GAP_MS, MAX_DOUBLE_GAP_FRAC, MIN_DOUBLE_GAP_MS, gapsToTimes, isFaceDouble, splitDoubles)
+- Double turns: the store keeps the first quarter's time (`SmartCubeMove.halfMs`, saved as `Solve.moveHalfTimestamps`); `analysis/doubleSplit` estimates it when missing and `buildTimeline` plays a double as two real quarter turns.

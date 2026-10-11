@@ -3,14 +3,13 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Cube3D } from "@/components/cube3d/Cube3D";
 import type { TurnState } from "@/components/lab/TurnCube";
-import { parseMove } from "@/lib/cube-engine/stickerTurns";
 import { quatToMat, type Quat } from "@/lib/gyro/orientation";
 import { solveMsAtPosition, streamQuatAt } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
 import { springStep, type SpringPose } from "@/lib/gyro/smooth";
 import { REST_SPRING, buildLeanTurns, cameraMotionAllowed, leanAt, stepLean, type LeanSpring } from "@/lib/analysis/replayCamera";
-import { activeLeaf } from "@/lib/analysis/replayTiming";
-import { FIXED_VIEW, viewOrientation } from "@/lib/analysis/replayView";
+import { activeLeaf, type ReplayTimeline } from "@/lib/analysis/replayTiming";
+import { FIXED_VIEW, halfwayFacelets, stageStateAt, viewOrientation } from "@/lib/analysis/replayView";
 
 /** Degrees of turn per pixel of drag. */
 const ORBIT_DEG_PER_PX = 0.45;
@@ -46,6 +45,7 @@ export function ReplayStageCube({
   tokens,
   starts,
   ends,
+  halves,
   stream,
   moveMs,
   positionMs,
@@ -59,13 +59,15 @@ export function ReplayStageCube({
   tokens: readonly string[];
   starts: readonly number[];
   ends: readonly number[];
+  /** A double turn played as its two real quarter turns (see ReplayTimeline.halves); omit for each move as one turn. */
+  halves?: ReplayTimeline["halves"];
   stream?: GyroStreamData | null;
   moveMs?: readonly number[] | null;
   /** The player's last reported position and state: they wake the frame loop (a scrub while paused, a speed change). */
   positionMs: number;
   playing: boolean;
   speed: number;
-  onTurn?: (k: number) => void;
+  onTurn?: (k: number, part?: 0 | 1) => void;
   /** The first frame is drawn (three.js loads lazily, so the stage shows its placeholder until then). */
   onReady?: () => void;
 }) {
@@ -73,9 +75,9 @@ export function ReplayStageCube({
   const [view, setView] = useState<View>(() => ({ facelets: faceletsAfter[0], turning: null, orientation: FIXED_VIEW }));
   const kickRef = useRef<() => void>(() => {});
   const orbitRef = useRef({ yaw: 0, pitch: 0 });
-  const dataRef = useRef({ clock, faceletsAfter, tokens, starts, ends, stream, moveMs, onTurn, onReady });
+  const dataRef = useRef({ clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, onTurn, onReady });
   useEffect(() => {
-    dataRef.current = { clock, faceletsAfter, tokens, starts, ends, stream, moveMs, onTurn, onReady };
+    dataRef.current = { clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, onTurn, onReady };
     kickRef.current();
   });
   useEffect(() => {
@@ -92,6 +94,8 @@ export function ReplayStageCube({
     let lastKey = "";
     let turnsKey = "";
     let turns: ReturnType<typeof buildLeanTurns> = [];
+    let halfOf = new Map<number, string>();
+    let halfFor: readonly string[] | null = null;
     const frame = (now: number) => {
       raf = 0;
       const d = dataRef.current;
@@ -114,6 +118,9 @@ export function ReplayStageCube({
         const from = activeLeaf(d.starts, prevPos);
         const to = activeLeaf(d.starts, pos);
         if (to > from && pos - prevPos < 400) d.onTurn?.(to);
+        // A double turn clicks twice: once per quarter, the second as playback crosses into its window.
+        const h = d.halves?.[to];
+        if (h && pos - prevPos < 400 && prevPos < h.secondStart && h.secondStart < pos) d.onTurn?.(to, 1);
       }
       prevPos = pos;
 
@@ -135,12 +142,28 @@ export function ReplayStageCube({
         settled = settled && step.settled;
       }
 
-      const k = d.starts.length ? activeLeaf(d.starts, pos) : -1;
-      const turn = k >= 0 ? parseMove(d.tokens[k] ?? "") : null;
-      const span = k >= 0 ? (d.ends[k] ?? 0) - (d.starts[k] ?? 0) : 0;
-      const progress = turn && span > 0 ? (pos - d.starts[k]) / span : 1;
-      const turning = turn && progress < 1 ? { turn, progress: Math.max(0, progress) } : null;
-      const facelets = (turning ? d.faceletsAfter[k] : d.faceletsAfter[Math.min(d.faceletsAfter.length - 1, Math.max(0, k + 1))]) ?? d.faceletsAfter[0];
+      if (halfFor !== d.faceletsAfter) {
+        halfFor = d.faceletsAfter;
+        halfOf = new Map();
+      }
+      const state = stageStateAt({
+        tokens: d.tokens,
+        starts: d.starts,
+        ends: d.ends,
+        halves: d.halves,
+        faceletsAfter: d.faceletsAfter,
+        pos,
+        halfway: (i) => {
+          let f = halfOf.get(i);
+          if (f === undefined) {
+            f = halfwayFacelets(d.faceletsAfter[i], d.tokens[i] ?? "");
+            halfOf.set(i, f);
+          }
+          return f;
+        },
+      });
+      const { k, facelets, turning } = state;
+      const progress = turning ? turning.progress : 1;
       const orientation = viewOrientation(base, spring, orbitRef.current);
       const sig = `${facelets}|${turning ? `${k}:${progress.toFixed(4)}` : ""}|${orientation.x.toFixed(5)},${orientation.y.toFixed(5)},${orientation.z.toFixed(5)},${orientation.w.toFixed(5)}`;
       if (sig !== lastKey) {
@@ -229,6 +252,8 @@ export function ReplayStageCube({
       data-testid={stream ? "replay-gyro-twin" : "replay-main-cube"}
       data-facelets={view.facelets}
       data-turning={view.turning ? "true" : "false"}
+      // Test hook: [move, firstStart, firstEnd, secondStart, secondEnd] for every double played as two quarter turns.
+      data-halves={halves?.some(Boolean) ? JSON.stringify(halves.flatMap((h, i) => (h ? [[i, h.firstStart, h.firstEnd, h.secondStart, h.secondEnd]] : []))) : undefined}
     >
       {/* The box is 78% of the stage's width: the cube itself then fills about 56% of it. */}
       <Cube3D facelets={view.facelets} turning={view.turning} orientation={view.orientation} className="h-[78cqw] w-[78cqw] shrink-0" />

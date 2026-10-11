@@ -619,7 +619,8 @@
     {"id":"src/lib/cube3d/layout.ts","kind":"lib","area":"Lab / Play","exports":["ASSUMED_TURN_FRAMES","CUBIE_LAYOUT","CubieLayout","CubieSticker","LayerAngle","blurTrail","cubieTurns","easeTurn","easeTurnSlope","ghostOpacity","liftColor","rotateAbout","stickerJitter","toneColor"],"summary":"Pure layout for the 3D cube: the 26 cubies, eased turns, sticker colour lift and the motion-blur trail.","loc":136,"importedBy":1,"hasTest":true},
     {"id":"src/lib/cube3d/scene.ts","kind":"lib","area":"Lab / Play","exports":["CubeQuality","CubeScene","CubeSceneOptions","CubeSceneState"],"summary":"The Three.js scene for the photoreal cube: plastic materials, studio lighting, shadow and layer turns.","loc":356,"importedBy":2,"hasTest":false},
     {"id":"src/lib/cube3d/headless.ts","kind":"lib","area":"Lab / Play","exports":["CubeFrameOptions","disposeCubeFrameCanvas","renderCubeFrameToCanvas"],"summary":"Renders one cube frame onto any canvas, for the reel video.","loc":50,"importedBy":0,"hasTest":false},
-    {"id":"src/components/cube3d/Cube3D.tsx","kind":"component","area":"Lab / Play","exports":["Cube3D","Cube3DProps"],"summary":"The photoreal 3D cube component: lazy-loads Three.js, falls back to the CSS cube without WebGL.","loc":147,"importedBy":1,"hasTest":false}
+    {"id":"src/components/cube3d/Cube3D.tsx","kind":"component","area":"Lab / Play","exports":["Cube3D","Cube3DProps"],"summary":"The photoreal 3D cube component: lazy-loads Three.js, falls back to the CSS cube without WebGL.","loc":147,"importedBy":1,"hasTest":false},
+    {"id":"src/lib/analysis/doubleSplit.ts","kind":"lib","area":"Analysis / X-Ray","exports":["DOUBLE_GAP_MS","MAX_DOUBLE_GAP_FRAC","MIN_DOUBLE_GAP_MS","gapsToTimes","isFaceDouble","splitDoubles"],"summary":"Splits a merged double turn (U2) back into its two quarter turns at their real times, using the recorded first-quarter time or an estimate.","loc":50,"importedBy":1,"hasTest":true}
   ],
   "edges": [
     {"from":"src/app/algid/page.tsx","to":"src/components/AppBootstrap.tsx"},
@@ -2889,7 +2890,8 @@
     {"from":"src/components/cube3d/Cube3D.tsx","to":"src/lib/cube3d/scene.ts"},
     {"from":"src/lib/cube3d/headless.ts","to":"src/lib/cube3d/scene.ts"},
     {"from":"src/components/cube3d/Cube3D.tsx","to":"src/components/lab/TurnCube.tsx"},
-    {"from":"src/components/cube3d/Cube3D.tsx","to":"src/lib/gyro/orientation.ts"}
+    {"from":"src/components/cube3d/Cube3D.tsx","to":"src/lib/gyro/orientation.ts"},
+    {"from":"src/components/analysis/TimedCubePlayer.tsx","to":"src/lib/analysis/doubleSplit.ts"}
   ],
   "routes": {
     "/": "src/app/page.tsx",

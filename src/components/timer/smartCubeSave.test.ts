@@ -88,6 +88,18 @@ describe("assembleSolveSave", () => {
   const fixed: TurnRepair = { tokens: ["R", "U", "R'", "U'", "F"], times: [0, 100, 150, 200, 300], change: { kind: "inserted", index: 4, tokens: ["F"] }, alternatives: 0 };
   const milestones = { crossAtMs: 1500, f2lAtMs: 4000, ollAtMs: 6000 } as unknown as Milestones;
 
+  it("carries the double-turn halves, and drops them when a repair changes the turns", () => {
+    const halves = [null, 150, null, null];
+    const withHalves = { ...input, moveHalfTimestampsRel: halves };
+    expect(assembleSolveSave(withHalves, ok).moveHalfTimestamps).toEqual(halves);
+    expect(assembleSolveSave({ ...input, moveHalfTimestampsRel: [null, null, null, null] }, ok).moveHalfTimestamps).toBeUndefined();
+    expect(assembleSolveSave({ ...input, moveHalfTimestampsRel: [null, 150] }, ok).moveHalfTimestamps).toBeUndefined();
+    const lost = { ...withHalves, correctedDuringSolve: true };
+    expect(assembleSolveSave(lost, { ...ok, repair: () => fixed }).moveHalfTimestamps).toBeUndefined();
+    expect(assembleSolveSave(lost, { ...ok, repair: () => null }).moveHalfTimestamps).toBeUndefined();
+    expect(assembleSolveSave(lost, ok).moveHalfTimestamps).toEqual(halves);
+  });
+
   it("keeps the recorded turns and every extra when nothing throws", () => {
     const out = assembleSolveSave(input, ok);
     expect(out.failed).toEqual([]);

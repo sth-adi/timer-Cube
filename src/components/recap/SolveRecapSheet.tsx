@@ -64,7 +64,7 @@ export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onCl
   const turns = b?.moves.length ?? 0;
 
   const analyze = () => {
-    requestAnalysis(solve.scramble, final, solve.id, solve.reconstruction, solve.moveTimestamps);
+    requestAnalysis(solve.scramble, final, solve.id, solve.reconstruction, solve.moveTimestamps, solve.moveHalfTimestamps);
     onClose();
     if (pathname !== "/") router.push("/?jump=analyze");
   };
@@ -125,7 +125,7 @@ export function SolveRecapSheet({ solve, onClose, onMore }: { solve: Solve; onCl
       </div>
       {replay && solve.reconstruction && (
         <div onClick={(e) => e.stopPropagation()}>
-          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} penalty={solve.penalty} moveTimestamps={solve.moveTimestamps} gyroStream={fullForReplay.solve?.gyroStream} solveId={solve.id} date={solve.date} event={solve.event} onClose={() => setReplay(false)} />
+          <InstantReplaySheet scramble={solve.scramble} reconstruction={solve.reconstruction} timeMs={solve.timeMs} penalty={solve.penalty} moveTimestamps={solve.moveTimestamps} moveHalfTimestamps={solve.moveHalfTimestamps} gyroStream={fullForReplay.solve?.gyroStream} solveId={solve.id} date={solve.date} event={solve.event} onClose={() => setReplay(false)} />
         </div>
       )}
     </div>,

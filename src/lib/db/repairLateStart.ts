@@ -20,6 +20,7 @@ export function repairLateStart(solve: Solve | FullSolve, storedStream?: GyroStr
     timeMs: solve.timeMs + offset,
     moveTimestamps: ts.map(shift),
   };
+  if (solve.moveHalfTimestamps) out.moveHalfTimestamps = solve.moveHalfTimestamps.map((h) => (h === null ? null : shift(h)));
   if (solve.crossMs !== undefined) out.crossMs = solve.crossMs + offset;
   if (solve.splits) out.splits = solve.splits.map(shift);
   if (solve.rotations) out.rotations = solve.rotations.map((r) => ({ ...r, atMs: r.atMs + offset }));

@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils/cn";
 import { AnalyzerEmptyState, AnalyzerResultSkeleton } from "./AnalyzerSkeleton";
 
 export function AnalyzerView() {
-  const { scramble, reconstruction, result, errors, loading, solveId, moveTimestamps, timeMs, setScramble, setReconstruction, setTimeMs, run } =
+  const { scramble, reconstruction, result, errors, loading, solveId, moveTimestamps, moveHalfTimestamps, timeMs, setScramble, setReconstruction, setTimeMs, run } =
     useAnalysisStore();
   const saveReconstruction = useSessionStore((s) => s.saveReconstruction);
   const solves = useSessionStore((s) => s.solves);
@@ -193,6 +193,7 @@ export function AnalyzerView() {
               findings={result.findings}
               summary={result.summary}
               moveTimestamps={moveTimestamps ?? undefined}
+              moveHalfTimestamps={moveHalfTimestamps ?? undefined}
               totalMs={timeMs ?? undefined}
               gyroStream={gyroStream}
               ghostOf={solveId ? { id: solveId, date: analysedSolve?.date, event: analysedSolve?.event } : undefined}

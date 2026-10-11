@@ -40,6 +40,8 @@ export interface SmartCubeMove {
   token: string;
   /** Timestamp (ms) from the connection's own event stream, not wall-clock Date.now(). */
   timeStampMs: number;
+  /** For a double turn merged from two quarter turns: when the first quarter was made (same clock as timeStampMs, which is the second's). */
+  halfMs?: number;
 }
 
 export const SOLVED_FACELETS = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";
@@ -631,7 +633,7 @@ function attachConnection(connection: SmartCubeConnection, resumed: boolean): vo
     const lastMove = state.moves[state.moves.length - 1];
     const isDoubleTurn = mergesIntoDoubleTurn(lastMove?.token, lastMove?.timeStampMs, rawToken, ts);
     const move: SmartCubeMove = isDoubleTurn
-      ? { token: `${rawToken[0]}2`, timeStampMs: ts }
+      ? { token: `${rawToken[0]}2`, timeStampMs: ts, halfMs: lastMove!.timeStampMs }
       : { token: rawToken, timeStampMs: ts };
     const milestones = advanceMilestones(pickMilestones(state), liveCube, (f) => frames[f], ts);
 

@@ -16,6 +16,8 @@ interface AnalysisState {
    * back at the cuber's actual pace instead of a uniform tempo.
    */
   moveTimestamps: number[] | null;
+  /** Parallel to moveTimestamps: when each double turn's first quarter was made (null elsewhere), if the solve recorded it. */
+  moveHalfTimestamps: (number | null)[] | null;
   result: SolveAnalysis | null;
   errors: string[];
   loading: boolean;
@@ -34,6 +36,7 @@ interface AnalysisState {
     solveId?: string,
     savedReconstruction?: string,
     moveTimestamps?: number[],
+    moveHalfTimestamps?: (number | null)[],
   ) => void;
   run: () => Promise<void>;
   clear: () => void;
@@ -45,6 +48,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   reconstruction: "",
   timeMs: null,
   moveTimestamps: null,
+  moveHalfTimestamps: null,
   result: null,
   errors: [],
   loading: false,
@@ -53,10 +57,10 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   setScramble: (scramble) => set({ scramble }),
   // Hand-editing the reconstruction invalidates any real per-move timing it
   // came with — the timestamps would no longer line up with the new moves.
-  setReconstruction: (reconstruction) => set({ reconstruction, moveTimestamps: null }),
+  setReconstruction: (reconstruction) => set({ reconstruction, moveTimestamps: null, moveHalfTimestamps: null }),
   setTimeMs: (timeMs) => set({ timeMs }),
 
-  requestAnalysis: (scramble, timeMs, solveId, savedReconstruction, moveTimestamps) =>
+  requestAnalysis: (scramble, timeMs, solveId, savedReconstruction, moveTimestamps, moveHalfTimestamps) =>
     set((s) => ({
       scramble,
       timeMs,
@@ -67,6 +71,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       // whichever solve was analyzed previously.
       reconstruction: savedReconstruction ?? "",
       moveTimestamps: moveTimestamps ?? null,
+      moveHalfTimestamps: moveHalfTimestamps ?? null,
       result: null,
       errors: [],
       requestSeq: s.requestSeq + 1,
@@ -90,5 +95,5 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }
   },
 
-  clear: () => set({ reconstruction: "", result: null, errors: [], timeMs: null, solveId: null, moveTimestamps: null }),
+  clear: () => set({ reconstruction: "", result: null, errors: [], timeMs: null, solveId: null, moveTimestamps: null, moveHalfTimestamps: null }),
 }));
