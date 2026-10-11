@@ -7,6 +7,7 @@ import {
   DirectionalLight,
   ExtrudeGeometry,
   Group,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
@@ -28,7 +29,8 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import type { MoveSpec } from "@/lib/cube-engine/stickerTurns";
 import { CUBE_BODY } from "@/components/scramble/cubeColors";
-import { ASSUMED_TURN_FRAMES, CUBIE_LAYOUT, blurTrail, cubieTurns, ghostOpacity, toneColor } from "./layout";
+import { ASSUMED_TURN_FRAMES, CUBIE_LAYOUT, blurTrail, cubieTurns, fillToHex, ghostOpacity, toneColor } from "./layout";
+import { layerTilt, type CubeJiggle } from "./jiggle";
 
 export type CubeQuality = "low" | "medium" | "high";
 
@@ -40,12 +42,20 @@ export interface CubeSceneState {
   orientation?: { x: number; y: number; z: number; w: number } | null;
   /** draw the trailing ghosts of a fast turn */
   motionBlur?: boolean;
+  /** per sticker (54, facelet order) a CSS colour that replaces its facelet colour (TurnCube's `stickerFills`); undefined keeps the facelet colour */
+  stickerFills?: readonly (string | undefined)[];
+  /** secondary motion: a wobble of the whole cube (rotation vector, cube frame) and, being present, a slight tilt of the turning layer */
+  jiggle?: CubeJiggle | null;
+  /** U/F/R... on the six centre stickers */
+  faceLetters?: boolean;
 }
 
 export interface CubeSceneOptions {
   quality?: CubeQuality;
   /** keep the drawing buffer so the canvas can be read back after the frame (headless use) */
   preserveDrawingBuffer?: boolean;
+  /** degrees the fixed camera sits to the right of the cube's front (default 32; negative looks from the left) */
+  cameraYaw?: number;
 }
 
 /**
@@ -62,13 +72,18 @@ const QUALITY: Record<CubeQuality, { dpr: number; shadow: number; ghosts: number
 
 /** The fixed camera: slightly above and to the right, three faces in view (the twin's rotateX(-24) rotateY(-32)). */
 const CAM_PITCH = (24 * Math.PI) / 180;
-const CAM_YAW = (32 * Math.PI) / 180;
+const DEFAULT_CAM_YAW = 32;
 const FIT_RADIUS = 2.7;
+/** A canvas this small (CSS px) costs next to nothing to draw at a high pixel ratio, so it gets one: stickers stay crisp in the compact live cube. */
+const SMALL_CANVAS_PX = 260;
+const SMALL_CANVAS_RATIO = 2.5;
 const FLOOR_Y = -2.45;
 const FOV = 26;
 
 const BODY = 0.982;
 const HALF = BODY / 2;
+
+const AXES = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)];
 
 function stickerGeometry(fine: boolean): ExtrudeGeometry {
   const size = 0.86;
@@ -130,6 +145,12 @@ export class CubeScene {
   private key: DirectionalLight;
   private contact: Mesh | null = null;
   private lastFacelets = "";
+  private lastFills: readonly (string | undefined)[] | undefined;
+  private letters: Group | null = null;
+  private camYaw: number;
+  private tiltQ = new Quaternion();
+  private wobbleQ = new Quaternion();
+  private wobbleAxis = new Vector3();
   private width = 0;
   private height = 0;
   private quality: CubeQuality;
@@ -147,6 +168,7 @@ export class CubeScene {
     const q = QUALITY[this.quality];
     this.ratioCap = q.dpr;
     this.ghostBudget = q.ghosts;
+    this.camYaw = ((opts.cameraYaw ?? DEFAULT_CAM_YAW) * Math.PI) / 180;
     const renderer = new WebGLRenderer({ canvas, antialias: (window.devicePixelRatio || 1) < 2, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: !!opts.preserveDrawingBuffer });
     this.renderer = renderer;
     renderer.setClearColor(0x000000, 0);
@@ -246,18 +268,35 @@ export class CubeScene {
     w = Math.max(1, Math.round(w));
     h = Math.max(1, Math.round(h));
     this.lastDpr = dpr;
-    const ratio = Math.max(1, Math.min(dpr, this.ratioCap));
-    this.renderer.setPixelRatio(ratio);
-    this.renderer.setSize(w, h, false);
     this.width = w;
     this.height = h;
-    const aspect = w / h;
+    this.applyRatio();
+    this.placeCamera();
+  }
+
+  /** Move the fixed camera to the other side of the cube (degrees to the right of the front; negative is left). */
+  setCameraYaw(deg: number): void {
+    const next = (deg * Math.PI) / 180;
+    if (next === this.camYaw) return;
+    this.camYaw = next;
+    if (this.width) this.placeCamera();
+  }
+
+  private applyRatio(): void {
+    const small = Math.max(this.width, this.height) <= SMALL_CANVAS_PX;
+    const cap = small ? Math.max(this.ratioCap, SMALL_CANVAS_RATIO) : this.ratioCap;
+    this.renderer.setPixelRatio(Math.max(1, Math.min(this.lastDpr, cap)));
+    this.renderer.setSize(this.width, this.height, false);
+  }
+
+  private placeCamera(): void {
+    const aspect = this.width / this.height;
     this.camera.aspect = aspect;
     // fit the cube's bounding sphere in the narrower dimension
     const half = (FOV * Math.PI) / 360;
     const fitHalf = aspect >= 1 ? half : Math.atan(Math.tan(half) * aspect);
     const dist = (FIT_RADIUS * 1.06) / Math.sin(fitHalf);
-    this.camera.position.set(Math.sin(CAM_YAW) * Math.cos(CAM_PITCH), Math.sin(CAM_PITCH), Math.cos(CAM_YAW) * Math.cos(CAM_PITCH)).multiplyScalar(dist);
+    this.camera.position.set(Math.sin(this.camYaw) * Math.cos(CAM_PITCH), Math.sin(CAM_PITCH), Math.cos(this.camYaw) * Math.cos(CAM_PITCH)).multiplyScalar(dist);
     this.camera.lookAt(0, -0.3, 0);
     this.camera.updateProjectionMatrix();
   }
@@ -297,18 +336,65 @@ export class CubeScene {
     }
   }
 
-  private setFacelets(facelets: string): void {
-    if (facelets === this.lastFacelets) return;
+  private setFacelets(facelets: string, fills?: readonly (string | undefined)[]): void {
+    if (facelets === this.lastFacelets && fills === this.lastFills) return;
     this.lastFacelets = facelets;
+    this.lastFills = fills;
     for (const c of this.cubies) {
       for (const s of c.stickers) {
-        const [r, g, b] = toneColor(FACELET_COLORS[facelets[s.index]] ?? "#555555", s.index);
+        const [r, g, b] = toneColor(fillToHex(fills?.[s.index]) ?? FACELET_COLORS[facelets[s.index]] ?? "#555555", s.index);
         s.material.color.setRGB(r, g, b, SRGBColorSpace);
       }
       c.ghostStickers.forEach((sts, level) => {
         for (const s of sts) s.mesh.material = this.ghostMaterial(facelets[s.index], level);
       });
     }
+  }
+
+  /** The six face letters on the centre stickers, built the first time they are asked for. Part of the cube group, so they tilt and wobble with it. */
+  private setFaceLetters(on: boolean): void {
+    if (!on && !this.letters) return;
+    if (!this.letters) {
+      const group = new Group();
+      const basis = new Matrix4();
+      // face: outward normal and the direction the letter's top points in the yellow-up grip the cube is shown in (so it reads upright there)
+      const FACES: [string, [number, number, number], [number, number, number], "dark" | "light"][] = [
+        ["F", [0, 0, 1], [0, -1, 0], "light"],
+        ["B", [0, 0, -1], [0, -1, 0], "light"],
+        ["R", [1, 0, 0], [0, -1, 0], "light"],
+        ["L", [-1, 0, 0], [0, -1, 0], "dark"],
+        ["U", [0, 1, 0], [0, 0, 1], "dark"],
+        ["D", [0, -1, 0], [0, 0, -1], "dark"],
+      ];
+      const geo = new PlaneGeometry(0.62, 0.62);
+      this.disposables.push(geo);
+      for (const [letter, n, up, ink] of FACES) {
+        const c = document.createElement("canvas");
+        c.width = c.height = 128;
+        const g = c.getContext("2d");
+        if (!g) continue;
+        g.font = "700 84px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillStyle = ink === "dark" ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.85)";
+        g.fillText(letter, 64, 68);
+        const tex = new CanvasTexture(c);
+        tex.colorSpace = SRGBColorSpace;
+        const mat = new MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false });
+        const mesh = new Mesh(geo, mat);
+        const nv = new Vector3(...n);
+        const uv = new Vector3(...up);
+        basis.makeBasis(new Vector3().crossVectors(uv, nv), uv, nv);
+        mesh.quaternion.setFromRotationMatrix(basis);
+        mesh.position.copy(nv).multiplyScalar(HALF + 0.03);
+        mesh.renderOrder = 2;
+        group.add(mesh);
+        this.disposables.push(tex, mat);
+      }
+      this.letters = group;
+      this.cube.add(group);
+    }
+    this.letters.visible = on;
   }
 
   /**
@@ -327,33 +413,43 @@ export class CubeScene {
     if (this.ghostBudget > 0) this.ghostBudget = 0;
     else if (this.ratioCap > 1) {
       this.ratioCap = Math.max(1, this.ratioCap * 0.75);
-      this.renderer.setPixelRatio(Math.max(1, Math.min(this.lastDpr, this.ratioCap)));
-      this.renderer.setSize(this.width, this.height, false);
+      this.applyRatio();
     }
   }
 
   /** Apply a state and draw one frame. */
   render(state: CubeSceneState): void {
     if (this.disposed || !this.width) return;
-    this.setFacelets(state.facelets.length === 54 ? state.facelets : this.lastFacelets || state.facelets);
+    this.setFacelets(state.facelets.length === 54 ? state.facelets : this.lastFacelets || state.facelets, state.stickerFills);
+    this.setFaceLetters(!!state.faceLetters);
     const o = state.orientation;
     if (o) this.cube.quaternion.set(o.x, o.y, o.z, o.w).normalize();
     else this.cube.quaternion.identity();
+    // Secondary motion: the whole cube rocks a little after a turn lands (a rotation vector in the cube's own frame).
+    const jig = state.jiggle ?? null;
+    if (jig) {
+      const [wx, wy, wz] = jig.wobble;
+      const mag = Math.hypot(wx, wy, wz);
+      if (mag > 1e-7) this.cube.quaternion.multiply(this.wobbleQ.setFromAxisAngle(this.wobbleAxis.set(wx / mag, wy / mag, wz / mag), mag));
+    }
+    const tilt = jig && state.turning ? layerTilt(state.turning.turn, state.turning.progress) : null;
+    if (tilt) this.tiltQ.setFromAxisAngle(AXES[tilt.axis], tilt.angle);
 
     const turns = cubieTurns(state.turning?.turn ?? null, state.turning?.progress ?? 0);
     const ghosts = state.motionBlur ? this.ghostBudget : 0;
     this.watchFrameRate(!!state.turning);
     const q = new Quaternion();
-    const axes = [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)];
-    const place = (g: Group, ci: number, angle: number, axis: 0 | 1 | 2) => {
+    const axes = AXES;
+    const place = (g: Group, ci: number, angle: number, axis: 0 | 1 | 2, tilted = false) => {
       q.setFromAxisAngle(axes[axis], angle);
+      if (tilted && tilt) q.premultiply(this.tiltQ);
       g.position.set(...CUBIE_LAYOUT[ci].pos).applyQuaternion(q);
       g.quaternion.copy(q);
     };
     let ghostOp: number[] = [];
     this.cubies.forEach((c, ci) => {
       const t = turns[ci];
-      if (t) place(c.group, ci, t.angle, t.axis);
+      if (t) place(c.group, ci, t.angle, t.axis, true);
       else {
         c.group.position.set(...CUBIE_LAYOUT[ci].pos);
         c.group.quaternion.identity();

@@ -109,6 +109,20 @@ export function liftColor(hex: string, amount = 0.04, gain = 1.03): [number, num
   return [ch((n >> 16) & 255), ch((n >> 8) & 255), ch(n & 255)];
 }
 
+/**
+ * A `stickerFills` entry (the CSS colour TurnCube paints a sticker with: "rgb(r,g,b)" or "#rrggbb") as "#rrggbb", or null when it is
+ * not one of those. The 3D cube lights and tone-maps it like any sticker colour, so a dimmed fill keeps its relation to the others.
+ */
+export function fillToHex(css: string | undefined): string | null {
+  if (!css) return null;
+  const hex = /^#([0-9a-f]{6})$/i.exec(css.trim());
+  if (hex) return `#${hex[1].toLowerCase()}`;
+  const m = /^rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})/i.exec(css.trim());
+  if (!m) return null;
+  const ch = (v: string) => Math.max(0, Math.min(255, Number(v))).toString(16).padStart(2, "0");
+  return `#${ch(m[1])}${ch(m[2])}${ch(m[3])}`;
+}
+
 /** Deterministic hash of a sticker index to -1..1, so each sticker has its own steady tone nudge. */
 export function stickerJitter(index: number): number {
   let h = Math.imul(index + 1, 0x9e3779b1) ^ 0x85ebca6b;

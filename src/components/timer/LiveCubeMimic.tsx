@@ -6,8 +6,8 @@ import { getCubeEngineClient } from "@/lib/cube-engine/client";
 import { FACELET_COLORS } from "@/lib/cube-engine/facelets";
 import { tickPositionClass } from "@/components/timer/tickPlacement";
 import { MIMIC_STABLE_MS, faceletsOf, fixAfter, mimicAlg, mimicSyncVerdict, mimicView, movesToReach, type MimicFix } from "@/lib/analysis/mimicSync";
-import { TurnCube } from "@/components/lab/TurnCube";
-import { TwinStage } from "@/components/lab/TwinStage";
+import { Cube3D } from "@/components/cube3d/Cube3D";
+import { HOME_ORIENTATION, matToQuat } from "@/lib/gyro/orientation";
 import { useTurnAnimation } from "@/components/lab/useTurnAnimation";
 import { useProgressFills } from "@/components/lab/useProgressFills";
 import { cn } from "@/lib/utils/cn";
@@ -18,10 +18,9 @@ import { cn } from "@/lib/utils/cn";
  */
 export function preloadCubeViewer(): void {}
 
-/** The camera: yellow on top, green in front, a little above and to the left (red shows on the left side), as the mimic has always been held. */
-const MIMIC_CAMERA = "rotateX(-24deg) rotateY(32deg)";
-/** The cube turned over (z2) so yellow is up, inside the camera. */
-const YELLOW_UP = "rotateZ(180deg)";
+/** Yellow on top, green in front, seen a little above and to the left (red shows on the left side), as the mimic has always been held. */
+const MIMIC_CAMERA_YAW = -32;
+const YELLOW_UP = matToQuat(HOME_ORIENTATION);
 
 /**
  * A short, face-coloured mark on the edge of the box that fades out — keyed
@@ -129,7 +128,7 @@ export function LiveCubeMimic({
   const tickFace = lastFace !== null && tickPositionClass(lastFace) !== null ? lastFace : null;
 
   // The facelets to draw: what the alg works out to (the cube's own report only if that alg can't be parsed).
-  const turnView = useTurnAnimation(expected ?? liveFacelets);
+  const turnView = useTurnAnimation(expected ?? liveFacelets, { jiggle: true });
   // The cube is drawn in px, so it takes its size from the box it is given (the stage is 1.9 cubes across).
   const boxRef = useRef<HTMLDivElement>(null);
   const [cubeSize, setCubeSize] = useState(0);
@@ -147,13 +146,15 @@ export function LiveCubeMimic({
 
   return (
     <div ref={boxRef} className={cn("relative flex items-center justify-center", className)} data-testid="mimic-cube">
-      {cubeSize > 0 && (
-        <TwinStage size={cubeSize}>
-          <div className="relative" style={{ width: cubeSize, height: cubeSize, transformStyle: "preserve-3d", transform: `${MIMIC_CAMERA} ${YELLOW_UP}` }}>
-            <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={cubeSize} stickerFills={progressFills} />
-          </div>
-        </TwinStage>
-      )}
+      <Cube3D
+        className="h-full w-full"
+        facelets={turnView.facelets}
+        turning={turnView.turning}
+        orientation={YELLOW_UP}
+        stickerFills={progressFills}
+        jiggle={turnView.jiggle}
+        cameraYaw={MIMIC_CAMERA_YAW}
+      />
       {tickFace && <TurnTick key={tokens.length} face={tickFace} />}
     </div>
   );

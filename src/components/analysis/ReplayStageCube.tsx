@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Cube3D } from "@/components/cube3d/Cube3D";
 import type { TurnState } from "@/components/lab/TurnCube";
+import { REST_JIGGLE, buildJiggleEvents, wobbleAt, type CubeJiggle } from "@/lib/cube3d/jiggle";
 import { quatToMat, type Quat } from "@/lib/gyro/orientation";
 import { solveMsAtPosition, streamQuatAt } from "@/lib/gyro/replayGyro";
 import type { GyroStreamData } from "@/lib/gyro/solveGyro";
@@ -20,6 +21,7 @@ interface View {
   facelets: string;
   turning: TurnState | null;
   orientation: Quat;
+  jiggle: CubeJiggle | null;
 }
 
 export interface StageClock {
@@ -72,12 +74,12 @@ export function ReplayStageCube({
   onReady?: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const [view, setView] = useState<View>(() => ({ facelets: faceletsAfter[0], turning: null, orientation: FIXED_VIEW }));
+  const [view, setView] = useState<View>(() => ({ facelets: faceletsAfter[0], turning: null, orientation: FIXED_VIEW, jiggle: null }));
   const kickRef = useRef<() => void>(() => {});
   const orbitRef = useRef({ yaw: 0, pitch: 0 });
-  const dataRef = useRef({ clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, onTurn, onReady });
+  const dataRef = useRef({ clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, speed, onTurn, onReady });
   useEffect(() => {
-    dataRef.current = { clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, onTurn, onReady };
+    dataRef.current = { clock, faceletsAfter, tokens, starts, ends, halves, stream, moveMs, speed, onTurn, onReady };
     kickRef.current();
   });
   useEffect(() => {
@@ -94,6 +96,9 @@ export function ReplayStageCube({
     let lastKey = "";
     let turnsKey = "";
     let turns: ReturnType<typeof buildLeanTurns> = [];
+    let jiggleEvents: ReturnType<typeof buildJiggleEvents> = [];
+    // Wobble is shown while playing and eased out when paused, so a pause never leaves the cube crooked; it is a pure function of the position.
+    let jiggleGain = 0;
     let halfOf = new Map<number, string>();
     let halfFor: readonly string[] | null = null;
     const frame = (now: number) => {
@@ -109,6 +114,7 @@ export function ReplayStageCube({
       if (key !== turnsKey) {
         turnsKey = key;
         turns = buildLeanTurns(d.tokens, d.starts, d.ends);
+        jiggleEvents = buildJiggleEvents(d.tokens, d.starts, d.ends, d.halves);
       }
       const dt = last ? Math.min(100, now - last) : 1000 / 60;
       last = now;
@@ -165,10 +171,18 @@ export function ReplayStageCube({
       const { k, facelets, turning } = state;
       const progress = turning ? turning.progress : 1;
       const orientation = viewOrientation(base, spring, orbitRef.current);
-      const sig = `${facelets}|${turning ? `${k}:${progress.toFixed(4)}` : ""}|${orientation.x.toFixed(5)},${orientation.y.toFixed(5)},${orientation.z.toFixed(5)},${orientation.w.toFixed(5)}`;
+      let jiggle: CubeJiggle | null = null;
+      if (!reduce) {
+        jiggleGain += ((running ? 1 : 0) - jiggleGain) * Math.min(1, dt / 90);
+        if (!running && jiggleGain < 0.002) jiggleGain = 0;
+        else if (jiggleGain > 0) settled = settled && running;
+        const w = jiggleGain > 0 ? wobbleAt(jiggleEvents, pos, Math.max(0.25, Math.min(2, d.speed))) : null;
+        jiggle = w ? { wobble: [w[0] * jiggleGain, w[1] * jiggleGain, w[2] * jiggleGain] } : REST_JIGGLE;
+      }
+      const sig = `${facelets}|${turning ? `${k}:${progress.toFixed(4)}` : ""}|${orientation.x.toFixed(5)},${orientation.y.toFixed(5)},${orientation.z.toFixed(5)},${orientation.w.toFixed(5)}|${jiggle ? jiggle.wobble.map((v) => v.toFixed(5)).join(",") : ""}`;
       if (sig !== lastKey) {
         lastKey = sig;
-        setView({ facelets, turning, orientation });
+        setView({ facelets, turning, orientation, jiggle });
       }
       if (running || !settled) raf = requestAnimationFrame(frame);
       else last = 0;
@@ -256,7 +270,7 @@ export function ReplayStageCube({
       data-halves={halves?.some(Boolean) ? JSON.stringify(halves.flatMap((h, i) => (h ? [[i, h.firstStart, h.firstEnd, h.secondStart, h.secondEnd]] : []))) : undefined}
     >
       {/* The box is 78% of the stage's width: the cube itself then fills about 56% of it. */}
-      <Cube3D facelets={view.facelets} turning={view.turning} orientation={view.orientation} className="h-[78cqw] w-[78cqw] shrink-0" />
+      <Cube3D facelets={view.facelets} turning={view.turning} orientation={view.orientation} jiggle={view.jiggle} className="h-[78cqw] w-[78cqw] shrink-0" />
     </div>
   );
 }

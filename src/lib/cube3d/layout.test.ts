@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseMove } from "@/lib/cube-engine/stickerTurns";
-import { CUBIE_LAYOUT, blurTrail, cubieTurns, easeTurn, easeTurnSlope, ghostOpacity, liftColor, rotateAbout, stickerJitter, toneColor } from "./layout";
+import { CUBIE_LAYOUT, blurTrail, cubieTurns, easeTurn, easeTurnSlope, fillToHex, ghostOpacity, liftColor, rotateAbout, stickerJitter, toneColor } from "./layout";
 
 const near = (a: readonly number[], b: readonly number[]) => a.every((v, i) => Math.abs(v - b[i]) < 1e-9);
 
@@ -111,3 +111,17 @@ describe("blur", () => {
   });
 });
 
+
+describe("fillToHex", () => {
+  it("reads the CSS colours stickerFills carries", () => {
+    expect(fillToHex("rgb(255,128,0)")).toBe("#ff8000");
+    expect(fillToHex("rgb( 10 , 20 , 30 )")).toBe("#0a141e");
+    expect(fillToHex("#AABBCC")).toBe("#aabbcc");
+    expect(fillToHex("rgb(300,0,0)")).toBe("#ff0000");
+  });
+  it("is null for anything else", () => {
+    expect(fillToHex(undefined)).toBeNull();
+    expect(fillToHex("")).toBeNull();
+    expect(fillToHex("red")).toBeNull();
+  });
+});

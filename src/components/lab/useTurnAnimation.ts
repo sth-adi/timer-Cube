@@ -4,11 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { applyMove, inferMove, isFaceMove, moveToken, pairOf, type MoveSpec } from "@/lib/cube-engine/stickerTurns";
 import { SLICE_PAIR_WINDOW_MS } from "@/lib/smartcube/slicePair";
 import type { TurnState } from "./TurnCube";
+import { REST_JIGGLE, WOBBLE_MS, turnKick, wobbleAt, type CubeJiggle, type JiggleEvent } from "@/lib/cube3d/jiggle";
+import { motionIsOff } from "@/components/motion/motionOff";
 
 export interface TurnView {
   /** The cube as it stands before `turning` (or just the cube, when nothing is turning). */
   facelets: string;
   turning: TurnState | null;
+  /** Only with `{ jiggle: true }`: the cube's secondary motion right now (see lib/cube3d/jiggle), for Cube3D. */
+  jiggle?: CubeJiggle | null;
 }
 
 /** The quickest and slowest a turn is drawn when nothing is waiting behind it. */
@@ -79,8 +83,9 @@ export interface TurnClock {
  * frame can span several), starting each next one where the last ended rather than a frame later, so a fast
  * stream never drifts behind, then leaves the turn in flight (or none). Turns are applied strictly in queue order.
  */
-export function stepTurns(clock: TurnClock, now: number): TurnClock {
+export function stepTurns(clock: TurnClock, now: number): TurnClock & { finished: { turn: MoveSpec; endAt: number; dur: number }[] } {
   let { shown, active } = clock;
+  const finished: { turn: MoveSpec; endAt: number; dur: number }[] = [];
   const queue = [...clock.queue];
   let startAt = now;
   for (;;) {
@@ -95,9 +100,10 @@ export function stepTurns(clock: TurnClock, now: number): TurnClock {
     if (now - active.start < active.dur) break;
     shown = applyMove(shown, moveToken(active.turn));
     startAt = active.start + active.dur;
+    finished.push({ turn: active.turn, endAt: startAt, dur: active.dur });
     active = null;
   }
-  return { shown, active, queue };
+  return { shown, active, queue, finished };
 }
 
 /**
@@ -144,7 +150,7 @@ export function enqueueTurn(clock: TurnClock, incoming: QueuedTurn, now: number)
  * scramble) just snaps, and so does everything under reduced motion. However the turns were timed, the cube
  * ends on exactly the target. All state moves happen in animation frames, never during render or in the effect itself.
  */
-export function useTurnAnimation(target: string): TurnView {
+export function useTurnAnimation(target: string, opts?: { jiggle?: boolean }): TurnView {
   const [view, setView] = useState<TurnView>({ facelets: target, turning: null });
   const lastTargetRef = useRef(target);
   const lastArrivalRef = useRef<number | null>(null);
@@ -154,11 +160,30 @@ export function useTurnAnimation(target: string): TurnView {
   const snapRef = useRef(false);
   const rafRef = useRef(0);
   const frameRef = useRef<(now: number) => void>(() => {});
+  const jiggleOn = !!opts?.jiggle;
+  const jiggleOnRef = useRef(jiggleOn);
+  // Recent finished turns, for the wobble that follows each (a pure function of the time since it ended).
+  const eventsRef = useRef<JiggleEvent[]>([]);
 
   useEffect(() => {
+    jiggleOnRef.current = jiggleOn;
+  }, [jiggleOn]);
+
+  useEffect(() => {
+    // The cube's secondary motion at `now`, or undefined when this caller does not use it.
+    const jiggleAt = (now: number): CubeJiggle | null | undefined => {
+      if (!jiggleOnRef.current) return undefined;
+      if (motionIsOff()) {
+        eventsRef.current = [];
+        return null;
+      }
+      eventsRef.current = eventsRef.current.filter((e) => now - e.endMs < WOBBLE_MS);
+      return eventsRef.current.length ? { wobble: wobbleAt(eventsRef.current, now) } : REST_JIGGLE;
+    };
     const frame = (now: number) => {
       rafRef.current = 0;
       if (snapRef.current) {
+        eventsRef.current = [];
         // To the latest target, not the one that asked for the snap: turns that came after it were dropped with the queue.
         const to = lastTargetRef.current;
         snapRef.current = false;
@@ -169,6 +194,12 @@ export function useTurnAnimation(target: string): TurnView {
         return;
       }
       const stepped = stepTurns({ shown: shownRef.current, active: activeRef.current, queue: queueRef.current }, now);
+      if (jiggleOnRef.current) {
+        for (const f of stepped.finished) {
+          const kick = turnKick(f.turn, f.dur);
+          if (kick) eventsRef.current.push({ endMs: f.endAt, kick });
+        }
+      }
       shownRef.current = stepped.shown;
       activeRef.current = stepped.active;
       queueRef.current = stepped.queue;
@@ -181,10 +212,14 @@ export function useTurnAnimation(target: string): TurnView {
       if (!active) {
         // Settled: whatever the turns added up to, show the cube as it really is.
         shownRef.current = lastTargetRef.current;
-        setView({ facelets: shownRef.current, turning: null });
+        const jiggle = jiggleAt(now);
+        setView(jiggle === undefined ? { facelets: shownRef.current, turning: null } : { facelets: shownRef.current, turning: null, jiggle });
+        // Keep drawing while the last turn's wobble dies away; one more frame then puts the cube exactly at rest.
+        if (jiggle && eventsRef.current.length > 0) rafRef.current = requestAnimationFrame(frameRef.current);
         return;
       }
-      setView({ facelets: shownRef.current, turning: { turn: active.turn, progress: (now - active.start) / active.dur } });
+      const jiggle = jiggleAt(now);
+      setView({ facelets: shownRef.current, turning: { turn: active.turn, progress: (now - active.start) / active.dur }, ...(jiggle === undefined ? {} : { jiggle }) });
       rafRef.current = requestAnimationFrame(frameRef.current);
     };
     frameRef.current = frame;

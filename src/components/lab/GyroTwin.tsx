@@ -11,6 +11,7 @@ import { HOME_ORIENTATION, RotationTracker, cssMatrix3d, matToQuat, orientationL
 import { springStep, type SpringPose } from "@/lib/gyro/smooth";
 import { liveMoveLabel } from "@/lib/smartcube/moveLabel";
 import { TurnCube } from "./TurnCube";
+import { Cube3D, type Cube3DHandle } from "@/components/cube3d/Cube3D";
 import { TwinStage } from "./TwinStage";
 import { useTurnAnimation } from "./useTurnAnimation";
 import { useProgressFills } from "./useProgressFills";
@@ -23,6 +24,9 @@ export const GYRO_TWIN_CAMERA = "rotateX(-24deg) rotateY(-32deg)";
 
 /** The face letters are only drawn on a twin big enough to read them; the compact one never shows them or its toggle. */
 const FACE_LETTERS_MIN_SIZE = 90;
+
+/** The orientation the twin starts in and returns to: yellow up, green front. */
+const HOME_QUAT: Quat = matToQuat(HOME_ORIENTATION);
 
 function prefersReducedMotion(): boolean {
   try {
@@ -69,6 +73,9 @@ interface GyroTwinProps {
  */
 export function GyroTwin({ size = 120, className, showControls = true, camera = GYRO_TWIN_CAMERA, onRotation, navLocked = false }: GyroTwinProps) {
   const cubeRef = useRef<HTMLDivElement | null>(null);
+  const glRef = useRef<Cube3DHandle | null>(null);
+  // The photoreal WebGL cube (falls back to the CSS cube by itself); a custom camera angle keeps the CSS cube, whose camera is a CSS transform.
+  const useGl = camera === GYRO_TWIN_CAMERA;
   const facelets = useSmartCubeStore((s) => s.liveFacelets);
   const gyroActive = useSmartCubeStore((s) => s.gyroActive);
   const protocolName = useSmartCubeStore((s) => s.protocolName);
@@ -92,8 +99,14 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
 
   useEffect(() => {
     const el = cubeRef.current;
-    if (!el) return;
-    el.style.transform = `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`;
+    const gl = glRef.current;
+    if (!el && !gl) return;
+    // Straight to the DOM / the WebGL cube's handle, never through React state.
+    const setPose = (q: Quat) => {
+      if (gl) gl.setOrientation(q);
+      else if (el) el.style.transform = `${camera} ${cssMatrix3d(quatToMat(q))}`;
+    };
+    setPose(HOME_QUAT);
     if (!ref) return;
     const { calibration } = calibrationFor(protocolName);
     const tracker = new RotationTracker(ref, calibration);
@@ -119,7 +132,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
         pose = next;
         settled = next.settled;
       }
-      el.style.transform = `${camera} ${cssMatrix3d(quatToMat(pose.q))}`;
+      setPose(pose.q);
       if (settled) lastFrameAt = 0;
       else raf = requestAnimationFrame(frame);
     };
@@ -139,7 +152,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
       unsubscribe();
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [ref, protocolName, calibrations, camera]);
+  }, [ref, protocolName, calibrations, camera, useGl]);
 
   // Every turn the cube reports is named in the label; a slice (two outer turns together) reads as the slice.
   useEffect(() => {
@@ -152,7 +165,7 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
   }, []);
 
   // Each turn the cube reports plays as that layer turning; anything bigger just snaps.
-  const turnView = useTurnAnimation(facelets);
+  const turnView = useTurnAnimation(facelets, { jiggle: useGl });
   const solveLive = useSmartCubeStore((s) => s.armed || s.recording);
   const progressFills = useProgressFills(turnView.facelets, solveLive, size);
 
@@ -161,21 +174,34 @@ export function GyroTwin({ size = 120, className, showControls = true, camera = 
   return (
     <div className={cn("relative flex flex-col items-center gap-3", className)} data-testid="gyro-twin">
       <div className="relative">
-        <TwinStage size={size}>
-          <div
-            ref={cubeRef}
-            className="relative"
-            style={{
-              width: size,
-              height: size,
-              transformStyle: "preserve-3d",
-              transform: `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`,
-            }}
-          >
-            <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={size} stickerFills={progressFills} />
-            {faceLetters && size >= FACE_LETTERS_MIN_SIZE && <FaceLetters size={size} />}
-          </div>
-        </TwinStage>
+        {useGl ? (
+          <Cube3D
+            ref={glRef}
+            size={Math.round(size * 1.9)}
+            facelets={turnView.facelets}
+            turning={turnView.turning}
+            orientation={HOME_QUAT}
+            stickerFills={progressFills}
+            jiggle={turnView.jiggle}
+            faceLetters={faceLetters && size >= FACE_LETTERS_MIN_SIZE}
+          />
+        ) : (
+          <TwinStage size={size}>
+            <div
+              ref={cubeRef}
+              className="relative"
+              style={{
+                width: size,
+                height: size,
+                transformStyle: "preserve-3d",
+                transform: `${camera} ${cssMatrix3d(HOME_ORIENTATION)}`,
+              }}
+            >
+              <TurnCube facelets={turnView.facelets} turning={turnView.turning} size={size} stickerFills={progressFills} />
+              {faceLetters && size >= FACE_LETTERS_MIN_SIZE && <FaceLetters size={size} />}
+            </div>
+          </TwinStage>
+        )}
         {moveLabel && <MoveLabel label={moveLabel.text} nonce={moveLabel.nonce} size={size} />}
       </div>
 

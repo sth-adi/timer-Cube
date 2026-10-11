@@ -456,3 +456,7 @@ Appended (not regenerated).
 ### Additions — 2026-10-12 (exact double-turn timing in the replay)
 - src/lib/analysis/doubleSplit.ts [1] {Analysis / X-Ray} — Splits a merged double turn (U2) back into its two quarter turns at their real times, using the recorded first-quarter time or an estimate. (DOUBLE_GAP_MS, MAX_DOUBLE_GAP_FRAC, MIN_DOUBLE_GAP_MS, gapsToTimes, isFaceDouble, splitDoubles)
 - Double turns: the store keeps the first quarter's time (`SmartCubeMove.halfMs`, saved as `Solve.moveHalfTimestamps`); `analysis/doubleSplit` estimates it when missing and `buildTimeline` plays a double as two real quarter turns.
+
+### Additions — 2026-10-13 (live-solve 3D cube, jiggle)
+- src/lib/cube3d/jiggle.ts [4] {Lab / Play} — Pure jiggle for the 3D cube: a small damped wobble after each turn and a slight layer tilt while it turns, computed from time since the turn ended. (CubeJiggle, JiggleEvent, JiggleKick, REST_JIGGLE, TILT_MAX_DEG, WOBBLE_MAX_DEG, WOBBLE_MS, buildJiggleEvents, layerTilt, turnKick, wobbleAngle, wobbleAt)
+- The live-solve cube is now `cube3d/Cube3D` too (LiveCubeMimic and GyroTwin; TurnCube is only the fallback); `cube3d/jiggle` adds a deterministic wobble so scrubbing stays exact.
