@@ -26,7 +26,10 @@ function median(values: number[]): number {
  */
 export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
   const [hover, setHover] = useState<EfficiencyPoint | null>(null);
-  const points = useMemo(() => computeEfficiencyPoints(solves).slice(-MAX_POINTS), [solves]);
+  const all = useMemo(() => computeEfficiencyPoints(solves), [solves]);
+  const points = useMemo(() => all.slice(-MAX_POINTS), [all]);
+  // Solves with no recorded moves (keyboard times, or a smart-cube solve saved time-only) cannot be placed on this map.
+  const unplotted = solves.filter((s) => s.penalty !== "dnf").length - all.length;
 
   if (points.length < 6) return null;
 
@@ -77,7 +80,9 @@ export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
         <span>fewer moves →</span>
         <span>↓ faster</span>
       </div>
-      <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2">
+      <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2" data-testid="efficiency-note">
+        {points.length < all.length ? `Showing the latest ${points.length} of ${all.length} solves. ` : ""}
+        {unplotted > 0 ? `${unplotted} solve${unplotted === 1 ? " has" : "s have"} no recorded moves, so ${unplotted === 1 ? "it isn't" : "they aren't"} plotted. ` : ""}
         Each dot is one solve: moves across, time down. Bottom-left is your best solves; top-left means efficient
         solutions held back by turn speed; bottom-right means fast fingers wasted on longer solutions.
       </p>
