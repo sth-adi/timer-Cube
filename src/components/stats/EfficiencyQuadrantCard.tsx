@@ -9,8 +9,6 @@ import { formatTime } from "@/lib/utils/time";
 const WIDTH = 280;
 const HEIGHT = 180;
 const PAD = 10;
-/** Most recent points shown — plenty for the pattern, cheap to render. */
-const MAX_POINTS = 300;
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -27,7 +25,7 @@ function median(values: number[]): number {
 export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
   const [hover, setHover] = useState<EfficiencyPoint | null>(null);
   const all = useMemo(() => computeEfficiencyPoints(solves), [solves]);
-  const points = useMemo(() => all.slice(-MAX_POINTS), [all]);
+  const points = all;
   // Solves with no recorded moves (keyboard times, or a smart-cube solve saved time-only) cannot be placed on this map.
   const unplotted = solves.filter((s) => s.penalty !== "dnf").length - all.length;
 
@@ -42,6 +40,9 @@ export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
   const medMoves = median(moveCounts);
   const medTime = median(times);
 
+  // Smaller, fainter dots as the history grows, so a few thousand solves still read as a density, not a blob.
+  const dotR = points.length > 1500 ? 1.1 : points.length > 600 ? 1.6 : 2.5;
+  const dotOpacity = points.length > 1500 ? 0.3 : points.length > 600 ? 0.4 : 0.5;
   const x = (moves: number) =>
     maxMoves > minMoves ? PAD + ((moves - minMoves) / (maxMoves - minMoves)) * (WIDTH - 2 * PAD) : WIDTH / 2;
   // Inverted: faster (lower time) plots lower on screen, matching "down-left is best".
@@ -54,7 +55,28 @@ export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
         Efficiency vs. speed
       </h3>
       <div className="relative">
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full" style={{ height: HEIGHT }}>
+        <svg
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          className="w-full"
+          style={{ height: HEIGHT }}
+          onMouseMove={(e) => {
+            // One listener for the whole map (every solve is plotted, there can be thousands of dots): hover the dot nearest the pointer.
+            const r = e.currentTarget.getBoundingClientRect();
+            const px = ((e.clientX - r.left) / r.width) * WIDTH;
+            const py = ((e.clientY - r.top) / r.height) * HEIGHT;
+            let best: EfficiencyPoint | null = null;
+            let bestD = 14 * 14;
+            for (const p of points) {
+              const d = (x(p.moveCount) - px) ** 2 + (y(p.timeMs) - py) ** 2;
+              if (d < bestD) {
+                bestD = d;
+                best = p;
+              }
+            }
+            setHover(best);
+          }}
+          onMouseLeave={() => setHover(null)}
+        >
           <line x1={x(medMoves)} y1={0} x2={x(medMoves)} y2={HEIGHT} stroke="var(--border)" strokeDasharray="3 3" />
           <line x1={0} y1={y(medTime)} x2={WIDTH} y2={y(medTime)} stroke="var(--border)" strokeDasharray="3 3" />
           {points.map((p) => (
@@ -62,11 +84,9 @@ export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
               key={p.id}
               cx={x(p.moveCount)}
               cy={y(p.timeMs)}
-              r={hover?.id === p.id ? 4 : 2.5}
+              r={hover?.id === p.id ? 4 : dotR}
               fill="var(--accent)"
-              fillOpacity={hover?.id === p.id ? 1 : 0.5}
-              onMouseEnter={() => setHover(p)}
-              onMouseLeave={() => setHover((h) => (h?.id === p.id ? null : h))}
+              fillOpacity={hover?.id === p.id ? 1 : dotOpacity}
             />
           ))}
         </svg>
@@ -81,7 +101,6 @@ export function EfficiencyQuadrantCard({ solves }: { solves: Solve[] }) {
         <span>↓ faster</span>
       </div>
       <p className="mt-2.5 text-[11px] leading-relaxed text-muted-2" data-testid="efficiency-note">
-        {points.length < all.length ? `Showing the latest ${points.length} of ${all.length} solves. ` : ""}
         {unplotted > 0 ? `${unplotted} solve${unplotted === 1 ? " has" : "s have"} no recorded moves, so ${unplotted === 1 ? "it isn't" : "they aren't"} plotted. ` : ""}
         Each dot is one solve: moves across, time down. Bottom-left is your best solves; top-left means efficient
         solutions held back by turn speed; bottom-right means fast fingers wasted on longer solutions.
