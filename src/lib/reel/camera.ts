@@ -40,14 +40,14 @@ const HOME_Q = (() => {
  * stream reads its smoothed track (no allocation); one without falls back
  * to the named regrips.
  */
-export function reelViewInto(out: Float64Array, tl: ReelTimeline, t: number, settle = 0): void {
+export function reelViewInto(out: Float64Array, tl: ReelTimeline, t: number, settle = 0, orbitYaw = 0, orbitPitch = 0): void {
   if (tl.viewTrack) {
     trackQuatInto(tl.viewTrack, t, Q);
   } else {
     const view = viewAt(tl, t).view;
     if (settle <= 0) {
       for (let i = 0; i < 9; i++) GRIP[i] = view[i];
-      compose(out, tl, t, 0);
+      compose(out, tl, t, 0, orbitYaw, orbitPitch);
       return;
     }
     const q = matToQuat(view);
@@ -58,7 +58,7 @@ export function reelViewInto(out: Float64Array, tl: ReelTimeline, t: number, set
   }
   if (settle > 0) blendQuatInto(Q, Q, HOME_Q, settle);
   quatToMatInto(GRIP, Q);
-  compose(out, tl, t, settle);
+  compose(out, tl, t, settle, orbitYaw, orbitPitch);
 }
 
 /**
@@ -67,7 +67,7 @@ export function reelViewInto(out: Float64Array, tl: ReelTimeline, t: number, set
  * Rx(26 + p) · Ry(-34 - y). The lean fades out as the end card settles, and is off under
  * reduced motion.
  */
-function compose(out: Float64Array, tl: ReelTimeline, t: number, settle: number): void {
+function compose(out: Float64Array, tl: ReelTimeline, t: number, settle: number, orbitYaw: number, orbitPitch: number): void {
   let yaw = 0;
   let pitch = 0;
   if (settle < 1 && Number.isFinite(t) && cameraMotionAllowed()) {
@@ -75,6 +75,13 @@ function compose(out: Float64Array, tl: ReelTimeline, t: number, settle: number)
     const k = (tl.viewTrack ? LEAN_SHARE_WITH_GYRO : LEAN_SHARE) * (1 - settle);
     yaw = lean.yaw * k;
     pitch = lean.pitch * k;
+  }
+  // The staged inspection orbit (see inspectionPose) swings the camera round the cube, like looking it over. Off under reduced motion.
+  if (orbitYaw !== 0 || orbitPitch !== 0) {
+    if (cameraMotionAllowed()) {
+      yaw += orbitYaw;
+      pitch += orbitPitch;
+    }
   }
   if (yaw === 0 && pitch === 0) {
     mul3(out, CAMERA, GRIP);

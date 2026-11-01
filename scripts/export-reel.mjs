@@ -13,6 +13,7 @@
  *
  * Credentials: CUBE_USER / CUBE_PASS in the environment or in a git-ignored `.env.local`.
  * Options: --url <site> (default CUBE_URL or https://zelta-timer.vercel.app), --out <dir> (default ./reels),
+ *          --no-ramp (no slow-mo on the last moves: use this for the split-screen with compose-reel, whose camera footage runs at real speed),
  *          --slow (half-speed slow-mo), --no-sound (silent reel), --headless, --realtime (old MediaRecorder capture with sound; can freeze at the first move, --slow/--no-sound/--no-warmup apply there).
  */
 import fs from "node:fs";
@@ -75,7 +76,7 @@ try {
   }
 
   // 2. Open the reel page (a full navigation re-runs the bootstrap, which syncs the account's solves).
-  await page.goto(`${URL_BASE}/reel`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${URL_BASE}/reel${flag("no-ramp") ? "?ramp=0" : ""}`, { waitUntil: "domcontentloaded" });
   const chips = page.locator("div.overflow-x-auto > button");
   await chips.first().waitFor({ timeout: 90_000 }); // appears once solves have synced from the account
   await page.waitForTimeout(2_000); // let the sync settle so "best" sees every solve

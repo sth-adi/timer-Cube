@@ -22,10 +22,13 @@ import {
 import { layoutPacing, pacingIndexAt, pacingSegments, playheadX, type PacingSegment, type PacingSlot } from "./pacing";
 import { frameAt, tickerCountAt, type ReelTimeline } from "./timeline";
 import { withAlpha } from "./theme";
+import { drawConfetti, drawFlash, drawPhaseGlow, drawRing } from "./fx";
+import { inspectionPose, introProgress, pulseSince } from "./juice";
+import { cameraMotionAllowed } from "@/lib/analysis/replayCamera";
 
 export { REEL_H, REEL_W };
-/** Scrambled cube shown before the clock starts, and the solved card held after it stops. */
-export const INTRO_MS = 1400;
+/** The staged inspection before the clock starts (see inspectionPose), and the solved card held after it stops. */
+export const INTRO_MS = 2400;
 export const OUTRO_MS = 2800;
 
 export interface ReelStyle {
@@ -39,6 +42,12 @@ export interface ReelStyle {
   mono?: string;
   /** How the 3D cube is dressed (the Settings choice). */
   look?: CubeLook;
+  /** Length of the intro this frame belongs to (default INTRO_MS) — the inspection orbit is spread across it. */
+  introMs?: number;
+  /** Show the staged inspection (orbit, draining bar, hook line) in the intro. Default true; the montage turns it off. */
+  hook?: boolean;
+  /** A new personal best: the end card says so and fires confetti. */
+  pb?: boolean;
 }
 
 // ───────────────────────────── layout (canvas px) ─────────────────────────────
@@ -124,13 +133,24 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
   const F = fontsFor(style.sans, style.mono);
   const { accent } = style;
   const { segs, slots } = barFor(tl);
+  const introMs = style.introMs ?? INTRO_MS;
+  const staged = style.hook ?? true;
+  const ip = introProgress(t, introMs);
+  const pose = t < 0 && staged ? inspectionPose(ip) : null;
+  const sinceEnd = t - tl.totalMs;
+  ctx.save();
+  // The finish lands with a kick: a short, decaying shake (not under reduced motion).
+  if (sinceEnd >= 0 && sinceEnd < 380 && cameraMotionAllowed()) {
+    const d = 1 - sinceEnd / 380;
+    ctx.translate(Math.sin(sinceEnd * 0.09) * 11 * d * d, Math.cos(sinceEnd * 0.12) * 8 * d * d);
+  }
 
   const finished = t >= tl.totalMs;
   const clampT = Math.min(Math.max(t, 0), tl.totalMs);
   const atT = t < 0 ? -Infinity : clampT;
   const frame = frameAt(tl, atT);
   // 0 → 1 over the first half second of the intro (a fade up from the dark), and over the first stretch of the end card.
-  const introK = easeOut((t + INTRO_MS) / 650);
+  const introK = easeOut((t + introMs) / (staged ? 350 : 650));
   const outroK = finished ? clamp01((t - tl.totalMs) / 700) : 0;
   const bump = finished ? easeOutBack((t - tl.totalMs) / 520) : 0;
   const phaseIdx = pacingIndexAt(segs, clampT);
@@ -138,6 +158,13 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
 
   ctx.textBaseline = "alphabetic";
   drawBackdrop(ctx, accent, CUBE_CY, finished ? 1 : 0);
+  // The background takes on the colour of the phase being solved, washing across at each handover.
+  if (t >= 0 && !finished) {
+    const seg = segs[phaseIdx];
+    const k = phaseIdx > 0 ? easeOut((clampT - seg.startMs) / 450) : 1;
+    drawPhaseGlow(ctx, CX, CUBE_CY + LAYOUT_DY, PHASE_HUES[seg.hue], 0.5 * k);
+    if (phaseIdx > 0 && k < 1) drawPhaseGlow(ctx, CX, CUBE_CY + LAYOUT_DY, PHASE_HUES[segs[phaseIdx - 1].hue], 0.5 * (1 - k));
+  }
 
   // ── Header: title at the left, date (or position in the montage) at the right.
   ctx.globalAlpha = introK;
@@ -159,11 +186,14 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
   ctx.textAlign = "center";
   ctx.font = F.hero;
   const text = fmtTime(clampT);
-  const scale = 1 + 0.05 * bump;
+  const goPop = t >= 0 ? 1 - easeOut(t / 320) : 0; // the clock starting: a quick punch
+  const scale = 1 + 0.05 * bump + 0.07 * goPop;
   ctx.save();
   ctx.translate(CX, HERO_Y);
   ctx.scale(scale, scale);
-  ctx.globalAlpha = introK * (t < 0 ? 0.4 : 1);
+  // Before GO the hero slot carries the hook (staged inspection), so the 0.00 only fades up at the very end of it.
+  const heroIntroA = staged ? 0.4 * clamp01((ip - 0.86) / 0.14) : 0.4;
+  ctx.globalAlpha = introK * (t < 0 ? heroIntroA : 1);
   ctx.fillStyle = "#ffffff";
   ctx.fillText(text, 0, 0);
   if (outroK > 0) {
@@ -173,11 +203,35 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
   }
   ctx.restore();
 
+  // ── The hook, during the inspection: what is about to happen, before it does.
+  if (t < 0 && staged) {
+    const a = introK * (1 - clamp01((ip - 0.74) / 0.16));
+    if (a > 0) {
+      const pop = 0.92 + 0.08 * easeOutBack(ip / 0.14);
+      const big = `${fmtTime(tl.totalMs)}s solve`;
+      ctx.font = F.display;
+      const fit = Math.min(1, (REEL_W - SAFE_X * 2) / textWidth(ctx, big));
+      ctx.textAlign = "center";
+      ctx.globalAlpha = a;
+      ctx.save();
+      ctx.translate(CX, HERO_Y - 24);
+      ctx.scale(fit * pop, fit * pop);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(big, 0, 0);
+      ctx.restore();
+      ctx.font = F.chip;
+      setSpacing(ctx, 7);
+      ctx.fillStyle = withAlpha(accent, 0.95);
+      ctx.fillText("WATCH THE CUBE", CX, HERO_Y + 34);
+      setSpacing(ctx, 0);
+    }
+  }
+
   // ── Chip row: which phase we're in (or Scramble / Solved) and the pace so far.
   ctx.globalAlpha = introK;
   const moves = tl.moves.length;
   const elapsedS = Math.max(0.001, clampT / 1000);
-  const label = t < 0 ? "Scramble" : finished ? "Solved" : (tl.phases[frame.phaseIndex]?.label ?? "Solving");
+  const label = t < 0 ? (staged ? "Inspection" : "Scramble") : finished ? (style.pb ? "New PB" : "Solved") : (tl.phases[frame.phaseIndex]?.label ?? "Solving");
   const right = t < 0 ? "" : finished ? `${moves} moves · ${(moves / elapsedS).toFixed(2)} TPS` : clampT > 600 ? `${(frame.done / elapsedS).toFixed(1)} TPS` : "";
   ctx.font = F.chip;
   const lw = textWidth(ctx, label);
@@ -200,10 +254,36 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
     ctx.fillText(right, x + lw + 34, CHIP_Y);
   }
 
+  // ── Inspection: a bar draining toward GO, turning red for the last stretch (the real one does the same).
+  if (t < 0 && staged) {
+    const bw = 360;
+    const bx = CX - bw / 2;
+    ctx.globalAlpha = introK;
+    roundRectPath(ctx, bx, CHIP_Y + 34, bw, 8, 4);
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.fill();
+    const left = 1 - ip;
+    if (left > 0.01) {
+      roundRectPath(ctx, bx, CHIP_Y + 34, Math.max(8, bw * left), 8, 4);
+      ctx.fillStyle = ip > 0.7 ? "#ef4444" : accent;
+      ctx.fill();
+    }
+  }
+
   // ── The cube, on its soft ground shadow. A layer mid-turn eases in and out.
-  const lift = finished ? 1 + 0.03 * bump : 0.94 + 0.06 * introK;
+  // Every landed turn gives the cube a small beat; the clock starting, each phase handover and the finish fire shockwaves behind it.
+  const beat = t >= 0 && !finished && frame.done > 0 ? pulseSince(tl.timesMs[frame.done - 1], clampT, 140) : 0;
+  const lift = (finished ? 1 + 0.03 * bump : 0.94 + 0.06 * introK) * (1 + 0.016 * beat);
+  ctx.globalAlpha = 1;
+  if (t >= 0 && !finished) {
+    drawRing(ctx, CX, CUBE_CY, t / 520, accent);
+    for (let i = 0; i < segs.length - 1; i++) drawRing(ctx, CX, CUBE_CY, (clampT - segs[i].endMs) / 520, PHASE_HUES[segs[i + 1].hue]);
+  } else if (finished) {
+    drawRing(ctx, CX, CUBE_CY, sinceEnd / 760, accent, 640, 20);
+    drawRing(ctx, CX, CUBE_CY, (sinceEnd - 120) / 760, "#ffffff", 540, 8);
+  }
   ctx.globalAlpha = introK;
-  reelViewInto(VIEW, tl, atT, easeInOut(outroK));
+  reelViewInto(VIEW, tl, atT, easeInOut(outroK), pose?.yaw ?? 0, pose?.pitch ?? 0);
   const lin = frame.turning && t >= 0 && !finished ? { token: tl.moves[frame.turning.index], progress: Math.min(1, frame.turning.progress) } : null;
   // The photoreal cube (with its own contact shadow) when three.js is up; otherwise the 2D software cube on a drawn shadow.
   if (!drawCubeLayer(ctx, { facelets: tl.facelets[frame.done], turning: lin, view: VIEW, look: style.look }, CX, CUBE_CY + LAYOUT_DY, CUBE_LAYER_PX * lift)) {
@@ -238,6 +318,13 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
     setSpacing(ctx, 0);
   }
   ctx.globalAlpha = 1;
+  // The finish: a white flash, and for a new best a burst of confetti over everything.
+  if (finished) {
+    drawFlash(ctx, sinceEnd / 200, 0.2);
+    // Fired from the cube's base so the burst arcs up past the time without covering it on the way out.
+    if (style.pb) drawConfetti(ctx, CX, CUBE_CY + 240, sinceEnd);
+  }
+  ctx.restore();
 }
 
 /** Seven fixed slots: what just happened fading off to the left, the current turn lit in the middle, what's coming dim on the right. */

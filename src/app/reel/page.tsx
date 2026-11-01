@@ -116,6 +116,13 @@ function SingleReel() {
   const credit = useReelCredit();
   const [pickedId, setPickedId] = useState<string | null>(null);
   const selected = candidates.find((s) => s.id === pickedId) ?? candidates[0] ?? null;
+  // A new personal best: nothing at or before this solve (ties included) was as fast. Drives the "New PB" end card and confetti.
+  const isPb = useMemo(() => {
+    if (!selected) return false;
+    const final = solveFinalMs(selected);
+    if (final === null) return false;
+    return !allSolves.some((s) => s.id !== selected.id && s.date <= selected.date && (solveFinalMs(s) ?? Infinity) <= final);
+  }, [allSolves, selected]);
   // The stream is read from the database (the store's rows carry none); the reel waits for it.
   const { solve: stored, status } = useFullSolve(selected?.hasGyro ? selected : null);
   const timeline = useMemo(
@@ -171,6 +178,7 @@ function SingleReel() {
                   subtitle={new Date(selected.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                   fileName={`solve-${formatTime(selected.timeMs).replace(/[:.]/g, "-")}`}
                   credit={credit}
+                  pb={isPb}
                 />
               )}
             </>

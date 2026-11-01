@@ -1,5 +1,5 @@
 import { REEL_H, REEL_W, renderReelDesign } from "./renderFrame";
-import { CARD_MS, OPENER_MS, montageAt, type HighlightKind, type Montage } from "./highlights";
+import { CARD_MS, OPENER_MS, SEG_INTRO_MS, montageAt, type HighlightKind, type Montage } from "./highlights";
 import { LAYOUT_DY, LAYOUT_H, SAFE_X, drawBackdrop, easeOut, fmtTime, fontsFor, roundRectPath, setSpacing } from "./draw";
 import { withAlpha } from "./theme";
 import type { CubeLook } from "@/lib/cube3d/look";
@@ -148,6 +148,10 @@ function renderHighlightDesign(ctx: CanvasRenderingContext2D, m: Montage, t: num
       sans: style.sans,
       mono: style.mono,
       look: style.look,
+      // The montage has its own cards and a short run-in per solve: no staged inspection here.
+      introMs: SEG_INTRO_MS,
+      hook: false,
+      pb: h.kind === "pb",
     });
     const local = at.t + (seg.solveStartMs - seg.startMs - CARD_MS);
     fade(ctx, local, seg.endMs - seg.startMs - CARD_MS);

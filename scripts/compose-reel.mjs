@@ -13,7 +13,8 @@
  *
  * Sync: find one moment visible in both (the last turn is easiest), note the camera timestamp c and the
  * reel timestamp r where the timer hits its final value, and pass --offset (c - r).
- * Output is 1080x1920, H.264 + AAC.
+ * Export the reel with `node scripts/export-reel.mjs --no-ramp` for this: the default reel slows its last few moves, which
+ * would drift out of sync with camera footage that runs at real speed. Output is 1080x1920, H.264 + AAC.
  */
 import fs from "node:fs";
 import path from "node:path";
