@@ -168,15 +168,18 @@ export function renderReelDesign(ctx: CanvasRenderingContext2D, tl: ReelTimeline
 
   // ── Header: title at the left, date (or position in the montage) at the right.
   ctx.globalAlpha = introK;
-  roundRectPath(ctx, SAFE_X, HEADER_Y - 20, 20, 20, 6);
-  ctx.fillStyle = accent;
-  ctx.fill();
-  setSpacing(ctx, 3);
-  ctx.textAlign = "left";
-  ctx.font = F.header;
-  ctx.fillStyle = "rgba(255,255,255,0.78)";
-  ctx.fillText(style.title.toUpperCase(), SAFE_X + 36, HEADER_Y);
-  setSpacing(ctx, 0);
+  // An empty title (the single-solve reel) leaves the left of the header bare: just the date.
+  if (style.title) {
+    roundRectPath(ctx, SAFE_X, HEADER_Y - 20, 20, 20, 6);
+    ctx.fillStyle = accent;
+    ctx.fill();
+    setSpacing(ctx, 3);
+    ctx.textAlign = "left";
+    ctx.font = F.header;
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.fillText(style.title.toUpperCase(), SAFE_X + 36, HEADER_Y);
+    setSpacing(ctx, 0);
+  }
   ctx.textAlign = "right";
   ctx.font = F.headerSub;
   ctx.fillStyle = "rgba(255,255,255,0.5)";

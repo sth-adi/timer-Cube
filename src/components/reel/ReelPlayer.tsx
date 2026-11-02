@@ -31,7 +31,8 @@ export function ReelPlayer({ timeline, title, subtitle, fileName, pb = false, cr
   const theme = useReelTheme();
   const [urlAllowsRamp] = useState(rampAllowed);
   const slow = useMemo(() => (ramp && urlAllowsRamp ? rampFor(timeline) : null), [timeline, ramp, urlAllowsRamp]);
-  const style = useMemo(() => ({ ...theme, title, subtitle, credit, pb }), [theme, title, subtitle, credit, pb]);
+  // `title` still names the file and the share sheet; it is no longer printed on the video itself.
+  const style = useMemo(() => ({ ...theme, title: "", subtitle, credit, pb }), [theme, subtitle, credit, pb]);
   // The recorder's clock `r` is the video's; the solve is drawn at the solve time it maps to (slowed over the ramp).
   const draw = useCallback((ctx: CanvasRenderingContext2D, r: number) => renderReelFrame(ctx, timeline, fromReelMs(slow, r, timeline.totalMs), style), [timeline, style, slow]);
   const soundtrack = useMemo(() => warpCues(reelSoundtrack(timeline, INTRO_MS, pb), INTRO_MS, slow), [timeline, pb, slow]);
